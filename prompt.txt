@@ -1,0 +1,8 @@
+26472 מסוף עמידר
+ אחר של קו 60 
+20832
+PublishedLineName
+curl "http://moran.mot.gov.il:110/Channels/HTTPChannel/SmQuery/2.8/json?Key=YP719171&LineRef=60"
+
+
+i am getting the location 32.075249, 34.807137 and i want to show it on a map
