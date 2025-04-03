@@ -1,0 +1,1162 @@
+National Authority for
+Public Transport
+GTFS - Developer Information
+1 General
+1.1 This document describes the structure of the Static Information of the Israel
+public transportation.
+1.2 The Static Information are set of files, which describe all planned trips,
+including the data about: start time, trip route, stations, tariff (fares) etc.
+1.3 The main package of files is structured at GTFS international format.
+1.4 In the link: https://gtfs.org/documentation/schedule/reference/ you can find
+an explanation of the structure and content of the files in GTFS format.
+1.5 In addition to GTFS files, additional information files are transferred, which
+include additional and unique information to the State of Israel, as detailed
+below.
+1.6 All files are text files, which are viewable by a file editor.
+1.7 The separator between the fields is a comma (,).
+1.8 The files are transferred every night to the site: https://gtfs.mot.gov.il/gtfsfiles
+1.9 In the above address there are the following compressed files in zip format:
+1.9.1
+israel-public-transportation.zip file - The main file of the information in
+GTFS format.
+1.9.2ClusterToLine.zip file - Describes the association of lines to clusters.
+1.9.3TripIdToDate.zip file - Describes the trip ID of each day of the week.
+1.9.4tarrif_2022.zip - Describes the zones according to 2022's fare reform.
+1.9.5zones_2022.zip – Describes the zones according to 2022's fare
+reform, as a geographical file.
+1.9.6
+ChargingRavKav.zip file - Describes the RavKav charging stations
+("‫קו‬ ‫רב‬ ‫לטעינת‬ ‫)"עמדות‬, or "Al-Hakav" stations ("'‫הקו‬ ‫'על‬ ‫השירות‬ ‫)"עמדות‬
+1.10 Revision history:
+Date
+20/8/2021
+Update Date:
+Description
+First version of this document at English (previous versions were at
+Hebrew)
+21/11/2024
+Page 1 of 24National Authority for
+Public Transport
+GTFS - Developer Information
+Date
+27/7/2021
+Description
+Changes related to Israel Railways data, starts from 8/8/2021, at
+sections: 1.11.3, 2.5.6, 2.6.2, 2.8.2, 2.9.2, 4
+29/7/2021 Remove comment, that was at 27/7/2021 version, about route_id as
+section 2.5.6
+24/5/2022 Changes related to tariff reform of August 2022
+15/6/2022 Changes to tariff_2022 fields
+Changes to URL of the files at section 1.8-1.10
+6/7/2022
+Changes to columns of profiles_2022
+Changes to columns of tariff_2022
+Add temporary files for single ride:
+• stops_reform2022
+• fare_rules_reform2022
+• fare_attributes_reform2022
+28/7/2022 • Remove stops_reform2022, fare_rules_reform2022,
+fare_attributes_reform2022
+• stops, fare_rules, fare_attributes are now with values of tariff reform
+of August 2022
+21/11/2024 • Add wheelchair_accessible to trips.txt
+2 Specify the files in israel-public-transportation
+2.1 The files in the israel-public-transportation package are compatible with the
+GTFS format.
+2.2 It should be emphasized that in the GTFS format, there are files and fields
+that are optional. Some have already been used and some have not been
+used at this stage. The developer must consider the possibility that, over time,
+fields or files that are optional will be added or removed from the israel-public-
+transportation package.
+2.3 The following is a list of the files transferred in the israel-public-transportation
+package:
+Filed name
+agency
+routes
+trips
+calendar
+stop_times
+stops
+shapes
+Update Date:
+21/11/2024
+Explanation
+Operators file.
+Line ID file (all directions, all alternatives).
+Trip file - Single trip level.
+Displays the days on which the line operates, and the dates
+of the activity.
+Trip times, by stop (“‫)”תחנה‬ order at the line.
+Stations file.
+Track Line file.
+Page 2 of 24National Authority for
+Public Transport
+GTFS - Developer Information
+Filed name
+translations
+fare_rules
+fare_attributes
+Explanation
+Translation file.
+Fare codes between stations.
+Price of fare to fare code.
+2.4 Explanation of agency file
+2.4.1
+The file includes details about public transport operators (" ‫מפעילי‬
+‫הציבורית‬ ‫)"התחבורה‬.
+2.4.2
+The fields in the file are shown in the following table (and also at
+https://gtfs.org/documentation/schedule/reference/#agencytxt :
+Filed name
+agency_id
+agency_name
+agency_url
+agency_timezone
+agency_lang
+Explanation
+Operator ("‫)"מפעיל‬ code.
+Operator Name.
+URL of the operator site.
+Fixed value: Asia / Jerusalem.
+Fixed value: he (Hebrew).
+2.5 Explanation of routes file
+2.5.1
+The file contains a row for each line identifier. The meaning of the term
+"line ID" is the combination of: line-direction-alternative (“-‫כיוון‬-‫קו‬
+‫)”חלופה‬, which creates unique identification of the line.
+2.5.2
+For example: line 86 is from Ariel to Petah Tikva and back. This line
+has 6 different alternatives (“‫)”חלופות‬, each has a unique line identifier,
+as illustrated by the following table:
+Route_id
+9141
+9142
+9143
+9146
+9147
+9148
+2.5.3
+Line
+86
+86
+86
+86
+86
+86
+Start
+Ariel
+Ariel
+Ariel
+Petah Tikva
+Petah Tikva
+Petah Tikva
+Finish
+Petah Tikva
+Petah Tikva
+Petah Tikva
+Ariel
+Ariel
+Ariel
+Alternative
+#
+1
+2
+#
+1
+2
+Each alternative (“‫)”חלופה‬, gets its own route_id, and remains constant
+throughout the lifetime of the alternative.
+Update Date:
+Direction
+1
+1
+1
+2
+2
+2
+21/11/2024
+Page 3 of 24National Authority for
+Public Transport
+GTFS - Developer Information
+2.5.4
+For each such alternative, there are three parameters that are unique
+to the alternative: schedule, sequence of stops, and trip route.
+2.5.5
+Even when one of these data changes (schedule / stations / route) the
+record remains with the same route_id.
+2.5.6
+The fields in the file are shown in the following table (and also at
+https://gtfs.org/documentation/schedule/reference/#routestxt ):
+Field name
+route_id
+agency_id
+route_short_name
+route_long_name
+Explanation
+A unique and permanent code for a line identifier, as
+explained above.
+Operator code, the field linking to the ‘agency’ file.
+This field shows the signs of the line, which usually appear on
+the sign on the bus itself, which is determined and maintained
+only by the operator, for example, the line signs can be 86,
+‫א‬86 etc.
+For Israel Railways lines, the field is empty.
+This field is composed of the following combining: name of
+departure station + name of departure city + destination
+station name + destination city name + direction + alternative.
+Direction - meaning forth (1) or back (2).
+For example, this field for line 86 from Ariel to Petah Tikva,
+direction 1 alternative #, would look like this:
+1#-‫תקווה‬ ‫פתח‬-‫שנקר‬/‫>ז'בוטינסקי‬-<‫אריאל‬-‫כדורגל‬ ‫מגרש‬
+For Israel Railways lines, this field is composed of the
+following combining: name of departure station + name of
+departure city + destination station name + destination city
+name. example:
+‫עדה‬ ‫גבעת‬ ‫בנימינה‬-‫בנימינה‬>-<‫יפו‬ ‫אביב‬ ‫תל‬-‫ההגנה‬ ‫אביב‬ ‫תל‬
+This field contains a chaining of the following 3 items:
+• Line catalog number ('‫קו‬ ‫)'מק"ט‬.
+• Line direction ('‫)'כיוון‬.
+• Line alternative ('‫)'חלופה‬.
+route_desc
+The 'line catalog number' contains of 5 digits, and is unique
+for the line, and does not change throughout the life of the
+line, and constitutes a kind of "identity card" for the line.
+For example - in line 86 of the Afikim operator, as explained
+above, for all the alternatives of the line, there is the same
+'line catalog number' 32086, and for direction 1 and
+alternatives #, the field would look like:
+Update Date:
+21/11/2024
+Page 4 of 24National Authority for
+Public Transport
+GTFS - Developer Information
+Field name
+Explanation
+32086-1-#
+For Israel Railways line, this field contains train number
+route_typeExisting values:
+0 - Light Train (Jerusalem Light Rail - "‫)"כפיר‬
+2 - Israel Railways
+3 – Bus
+5 – Cable car ("‫אקספרס‬ ‫"כבל‬ ,"‫כרמלית‬")
+8- Taxi )"‫שירות‬ ‫מוניות‬"(
+715 - Flexible Service Line (“‫גמיש‬ ‫בשירות‬ ‫)”קו‬
+route_colorLine color by line uniqueness:
+Regular Lines - no color
+Students Lines ("‫תלמידים‬ ‫)"קווי‬ - Orange color (#FF9933)
+Sea Lines ("‫ים‬ ‫)"קווי‬- Blue color (#3399FF)
+Train Lines ("‫לרכבת‬ ‫הזנה‬ ‫)"קווי‬ – Green color (#33CC33)
+Night Lines ("‫לילה‬ ‫)"קווי‬ - Purple color (#9933FF)
+2.6 Explanation of trips file
+2.6.1
+The file contains the single trip. This file is linked to ‘routes’,
+’stop_times’ files.
+2.6.2
+The fields in the file are shown in the following table (see also
+https://gtfs.org/documentation/schedule/reference/#tripstxt ) :
+Field name
+route_id
+service_id
+Update Date:
+21/11/2024
+Explanation
+Field linking to the ‘routes’ file.
+Field linking to the ‘calendar’ file.
+Page 5 of 24National Authority for
+Public Transport
+GTFS - Developer Information
+Field name
+trip_id
+trip_headsign
+direction_id
+shape_id
+Explanation
+Running number (unique). Field links to ‘stop_times’ file.
+For your attention:
+1. For the same trip that repeats itself on each Sunday-
+Thursday, this field is the same for the same time on all
+days.
+2. The dates on which the trip takes place should be taken
+from ‘calendar’ file which lists the days of the line and its
+date range.
+3. It should be noted that the trip_id field in this file is a
+running number only. The date field structure
+(xxxx_ddmmyy) is meaningless to the user in the files, but
+is intended to create a unique field only.
+4. It should also be emphasized that this field does not
+reflect the actual "trip ID" of the public transport operators
+in Israel. The information for the "trip ID" - the exact day of
+the week and hour of day, is detailed in the reference file
+found in the package: ‘TripToDate’.
+For the end stations of the line, besides the name of the
+official station appearing in the signs, there is also a
+destination station for publication, which is an intuitive
+name for the passenger. For example, when a station
+whose official name is "‫קניונשוק‬/‫"אגריפס‬, appears on the
+line as the final destination of the line, the name of the
+destination station for publication will be "‫יהודה‬ ‫מחנה‬ ‫"שוק‬.
+In this field, where the locality of origin and destination are
+the same - the value in this field will be the name of the
+destination station for publication. In cases where the
+locality of origin and destination locality of the line are
+different, the name of the destination city will be added to
+the name of the target station for publication, as well as
+the name of the destination city_ (bottom line) and the
+destination station name of the line.
+For Israel Railways trips, this field contain train number.
+The direction of trip can be 0 or 1, in this field we make the
+following values:
+0 = 1 or 3 (rounds) in MOT licensing system (forth)
+1 = 2 on MOT licensing system (back)
+Field linking to a ‘shapes’ file (this field can sometimes
+remain blank).
+For Israel Railways trips, this field is empty.
+As at GTFS reference.
+wheelchair_accessible
+The field is included starts from 25/11/2024
+Update Date:
+21/11/2024
+Page 6 of 24National Authority for
+Public Transport
+GTFS - Developer Information
+2.7 Explanation of calendar file
+2.7.1
+The file displays the line activity by date. When a value in a line
+(station list or schedule) changes, the service_id changes to a new
+record with the appropriate dates.
+2.7.2
+As long as the line behaves in the same way within the date range
+there will be one row.
+2.7.3
+As soon as there is a change in the schedule of the line, a new row
+will be added for a given day or date.
+2.7.4
+The fields in the file are shown in the following table (see also
+https://gtfs.org/documentation/schedule/reference/#calendartxt ) :
+Field name
+service_id
+Explanation
+Running number (unique). Field linking to the ‘trips’ file.
+0 - Not active on this day
+1 - Active on this day
+Same as above.
+Same as above.
+Same as above.
+Same as above.
+Same as above.
+Same as above.
+Start date of record activity The format is a requirement of
+Google: Format: YYYYMMDD.
+Meaning start_date is the start date of the record - if the
+calendar date creation date starts in the middle of the record
+date range, the date "is cut off" and starts on the same day as
+the calendar file creation.
+Example: If record dates are 10/1-15/1 and the file creation
+date is 12/1 - the starting date will be 12/1.
+Until the record activity date.
+Format: YYYYMMDD
+sunday
+monday
+tuesday
+wednesday
+thursday
+friday
+saturday
+start_date
+end_date
+2.7.5
+Example: Throughout the period, the line behaves in the same
+manner (same schedule) for the days Sunday - Thursday and another
+schedule for Friday, and is not active on Saturday so it has two lines.
+(If there was another schedule for the line on Saturday there was
+another row) If in the same date range there was an event in which
+the schedule was different, rows were added accordingly.
+Update Date:
+21/11/2024
+Page 7 of 24National Authority for
+Public Transport
+GTFS - Developer Information
+service_id sunday monday tuesday wednesday thursday friday saturdaystart_date end_date
+139839111110020120205 20120216
+139840000001020120205 20120216
+2.8 Explanation of stop_times file
+2.8.1
+The file contains the trip schedule, and the sequence of stops on the
+route.
+2.8.2
+The fields in the file are shown in the following table (see also
+https://gtfs.org/documentation/schedule/reference/#stop_timestxt ):
+Field name
+trip_id
+Explanation
+Field linking to the ‘trips’ file
+Arrival time to a stop defined by `stop_id`.
+A trip that begins before midnight and continues after
+midnight - all of its station's arrival times will appear on the
+arrival_time
+same calendar day it began, and can have values above
+"24:00:00".
+A trip that starts after midnight is defined in the next calendar
+day.
+Departure time to a stop defined by `stop_id`
+The fields: `departure_time` and `arrival_time` are the same
+departure_time
+unless there is regular break at the stop (e.g for letting the
+driver and passengers to get down and rest for some
+minutes) or for Israel Railways.
+stop_id
+Link `stop_id` at `stops` table.
+Displays the sequence (order) of the stops on the line, starts
+stop_sequence
+from a value of 1.
+Displays activity at the stop:
+0 = Pickup (allowed to pick up passengers at this stop)
+pickup_type
+1 = Drop off only (no pickup at this stop)
+Other values in the GTFS reference are not supported.
+Displays activity at the station:
+0 = Drop off (allowed to drop off passengers at this station)
+drop_off_type
+1 = Pickup Only (No drop off at this station)
+Other values in the GTFS reference are not supported.
+Distance from the origin stop.
+shape_dist_traveled
+For Israel Railways trips, this field is empty.
+2.9 Explanation of stops file
+2.9.1
+Update Date:
+The file contains the infrastructure of all stations in Israel.
+21/11/2024
+Page 8 of 24National Authority for
+Public Transport
+GTFS - Developer Information
+2.9.2
+The fields in the file are shown in the following table (see also
+https://gtfs.org/documentation/schedule/reference/#stopstxt ):
+Field name
+stop_id
+stop_code
+stop_name
+stop_desc
+stop_lat
+stop_lon
+location_type
+parent_station
+zone_id
+Explanation
+Running number of the stop in the MOT licensing system.
+Field linking to ‘stop_times’ file
+Stop code.
+The number of the stop that appears on the station yellow
+signs ("505 ‫שלט‬").
+Stop name.
+Stop description: Street: @Street + @House number City:
+@City platform: @Platform floor: @Floor. Note: All words of
+the description will always appear, even if there is no value
+(the title will appear without content).
+For Israel Railways stops, this field is empty.
+Coordinate latitude of location of the stop, at WGS 84
+coordinates.
+Coordinate longitude of location of the stop, at WGS 84
+coordinates.
+Values are passed:
+1 = if it is a central station (“‫מרכזית‬ ‫)”תחנה‬.
+0 = if this is a regular stop (whether it is a regular stop or a
+platform within station).
+Other values in the GTFS reference are not supported.
+This field can have 3 modes:
+1. regular stop, not in a central station: no value will be
+transferred.
+2. stop which is platform within central bus station: the value
+shall be transferred: stop_id of the central bus station on
+which the platform is located.
+Highlight: the stop_id to which the link should be placed, must
+have location_type = 1 (central station).
+3. Central Station: no value will be transferred in this field.
+Associate the station within a tariff zone.
+The field is linked to `origin_id`, `destination_id` fields in the
+‘fare_rules’ file.
+For Israel Railways stops, this field is empty.
+2.10 Explanation of shapes file
+2.10.1 The file contains the route shape points by latitude and longitude, and
+with the information in the file you can view the shape of route on a
+map.
+2.10.2 There are no shapes for Israel Railway routes.
+Update Date:
+21/11/2024
+Page 9 of 24National Authority for
+Public Transport
+GTFS - Developer Information
+2.10.3 The fields in the file are shown in the following table (see also
+https://gtfs.org/documentation/schedule/reference/#shapestxt ):
+Field name
+shape_id
+shape_pt_lat
+shape_pt_lon
+Explanation
+Field links to ‘trips’ file.
+Coordinate latitude, at WGS 84 coordinates
+Coordinate longitude, at WGS 84 coordinates
+Associates the latitude and longitude of a shape point with its
+shape_pt_sequence sequence order along the shape.
+The first points get a value of 1.
+2.11 Explanation of fare_rules
+2.11.1 The files: fare_rules, fare_attributes allow you to locate the single ride
+fare (“‫בודדת‬ ‫נסיעה‬ ‫מחיר‬”) from each source stop (“‫עליה‬ ‫)”תחנת‬ to each
+destination station (“‫ירידה‬ ‫)”תחנה‬ of the active lines at the same time.
+The fare_rules file includes only the codes within the date range of the
+information in the GTFS files
+2.11.2 The files contain the single ride fare of all public transport operators.
+2.11.3 In case that route has a single fare: route_id will have a value, and
+origin_id, destination_id will be empty.
+2.11.4 In case that route has more than one fare: route_id will empty, and
+origin_id, destination_id will have value. The reason is that after the
+tariff reform of August 2022 the fare between 2 stops is the same for
+all routes.
+2.11.5 The fields in the file are shown in the following table (see also
+https://gtfs.org/documentation/schedule/reference/#fare_rulestxt ):
+Field name
+fare_id
+route_id
+origin_id
+destination_id
+contains_id
+Update Date:
+21/11/2024
+Explanation
+Fare code, field linking to ‘fare_attributes’ file.
+Route id, field linking to ‘routes’ file.
+Origin zone code linked to station zone code field: zone_id
+field in the ‘stops’ file.
+Destination zone code linked to station zone code field:
+zone_id field in the ‘stops’ file.
+Optional field - the field is passed with a null value.
+Page 10 of 24National Authority for
+Public Transport
+GTFS - Developer Information
+2.12 Explanation of fare_attributes file
+2.12.1 The file contains the individual fare.
+2.12.2 The fields in the file are shown in the following table (see also
+https://gtfs.org/documentation/schedule/reference/#fare_attributestxt
+):
+Field name
+fare_id
+price
+currency_type
+payment_method
+Transfers
+agency_id
+transfer_duration
+Explanation
+Fare code, field linking to the fare_rules table.
+Price at new Israel Shekel ₪
+ILS
+Form of payment - fixed value = 0
+(Meaning = payment for pickup).
+Transition between buses. Fixed value = 0, meaning no
+transition.
+Optional field - currently not passed, the field is passed with a
+null value.
+Optional field - currently not passed, the field is passed with a
+null value.
+2.13 Explanation of translations file
+2.13.1 The file includes translation of station names into English and Arabic.
+2.13.2 For this table, the fields is not compatible with the GTFS reference,
+but as shown in the following table:
+Field name
+trans_id
+lang
+translation
+Update Date:
+21/11/2024
+Explanation
+For each stop that has an English translation, the name of the
+stop appears.
+For each rail line appears a chaining of:
+Stop name + destination city name + destination stop name +
+destination city name.
+EN = English line
+HE = Hebrew line
+AR = Arabic line
+The English or Arabic translation or the Hebrew text
+respectively.
+Page 11 of 24National Authority for
+Public Transport
+GTFS - Developer Information
+3 Specify the files in ClusterToLine package
+3.1 The package includes a single file named ClusterToLine that shows the
+association of the line to the cluster (“‫)”אשכול‬.
+3.2 Public transport lines are grouped in clusters according to geographic regions,
+and/or according to MOT tenders.
+3.3 The file contains the data available in the MOT licensing system, as of the
+issue date. Therefore, in cases where a line passes from cluster to cluster, it
+may appear for a certain time period twice, once to the outgoing cluster and
+once to the new cluster.
+3.4 The fields in the file are shown in the following table:
+Field name
+OperatorName
+OfficeLineId
+OperatorLineId
+ClusterName
+FromDate
+ToDate
+ClusterId
+LineType
+LineTypeDesc
+ClusterSubDesc
+Update Date:
+21/11/2024
+Explanation
+Operator name.
+Line code.
+Field linking to the ‘routes’ file, field: route_desc.
+Explanation:
+The field: route_desc, contains the following: -mect-line-
+direction-alternative.
+The first 5 digits of the line cut must be taken from the string.
+Line numer.
+The name of the cluster to which the line belongs.
+From date - Displays from the date the line belongs to the
+cluster.
+To date - usually up to 2200, unless the line goes to another
+cluster.
+Cluster code.
+Line Type code.
+Description Line type
+"‫"עירוני‬- Urban.
+"‫"בינעירוני‬ – Intercity.
+"‫"אזורי‬ – Regional.
+A sub-cluster name to which the line is associated.
+Page 12 of 24National Authority for
+Public Transport
+GTFS - Developer Information
+4 Specify the files in TripIdToDate package
+4.1 The package includes a single file called `TripIdToDate` that allows to
+associate a single `TripId` according to the day of the week of the trip.
+4.2 There are 2 kinds of "trip id" in the static files:
+4.2.1
+`trip_id` – this field comply to GTFS reference an is used just to link
+between `trips` and `stop_times` tables.
+4.2.2
+TripId – a unique number for each trip in a day, so each trip in a day
+gets a different TripID value. The TripId is used for many systems to
+identify a specific trip in a day.
+4.3 Usually, the use a specific value of TripId can be repeated at same week day,
+over weeks, but not in the same week. However, this is not mandatory, and
+the developer should find `TripId` values according to the `TripIdToDate`
+table.
+4.4 The file is under "28 hours in a day", from 4:00 to 03:59 in the next day. For
+example: a trip at 1:00 AM in the night between Sunday and Monday should
+be treated as it is on Sunday, for matching with FromDate, ToDate,
+DayInWeek fields.
+4.5 Values after midnight are continued as 24:00 till 27:59, so, for example 1 AM
+is 25:00.
+4.6 Example: to find all TripID from Sunday 17/11/2024 at 04:00 till 18/11/2024 at
+03:59, filter the `TripIdToDate` table with all the following conditions:
+4.6.1DayInWeek == 1
+4.6.217/11/2024 >= FromDate
+4.6.317/11/2024 <= ToDate
+4.7 To match between a `TripId` of a trip to a trip defined at `trips`, `calendar`,
+`stops_times` use the following conditions:
+4.7.1
+TripIdToDate,DepartureTime == stop_time.departure_time be aware
+that `trips`, `calendar`, `stops_times` are describing trips for a "day"
+Update Date:
+21/11/2024
+Page 13 of 24National Authority for
+Public Transport
+GTFS - Developer Information
+between midnights while `TripIdToDate` is for a "day" between 4:00
+AM till 3:59 AM in the next day.
+4.7.2
+TripIdToDate.LineDetailRecordId == trips.route_id
+4.8 There can be more than one `TripId` value for same day and
+`LineDetailRecordId` and in these cases it means that more that one bus are
+scheduled to depart for a certain route at a certain time.
+4.9 The `TripId` filed links to `DatedVehicleJourney` at the SIRI-SM feed.
+4.10 The file does not include `TripId` values for Israel Railways.
+4.11 The fields in the file are shown in the following table:
+Field name
+LineDetailRecordId
+OfficeLineId
+Direction
+LineAlternativeExplanation
+FromDateFrom date
+TodateTo date
+TripIdUnique Trip ID
+Line ID
+Direction
+Alternative
+DayInWeekDay in the week
+DepartureTimeTrip time
+Update Date:
+21/11/2024
+Comment
+Equal to `route_id` field at ‘trips’ table
+‫קו‬ ‫מק"ט‬
+‫כיוון‬
+‫חלופה‬
+The format is like:
+22/10/2024 00:00:00
+The format is like:
+27/10/2024 00:00:00
+1: Sunday
+2: Monday
+..
+7: Saturday
+The values are from 04:00 to 27:59
+Page 14 of 24National Authority for
+Public Transport
+GTFS - Developer Information
+5 Specify the files in `Tariff` package
+5.1 The package is not relevant anymore.
+6 Specify the files in `zones` package
+6.1 The package is not relevant anymore.
+Update Date:
+21/11/2024
+Page 15 of 24National Authority for
+Public Transport
+GTFS - Developer Information
+Specify the files in tariff_2022 package
+6.2 The package includes three files:
+6.2.1
+tariff_2022.csv: Describes the rates of trip according to travel distance
+and validity zoned.
+6.2.2
+profiles_2022.csv: Describes the discounts for each profile (" ‫לפי‬ ‫הנחה‬
+‫)"פרופילים‬
+6.2.3
+zones_2022.kml Describes the zones. Links to tariff_2022.csv.
+6.3 Explanation of tariff_2022.csv file
+6.3.1
+The developer should screen rows in the file, and check that all
+conditions are met for the requested trip.
+6.3.2The price is the lowest one among rows that comply to all conditions.
+6.3.3The flow should be done separately for each of one single trip, daily
+pass and monthly pass.
+6.3.4The zones are according to zones_2022.kml.
+6.3.5To comply with the zones criteria, origin zone should reside in the
+FromZones field, and destination zone should reside in the ToZones
+field.
+6.3.6
+In order to match a station to a zone, the developer should match the
+station location with zones_2022.kml. No allocation data between
+stations and zones is provided.
+6.3.7
+The fields in the tariff_2022.csv file is shown in the following table:
+Field name
+PredefinedCode
+Explanation
+Pre-defined code
+Description of pre-
+PredefinedCodeDesc
+defined code.
+ETT
+ETTDesc
+FareCode
+FareCodeDesc
+OutterRing
+Update Date:
+21/11/2024
+Outter ring
+Comment
+‫שיתוף‬ ‫קוד‬
+‫השיתוף‬ ‫קוד‬ ‫של‬ ‫ר‬‫תיאו‬
+‫קו‬ ‫הרב‬ ‫לכרטיס‬ ‫שנכתב‬ ‫כפי‬ ETT ‫קוד‬
+‫קו‬ ‫הרב‬ ‫לכרטיס‬ ‫שנכתב‬ ‫כפי‬ ETT ‫קוד‬ ‫תאור‬
+‫כרטיס‬ ‫קוד‬
+‫כרטיס‬ ‫קוד‬ ‫ר‬‫תיאו‬
+Valid only if the maximum travel
+distance, at Kilometers, is lower that this
+value.
+Page 16 of 24National Authority for
+Public Transport
+GTFS - Developer Information
+Field name
+Explanation
+Transportion
+Price
+PrePaid
+PostPaid
+FromDateFrom date
+ToDateTo date
+FromZones
+ToZones
+ColorCode
+ColorName
+Comment
+One of: Bus, Carmelit, Racbalit,
+LightRail, Train
+Price of single trip or daily\monthly pass
+Valid for payment with RavKav, just if
+the value of the field is 'true', else the
+value is 'false'.
+Valid for payment with app, just if the
+value of the field is 'true', else the value
+is 'false'.
+Valid just if the travel date is greater
+than this field
+Valid just if the travel date is smaller
+than this field
+Valid if origin zone at the zones list.
+The zones are separated by ;
+The zones are according to
+zones_2022.kml
+Valid if destination zone at the zones
+list.
+The zones are separated by ;
+The zones are according to
+zones_2022.kml
+Color code that is associated to the
+distance, as HTML RGB like #ffd800
+Color name that is associated to the
+distance
+6.4 Explanation of profiles_2022.csv file
+6.4.1
+After getting the requested fare from tariff_2022.csv, the discount is
+calculated with the data from profiles_2022.csv.
+6.4.2
+The developer should screen rows in the file, that all conditions are
+met for the requested trip.
+6.4.3
+The discount is defined as percentage. Value of 100 means no charge
+for trip.
+6.4.4
+Black cell means that there is no discount.
+Field name
+ProfileCode
+ProfileName
+FreeCertificate
+Update Date:
+21/11/2024
+Explanation
+Comment
+.‫פרופיל‬ ‫קוד‬
+.‫הפרופיל‬ ‫שם‬
+.‫חופשי‬ ‫נסיעה‬ ‫לתעודת‬ ‫זכאי‬ ‫הפרופיל‬ ‫האם‬
+Page 17 of 24National Authority for
+Public Transport
+GTFS - Developer Information
+Field name
+Explanation
+SingleRideDiscount
+StoredValue
+DailyDiscount
+MonthlyDiscount
+SemesterDiscount
+YearlyDiscount
+PrePaid
+PostPaid
+FromDateFrom date
+ToDateTo date
+Update Date:
+21/11/2024
+Comment
+.‫בודדת‬ ‫לנסיעה‬ ‫הנחה‬
+‫צבור‬ ‫לערך‬ ‫הנחה‬
+‫תשלום‬ ‫תקרת‬ ‫או‬ ,‫יומי‬ ‫חופשי‬ ‫לחוזה‬ ‫הנחה‬
+.‫יומית‬
+‫תשלום‬ ‫תקרת‬ ‫או‬ ,‫חודשי‬ ‫חופשי‬ ‫לחוזה‬ ‫הנחה‬
+.‫חודשית‬
+.‫סמסטריאלי‬ ‫לחוזה‬ ‫הנחה‬
+.‫שנתי‬ ‫לחוזה‬ ‫הנחה‬
+Valid for payment with RavKav, just if
+the value of the field is 'true', else the
+value is 'false'.
+Valid for payment with app, just if the
+value of the field is 'true', else the value
+is 'false'.
+Valid just if the travel date is greater
+than this field
+Valid just if the travel date is smaller
+than this field
+Page 18 of 24National Authority for
+Public Transport
+GTFS - Developer Information
+7 Specify the files in zones_2022 package
+7.1 Explanation of zones_2022.kml file
+7.1.1The files contain the polygons of tariff reform of August 2022.
+7.1.2The zone id is at the 'zone' field.
+7.1.3The zone_id is linked to the fields FromZones and ToZones at
+tariff_reform_2022.csv
+Update Date:
+21/11/2024
+Page 19 of 24National Authority for
+Public Transport
+GTFS - Developer Information
+8 Specify the files in ChargingRavKav package
+8.1 The package contains files that define parameters for RavKav charging
+stations ("‫קו‬ ‫רב‬ ‫לטעינת‬ ‫עמדות‬"), or "Al-Hakav" stations ("'‫הקו‬ ‫'על‬ ‫השירות‬ ‫)"עמדות‬.
+The information includes details about: the location of the office, its address,
+opening hours and more.
+8.2 The package replaces the data at https://data.gov.il/dataset/alhakav that will
+not be updated anymore.
+8.3 The file type is a text file, with .csv extension.
+8.4 The delimiter of the file is colon ("‫)"פסיק‬.
+8.5 In case a field contains sub-field, the delimiter of the sub-fields is semi-colon
+("‫פסיק‬ ‫ה‬‫נקוד‬").
+8.6 The file encoding is UTF-8.
+8.7 The name of each file is XXX-ChrgingRavKav.csv. (XXX=company name)
+8.8 The fields in the file are shown in the following table:
+Mandatory Valid
+values
+String
+Field name
+NameOfStationHeb
+NameOfStationEng
+NameOfStationArbYes
+No
+No
+AgencyHebNo
+String
+String
+String
+String
+AgencyEng
+Update Date:
+No
+21/11/2024
+Explanation
+Name of the station in Hebrew.
+The name can be after the shop name, like:
+"‫הפיצוחים‬ ‫"עולם‬,"‫גבירול‬ ‫אבן‬ ‫יודה‬ ‫"סופר‬.
+Name of the station in English.
+Name of the station in Arabic.
+Name, in Hebrew, of the public transportation
+operator of the station (like: "‫"אגד‬,"‫)"דן‬.
+The name should match the name at the
+'agency_name' field in agency.txt.
+The field can be the owner of the station, like:
+"‫"כספונט‬,"‫אופן‬ ‫"תל‬,"‫"קופיקס‬,"‫פארם‬ ‫"סופר‬," ‫דואר‬
+‫"ישראל‬.
+Name, in English, of the public transportation
+operator of the station.
+The field may be empty if the station is not
+operated by a public transportation operator.
+Page 20 of 24National Authority for
+Public Transport
+GTFS - Developer Information
+Mandatory Valid
+values
+String
+Field name
+AgencyArbNo
+ChargingCompanyHeb
+ChargingCompanyEng
+ChargingCompanyArbNo
+No
+No
+CityHebYes
+String
+String
+String
+String
+String
+CityEng
+No
+String
+CityArb
+No
+String
+AddressHeb
+Yes
+String
+AddressEng
+No
+String
+AddressArb
+No
+String
+PlaceHeb
+No
+String
+PlaceEng
+No
+String
+PlaceArb
+No
+String
+PhoneNumberNo
+LatitudeYes
+LatitudeYes
+Decimal
+Decimal
+Boolean
+AcceptCash
+Update Date:
+Yes
+21/11/2024
+Explanation
+Name, in Arabic, of the public transportation
+operator of the station.
+The field may be empty if the station is not
+operated by a public transportation operator.
+The name, in Hebrew, of the charging company,
+like: "‫אונליין‬ ‫קו‬ ‫"רב‬,"‫"הופאון‬, "‫הדואר‬ ‫"בנק‬.
+The name, in English, of the charging company.
+The name, in Arabic, of the charging company.
+The name of the city, in Hebrew, where the
+station is located.
+The name of the city, in English, where the
+station is located.
+The name of the city, in Arabic, where the
+station is located.
+The address, in Hebrew, where the station is
+located, like: "50 ;‫גבירול‬ ‫אבן‬".
+The address, in English, where the station is
+located.
+The address, in Arabic, where the station is
+located.
+A description, in Hebrew of the place where the
+station is located.
+Like: "6 ‫קומה‬","‫צפון‬ ‫לכיוון‬ ‫ירקונים‬ ‫"בצומת‬," ‫ליד‬
+‫"המודיעין‬.
+A description, in Hebrew of the place where the
+station is located.
+A description, in Hebrew of the place where the
+station is located.
+A phone number, one or many, that is relevant
+to the station. Several phone numbers are
+separated by a semi-colon (";").
+For one phone number, the format is:
+"039566645".
+For many phone numbers, the format is
+"039566645;0525664236".
+Coordinate latitude of location of the station, at
+WGS 84 coordinates, like "31.841236".
+Coordinate longitude of location of the stop, at
+WGS 84 coordinates, like "35.250285".
+true: the station accept cash for charging the
+RavKav.
+false: the station does not accept cash for
+charging the RavKav.
+Page 21 of 24National Authority for
+Public Transport
+GTFS - Developer Information
+Mandatory Valid
+values
+Boolean
+Field name
+AcceptCreditCard
+Yes
+Boolean
+Manned
+Yes
+Boolean
+RavKavServices
+Yes
+Boolean
+AnonymousCard
+Yes
+Boolean
+Accessible
+No
+List of
+hours
+range
+SundayHours
+No
+MondayHours
+No
+TuesdayHours
+WednesdayHours
+ThursdayHours
+FridayHours
+No
+No
+No
+SaturdayHours
+Update Date:
+No
+No
+21/11/2024
+List of
+hours
+range
+List of
+hours
+range
+List of
+hours
+range
+List of
+hours
+range
+List of
+hours
+range
+List of
+hours
+range
+Explanation
+true: the station accept credit card for charging
+the RavKav.
+false: the station does not accept credit card for
+charging the RavKav.
+true: there is a person that charges the RavKav
+for the passenger, or at least there is a person
+near an automated machine.
+false: the station is an automated machine,
+without any personal assistance.
+true: the station has a capability to issue a new
+RavKav ("‫כרטיס‬ ‫של‬ ‫ושחזור‬ ‫הנפקה‬ ‫)"יכולת‬.
+false: the station does not have a capability to
+issue a new RavKav.
+true: the station has a capability to sell
+anonymous RavKav.
+false: the station does not have a capability to
+sell anonymous RavKav.
+true: the station is accessible for wheel chair.
+false: the station is not accessible for wheel
+chair.
+empty if the information is unknown.
+The opening hours range, one or many.
+For one opening hours range, the format is:
+"08:00-17:00".
+For many opening hours ranges, the format is
+"08:00-13:00;15:00-19:00".
+Same as definition as SundayHours field, but for
+Monday
+Same as definition as SundayHours field, but for
+Tuesday
+Same as definition as SundayHours field, but for
+Wednesday
+Same as definition as SundayHours field, but for
+Thursday
+Same as definition as SundayHours field, but for
+Friday and holiday evening.
+Same as definition as SundayHours field, but for
+Saturday
+Page 22 of 24National Authority for
+Public Transport
+GTFS - Developer Information
+Field name
+NotesHeb
+NotesEng
+NotesArb
+Update Date:
+Mandatory Valid
+values
+String
+No
+No
+No
+21/11/2024
+String
+String
+Explanation
+Any other relevant information, in Hebrew, like:
+" ‫בשאר‬ ‫עצמי‬ ‫בשירות‬ ‫ופעיל‬ ‫הפתיחה‬ ‫בשעות‬ ‫מאויש‬
+‫"היום‬,"‫בלבד‬ ‫ראשית‬ ‫בקופה‬ ‫"טעינה‬.
+Any other information, in English.
+Any other information, in Arabic.
+Page 23 of 24National Authority for
+Public Transport
+GTFS - Developer Information
+9 Questions and Answers
+9.1 Question: I cannot extract properly the information in Hebrew from the files.
+Answer: all tables files (*.txt, *.csv) are at UTF-8 format with BOM.
+See https://en.wikipedia.org/wiki/Byte_order_mark#UTF-8
+Update Date:
+21/11/2024
+Page 24 of 24

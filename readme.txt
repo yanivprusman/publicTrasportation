@@ -1,4 +1,5 @@
-view results of publicTransportation: https://localhost/publicTransportation.php?format=text
+view results of publicTransportation: 
+    https://localhost/publicTransportation.php?format=text
 output sample:
     Monitored Vehicles:
     Line:160
