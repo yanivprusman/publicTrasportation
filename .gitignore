@@ -1,6 +1,7 @@
 # Dependencies
 node_modules/
 vendor/
+frontend/public-transportation/node_modules/
 
 # Environment variables
 .env
@@ -8,6 +9,7 @@ vendor/
 .env.development.local
 .env.test.local
 .env.production.local
+backend/php-api/config.php
 
 # Logs
 npm-debug.log*
@@ -27,6 +29,7 @@ storage/*.key
 gtfs/
 *.txt
 *.zip
+*.pdf
 
 # IDEs
 .idea/
@@ -37,8 +40,17 @@ gtfs/
 # MacOS
 .DS_Store
 
-# Temporary files
-.html
+# Windows
+Thumbs.db
 
-# PHP Config
-backend/php-api/config.php
+# Temporary/Junk files
+.html
+out.txt
+prompt.txt
+*.bak
+*.tmp
+
+# Legacy/Backup directories (keep locally but don't commit)
+old_react/
+old_scripts/
+react-public-transportation/
