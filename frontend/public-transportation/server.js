@@ -3,7 +3,7 @@ const express = require('express');
 const axios = require('axios');
 const cors = require('cors'); // Import the CORS middleware
 const app = express();
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
 
 const path = require('path');
 
@@ -35,7 +35,7 @@ app.get('/api/directions', async (req, res) => {
   }
 });
 
-app.get('*', (req, res) => {
+app.get(/(.*)/, (req, res) => {
   res.sendFile(path.join(__dirname, 'build', 'index.html'));
 });
 
