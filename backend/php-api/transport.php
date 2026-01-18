@@ -25,7 +25,15 @@ function safeLog($message)
 
 $host = '185.159.74.218';
 $username = 'root';
-$apiKey = 'YP719171';
+$configFile = __DIR__ . '/config.php';
+if (file_exists($configFile)) {
+    $config = require $configFile;
+    $apiKey = isset($config['mot_api_key']) ? $config['mot_api_key'] : 'YP719171';
+} else {
+    // Fallback if config.php doesn't exist (e.g. initial setup)
+    // In production, you should ensure config.php exists
+    $apiKey = getenv('MOT_API_KEY') ?: 'YP719171';
+}
 $baseUrl = 'http://moran.mot.gov.il:110/Channels/HTTPChannel/SmQuery/2.8/json';
 
 // Get parameters
@@ -63,7 +71,7 @@ try {
         }
 
         safeLog('Fetching from local proxy: ' . $localUrl);
-        
+
         // Add Host header because MOT server rejects localhost Host header
         $opts = [
             'http' => [

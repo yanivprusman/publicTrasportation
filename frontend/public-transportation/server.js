@@ -1,3 +1,4 @@
+require('dotenv').config({ path: __dirname + '/../../.env' }); // Load from root .env
 const express = require('express');
 const axios = require('axios');
 const cors = require('cors'); // Import the CORS middleware
@@ -9,7 +10,7 @@ app.use(express.json());
 
 app.get('/api/directions', async (req, res) => {
   const { start, end } = req.query;
-  const apiKey = 'YOUR_API_KEY'; // Replace with your actual API key
+  const apiKey = process.env.ORS_API_KEY; // Loaded from .env
 
   try {
     const response = await axios.get(

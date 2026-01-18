@@ -1,1 +1,44 @@
-/react/public-transportation/node_modulesgtfs/israel-public-transportation/
+# Dependencies
+node_modules/
+vendor/
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+logs/
+*.log
+
+# Build outputs
+build/
+dist/
+public/hot/
+public/storage
+storage/*.key
+
+# GTFS Data
+gtfs/
+*.txt
+*.zip
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# MacOS
+.DS_Store
+
+# Temporary files
+.html
+
+# PHP Config
+backend/php-api/config.php
