@@ -5,8 +5,13 @@ const cors = require('cors'); // Import the CORS middleware
 const app = express();
 const PORT = 5000;
 
+const path = require('path');
+
 app.use(cors()); // Enable CORS for all routes
 app.use(express.json());
+
+// Serve static files from the build directory
+app.use(express.static(path.join(__dirname, 'build')));
 
 app.get('/api/directions', async (req, res) => {
   const { start, end } = req.query;
@@ -28,6 +33,10 @@ app.get('/api/directions', async (req, res) => {
     console.error('Error fetching directions:', error.message);
     res.status(error.response?.status || 500).json({ error: 'Failed to fetch directions' });
   }
+});
+
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'build', 'index.html'));
 });
 
 app.listen(PORT, () => {
