@@ -35,6 +35,20 @@ app.get('/api/directions', async (req, res) => {
   }
 });
 
+// Proxy transport.php requests to nginx
+app.get('/transport.php', async (req, res) => {
+  try {
+    const response = await axios.get(`http://localhost/transport.php`, {
+      params: req.query
+    });
+    res.json(response.data);
+  } catch (error) {
+    console.error('Error proxying transport.php:', error.message);
+    res.status(error.response?.status || 500).json({ error: 'Failed to fetch transport data' });
+  }
+});
+
+// SPA catch-all route - must be last
 app.get(/(.*)/, (req, res) => {
   res.sendFile(path.join(__dirname, 'build', 'index.html'));
 });
