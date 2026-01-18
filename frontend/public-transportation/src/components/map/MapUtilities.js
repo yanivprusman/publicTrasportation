@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useMapEvents, useMap } from 'react-leaflet';
 import axios from 'axios';
 
@@ -11,6 +11,102 @@ export function TrackMapMovement({ setMapCenter }) {
     },
   });
   return null;
+}
+
+export function MapContextMenu({ onSetStart, onSetDestination }) {
+  const [contextMenu, setContextMenu] = useState(null);
+
+  useMapEvents({
+    contextmenu: (e) => {
+      e.originalEvent.preventDefault();
+      setContextMenu({
+        lat: e.latlng.lat,
+        lng: e.latlng.lng,
+        x: e.originalEvent.clientX,
+        y: e.originalEvent.clientY
+      });
+    },
+    click: () => {
+      if (contextMenu) setContextMenu(null);
+    },
+    dragstart: () => {
+      if (contextMenu) setContextMenu(null);
+    },
+    zoomstart: () => {
+      if (contextMenu) setContextMenu(null);
+    }
+  });
+
+  if (!contextMenu) return null;
+
+  const handleSetStart = () => {
+    onSetStart([contextMenu.lat, contextMenu.lng]);
+    setContextMenu(null);
+  };
+
+  const handleSetDestination = () => {
+    onSetDestination([contextMenu.lat, contextMenu.lng]);
+    setContextMenu(null);
+  };
+
+  return (
+    <div
+      className="map-context-menu"
+      style={{
+        position: 'fixed',
+        top: contextMenu.y,
+        left: contextMenu.x,
+        zIndex: 10000,
+        backgroundColor: 'white',
+        border: '1px solid #ccc',
+        borderRadius: '4px',
+        boxShadow: '0 2px 10px rgba(0,0,0,0.2)',
+        padding: '5px 0',
+        minWidth: '150px'
+      }}
+    >
+      <div
+        onClick={handleSetStart}
+        style={{
+          padding: '8px 15px',
+          cursor: 'pointer',
+          fontSize: '14px',
+          transition: 'background 0.2s'
+        }}
+        onMouseOver={(e) => e.target.style.backgroundColor = '#f0f0f0'}
+        onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}
+      >
+        🚩 Set as Start
+      </div>
+      <div
+        onClick={handleSetDestination}
+        style={{
+          padding: '8px 15px',
+          cursor: 'pointer',
+          fontSize: '14px',
+          transition: 'background 0.2s'
+        }}
+        onMouseOver={(e) => e.target.style.backgroundColor = '#f0f0f0'}
+        onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}
+      >
+        📍 Set as Destination
+      </div>
+      <div
+        onClick={() => setContextMenu(null)}
+        style={{
+          padding: '8px 15px',
+          borderTop: '1px solid #eee',
+          cursor: 'pointer',
+          fontSize: '14px',
+          color: '#666'
+        }}
+        onMouseOver={(e) => e.target.style.backgroundColor = '#f0f0f0'}
+        onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}
+      >
+        Cancel
+      </div>
+    </div>
+  );
 }
 
 export function UpdateMapView({ position }) {
@@ -44,8 +140,8 @@ export const findRoute = async (position, destination) => {
     console.log("Finding route from:", position, "to:", destination);
 
     // Validate input coordinates
-    if (!position || !position[0] || !position[1] || 
-        !destination || !destination[0] || !destination[1]) {
+    if (!position || !position[0] || !position[1] ||
+      !destination || !destination[0] || !destination[1]) {
       console.error("Invalid coordinates for routing:", { position, destination });
       return [position, destination]; // Return direct line as fallback
     }
@@ -68,7 +164,7 @@ export const findRoute = async (position, destination) => {
       console.log(`Found route with ${formattedRoute.length} points`);
       return formattedRoute;
     }
-    
+
     // If no route is found, create a simple straight line from position to destination
     console.log("No route found via API, creating direct line");
     return [

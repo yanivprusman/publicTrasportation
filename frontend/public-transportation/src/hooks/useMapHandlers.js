@@ -10,7 +10,7 @@ const useMapHandlers = (position, setPosition, destination, onDestinationSet, se
   const [searchError, setSearchError] = useState(null);
   const [positionAddress, setPositionAddress] = useState('');
   const [destinationAddress, setDestinationAddress] = useState('');
-  
+
   // Handle search input and query nominatim API
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;
@@ -31,24 +31,25 @@ const useMapHandlers = (position, setPosition, destination, onDestinationSet, se
     }
   };
 
-  // Set the starting point to the current map center
-  const handleSetStartPoint = () => {
-    if (mapCenter && Array.isArray(mapCenter) && mapCenter.length === 2) {
-      // Update position state with setPosition instead of modifying array directly
-      setPosition([mapCenter[0], mapCenter[1]]);
-      fetchAddress(mapCenter[0], mapCenter[1], setPositionAddress);
-      console.log("Starting position updated to:", mapCenter);
+  // Set the starting point (defaults to current map center if no coords provided)
+  const handleSetStartPoint = (coords) => {
+    const targetPoint = coords || mapCenter;
+    if (targetPoint && Array.isArray(targetPoint) && targetPoint.length === 2) {
+      setPosition([targetPoint[0], targetPoint[1]]);
+      fetchAddress(targetPoint[0], targetPoint[1], setPositionAddress);
+      console.log("Starting position updated to:", targetPoint);
     }
   };
 
-  // Set the destination to the current map center
-  const handleSetDestinationPoint = () => {
-    if (mapCenter && Array.isArray(mapCenter) && mapCenter.length === 2) {
-      console.log("Setting destination to map center:", mapCenter);
-      onDestinationSet(mapCenter);
-      fetchAddress(mapCenter[0], mapCenter[1], setDestinationAddress);
+  // Set the destination (defaults to current map center if no coords provided)
+  const handleSetDestinationPoint = (coords) => {
+    const targetPoint = coords || mapCenter;
+    if (targetPoint && Array.isArray(targetPoint) && targetPoint.length === 2) {
+      console.log("Setting destination to:", targetPoint);
+      onDestinationSet(targetPoint);
+      fetchAddress(targetPoint[0], targetPoint[1], setDestinationAddress);
     } else {
-      console.error("Invalid map center for destination:", mapCenter);
+      console.error("Invalid point for destination:", targetPoint);
     }
   };
 
@@ -62,7 +63,7 @@ const useMapHandlers = (position, setPosition, destination, onDestinationSet, se
   // Find a route between position and destination
   const handleFindRoute = async () => {
     console.log("Find route called with: position=", position, "destination=", destination);
-    
+
     if (!destination || !destination[0] || !destination[1]) {
       console.error("Missing or invalid destination:", destination);
       setSearchError('Please set a destination first.');
@@ -73,7 +74,7 @@ const useMapHandlers = (position, setPosition, destination, onDestinationSet, se
       setSearchError(null);
       // Explicitly use the current position, not map center
       const routeData = await findRoute(position, destination);
-      
+
       if (routeData) {
         console.log("Route data received:", routeData.length, "points");
         return routeData;

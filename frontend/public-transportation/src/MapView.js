@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import './App.css';
 import { MapContainer, TileLayer } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import { TrackMapMovement, UpdateMapView, fetchAddress } from './components/map/MapUtilities';
+import { TrackMapMovement, UpdateMapView, fetchAddress, MapContextMenu } from './components/map/MapUtilities';
 import { configureDefaultLeafletIcons } from './components/map/MapMarkers';
 import MapControls from './components/map/MapControls';
 import useMapHandlers from './hooks/useMapHandlers';
@@ -14,11 +14,11 @@ import MapControlPanel from './components/map/MapControlPanel';
 // Configure default Leaflet icons
 configureDefaultLeafletIcons();
 
-function MapView({ 
-  latitude, 
-  longitude, 
-  destination, 
-  onDestinationSet, 
+function MapView({
+  latitude,
+  longitude,
+  destination,
+  onDestinationSet,
   startingPoint,
   mapCenter: initialMapCenter,
   setMapCenter,
@@ -92,7 +92,7 @@ function MapView({
     if (calculateRoute && position && destination) {
       // Actually calculate the route using the position as starting point
       handleFindRouteClick();
-      
+
       // Let parent know we've processed the request
       if (onRouteCalculated) {
         onRouteCalculated();
@@ -133,13 +133,13 @@ function MapView({
   const handleShowMiddlePoint = async () => {
     try {
       setSearchError('Fetching Line 60 route data...');
-      
+
       // First approach: Use route shape points if available
       if (routeShape && routeShape.length > 0) {
         const middleIndex = Math.floor(routeShape.length / 2);
         const calculatedMiddlePoint = routeShape[middleIndex];
         setMiddlePoint(calculatedMiddlePoint);
-        
+
         // Log detailed information to console for debugging
         console.group("Line 60 Middle Point Information");
         console.log("Middle point coordinates:", calculatedMiddlePoint);
@@ -147,25 +147,25 @@ function MapView({
         console.log("Middle point index:", middleIndex);
         console.log("Method used: Route shape");
         console.groupEnd();
-        
+
         // Update map center to show the middle point
         setMapCenterLocal(calculatedMiddlePoint);
         return;
       }
-      
+
       // Second approach: Fetch stops data for Line 60
       const response = await fetch('/api/stops-data.php?line=60');
       const data = await response.json();
-      
+
       if (data.stops && data.stops.length > 0) {
         // Get the middle stop from the stops array
         const stops = data.stops;
         const middleIndex = Math.floor(stops.length / 2);
         const middleStop = stops[middleIndex];
         const calculatedMiddlePoint = [middleStop.lat, middleStop.lon];
-        
+
         setMiddlePoint(calculatedMiddlePoint);
-        
+
         // Log detailed information about the middle stop to console
         console.group("Line 60 Middle Stop Information");
         console.log("Middle stop:", middleStop.name);
@@ -174,36 +174,36 @@ function MapView({
         console.log("Stop sequence:", middleStop.sequence);
         console.log("Position in route:", `${middleIndex + 1} of ${stops.length} stops`);
         console.log("Method used: Stops data");
-        
+
         // Log all stops for detailed analysis
         console.log("All stops on route:", stops);
         console.groupEnd();
-        
+
         // Update map center to show the middle stop
         setMapCenterLocal(calculatedMiddlePoint);
       } else {
         // Third approach: Hardcode known middle points for Line 60
         const hardcodedMiddlePoint = [32.0729, 34.8046]; // Middle point for Line 60 in Ramat Gan
         setMiddlePoint(hardcodedMiddlePoint);
-        
+
         console.group("Line 60 Middle Point Information");
         console.log("Middle point coordinates (hardcoded):", hardcodedMiddlePoint);
         console.log("Method used: Hardcoded coordinates");
         console.log("Note: This is an approximation as API data was unavailable");
         console.groupEnd();
-        
+
         // Update map center to show the hardcoded middle point
         setMapCenterLocal(hardcodedMiddlePoint);
       }
     } catch (error) {
       console.error('Error finding middle point:', error);
       setSearchError('Error finding middle point');
-      
+
       // Still provide some fallback coordinates in case of error
       const fallbackPoint = [32.0729, 34.8046]; // Known approximate middle point for Line 60
       setMiddlePoint(fallbackPoint);
       setMapCenterLocal(fallbackPoint);
-      
+
       setTimeout(() => setSearchError(null), 3000);
     }
   };
@@ -222,7 +222,7 @@ function MapView({
     }
 
     // Filter out any points that are clearly outside Israel
-    const validPoints = routePoints.filter(point => 
+    const validPoints = routePoints.filter(point =>
       isInIsrael(point[0], point[1])
     );
 
@@ -238,40 +238,40 @@ function MapView({
     // Calculate the cumulative distances along the route
     let totalDistance = 0;
     const distances = [0]; // First point has 0 distance
-    
+
     for (let i = 1; i < validPoints.length; i++) {
-      const p1 = validPoints[i-1];
+      const p1 = validPoints[i - 1];
       const p2 = validPoints[i];
-      
+
       // Calculate the distance between consecutive points
       const d = Math.sqrt(
-        Math.pow(p2[0] - p1[0], 2) + 
+        Math.pow(p2[0] - p1[0], 2) +
         Math.pow(p2[1] - p1[1], 2)
       );
-      
+
       totalDistance += d;
       distances.push(totalDistance);
     }
-    
+
     // Find the middle distance point
     const middleDistance = totalDistance / 2;
-    
+
     // Find the segment containing the middle distance
     let segmentIndex = 0;
     while (segmentIndex < distances.length - 1 && distances[segmentIndex + 1] < middleDistance) {
       segmentIndex++;
     }
-    
+
     // Calculate the exact middle point using interpolation
     let calculatedMiddlePoint;
-    
+
     if (segmentIndex < validPoints.length - 1) {
       const p1 = validPoints[segmentIndex];
       const p2 = validPoints[segmentIndex + 1];
-      
+
       const segmentLength = distances[segmentIndex + 1] - distances[segmentIndex];
       const ratio = segmentLength ? (middleDistance - distances[segmentIndex]) / segmentLength : 0;
-      
+
       calculatedMiddlePoint = [
         p1[0] + ratio * (p2[0] - p1[0]),
         p1[1] + ratio * (p2[1] - p1[1])
@@ -286,7 +286,7 @@ function MapView({
       console.error("Calculated middle point is outside Israel, using midpoint of array instead");
       calculatedMiddlePoint = validPoints[Math.floor(validPoints.length / 2)];
     }
-    
+
     // Set the middle point and log to console
     setMiddlePoint(calculatedMiddlePoint);
     console.log("Line 60 middle point:", calculatedMiddlePoint);
@@ -303,7 +303,7 @@ function MapView({
   return (
     <div style={{ height: '100vh', width: '100%' }}>
       {/* Search and controls */}
-      <MapControls 
+      <MapControls
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
         handleSearch={handleSearch}
@@ -314,7 +314,7 @@ function MapView({
         positionAddress={positionAddress}
         destinationAddress={destinationAddress}
       />
-      
+
       {/* Middle point button for line 60 */}
       <button
         onClick={handleShowMiddlePoint}
@@ -334,7 +334,7 @@ function MapView({
       >
         Show Line 60 Middle Point
       </button>
-      
+
       {/* Route panel and controls */}
       <MapControlPanel
         showRoutePanel={showRoutePanel}
@@ -342,11 +342,11 @@ function MapView({
         optimizedRouteShape={optimizedRouteShape}
         handleShowRoutePanel={handleShowRoutePanel}
       />
-      
-      <MapContainer 
-        center={mapCenter} 
-        zoom={13} 
-        style={{ height: '100%', width: '100%' }} 
+
+      <MapContainer
+        center={mapCenter}
+        zoom={13}
+        style={{ height: '100%', width: '100%' }}
         zoomControl={false}
         whenReady={() => setMapReady(true)}
         preferCanvas={true}
@@ -357,14 +357,18 @@ function MapView({
         />
         <UpdateMapView position={mapCenter} />
         <TrackMapMovement setMapCenter={setMapCenterLocal} />
+        <MapContextMenu
+          onSetStart={handleSetStartPoint}
+          onSetDestination={handleSetDestinationPoint}
+        />
         <MapEffect routeShape={optimizedRouteShape} />
-        
+
         {/* All route polylines */}
-        <RouteLayer 
+        <RouteLayer
           routeShape={routeShape}
           route={route}
         />
-        
+
         {/* All map markers */}
         <MarkersLayer
           position={position}
