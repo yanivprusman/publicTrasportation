@@ -40,7 +40,7 @@ function TransportationMap() {
 
     axios({
       method: 'get',
-      url: `${window.location.origin}/transport.php`,
+      url: '/transport.php',
       timeout: 10000,
     })
       .then((res) => {
