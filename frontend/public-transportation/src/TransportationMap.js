@@ -11,19 +11,19 @@ function TransportationMap() {
     (startingPoint[0] + destination[0]) / 2,
     (startingPoint[1] + destination[1]) / 2,
   ]);
-  
+
   useEffect(() => {
     setMapCenter([
       (startingPoint[0] + destination[0]) / 2,
       (startingPoint[1] + destination[1]) / 2,
     ]);
   }, [startingPoint, destination]);
-  
+
   const isInitialRender = useRef(true);
   const [Siri, setSiriData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  
+
   useEffect(() => {
     if (isInitialRender.current) {
       isInitialRender.current = false;
@@ -31,16 +31,16 @@ function TransportationMap() {
     }
     console.log('Hi');
   }, []);
-  
+
   const fetchData = () => {
     setLoading(true);
     setError(null);
     console.group('Fetch Data Process');
     console.log('Starting fetch at:', new Date().toISOString());
-    
+
     axios({
       method: 'get',
-      url: process.env.REACT_APP_API_URL || '/transport.php', // Updated to use local endpoint
+      url: `${window.location.origin}/transport.php`,
       timeout: 10000,
     })
       .then((res) => {
@@ -63,8 +63,8 @@ function TransportationMap() {
         const errorMessage = err.response
           ? `Server responded with status ${err.response.status}`
           : err.request
-          ? 'Network error: Unable to reach the server'
-          : 'An unexpected error occurred';
+            ? 'Network error: Unable to reach the server'
+            : 'An unexpected error occurred';
         setError(errorMessage);
         setLoading(false);
       })
@@ -72,16 +72,16 @@ function TransportationMap() {
         console.groupEnd();
       });
   };
-  
+
   useEffect(() => {
     console.log('Initial Render - Fetching Data');
     fetchData();
   }, []);
-  
+
   useEffect(() => {
     console.log('Siri State Updated:', Siri);
   }, [Siri]);
-  
+
   function VehicleDetails({ journey }) {
     return (
       <div className="vehicle-details-container">
@@ -112,7 +112,7 @@ function TransportationMap() {
       </div>
     );
   }
-  
+
   function ShowData({ Siri, loading, error }) {
     if (loading) return <h2>Loading...</h2>;
     if (error) return <h2>{error}</h2>;
@@ -120,16 +120,16 @@ function TransportationMap() {
       console.warn('No Siri data or ServiceDelivery found');
       return <h2>No data available</h2>;
     }
-    
+
     const monitoredVehicles =
       Siri.ServiceDelivery.StopMonitoringDelivery[0]?.MonitoredStopVisit || [];
-      
+
     if (monitoredVehicles.length === 0) {
       return <h2>No vehicles are currently being monitored</h2>;
     }
-    
+
     console.log('Monitored Vehicles:', monitoredVehicles);
-    
+
     return (
       <div>
         <h2>Monitored Vehicles:</h2>
@@ -142,7 +142,7 @@ function TransportationMap() {
       </div>
     );
   }
-  
+
   return (
     <div className="App">
       <div className="map-container">
