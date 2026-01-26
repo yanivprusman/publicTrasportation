@@ -33,17 +33,23 @@ const useMapHandlers = (position, setPosition, destination, onDestinationSet, se
 
   // Set the starting point (defaults to current map center if no coords provided)
   const handleSetStartPoint = (coords) => {
-    const targetPoint = coords || mapCenter;
+    // If coords is a React event or not an array, use mapCenter
+    const targetPoint = (Array.isArray(coords) && coords.length === 2) ? coords : mapCenter;
+
     if (targetPoint && Array.isArray(targetPoint) && targetPoint.length === 2) {
       setPosition([targetPoint[0], targetPoint[1]]);
       fetchAddress(targetPoint[0], targetPoint[1], setPositionAddress);
       console.log("Starting position updated to:", targetPoint);
+    } else {
+      console.error("Invalid point for starting point:", targetPoint);
     }
   };
 
   // Set the destination (defaults to current map center if no coords provided)
   const handleSetDestinationPoint = (coords) => {
-    const targetPoint = coords || mapCenter;
+    // If coords is a React event or not an array, use mapCenter
+    const targetPoint = (Array.isArray(coords) && coords.length === 2) ? coords : mapCenter;
+
     if (targetPoint && Array.isArray(targetPoint) && targetPoint.length === 2) {
       console.log("Setting destination to:", targetPoint);
       onDestinationSet(targetPoint);

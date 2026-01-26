@@ -11,7 +11,7 @@ function CombinedTransportApp() {
   const defaultStartingPoint = [32.0783, 34.8120];
   // המסגר 49 תל אביב - HaMasger 49 in Tel Aviv
   const defaultDestination = [32.0673, 34.7835];
-  
+
   const [siriData, setSiriData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -19,17 +19,18 @@ function CombinedTransportApp() {
   const [lineNumber, setLineNumber] = useState('60'); // Default line number
   const [routeShape, setRouteShape] = useState(null);
   const [routeDirection, setRouteDirection] = useState('0'); // 0 = outbound, 1 = inbound
-  
+
   // Add state to control vehicle markers visibility
   const [showVehicleMarkers, setShowVehicleMarkers] = useState(false);
   const [vehicleMarkers, setVehicleMarkers] = useState([]);
-  
+
+  // Starting and Destination points
+  const [startingPoint, setStartingPoint] = useState(defaultStartingPoint);
+  const [destination, setDestination] = useState(defaultDestination);
+
   // Map state
   const [mapCenter, setMapCenter] = useState(defaultStartingPoint); // Use default starting point as initial center
   const [stops, setStops] = useState([]);
-  
-  // Set default starting position and destination
-  const [destination, setDestination] = useState(defaultDestination);
 
   // Add this state variable
   const [calculateRoute, setCalculateRoute] = useState(false);
@@ -37,15 +38,15 @@ function CombinedTransportApp() {
   const fetchStationData = async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
       const data = await fetchStationArrivals(stationCode);
       setSiriData(data);
-      
+
       // Extract vehicle markers from SIRI data
       const markers = extractVehicleMarkers(data);
       setVehicleMarkers(markers);
-      
+
       setLoading(false);
     } catch (err) {
       console.error('Error fetching arrivals:', err);
@@ -59,18 +60,18 @@ function CombinedTransportApp() {
       setError("Please set a destination first");
       return;
     }
-    
+
     setLoading(true);
     setError(null);
-    
+
     try {
-      // Use the actual starting point instead of map center
-      const startPoint = defaultStartingPoint;
+      // Use the actual starting point instead of map center or hardcoded default
+      const startPoint = startingPoint;
       console.log("Finding route from", startPoint, "to", destination);
-      
+
       // Trigger the route finding in MapView
       setCalculateRoute(true);
-      
+
       setLoading(false);
     } catch (err) {
       console.error('Error finding route:', err);
@@ -88,23 +89,23 @@ function CombinedTransportApp() {
         setLoading(false);
         return;
       }
-      
+
       console.log(`Fetching shape for line ${lineNumber} in direction ${routeDirection}`);
-      
+
       try {
         const data = await fetchLineShape(lineNumber);
         console.log("Shape data received:", data);
-        
+
         // Check if we have data for the selected direction
         if (data[routeDirection] && Array.isArray(data[routeDirection]) && data[routeDirection].length > 0) {
           console.log(`Using direction ${routeDirection} with ${data[routeDirection].length} points`);
           setRouteShape(data[routeDirection]);
-          
+
           // Set map center to first point of the shape
           if (data[routeDirection][0] && data[routeDirection][0].length === 2) {
             setMapCenter(data[routeDirection][0]);
           }
-        } 
+        }
         // Fall back to the other direction if the selected one has no data
         else if (data['0'] && Array.isArray(data['0']) && data['0'].length > 0) {
           console.log(`Falling back to direction 0 with ${data['0'].length} points`);
@@ -145,8 +146,8 @@ function CombinedTransportApp() {
       <div className="app-header">
         <h1>Israel Public Transportation Tracker</h1>
       </div>
-      
-      <TransportControls 
+
+      <TransportControls
         stationCode={stationCode}
         setStationCode={setStationCode}
         fetchStationData={fetchStationData}
@@ -159,7 +160,7 @@ function CombinedTransportApp() {
         setShowVehicleMarkers={setShowVehicleMarkers}
         handleFindRoute={handleFindRoute}
       />
-      
+
       <div className="main-content">
         <div className="map-section">
           <MapView
@@ -172,6 +173,8 @@ function CombinedTransportApp() {
             stops={stops}
             onDestinationSet={setDestination}
             destination={destination}
+            startingPoint={startingPoint}
+            onStartingPointSet={setStartingPoint}
             center={mapCenter}
             defaultStartingPoint={defaultStartingPoint}
             defaultDestination={defaultDestination}
@@ -180,10 +183,10 @@ function CombinedTransportApp() {
           />
         </div>
         <div className="data-section">
-          <StationArrivals 
-            siriData={siriData} 
-            loading={loading} 
-            error={error} 
+          <StationArrivals
+            siriData={siriData}
+            loading={loading}
+            error={error}
             stationCode={stationCode}
           />
         </div>

@@ -30,10 +30,11 @@ function MapView({
   defaultStartingPoint,
   defaultDestination,
   calculateRoute,
-  onRouteCalculated
+  onRouteCalculated,
+  onStartingPointSet
 }) {
-  // Use default starting point if provided
-  const [position, setPosition] = useState(defaultStartingPoint || [latitude, longitude]);
+  // Use provided starting point or fallback to initial coords
+  const [position, setPosition] = useState(startingPoint || defaultStartingPoint || [latitude, longitude]);
   const [route, setRoute] = useState(null);
   const [mapReady, setMapReady] = useState(false);
   const [mapCenter, setMapCenterLocal] = useState(center || initialMapCenter || [latitude, longitude]);
@@ -70,7 +71,10 @@ function MapView({
     handleSetDestinationPoint,
     handleKeyPress,
     handleFindRoute
-  } = useMapHandlers(position, setPosition, destination, onDestinationSet, setMapCenterLocal, mapCenter);
+  } = useMapHandlers(position, (newPos) => {
+    setPosition(newPos);
+    if (onStartingPointSet) onStartingPointSet(newPos);
+  }, destination, onDestinationSet, setMapCenterLocal, mapCenter);
 
   // When destination changes, ensure it's properly set
   useEffect(() => {
@@ -98,7 +102,16 @@ function MapView({
         onRouteCalculated();
       }
     }
-  }, [calculateRoute, position, destination]);
+  }, [calculateRoute, position, destination, onRouteCalculated]);
+
+  // When startingPoint prop changes from outside
+  useEffect(() => {
+    if (startingPoint && Array.isArray(startingPoint) && startingPoint.length === 2) {
+      if (startingPoint[0] !== position[0] || startingPoint[1] !== position[1]) {
+        setPosition(startingPoint);
+      }
+    }
+  }, [startingPoint, position]);
 
   // Log routeShape when it changes to debug
   useEffect(() => {

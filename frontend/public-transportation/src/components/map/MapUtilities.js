@@ -39,12 +39,14 @@ export function MapContextMenu({ onSetStart, onSetDestination }) {
 
   if (!contextMenu) return null;
 
-  const handleSetStart = () => {
+  const handleSetStart = (e) => {
+    e.stopPropagation();
     onSetStart([contextMenu.lat, contextMenu.lng]);
     setContextMenu(null);
   };
 
-  const handleSetDestination = () => {
+  const handleSetDestination = (e) => {
+    e.stopPropagation();
     onSetDestination([contextMenu.lat, contextMenu.lng]);
     setContextMenu(null);
   };
