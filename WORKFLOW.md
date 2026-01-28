@@ -10,7 +10,7 @@
 
 ### 1. Develop in Dev Environment
 ```bash
-cd ~/coding/automateLinux/extraApps/publicTransportation
+cd /opt/automateLinux/extraApps/publicTransportation
 
 # Make your changes to the code
 # Test on port 3003 (development server with hot reload)
@@ -26,7 +26,7 @@ git push
 ### 3. Deploy to Production
 ```bash
 # Run the sync script to update production
-~/coding/automateLinux/extraApps/publicTransportation/sync-prod.sh
+/opt/automateLinux/extraApps/publicTransportation/sync-prod.sh
 ```
 
 This script will:
@@ -36,8 +36,8 @@ This script will:
 - Restart the PM2 process
 
 ## Directory Structure
-- **Dev**: `/home/yaniv/coding/automateLinux/extraApps/publicTransportation`
-- **Prod**: `/home/yaniv/coding/prod/publicTransportation-prod`
+- **Dev**: `/opt/automateLinux/extraApps/publicTransportation`
+- **Prod**: `/opt/prod/publicTransportation`
 
 ## Ports
 - **3002**: Production (served via PM2 running `server.js`)
@@ -47,5 +47,5 @@ This script will:
 - Never edit files directly in the production directory
 - The production `.env` and `config.php` files are not in git (they're ignored)
 - Make sure to have these files in production:
-  - `/home/yaniv/coding/prod/publicTransportation-prod/.env`
-  - `/home/yaniv/coding/prod/publicTransportation-prod/backend/php-api/config.php`
+  - `/opt/prod/publicTransportation/.env`
+  - `/opt/prod/publicTransportation/backend/php-api/config.php`
