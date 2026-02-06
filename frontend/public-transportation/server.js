@@ -6,6 +6,48 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 
+const GTFS_DATA_DIR = path.join(__dirname, '../../backend/israel-public-transportation');
+const GTFS_URL = 'https://storage.googleapis.com/storage/v1/b/mdb-latest/o/il-ministry-of-transport-and-road-safety-gtfs-2519.zip?alt=media';
+const GTFS_REQUIRED_FILES = ['routes.txt', 'trips.txt', 'shapes.txt'];
+
+let gtfsDownloading = null; // Promise while download is in progress
+
+async function ensureGtfsData() {
+  const allExist = GTFS_REQUIRED_FILES.every(f =>
+    fs.existsSync(path.join(GTFS_DATA_DIR, f))
+  );
+  if (allExist) return;
+
+  // If already downloading, wait for it
+  if (gtfsDownloading) return gtfsDownloading;
+
+  gtfsDownloading = (async () => {
+    try {
+      console.log('GTFS files missing, downloading from MOT...');
+      fs.mkdirSync(GTFS_DATA_DIR, { recursive: true });
+      const zipPath = path.join(GTFS_DATA_DIR, 'gtfs.zip');
+      execSync(`curl -fSL -o "${zipPath}" "${GTFS_URL}"`, {
+        timeout: 120000,
+        stdio: ['pipe', 'pipe', 'pipe']
+      });
+      console.log('Extracting GTFS data...');
+      execSync(`unzip -o "${zipPath}" ${GTFS_REQUIRED_FILES.join(' ')} -d "${GTFS_DATA_DIR}"`, {
+        timeout: 60000,
+        stdio: ['pipe', 'pipe', 'pipe']
+      });
+      fs.unlinkSync(zipPath);
+      console.log('GTFS data ready.');
+    } catch (err) {
+      console.error('Failed to download GTFS data:', err.message);
+      throw new Error('Failed to download GTFS data. Please manually place routes.txt, trips.txt, shapes.txt in backend/israel-public-transportation/');
+    } finally {
+      gtfsDownloading = null;
+    }
+  })();
+
+  return gtfsDownloading;
+}
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
@@ -54,7 +96,7 @@ app.get('/api/transport', async (req, res) => {
 const shapeCache = new Map();
 const SHAPE_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
 
-app.get('/api/line-shape', (req, res) => {
+app.get('/api/line-shape', async (req, res) => {
   const lineNumber = (req.query.line || '60').trim();
 
   // Check cache
@@ -64,16 +106,12 @@ app.get('/api/line-shape', (req, res) => {
   }
 
   try {
-    const dataDir = path.join(__dirname, '../../backend/israel-public-transportation');
+    await ensureGtfsData();
+
+    const dataDir = GTFS_DATA_DIR;
     const routesFile = path.join(dataDir, 'routes.txt');
     const tripsFile = path.join(dataDir, 'trips.txt');
     const shapesFile = path.join(dataDir, 'shapes.txt');
-
-    for (const f of [routesFile, tripsFile, shapesFile]) {
-      if (!fs.existsSync(f)) {
-        throw new Error(`GTFS file not found: ${f}`);
-      }
-    }
 
     // Step 1: Find route IDs for the line number
     const routesContent = fs.readFileSync(routesFile, 'utf8');
