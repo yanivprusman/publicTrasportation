@@ -2,103 +2,90 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## What This Is
+## Project Overview
 
-Real-time Israeli public transportation tracker. React SPA with Leaflet maps showing live vehicle positions, station arrivals, and route shapes using SIRI/GTFS data from the Ministry of Transportation (MOT).
+Israel Public Transportation Tracker — a React + Express app that displays real-time bus arrivals (via Israel's MOT SIRI API) and GTFS route shapes on a Leaflet map.
 
-## Build & Run Commands
+## App Lifecycle (via automateLinux daemon)
+
+This app is managed by the automateLinux daemon (app ID: `pt`). Do not start/stop services or assign ports manually.
+
+```bash
+d appStatus --app pt
+d startApp --app pt --mode dev
+d stopApp --app pt --mode dev
+d restartApp --app pt --mode dev
+d buildApp --app pt --mode dev
+d installAppDeps --app pt --mode dev
+d deployToProd --app pt
+d getPort --key pt-dev          # get assigned dev port
+d getPort --key pt-prod         # get assigned prod port
+```
+
+## Development Commands
 
 All commands run from `frontend/public-transportation/`:
 
 ```bash
-# Development (hot reload on Vite dev server)
-d startApp --app pt --mode dev        # Or: cd frontend/public-transportation && npm run dev
-
-# Production build
-npm run build                          # tsc -b && vite build → outputs to dist/
-
-# Install dependencies
-d installAppDeps --app pt              # Or: cd frontend/public-transportation && npm install
-
-# Deploy to production
-d deployToProd --app pt                # Commits must be pushed first
-
-# Check app status
-d appStatus --app pt
+npm run dev          # Vite dev server (hot reload)
+npm run build        # tsc -b && vite build
+npm run preview      # preview production build
+npm start            # production: node server.js (serves dist/ via Express)
 ```
 
-No tests or linting configured.
-
-## Ports
-
-- **3002** (`pt-prod`): Production Express server serving `dist/` via PM2
-- **3003** (`pt-dev`): Vite dev server with hot reload
-
-Ports are managed by the daemon: `d getPort --key pt-prod`, `d getPort --key pt-dev`.
-
-## Architecture
-
-```
-frontend/public-transportation/
-├── server.js              # Express production server (CommonJS) - serves dist/ + 3 API endpoints
-├── vite.config.ts         # Dev proxy: /api → localhost:3003
-├── src/
-│   ├── App.tsx            # Root component, owns all top-level state
-│   ├── main.tsx           # React entry point
-│   ├── types.ts           # TypeScript interfaces (SiriData, VehicleMarker, etc.)
-│   ├── services/
-│   │   └── transport-api.ts    # API client (fetchStationArrivals, fetchLineShape)
-│   ├── hooks/
-│   │   └── useMapHandlers.ts   # Map interaction logic (click, context menu, routing)
-│   ├── utils/
-│   │   └── ShapeSimplifier.ts  # Polyline decimation for large route shapes
-│   └── components/
-│       ├── map/            # Leaflet map: MapView, MarkersLayer, RouteLayer, MapControls, etc.
-│       ├── controls/       # TransportControls (station/line input)
-│       └── data-display/   # StationArrivals (arrival table)
-backend/
-├── php-api/               # Legacy PHP endpoints (mostly superseded by server.js)
-└── israel-public-transportation/   # GTFS data files (routes.txt, trips.txt, shapes.txt)
-```
-
-CSS uses module-scoped `.module.css` files per component. Global CSS variables are in `src/index.css`.
-
-## Server API Endpoints (server.js)
-
-| Endpoint | Description | Key Detail |
-|----------|-------------|------------|
-| `GET /api/transport` | Real-time arrivals via SIRI | Requires proxy tunnel; reads port from `/tmp/pt_proxy_port` |
-| `GET /api/line-shape` | Route shape from GTFS files | Parses `backend/israel-public-transportation/*.txt`; 24h in-memory cache |
-| `GET /api/directions` | Driving route via OpenRouteService | Proxies to ORS API |
+There are no tests or linter configured.
 
 ## Proxy Requirement
 
-The MOT SIRI API is not directly accessible. A tunnel must be running:
+The MOT real-time API (`moran.mot.gov.il:110`) is not publicly accessible. Before using real-time features:
+
 ```bash
-d publicTransportationStartProxy    # Starts tunnel, writes port to /tmp/pt_proxy_port
+d publicTransportationStartProxy   # starts SSH tunnel, writes port to /tmp/pt_proxy_port
 ```
-Without this, `/api/transport` calls will fail with "Proxy not running".
+
+The Express server reads `/tmp/pt_proxy_port` to route requests through the tunnel.
+
+## Architecture
+
+### Frontend (`frontend/public-transportation/`)
+
+Vite + React 19 + TypeScript. Uses Leaflet (react-leaflet) for maps.
+
+- `src/App.tsx` — root component, manages all state (station code, line number, route shape, vehicle markers, map center, navigation points)
+- `src/services/transport-api.ts` — API client: `fetchStationArrivals()`, `extractVehicleMarkers()`, `fetchLineShape()`
+- `src/types.ts` — shared TypeScript types (SiriData, VehicleMarker, RouteShapeData, Coordinates)
+- `src/components/map/` — map rendering: MapView, RouteLayer, MarkersLayer, MapControls, MapContextMenu, RouteMapView
+- `src/components/controls/TransportControls.tsx` — user input controls (station, line, direction)
+- `src/components/data-display/StationArrivals.tsx` — arrival times display panel
+- `src/hooks/useMapHandlers.ts` — map interaction logic
+- `src/utils/ShapeSimplifier.ts` — polyline simplification for route rendering
+- CSS modules pattern: each component has a co-located `.module.css` file
+
+### Backend (`frontend/public-transportation/server.js`)
+
+Express server serving three API endpoints and the static Vite build:
+
+- `GET /api/transport` — proxies real-time SIRI data from MOT (requires active proxy tunnel)
+- `GET /api/line-shape` — reads GTFS files (routes.txt, trips.txt, shapes.txt) to return route polylines by direction. Caches results in-memory (24h TTL). Auto-downloads GTFS data from MOT mirror if missing.
+- `GET /api/directions` — proxies driving directions from OpenRouteService
+
+Vite dev server proxies `/api` requests to port 3002 (configured in `vite.config.ts`).
+
+### PHP API (legacy, `backend/php-api/`)
+
+Legacy PHP endpoints for GTFS data processing. `gtfs-core.php` contains the shared GTFS parsing logic. These are served via nginx and are largely superseded by server.js.
+
+### GTFS Data
+
+GTFS files live in `backend/israel-public-transportation/`. The server auto-downloads required files (`routes.txt`, `trips.txt`, `shapes.txt`) from the MOT Google Cloud Storage mirror on first request.
 
 ## Environment Variables
 
-Stored in `.env` at the repo root (not in `frontend/`). `server.js` loads it with `dotenv` from `__dirname + '/../../.env'`.
+Defined in `.env` at project root (see `.env.example`):
+- `GOOGLE_API_KEY` — Google Maps (frontend)
+- `ORS_API_KEY` — OpenRouteService directions
+- `MOT_API_KEY` — Ministry of Transportation SIRI API
 
-| Variable | Purpose |
-|----------|---------|
-| `MOT_API_KEY` | Ministry of Transportation SIRI API key |
-| `ORS_API_KEY` | OpenRouteService directions API key |
-| `GOOGLE_API_KEY` | Google Maps (frontend) |
-| `PORT` | Express server port override (defaults to 5000 if unset) |
+## Production
 
-## Key Data Flow
-
-1. **Station arrivals**: TransportControls → `fetchStationArrivals()` → `/api/transport` → MOT proxy tunnel → SIRI JSON → StationArrivals table + vehicle markers on map
-2. **Route shapes**: Line number input → `fetchLineShape()` → `/api/line-shape` → server parses GTFS text files → `{ "0": [[lat,lon],...], "1": [...] }` by direction → RouteLayer polyline
-3. **Directions**: Set start/destination on map → `/api/directions` → OpenRouteService → GeoJSON → blue polyline overlay
-
-## Development Notes
-
-- Recently migrated from Create React App to Vite. The README.md in `frontend/public-transportation/` is stale CRA boilerplate.
-- In dev mode, Vite proxies `/api` to `localhost:3003` where the Express server runs. In prod, Express serves both the static files and API from the same port.
-- GTFS data files (`routes.txt`, `trips.txt`, `shapes.txt`) are large. `server.js` uses `grep` via `execSync` for efficient shape extraction from `shapes.txt`.
-- Production is at `/opt/prod/publicTransportation` (git worktree). Never edit prod directly.
+Production is deployed to a separate directory and served via PM2 (`pt-prod`). Deploy with `d deployToProd --app pt` or `./deploy.sh`. The `sync-prod.sh` script handles full clone/build/PM2 restart.
