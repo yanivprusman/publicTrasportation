@@ -1,0 +1,65 @@
+.container {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 1000;
+  background-color: rgba(255, 255, 255, 0.8);
+  padding: var(--spacing-sm);
+  border-radius: var(--radius-md);
+}
+
+.searchInput {
+  padding: var(--spacing-xs);
+  width: 200px;
+  margin-right: var(--spacing-xs);
+  border-radius: var(--radius-md);
+  border: 1px solid #ccc;
+  margin-bottom: var(--spacing-xs);
+}
+
+.buttonRow {
+  display: flex;
+  gap: var(--spacing-xs);
+}
+
+.startButton {
+  padding: 5px 10px;
+  background-color: var(--color-start);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  flex: 1;
+}
+
+.destButton {
+  padding: 5px 10px;
+  background-color: var(--color-destination);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  flex: 1;
+}
+
+.error {
+  color: red;
+  margin-top: var(--spacing-xs);
+  font-size: 14px;
+}
+
+.infoBox {
+  margin-top: var(--spacing-sm);
+  font-size: 14px;
+  border: 1px solid #ccc;
+  padding: var(--spacing-xs);
+  border-radius: var(--radius-md);
+}
+
+.infoBoxDest {
+  margin-top: var(--spacing-xs);
+  font-size: 14px;
+  border: 1px solid #ccc;
+  padding: var(--spacing-xs);
+  border-radius: var(--radius-md);
+}

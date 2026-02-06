@@ -1,0 +1,42 @@
+.stationGroup {
+  margin-right: 20px;
+}
+
+.label {
+  margin-right: var(--spacing-sm);
+}
+
+.select {
+  padding: var(--spacing-xs);
+}
+
+.refreshButton {
+  margin-left: var(--spacing-sm);
+  padding: 5px 10px;
+}
+
+.vehicleLabel {
+  margin-left: 15px;
+}
+
+.lineInput {
+  width: 50px;
+  padding: var(--spacing-xs);
+}
+
+.directionLabel {
+  margin-left: var(--spacing-sm);
+  margin-right: var(--spacing-xs);
+}
+
+.showRouteButton {
+  margin-left: var(--spacing-sm);
+  padding: 5px 10px;
+}
+
+.findRouteButton {
+  margin-left: var(--spacing-sm);
+  padding: 5px 10px;
+  background-color: var(--color-success);
+  color: white;
+}

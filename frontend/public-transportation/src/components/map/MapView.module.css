@@ -1,0 +1,17 @@
+.wrapper {
+  height: 100vh;
+  width: 100%;
+}
+
+.middlePointButton {
+  position: absolute;
+  bottom: 60px;
+  left: 10px;
+  z-index: 1000;
+  padding: 8px 12px;
+  background-color: var(--color-accent);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}

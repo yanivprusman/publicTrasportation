@@ -1,6 +1,5 @@
-import L from 'leaflet';
+import L from 'leaflet'
 
-// Icon definitions for different marker types
 export const destinationIcon = new L.Icon({
   iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
   iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
@@ -10,7 +9,7 @@ export const destinationIcon = new L.Icon({
   popupAnchor: [1, -34],
   shadowSize: [41, 41],
   className: 'destination-marker'
-});
+})
 
 export const centerIcon = new L.Icon({
   iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png',
@@ -21,7 +20,7 @@ export const centerIcon = new L.Icon({
   popupAnchor: [1, -34],
   shadowSize: [41, 41],
   className: 'center-marker'
-});
+})
 
 export const vehicleIcon = new L.Icon({
   iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png',
@@ -32,7 +31,7 @@ export const vehicleIcon = new L.Icon({
   popupAnchor: [1, -34],
   shadowSize: [41, 41],
   className: 'vehicle-marker'
-});
+})
 
 export const stopIcon = new L.Icon({
   iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
@@ -43,14 +42,13 @@ export const stopIcon = new L.Icon({
   popupAnchor: [1, -34],
   shadowSize: [41, 41],
   className: 'stop-marker'
-});
+})
 
-// Configure default Leaflet icons
 export const configureDefaultLeafletIcons = () => {
-  delete L.Icon.Default.prototype._getIconUrl;
+  delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl
   L.Icon.Default.mergeOptions({
     iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
     iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
     shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-  });
-};
+  })
+}

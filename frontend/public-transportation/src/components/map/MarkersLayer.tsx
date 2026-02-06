@@ -1,52 +1,58 @@
-import React from 'react';
-import { Marker, Popup } from 'react-leaflet';
-import L from 'leaflet';
-import { destinationIcon, centerIcon, vehicleIcon, stopIcon } from './MapMarkers';
+import { Marker, Popup } from 'react-leaflet'
+import L from 'leaflet'
+import { destinationIcon, centerIcon, vehicleIcon, stopIcon } from './MapMarkers'
+import type { Coordinates, VehicleMarker, StopInfo } from '../../types'
 
-/**
- * Displays all types of markers on the map
- */
-const MarkersLayer = ({ 
-  position, 
-  positionAddress, 
-  destination, 
-  destinationAddress, 
+interface MarkersLayerProps {
+  position: Coordinates
+  positionAddress: string
+  destination: Coordinates | null
+  destinationAddress: string
+  mapCenter: Coordinates
+  vehicleMarkers: VehicleMarker[]
+  stops: StopInfo[]
+  selectedStop?: string | null
+  handleSetStartPoint: (coords: Coordinates) => void
+  middlePoint: Coordinates | null
+}
+
+const MarkersLayer = ({
+  position,
+  positionAddress,
+  destination,
+  destinationAddress,
   mapCenter,
-  vehicleMarkers, 
-  stops, 
-  selectedStop, 
+  vehicleMarkers,
+  stops,
+  selectedStop,
   handleSetStartPoint,
-  middlePoint  // Add middle point parameter
-}) => {
-  // Custom green icon for position marker
+  middlePoint
+}: MarkersLayerProps) => {
   const positionIcon = L.icon({
     iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png',
     iconRetinaUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
     shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
     iconSize: [25, 41],
     iconAnchor: [12, 41],
-  });
+  })
 
-  // Custom purple icon for middle point marker
   const middlePointIcon = L.icon({
     iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-violet.png',
     iconRetinaUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-violet.png',
     shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
     iconSize: [25, 41],
     iconAnchor: [12, 41],
-  });
+  })
 
   return (
     <>
-      {/* User position marker */}
       <Marker position={position} icon={positionIcon}>
         <Popup>
           <strong>Starting Point:</strong> {positionAddress}<br/>
           Coordinates: {position[0].toFixed(6)}, {position[1].toFixed(6)}
         </Popup>
       </Marker>
-      
-      {/* Middle point marker */}
+
       {middlePoint && (
         <Marker position={middlePoint} icon={middlePointIcon}>
           <Popup>
@@ -57,8 +63,7 @@ const MarkersLayer = ({
           </Popup>
         </Marker>
       )}
-      
-      {/* Destination marker */}
+
       {destination && (
         <Marker position={destination} icon={destinationIcon}>
           <Popup>
@@ -69,20 +74,18 @@ const MarkersLayer = ({
           </Popup>
         </Marker>
       )}
-      
-      {/* Map center marker */}
+
       <Marker position={mapCenter} icon={centerIcon}>
         <Popup>
           <div>
-            <strong>Map Center:</strong> {Array.isArray(mapCenter) ? `${mapCenter[0]?.toFixed(6)}, ${mapCenter[1]?.toFixed(6)}` : 'Invalid coordinates'}
+            <strong>Map Center:</strong> {mapCenter[0]?.toFixed(6)}, {mapCenter[1]?.toFixed(6)}
           </div>
         </Popup>
       </Marker>
-      
-      {/* Vehicle markers */}
+
       {vehicleMarkers.map((vehicle, index) => (
-        <Marker 
-          key={`vehicle-${index}`} 
+        <Marker
+          key={`vehicle-${index}`}
           position={vehicle.position}
           icon={vehicleIcon}
         >
@@ -96,11 +99,10 @@ const MarkersLayer = ({
           </Popup>
         </Marker>
       ))}
-      
-      {/* Stop markers */}
+
       {stops.map(stop => (
-        <Marker 
-          key={`stop-${stop.stopId}`} 
+        <Marker
+          key={`stop-${stop.stopId}`}
           position={[stop.lat, stop.lon]}
           icon={stop.stopId === selectedStop ? centerIcon : stopIcon}
         >
@@ -116,7 +118,7 @@ const MarkersLayer = ({
         </Marker>
       ))}
     </>
-  );
-};
+  )
+}
 
-export default MarkersLayer;
+export default MarkersLayer

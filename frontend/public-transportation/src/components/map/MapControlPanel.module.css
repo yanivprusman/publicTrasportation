@@ -1,0 +1,28 @@
+.panel {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: white;
+  padding: var(--spacing-sm);
+  z-index: 1000;
+  width: 300px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+  border-radius: var(--radius-md);
+}
+
+.panelMap {
+  height: 300px;
+  margin-top: var(--spacing-sm);
+}
+
+.showButton {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  z-index: 1000;
+  padding: var(--spacing-sm);
+  background: var(--color-start);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+}
