@@ -1,6 +1,21 @@
 import { useState, useCallback, useMemo } from 'react'
+import axios from 'axios'
 import type { GeocodeSuggestion, RouteResult, Itinerary } from '../types'
 import { searchRoute } from '../services/routing-api'
+
+async function reverseGeocode(lat: number, lon: number): Promise<string> {
+  try {
+    const resp = await axios.get(
+      `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=he&addressdetails=1&countrycodes=il`
+    )
+    const name = resp.data.display_name
+    if (!name) return `${lat.toFixed(4)}, ${lon.toFixed(4)}`
+    // Return first two parts (street, city) for a concise label
+    return name.split(',').slice(0, 2).join(',').trim()
+  } catch {
+    return `${lat.toFixed(4)}, ${lon.toFixed(4)}`
+  }
+}
 
 export interface UseRoutingReturn {
   origin: GeocodeSuggestion | null
@@ -34,10 +49,16 @@ export function useRouting(): UseRoutingReturn {
 
   const setOriginFromCoords = useCallback((lat: number, lon: number, name?: string) => {
     setOrigin({ name: name || `${lat.toFixed(4)}, ${lon.toFixed(4)}`, lat, lon })
+    if (!name) {
+      reverseGeocode(lat, lon).then(addr => setOrigin(prev => prev && prev.lat === lat ? { ...prev, name: addr } : prev))
+    }
   }, [])
 
   const setDestinationFromCoords = useCallback((lat: number, lon: number, name?: string) => {
     setDestination({ name: name || `${lat.toFixed(4)}, ${lon.toFixed(4)}`, lat, lon })
+    if (!name) {
+      reverseGeocode(lat, lon).then(addr => setDestination(prev => prev && prev.lat === lat ? { ...prev, name: addr } : prev))
+    }
   }, [])
 
   const search = useCallback(async () => {

@@ -75,13 +75,7 @@ const MarkersLayer = ({
         </Marker>
       )}
 
-      <Marker position={mapCenter} icon={centerIcon}>
-        <Popup>
-          <div>
-            <strong>Map Center:</strong> {mapCenter[0]?.toFixed(6)}, {mapCenter[1]?.toFixed(6)}
-          </div>
-        </Popup>
-      </Marker>
+      {/* Map center marker hidden - was showing "Map Center: lat, lon" */}
 
       {vehicleMarkers.map((vehicle, index) => (
         <Marker
