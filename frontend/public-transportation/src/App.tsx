@@ -3,7 +3,10 @@ import './App.css'
 import MapView from './components/map/MapView'
 import StationArrivals from './components/data-display/StationArrivals'
 import TransportControls from './components/controls/TransportControls'
+import RoutePlanner from './components/routing/RoutePlanner'
+import { useRouting } from './hooks/useRouting'
 import { fetchStationArrivals, extractVehicleMarkers, fetchLineShape } from './services/transport-api'
+import type { SheetState } from './components/routing/BottomSheet'
 import type { SiriData, VehicleMarker, Coordinates } from './types'
 
 function App() {
@@ -27,10 +30,13 @@ function App() {
   const [mapCenter, setMapCenter] = useState<Coordinates>(defaultStartingPoint)
   const [calculateRoute, setCalculateRoute] = useState(false)
 
+  const routing = useRouting()
+  const [sheetState, setSheetState] = useState<SheetState>('collapsed')
+  const [activeTab, setActiveTab] = useState<'route' | 'arrivals'>('route')
+
   const fetchStationData = async () => {
     setLoading(true)
     setError(null)
-
     try {
       const data = await fetchStationArrivals(stationCode)
       setSiriData(data)
@@ -49,10 +55,8 @@ function App() {
       setError('Please set a destination first')
       return
     }
-
     setLoading(true)
     setError(null)
-
     try {
       setCalculateRoute(true)
       setLoading(false)
@@ -99,16 +103,24 @@ function App() {
     }
   }
 
+  const handleRouteFrom = (lat: number, lon: number) => {
+    routing.setOriginFromCoords(lat, lon)
+    setActiveTab('route')
+    setSheetState('half')
+  }
+
+  const handleRouteTo = (lat: number, lon: number) => {
+    routing.setDestinationFromCoords(lat, lon)
+    setActiveTab('route')
+    setSheetState('half')
+  }
+
   useEffect(() => {
     fetchStationData()
   }, [stationCode])
 
-  return (
-    <div className="combined-app">
-      <div className="app-header">
-        <h1>Israel Public Transportation Tracker</h1>
-      </div>
-
+  const arrivalsContent = (
+    <>
       <TransportControls
         stationCode={stationCode}
         setStationCode={setStationCode}
@@ -122,36 +134,46 @@ function App() {
         setShowVehicleMarkers={setShowVehicleMarkers}
         handleFindRoute={handleFindRoute}
       />
+      <StationArrivals
+        siriData={siriData}
+        loading={loading}
+        error={error}
+        stationCode={stationCode}
+      />
+    </>
+  )
 
-      <div className="main-content">
-        <div className="map-section">
-          <MapView
-            latitude={mapCenter[0]}
-            longitude={mapCenter[1]}
-            mapCenter={mapCenter}
-            setMapCenter={setMapCenter}
-            vehicleMarkers={showVehicleMarkers ? vehicleMarkers : []}
-            routeShape={routeShape}
-            destination={destination}
-            onDestinationSet={setDestination}
-            startingPoint={startingPoint}
-            onStartingPointSet={setStartingPoint}
-            center={mapCenter}
-            defaultStartingPoint={defaultStartingPoint}
-            defaultDestination={defaultDestination}
-            calculateRoute={calculateRoute}
-            onRouteCalculated={() => setCalculateRoute(false)}
-          />
-        </div>
-        <div className="data-section">
-          <StationArrivals
-            siriData={siriData}
-            loading={loading}
-            error={error}
-            stationCode={stationCode}
-          />
-        </div>
-      </div>
+  return (
+    <div className="combined-app">
+      <MapView
+        latitude={mapCenter[0]}
+        longitude={mapCenter[1]}
+        mapCenter={mapCenter}
+        setMapCenter={setMapCenter}
+        vehicleMarkers={showVehicleMarkers ? vehicleMarkers : []}
+        routeShape={routeShape}
+        destination={destination}
+        onDestinationSet={setDestination}
+        startingPoint={startingPoint}
+        onStartingPointSet={setStartingPoint}
+        center={mapCenter}
+        defaultStartingPoint={defaultStartingPoint}
+        defaultDestination={defaultDestination}
+        calculateRoute={calculateRoute}
+        onRouteCalculated={() => setCalculateRoute(false)}
+        selectedItinerary={routing.selectedItinerary}
+        onRouteFrom={handleRouteFrom}
+        onRouteTo={handleRouteTo}
+      />
+
+      <RoutePlanner
+        routing={routing}
+        sheetState={sheetState}
+        onSheetStateChange={setSheetState}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        arrivalsContent={arrivalsContent}
+      />
     </div>
   )
 }

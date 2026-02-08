@@ -42,6 +42,12 @@ old_react/
 old_scripts/
 react-public-transportation/
 
+# --- MOTIS (binary, imported data, raw data) ---
+motis/bin/
+motis/data/
+motis/data-input/
+motis/data-input-staging/
+
 # --- IDE & System ---
 .idea/
 .vscode/

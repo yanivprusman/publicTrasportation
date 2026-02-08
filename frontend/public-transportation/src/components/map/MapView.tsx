@@ -10,7 +10,8 @@ import MapEffect from './MapEffect'
 import RouteLayer from './RouteLayer'
 import MarkersLayer from './MarkersLayer'
 import MapControlPanel from './MapControlPanel'
-import type { Coordinates, VehicleMarker, StopInfo } from '../../types'
+import MultimodalRouteLayer from './MultimodalRouteLayer'
+import type { Coordinates, VehicleMarker, StopInfo, Itinerary } from '../../types'
 import styles from './MapView.module.css'
 
 configureDefaultLeafletIcons()
@@ -52,6 +53,9 @@ interface MapViewProps {
   calculateRoute: boolean
   onRouteCalculated: () => void
   onStartingPointSet: (pos: Coordinates) => void
+  selectedItinerary?: Itinerary | null
+  onRouteFrom?: (lat: number, lon: number) => void
+  onRouteTo?: (lat: number, lon: number) => void
 }
 
 function MapView({
@@ -71,7 +75,10 @@ function MapView({
   defaultDestination,
   calculateRoute,
   onRouteCalculated,
-  onStartingPointSet
+  onStartingPointSet,
+  selectedItinerary = null,
+  onRouteFrom,
+  onRouteTo
 }: MapViewProps) {
   const [position, setPosition] = useState<Coordinates>(startingPoint || defaultStartingPoint || [latitude, longitude])
   const [route, setRoute] = useState<Coordinates[] | null>(null)
@@ -234,6 +241,8 @@ function MapView({
         <MapContextMenu
           onSetStart={handleSetStartPoint}
           onSetDestination={handleSetDestinationPoint}
+          onRouteFrom={onRouteFrom}
+          onRouteTo={onRouteTo}
         />
         <MapEffect routeShape={optimizedRouteShape} />
 
@@ -241,6 +250,8 @@ function MapView({
           routeShape={routeShape}
           route={route}
         />
+
+        <MultimodalRouteLayer itinerary={selectedItinerary} />
 
         <MarkersLayer
           position={position}

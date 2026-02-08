@@ -50,6 +50,8 @@ async function ensureGtfsData() {
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const MOTIS_PORT = process.env.MOTIS_PORT || 3504;
+const MOTIS_BASE = `http://localhost:${MOTIS_PORT}`;
 
 app.use(cors());
 app.use(express.json());
@@ -236,6 +238,176 @@ app.get('/api/directions', async (req, res) => {
   } catch (error) {
     console.error('Error fetching directions:', error.message);
     res.status(error.response?.status || 500).json({ error: 'Failed to fetch directions' });
+  }
+});
+
+// --- Route cache (in-memory, 5min TTL, max 500 entries) ---
+const routeCache = new Map();
+const ROUTE_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const ROUTE_CACHE_MAX = 500;
+
+function getCachedRoute(key) {
+  const entry = routeCache.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.time > ROUTE_CACHE_TTL) {
+    routeCache.delete(key);
+    return null;
+  }
+  return entry.data;
+}
+
+function setCachedRoute(key, data) {
+  // Evict oldest entries if at capacity
+  if (routeCache.size >= ROUTE_CACHE_MAX) {
+    const oldest = routeCache.keys().next().value;
+    routeCache.delete(oldest);
+  }
+  routeCache.set(key, { data, time: Date.now() });
+}
+
+// --- Transform MOTIS plan response ---
+function transformMotisResponse(motisData) {
+  const itineraries = (motisData.itineraries || []).map(itin => ({
+    duration: itin.duration || 0,
+    startTime: itin.startTime || '',
+    endTime: itin.endTime || '',
+    transfers: itin.transfers || 0,
+    legs: (itin.legs || []).map(leg => {
+      const transformed = {
+        mode: leg.mode || 'WALK',
+        from: {
+          name: leg.from?.name || '',
+          lat: leg.from?.lat || 0,
+          lon: leg.from?.lon || 0,
+        },
+        to: {
+          name: leg.to?.name || '',
+          lat: leg.to?.lat || 0,
+          lon: leg.to?.lon || 0,
+        },
+        startTime: leg.startTime || '',
+        endTime: leg.endTime || '',
+        duration: leg.duration || 0,
+        polyline: leg.legGeometry?.points || leg.polyline || '',
+      };
+      if (leg.routeShortName) transformed.routeShortName = leg.routeShortName;
+      if (leg.routeColor) transformed.routeColor = leg.routeColor;
+      if (leg.agencyName) transformed.agencyName = leg.agencyName;
+      if (leg.intermediateStops && leg.intermediateStops.length > 0) {
+        transformed.intermediateStops = leg.intermediateStops.map(stop => ({
+          name: stop.name || '',
+          lat: stop.lat || 0,
+          lon: stop.lon || 0,
+        }));
+      }
+      return transformed;
+    }),
+  }));
+  return { itineraries };
+}
+
+// --- /api/route (multimodal transit routing via MOTIS) ---
+app.get('/api/route', async (req, res) => {
+  const { from, to, time, arriveBy } = req.query;
+
+  if (!from || !to) {
+    return res.status(400).json({ error: 'Missing required parameters: from, to (format: lat,lon)' });
+  }
+
+  const [fromLat, fromLon] = from.split(',').map(Number);
+  const [toLat, toLon] = to.split(',').map(Number);
+
+  if (isNaN(fromLat) || isNaN(fromLon) || isNaN(toLat) || isNaN(toLon)) {
+    return res.status(400).json({ error: 'Invalid coordinate format. Use: lat,lon' });
+  }
+
+  const routeTime = time || new Date().toISOString();
+  const isArriveBy = arriveBy === 'true';
+  const cacheKey = `${from}|${to}|${routeTime}|${isArriveBy}`;
+
+  const cached = getCachedRoute(cacheKey);
+  if (cached) {
+    return res.json(cached);
+  }
+
+  try {
+    const motisResponse = await axios.post(`${MOTIS_BASE}/api/v1/plan`, {
+      fromPlace: { lat: fromLat, lon: fromLon },
+      toPlace: { lat: toLat, lon: toLon },
+      time: routeTime,
+      arriveBy: isArriveBy,
+      transitModes: ['BUS', 'RAIL', 'TRAM'],
+      numItineraries: 5,
+    }, { timeout: 15000 });
+
+    const result = transformMotisResponse(motisResponse.data);
+    setCachedRoute(cacheKey, result);
+    res.json(result);
+  } catch (error) {
+    console.error('Error fetching route from MOTIS:', error.message);
+    res.status(error.response?.status || 502).json({
+      error: 'Failed to fetch route',
+      message: error.message,
+    });
+  }
+});
+
+// --- /api/geocode (location autocomplete via MOTIS) ---
+app.get('/api/geocode', async (req, res) => {
+  const { text } = req.query;
+
+  if (!text) {
+    return res.status(400).json({ error: 'Missing required parameter: text' });
+  }
+
+  try {
+    const motisResponse = await axios.get(`${MOTIS_BASE}/api/v1/geocode`, {
+      params: { text },
+      timeout: 5000,
+    });
+    res.json(motisResponse.data);
+  } catch (error) {
+    console.error('Error fetching geocode from MOTIS:', error.message);
+    res.status(error.response?.status || 502).json({
+      error: 'Failed to geocode',
+      message: error.message,
+    });
+  }
+});
+
+// --- /api/stoptimes (stop departures via MOTIS) ---
+app.get('/api/stoptimes', async (req, res) => {
+  const { stopId, n } = req.query;
+
+  if (!stopId) {
+    return res.status(400).json({ error: 'Missing required parameter: stopId' });
+  }
+
+  try {
+    const motisResponse = await axios.get(`${MOTIS_BASE}/api/v1/stoptimes`, {
+      params: { stopId, n: n || 20 },
+      timeout: 5000,
+    });
+    res.json(motisResponse.data);
+  } catch (error) {
+    console.error('Error fetching stoptimes from MOTIS:', error.message);
+    res.status(error.response?.status || 502).json({
+      error: 'Failed to fetch stop times',
+      message: error.message,
+    });
+  }
+});
+
+// --- /api/health (health check with MOTIS connectivity) ---
+app.get('/api/health', async (req, res) => {
+  try {
+    await axios.get(`${MOTIS_BASE}/api/v1/geocode`, {
+      params: { text: 'test' },
+      timeout: 3000,
+    });
+    res.json({ status: 'ok', motis: 'connected' });
+  } catch (error) {
+    res.json({ status: 'degraded', motis: 'unreachable' });
   }
 });
 

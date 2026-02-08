@@ -1,0 +1,12 @@
+osm: data-input/israel.osm.pbf
+
+timetable:
+  first_day: TODAY
+  num_days: 365
+  datasets:
+    israel:
+      path: data-input/israel-gtfs.zip
+
+server:
+  host: 127.0.0.1
+  port: 3504

@@ -6,6 +6,8 @@ import styles from './MapContextMenu.module.css'
 interface MapContextMenuProps {
   onSetStart: (coords: Coordinates) => void
   onSetDestination: (coords: Coordinates) => void
+  onRouteFrom?: (lat: number, lon: number) => void
+  onRouteTo?: (lat: number, lon: number) => void
 }
 
 interface ContextMenuState {
@@ -15,7 +17,7 @@ interface ContextMenuState {
   y: number
 }
 
-export default function MapContextMenu({ onSetStart, onSetDestination }: MapContextMenuProps) {
+export default function MapContextMenu({ onSetStart, onSetDestination, onRouteFrom, onRouteTo }: MapContextMenuProps) {
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
 
   useMapEvents({
@@ -53,6 +55,18 @@ export default function MapContextMenu({ onSetStart, onSetDestination }: MapCont
     setContextMenu(null)
   }
 
+  const handleRouteFrom = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    onRouteFrom?.(contextMenu.lat, contextMenu.lng)
+    setContextMenu(null)
+  }
+
+  const handleRouteTo = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    onRouteTo?.(contextMenu.lat, contextMenu.lng)
+    setContextMenu(null)
+  }
+
   return (
     <div className={styles.menu} style={{ top: contextMenu.y, left: contextMenu.x }}>
       <div onMouseDown={handleSetStart} className={styles.item}>
@@ -61,6 +75,16 @@ export default function MapContextMenu({ onSetStart, onSetDestination }: MapCont
       <div onMouseDown={handleSetDestination} className={styles.item}>
         Set as Destination
       </div>
+      {onRouteFrom && (
+        <div onMouseDown={handleRouteFrom} className={styles.item}>
+          Route from here
+        </div>
+      )}
+      {onRouteTo && (
+        <div onMouseDown={handleRouteTo} className={styles.item}>
+          Route to here
+        </div>
+      )}
       <div onMouseDown={() => setContextMenu(null)} className={styles.cancel}>
         Cancel
       </div>

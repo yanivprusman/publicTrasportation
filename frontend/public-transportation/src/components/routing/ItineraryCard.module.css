@@ -1,0 +1,79 @@
+.card {
+  padding: 10px 12px;
+  border: 2px solid transparent;
+  border-radius: 10px;
+  background: #f8f9fa;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.card:hover {
+  background: #eef2f7;
+}
+
+.card.selected {
+  border-color: #2196F3;
+  background: #e8f0fe;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+
+.duration {
+  font-weight: 700;
+  font-size: 16px;
+  color: #222;
+}
+
+.transfers {
+  font-size: 12px;
+  color: #666;
+  background: #e0e0e0;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.times {
+  margin-left: auto;
+  font-size: 13px;
+  color: #444;
+  font-weight: 500;
+}
+
+.legs {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.pill {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 8px;
+  border-radius: 12px;
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.pillMode {
+  opacity: 0.9;
+}
+
+.pillRoute {
+  background: rgba(255,255,255,0.25);
+  padding: 0 4px;
+  border-radius: 3px;
+}
+
+.pillTime {
+  opacity: 0.85;
+  font-weight: 400;
+}
