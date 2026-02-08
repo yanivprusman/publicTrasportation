@@ -60,9 +60,9 @@ d setPort --key motis --value 3504 || echo "Warning: Could not register port (da
 
 # --- Run MOTIS import ---
 echo "Running MOTIS import (this may take several minutes)..."
-"$BIN_DIR/motis" --config "$SCRIPT_DIR/config.yml" import
+"$BIN_DIR/motis" import
 echo "MOTIS import complete"
 
 echo ""
 echo "Installation finished. Start the server with:"
-echo "  $BIN_DIR/motis --config $SCRIPT_DIR/config.yml server"
+echo "  cd $SCRIPT_DIR && $BIN_DIR/motis server"

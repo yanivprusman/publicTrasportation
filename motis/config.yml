@@ -1,5 +1,10 @@
 osm: data-input/israel.osm.pbf
 
+street_routing: true
+geocoding: true
+reverse_geocoding: true
+osr_footpath: true
+
 timetable:
   first_day: TODAY
   num_days: 365

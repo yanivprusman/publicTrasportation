@@ -54,7 +54,7 @@ rmdir "$STAGING_DIR" 2>/dev/null || true
 
 # --- Run MOTIS import ---
 echo "Running MOTIS import..."
-"$SCRIPT_DIR/bin/motis" --config "$SCRIPT_DIR/config.yml" import
+"$SCRIPT_DIR/bin/motis" import
 
 # --- Restart MOTIS service ---
 echo "Restarting MOTIS service..."
