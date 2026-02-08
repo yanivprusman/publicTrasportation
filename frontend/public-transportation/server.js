@@ -331,14 +331,16 @@ app.get('/api/route', async (req, res) => {
   }
 
   try {
-    const motisResponse = await axios.post(`${MOTIS_BASE}/api/v1/plan`, {
-      fromPlace: { lat: fromLat, lon: fromLon },
-      toPlace: { lat: toLat, lon: toLon },
-      time: routeTime,
-      arriveBy: isArriveBy,
-      transitModes: ['BUS', 'RAIL', 'TRAM'],
-      numItineraries: 5,
-    }, { timeout: 15000 });
+    const motisResponse = await axios.get(`${MOTIS_BASE}/api/v1/plan`, {
+      params: {
+        fromPlace: `${fromLat},${fromLon}`,
+        toPlace: `${toLat},${toLon}`,
+        time: routeTime,
+        arriveBy: isArriveBy,
+        numItineraries: 5,
+      },
+      timeout: 15000,
+    });
 
     const result = transformMotisResponse(motisResponse.data);
     setCachedRoute(cacheKey, result);
