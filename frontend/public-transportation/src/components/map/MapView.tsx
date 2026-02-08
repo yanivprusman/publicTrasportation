@@ -54,8 +54,8 @@ interface MapViewProps {
   onRouteCalculated: () => void
   onStartingPointSet: (pos: Coordinates) => void
   selectedItinerary?: Itinerary | null
-  onRouteFrom?: (lat: number, lon: number) => void
-  onRouteTo?: (lat: number, lon: number) => void
+  onRouteFrom: (lat: number, lon: number) => void
+  onRouteTo: (lat: number, lon: number) => void
 }
 
 function MapView({
@@ -239,8 +239,6 @@ function MapView({
         <UpdateMapView position={mapCenter} />
         <TrackMapMovement setMapCenter={setMapCenterLocal} />
         <MapContextMenu
-          onSetStart={handleSetStartPoint}
-          onSetDestination={handleSetDestinationPoint}
           onRouteFrom={onRouteFrom}
           onRouteTo={onRouteTo}
         />

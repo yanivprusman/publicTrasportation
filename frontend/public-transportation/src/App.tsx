@@ -105,12 +105,14 @@ function App() {
 
   const handleRouteFrom = (lat: number, lon: number) => {
     routing.setOriginFromCoords(lat, lon)
+    setStartingPoint([lat, lon])
     setActiveTab('route')
     setSheetState('half')
   }
 
   const handleRouteTo = (lat: number, lon: number) => {
     routing.setDestinationFromCoords(lat, lon)
+    setDestination([lat, lon])
     setActiveTab('route')
     setSheetState('half')
   }
