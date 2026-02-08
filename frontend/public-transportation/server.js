@@ -82,7 +82,7 @@ app.get('/api/transport', async (req, res) => {
         timeout: 10000
       });
     } else {
-      throw new Error("Proxy not running (port file not found). Run 'd publicTransportationStartProxy'.");
+      throw new Error("Proxy not running (port file not found). Run 'd startApp --app pt' to start the proxy.");
     }
 
     res.json(response.data);

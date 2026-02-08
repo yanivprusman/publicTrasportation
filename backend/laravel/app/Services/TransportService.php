@@ -36,7 +36,7 @@ class TransportService
                 $this->apiUrl = "http://localhost:{$port}/Channels/HTTPChannel/SmQuery/2.8/json";
                 Log::info("Using local proxy port: {$port}");
             } else {
-                throw new \Exception("Proxy not running. Run 'd publicTransportationStartProxy'.");
+                throw new \Exception("Proxy not running. Run 'd startApp --app pt' to start the proxy.");
             }
 
             // Build API URL

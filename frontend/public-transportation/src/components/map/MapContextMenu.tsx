@@ -55,13 +55,13 @@ export default function MapContextMenu({ onSetStart, onSetDestination }: MapCont
 
   return (
     <div className={styles.menu} style={{ top: contextMenu.y, left: contextMenu.x }}>
-      <div onClick={handleSetStart} className={styles.item}>
+      <div onMouseDown={handleSetStart} className={styles.item}>
         Set as Start
       </div>
-      <div onClick={handleSetDestination} className={styles.item}>
+      <div onMouseDown={handleSetDestination} className={styles.item}>
         Set as Destination
       </div>
-      <div onClick={() => setContextMenu(null)} className={styles.cancel}>
+      <div onMouseDown={() => setContextMenu(null)} className={styles.cancel}>
         Cancel
       </div>
     </div>

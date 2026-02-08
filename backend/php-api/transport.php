@@ -88,7 +88,7 @@ try {
 
     } else {
         // Fallback or error - let's error for now to enforce proxy usage as requested
-        throw new Exception("Proxy not running (port file not found). Run 'd publicTransportationStartProxy'.");
+        throw new Exception("Proxy not running (port file not found). Run 'd startApp --app pt' to start the proxy.");
     }
 
     safeLog('Raw output length: ' . strlen($output));
