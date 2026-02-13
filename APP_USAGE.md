@@ -10,7 +10,7 @@
 To enable access to the Ministry of Transportation (MOT) servers, you must start the proxy via the daemon.
 
 ```bash
-# Start the proxy (this establishes a tunnel to 10.0.0.1)
+# Start the proxy (this establishes a tunnel to 10.0.0.8)
 d publicTransportationStartProxy
 
 cat /tmp/pt_proxy_port
