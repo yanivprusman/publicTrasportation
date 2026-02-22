@@ -2,8 +2,15 @@ import axios from 'axios'
 import type { SiriData, VehicleMarker, RouteShapeData } from '../types'
 
 export const fetchStationArrivals = async (stationCode: string, detailLevel = 'calls'): Promise<SiriData> => {
-  const response = await axios.get<SiriData>(`/api/transport?station=${stationCode}&detail=${detailLevel}`)
-  return response.data
+  try {
+    const response = await axios.get<SiriData>(`/api/transport?station=${stationCode}&detail=${detailLevel}`)
+    return response.data
+  } catch (err) {
+    if (axios.isAxiosError(err) && err.response?.data?.error) {
+      throw new Error(err.response.data.error)
+    }
+    throw err
+  }
 }
 
 export const extractVehicleMarkers = (siriData: SiriData): VehicleMarker[] => {
