@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
-import './App.css'
 import MapView from './components/map/MapView'
 import StationArrivals from './components/data-display/StationArrivals'
 import TransportControls from './components/controls/TransportControls'
 import RoutePlanner from './components/routing/RoutePlanner'
 import { useRouting } from './hooks/useRouting'
+import { useSessionState } from './hooks/useSessionState'
 import { fetchStationArrivals, extractVehicleMarkers, fetchLineShape } from './services/transport-api'
 import type { SheetState } from './components/routing/BottomSheet'
 import type { SiriData, VehicleMarker, Coordinates } from './types'
@@ -16,12 +16,12 @@ function App() {
   const [siriData, setSiriData] = useState<SiriData | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [stationCode, setStationCode] = useState('26472')
-  const [lineNumber, setLineNumber] = useState('60')
+  const [stationCode, setStationCode] = useSessionState('stationCode', '26472')
+  const [lineNumber, setLineNumber] = useSessionState('lineNumber', '60')
   const [routeShape, setRouteShape] = useState<Coordinates[] | null>(null)
-  const [routeDirection, setRouteDirection] = useState('0')
+  const [routeDirection, setRouteDirection] = useSessionState('routeDirection', '0')
 
-  const [showVehicleMarkers, setShowVehicleMarkers] = useState(false)
+  const [showVehicleMarkers, setShowVehicleMarkers] = useSessionState('showVehicleMarkers', false)
   const [vehicleMarkers, setVehicleMarkers] = useState<VehicleMarker[]>([])
 
   const [startingPoint, setStartingPoint] = useState<Coordinates>(defaultStartingPoint)
@@ -32,7 +32,7 @@ function App() {
 
   const routing = useRouting()
   const [sheetState, setSheetState] = useState<SheetState>('collapsed')
-  const [activeTab, setActiveTab] = useState<'route' | 'arrivals'>('route')
+  const [activeTab, setActiveTab] = useSessionState<'route' | 'arrivals'>('activeTab', 'route')
 
   const fetchStationData = async () => {
     setLoading(true)

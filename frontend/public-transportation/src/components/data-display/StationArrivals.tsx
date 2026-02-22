@@ -1,3 +1,4 @@
+import { Fragment, useState } from 'react'
 import type { SiriData } from '../../types'
 
 interface StationArrivalsProps {
@@ -8,6 +9,8 @@ interface StationArrivalsProps {
 }
 
 function StationArrivals({ siriData, loading, error, stationCode }: StationArrivalsProps) {
+  const [expandedIndex, setExpandedIndex] = useState<number | null>(null)
+
   if (loading) return <h2>Loading...</h2>
   if (error) return <h2>Error: {error}</h2>
   if (!siriData) return <h2>No data available</h2>
@@ -36,27 +39,59 @@ function StationArrivals({ siriData, loading, error, stationCode }: StationArriv
             {monitoredStopVisits.map((visit, index) => {
               const journey = visit.MonitoredVehicleJourney
               const monitoredCall = journey.MonitoredCall
+              const isExpanded = expandedIndex === index
 
               let arrivalTime = 'N/A'
+              let fullArrivalTime = 'N/A'
               if (monitoredCall?.ExpectedArrivalTime) {
                 const date = new Date(monitoredCall.ExpectedArrivalTime)
                 arrivalTime = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                fullArrivalTime = date.toLocaleString()
               }
 
               let distance = 'N/A'
-              if (monitoredCall?.DistanceFromStop) {
-                const m = monitoredCall.DistanceFromStop
-                distance = m >= 1000 ? `${(m / 1000).toFixed(1)} km` : `${m} m`
+              const exactMeters = monitoredCall?.DistanceFromStop
+              if (exactMeters != null) {
+                distance = exactMeters >= 1000 ? `${(exactMeters / 1000).toFixed(1)} km` : `${exactMeters} m`
               }
 
+              const vehicleLocation = journey.VehicleLocation
+
               return (
-                <tr key={visit.ItemIdentifier || index}>
-                  <td>{journey.PublishedLineName || 'N/A'}</td>
-                  <td>{journey.DirectionRef || 'N/A'}</td>
-                  <td>{journey.DestinationRef || 'N/A'}</td>
-                  <td>{arrivalTime}</td>
-                  <td>{distance}</td>
-                </tr>
+                <Fragment key={visit.ItemIdentifier || index}>
+                  <tr
+                    className="expandable-row"
+                    onClick={() => setExpandedIndex(isExpanded ? null : index)}
+                  >
+                    <td>{journey.PublishedLineName || 'N/A'}</td>
+                    <td>{journey.DirectionRef || 'N/A'}</td>
+                    <td>{journey.DestinationRef || 'N/A'}</td>
+                    <td>{arrivalTime}</td>
+                    <td>{distance}</td>
+                  </tr>
+                  {isExpanded && (
+                    <tr className="expanded-detail-row">
+                      <td colSpan={5}>
+                        <div className="detail-content">
+                          <div className="detail-item">
+                            <span className="detail-label">Vehicle ID:</span> {journey.VehicleRef || 'N/A'}
+                          </div>
+                          <div className="detail-item">
+                            <span className="detail-label">Exact distance:</span> {exactMeters != null ? `${exactMeters} m` : 'N/A'}
+                          </div>
+                          {vehicleLocation && (
+                            <div className="detail-item">
+                              <span className="detail-label">GPS:</span> {vehicleLocation.Latitude}, {vehicleLocation.Longitude}
+                            </div>
+                          )}
+                          <div className="detail-item">
+                            <span className="detail-label">Full arrival:</span> {fullArrivalTime}
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
               )
             })}
           </tbody>

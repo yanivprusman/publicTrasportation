@@ -28,9 +28,9 @@ function TransportControls({
   handleFindRoute
 }: TransportControlsProps) {
   return (
-    <div className="controls-panel">
-      <div className={styles.stationGroup}>
-        <label className={styles.label}>Station:</label>
+    <div className={styles.panel}>
+      <div className={styles.row}>
+        <span className={styles.label}>Station</span>
         <select
           value={stationCode}
           onChange={(e) => setStationCode(e.target.value)}
@@ -39,43 +39,36 @@ function TransportControls({
           <option value="26472">מסוף עמידר (26472)</option>
           <option value="20832">Station 20832</option>
         </select>
-        <button onClick={fetchStationData} className={styles.refreshButton}>
-          Refresh Station Data
-        </button>
-
-        <label className={styles.vehicleLabel}>
+        <button onClick={fetchStationData} className={styles.btn}>Refresh</button>
+        <label className={styles.checkbox}>
           <input
             type="checkbox"
             checked={showVehicleMarkers}
             onChange={(e) => setShowVehicleMarkers(e.target.checked)}
           />
-          Show Vehicles
+          Vehicles
         </label>
       </div>
-      <div>
-        <label className={styles.label}>Line:</label>
+
+      <div className={styles.row}>
+        <span className={styles.label}>Line</span>
         <input
           type="text"
           value={lineNumber}
           onChange={(e) => setLineNumber(e.target.value)}
-          className={styles.lineInput}
+          className={styles.input}
         />
-        <label className={styles.directionLabel}>Direction:</label>
         <select
           value={routeDirection}
           onChange={(e) => setRouteDirection(e.target.value)}
           className={styles.select}
+          style={{ flex: 'none', width: 'auto' }}
         >
           <option value="0">Outbound</option>
           <option value="1">Inbound</option>
         </select>
-        <button onClick={fetchLineShape} className={styles.showRouteButton}>
-          Show Route
-        </button>
-
-        <button onClick={handleFindRoute} className={styles.findRouteButton}>
-          Find Route
-        </button>
+        <button onClick={fetchLineShape} className={styles.btn}>Show Route</button>
+        <button onClick={handleFindRoute} className={styles.btnPrimary}>Find Route</button>
       </div>
     </div>
   )

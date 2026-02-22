@@ -54,6 +54,33 @@ code {
   background-color: #f2f2f2;
 }
 
+.expandable-row {
+  cursor: pointer;
+}
+
+.expandable-row:hover {
+  background-color: #eef2f7;
+}
+
+.expanded-detail-row td {
+  padding: 0 8px 8px;
+  background-color: #f8f9fa;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.detail-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.8rem;
+  color: #555;
+}
+
+.detail-label {
+  font-weight: 600;
+  color: #333;
+}
+
 @media (min-width: 769px) {
   .combined-app {
     padding-left: 400px;

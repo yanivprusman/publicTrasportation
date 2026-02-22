@@ -1,42 +1,66 @@
-.stationGroup {
-  margin-right: 20px;
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  font-size: 0.85rem;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .label {
-  margin-right: var(--spacing-sm);
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 .select {
-  padding: var(--spacing-xs);
+  padding: 4px 6px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  flex: 1;
+  min-width: 0;
 }
 
-.refreshButton {
-  margin-left: var(--spacing-sm);
-  padding: 5px 10px;
-}
-
-.vehicleLabel {
-  margin-left: 15px;
-}
-
-.lineInput {
+.input {
+  padding: 4px 6px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
   width: 50px;
-  padding: var(--spacing-xs);
 }
 
-.directionLabel {
-  margin-left: var(--spacing-sm);
-  margin-right: var(--spacing-xs);
-}
-
-.showRouteButton {
-  margin-left: var(--spacing-sm);
+.btn {
   padding: 5px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: white;
+  cursor: pointer;
+  white-space: nowrap;
 }
 
-.findRouteButton {
-  margin-left: var(--spacing-sm);
-  padding: 5px 10px;
+.btn:hover {
+  background: #f0f0f0;
+}
+
+.btnPrimary {
+  composes: btn;
   background-color: var(--color-success);
   color: white;
+  border-color: var(--color-success);
+}
+
+.btnPrimary:hover {
+  background-color: #43a047;
+}
+
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  margin-left: auto;
 }
