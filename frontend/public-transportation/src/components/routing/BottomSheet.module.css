@@ -46,5 +46,6 @@
   box-shadow: 2px 0 16px rgba(0, 0, 0, 0.12);
   z-index: 1000;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 16px;
 }
