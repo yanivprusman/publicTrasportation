@@ -2,13 +2,12 @@
   "name": "public-transportation",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "dependencies": {
-    "cors": "^2.8.5",
-    "express": "^5.1.0",
     "@mapbox/polyline": "^1.2.1",
     "axios": "^1.8.4",
-    "dotenv": "^17.2.3",
     "leaflet": "^1.9.4",
+    "next": "^16.1.6",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-leaflet": "^5.0.0"
@@ -18,14 +17,11 @@
     "@types/node": "^25.2.1",
     "@types/react": "^19.2.5",
     "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^5.1.1",
-    "typescript": "~5.9.3",
-    "vite": "^7.2.4"
+    "typescript": "~5.9.3"
   },
   "scripts": {
-    "dev": "vite",
-    "start": "node server.js",
-    "build": "tsc -b && vite build",
-    "preview": "vite preview"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
   }
 }

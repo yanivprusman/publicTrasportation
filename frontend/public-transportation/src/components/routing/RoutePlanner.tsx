@@ -14,11 +14,17 @@ interface RoutePlannerProps {
   activeTab: 'route' | 'arrivals'
   onTabChange: (tab: 'route' | 'arrivals') => void
   arrivalsContent: React.ReactNode
+  lineNumber: string
+  setLineNumber: (num: string) => void
+  routeDirection: string
+  setRouteDirection: (dir: string) => void
+  onFetchLineShape: () => void
 }
 
 export default function RoutePlanner({
   routing, sheetState, onSheetStateChange,
-  activeTab, onTabChange, arrivalsContent
+  activeTab, onTabChange, arrivalsContent,
+  lineNumber, setLineNumber, routeDirection, setRouteDirection, onFetchLineShape
 }: RoutePlannerProps) {
   const handleSearch = useCallback(() => {
     routing.search()
@@ -85,6 +91,34 @@ export default function RoutePlanner({
                 >
                   {routing.loading ? 'Searching...' : 'Search Routes'}
                 </button>
+              </div>
+
+              <div className={styles.lineShapeSection}>
+                <div className={styles.lineShapeLabel}>Line Shape</div>
+                <div className={styles.lineShapeRow}>
+                  <input
+                    type="text"
+                    value={lineNumber}
+                    onChange={(e) => setLineNumber(e.target.value)}
+                    placeholder="Line #"
+                    className={styles.lineShapeInput}
+                  />
+                  <select
+                    value={routeDirection}
+                    onChange={(e) => setRouteDirection(e.target.value)}
+                    className={styles.lineShapeSelect}
+                  >
+                    <option value="0">Outbound</option>
+                    <option value="1">Inbound</option>
+                  </select>
+                  <button
+                    onClick={onFetchLineShape}
+                    className={styles.lineShapeBtn}
+                    type="button"
+                  >
+                    Show Route
+                  </button>
+                </div>
               </div>
 
               <RouteResults

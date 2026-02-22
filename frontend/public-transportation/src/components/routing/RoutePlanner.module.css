@@ -65,3 +65,52 @@
 .arrivalsWrap {
   padding: 4px 0;
 }
+
+.lineShapeSection {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #eee;
+}
+
+.lineShapeLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: #888;
+  margin-bottom: 6px;
+}
+
+.lineShapeRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.lineShapeInput {
+  width: 60px;
+  padding: 6px 8px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.lineShapeSelect {
+  padding: 6px 8px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.lineShapeBtn {
+  padding: 6px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: white;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.lineShapeBtn:hover {
+  background: #f5f5f5;
+}

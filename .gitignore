@@ -9,6 +9,7 @@
 **/build/
 **/dist/
 **/out/
+**/.next/
 **/gtfs_cache/
 **/gtfs_data/
 **/public/storage
