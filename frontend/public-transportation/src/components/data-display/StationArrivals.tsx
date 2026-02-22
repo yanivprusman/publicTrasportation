@@ -3,27 +3,41 @@ import type { SiriData } from '../../types'
 
 interface StationArrivalsProps {
   siriData: SiriData | null
-  loading: boolean
   error: string | null
   stationCode: string
+  lineFilter?: string
 }
 
-function StationArrivals({ siriData, loading, error, stationCode }: StationArrivalsProps) {
+function StationArrivals({ siriData, error, stationCode, lineFilter }: StationArrivalsProps) {
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null)
 
-  if (loading) return <h2>Loading...</h2>
   if (error) return <h2>Error: {error}</h2>
-  if (!siriData) return <h2>No data available</h2>
+  if (!siriData) return <h2>Loading...</h2>
 
-  const monitoredStopVisits = siriData?.Siri?.ServiceDelivery?.StopMonitoringDelivery?.[0]?.MonitoredStopVisit || []
+  const allVisits = siriData?.Siri?.ServiceDelivery?.StopMonitoringDelivery?.[0]?.MonitoredStopVisit || []
 
-  if (monitoredStopVisits.length === 0) {
+  if (allVisits.length === 0) {
     return <h2>No vehicles are currently being monitored for station {stationCode}</h2>
   }
 
+  const trimmedFilter = lineFilter?.trim().toLowerCase() || ''
+  const monitoredStopVisits = trimmedFilter
+    ? allVisits.filter(visit =>
+        (visit.MonitoredVehicleJourney.PublishedLineName || '').toString().toLowerCase().trim() === trimmedFilter
+      )
+    : allVisits
+
+  if (trimmedFilter && monitoredStopVisits.length === 0) {
+    return <h2>No vehicles match line {lineFilter?.trim()}</h2>
+  }
+
+  const heading = trimmedFilter
+    ? `Showing ${monitoredStopVisits.length} of ${allVisits.length} vehicles`
+    : `Monitored Vehicles: ${allVisits.length}`
+
   return (
     <div>
-      <h2>Monitored Vehicles:</h2>
+      <h2>{heading}</h2>
       <div style={{ overflowX: 'auto' }}>
         <table className="vehicle-table">
           <thead>

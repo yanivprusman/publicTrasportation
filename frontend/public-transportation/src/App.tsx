@@ -14,8 +14,8 @@ function App() {
   const defaultDestination: Coordinates = [32.0673, 34.7835]
 
   const [siriData, setSiriData] = useState<SiriData | null>(null)
-  const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [stationCode, setStationCode] = useSessionState('stationCode', '26472')
   const [lineNumber, setLineNumber] = useSessionState('lineNumber', '60')
   const [routeShape, setRouteShape] = useState<Coordinates[] | null>(null)
@@ -31,49 +31,29 @@ function App() {
   const [calculateRoute, setCalculateRoute] = useState(false)
 
   const routing = useRouting()
+  const [lineFilter, setLineFilter] = useSessionState('lineFilter', '')
   const [sheetState, setSheetState] = useState<SheetState>('collapsed')
   const [activeTab, setActiveTab] = useSessionState<'route' | 'arrivals'>('activeTab', 'route')
 
   const fetchStationData = async () => {
-    setLoading(true)
     setError(null)
     try {
       const data = await fetchStationArrivals(stationCode)
       setSiriData(data)
       const markers = extractVehicleMarkers(data)
       setVehicleMarkers(markers)
-      setLoading(false)
+      setLastUpdated(new Date())
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
       setError(`Connection error: ${message}. Make sure the API server is running.`)
-      setLoading(false)
-    }
-  }
-
-  const handleFindRoute = async () => {
-    if (!destination) {
-      setError('Please set a destination first')
-      return
-    }
-    setLoading(true)
-    setError(null)
-    try {
-      setCalculateRoute(true)
-      setLoading(false)
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err)
-      setError(`Error finding route: ${message}`)
-      setLoading(false)
     }
   }
 
   const handleFetchLineShape = async () => {
-    setLoading(true)
     setError(null)
     try {
       if (!lineNumber.trim()) {
         setError('Please enter a valid line number')
-        setLoading(false)
         return
       }
 
@@ -98,8 +78,6 @@ function App() {
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
       setError(`Failed to load route shape: ${message}`)
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -119,6 +97,8 @@ function App() {
 
   useEffect(() => {
     fetchStationData()
+    const interval = setInterval(fetchStationData, 15000)
+    return () => clearInterval(interval)
   }, [stationCode])
 
   const arrivalsContent = (
@@ -126,21 +106,17 @@ function App() {
       <TransportControls
         stationCode={stationCode}
         setStationCode={setStationCode}
-        fetchStationData={fetchStationData}
-        lineNumber={lineNumber}
-        setLineNumber={setLineNumber}
-        routeDirection={routeDirection}
-        setRouteDirection={setRouteDirection}
-        fetchLineShape={handleFetchLineShape}
+        lastUpdated={lastUpdated}
+        lineFilter={lineFilter}
+        setLineFilter={setLineFilter}
         showVehicleMarkers={showVehicleMarkers}
         setShowVehicleMarkers={setShowVehicleMarkers}
-        handleFindRoute={handleFindRoute}
       />
       <StationArrivals
         siriData={siriData}
-        loading={loading}
         error={error}
         stationCode={stationCode}
+        lineFilter={lineFilter}
       />
     </>
   )
@@ -152,7 +128,9 @@ function App() {
         longitude={mapCenter[1]}
         mapCenter={mapCenter}
         setMapCenter={setMapCenter}
-        vehicleMarkers={showVehicleMarkers ? vehicleMarkers : []}
+        vehicleMarkers={showVehicleMarkers ? (lineFilter.trim()
+          ? vehicleMarkers.filter(m => m.lineNumber.toLowerCase() === lineFilter.trim().toLowerCase())
+          : vehicleMarkers) : []}
         routeShape={routeShape}
         destination={destination}
         onDestinationSet={setDestination}
@@ -175,6 +153,11 @@ function App() {
         activeTab={activeTab}
         onTabChange={setActiveTab}
         arrivalsContent={arrivalsContent}
+        lineNumber={lineNumber}
+        setLineNumber={setLineNumber}
+        routeDirection={routeDirection}
+        setRouteDirection={setRouteDirection}
+        onFetchLineShape={handleFetchLineShape}
       />
     </div>
   )

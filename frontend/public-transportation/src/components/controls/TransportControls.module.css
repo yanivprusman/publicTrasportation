@@ -1,7 +1,4 @@
 .panel {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
   padding: 12px;
   font-size: 0.85rem;
 }
@@ -23,7 +20,7 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   flex: 1;
-  min-width: 0;
+  min-width: 120px;
 }
 
 .input {
@@ -33,28 +30,10 @@
   width: 50px;
 }
 
-.btn {
-  padding: 5px 10px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background: white;
-  cursor: pointer;
+.updatedAgo {
+  color: #888;
+  font-size: 0.8rem;
   white-space: nowrap;
-}
-
-.btn:hover {
-  background: #f0f0f0;
-}
-
-.btnPrimary {
-  composes: btn;
-  background-color: var(--color-success);
-  color: white;
-  border-color: var(--color-success);
-}
-
-.btnPrimary:hover {
-  background-color: #43a047;
 }
 
 .checkbox {
