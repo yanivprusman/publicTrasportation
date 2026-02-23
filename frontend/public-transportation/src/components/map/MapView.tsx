@@ -30,7 +30,10 @@ function TrackMapMovement({ setMapCenter }: { setMapCenter: (c: Coordinates) => 
 function UpdateMapView({ position }: { position: Coordinates }) {
   const map = useMap()
   useEffect(() => {
-    map.setView(position, map.getZoom())
+    const center = map.getCenter()
+    if (Math.abs(center.lat - position[0]) > 1e-6 || Math.abs(center.lng - position[1]) > 1e-6) {
+      map.setView(position, map.getZoom())
+    }
   }, [position, map])
   return null
 }
