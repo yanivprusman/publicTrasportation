@@ -1,6 +1,6 @@
 import { Marker, Popup } from 'react-leaflet'
 import L from 'leaflet'
-import { destinationIcon, centerIcon, vehicleIcon, stopIcon } from './MapMarkers'
+import { destinationIcon, centerIcon, createBusIcon, stopIcon } from './MapMarkers'
 import type { Coordinates, VehicleMarker, StopInfo } from '../../types'
 
 interface MarkersLayerProps {
@@ -81,7 +81,7 @@ const MarkersLayer = ({
         <Marker
           key={`vehicle-${index}`}
           position={vehicle.position}
-          icon={vehicleIcon}
+          icon={createBusIcon(vehicle.lineNumber)}
         >
           <Popup>
             <div>
