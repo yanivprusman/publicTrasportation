@@ -28,6 +28,7 @@ export interface SiriData {
       }>
     }
   }
+  _stopNames?: Record<string, string>
 }
 
 export interface MonitoredStopVisit {

@@ -43,6 +43,11 @@ function TransportControls({
           className={styles.select}
         >
           <option value="26472">מסוף עמידר (26472)</option>
+          <option value="20001">ת. רכבת תל אביב סבידור (20001)</option>
+          <option value="21256">ת. מרכזית ת&quot;א קומה 6 (21256)</option>
+          <option value="23009">שוק הכרמל/אלנבי (23009)</option>
+          <option value="21199">קניון רמת אביב (21199)</option>
+          <option value="20304">פנחס רוזן/קהילת יאסי (20304)</option>
           <option value="20832">Station 20832</option>
         </select>
         {lastUpdated && <span className={styles.updatedAgo}>Updated {agoText}</span>}

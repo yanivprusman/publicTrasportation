@@ -15,6 +15,7 @@ function StationArrivals({ siriData, error, stationCode, lineFilter }: StationAr
   if (!siriData) return <h2>Loading...</h2>
 
   const allVisits = siriData?.Siri?.ServiceDelivery?.StopMonitoringDelivery?.[0]?.MonitoredStopVisit || []
+  const stopNames = siriData?._stopNames || {}
 
   if (allVisits.length === 0) {
     return <h2>No vehicles are currently being monitored for station {stationCode}</h2>
@@ -79,7 +80,7 @@ function StationArrivals({ siriData, error, stationCode, lineFilter }: StationAr
                   >
                     <td>{journey.PublishedLineName || 'N/A'}</td>
                     <td>{journey.DirectionRef || 'N/A'}</td>
-                    <td>{journey.DestinationRef || 'N/A'}</td>
+                    <td>{stopNames[journey.DestinationRef] || journey.DestinationRef || 'N/A'}</td>
                     <td>{arrivalTime}</td>
                     <td>{distance}</td>
                   </tr>
