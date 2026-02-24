@@ -10,6 +10,7 @@
 **/dist/
 **/out/
 **/.next/
+**/*.tsbuildinfo
 **/gtfs_cache/
 **/gtfs_data/
 **/public/storage
