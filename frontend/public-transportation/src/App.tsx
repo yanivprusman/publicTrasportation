@@ -6,6 +6,7 @@ import RoutePlanner from './components/routing/RoutePlanner'
 import { useRouting } from './hooks/useRouting'
 import { useSessionState } from './hooks/useSessionState'
 import { fetchStationArrivals, extractVehicleMarkers, fetchLineShape } from './services/transport-api'
+import { geocodeSearch } from './services/routing-api'
 import type { SheetState } from './components/routing/BottomSheet'
 import type { SiriData, VehicleMarker, Coordinates } from './types'
 
@@ -34,6 +35,27 @@ function App() {
   const [lineFilter, setLineFilter] = useSessionState('lineFilter', '')
   const [sheetState, setSheetState] = useState<SheetState>('collapsed')
   const [activeTab, setActiveTab] = useSessionState<'route' | 'arrivals'>('activeTab', 'route')
+
+  // Handle debug route from URL params (?origin=...&destination=...)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const originText = params.get('origin')
+    const destText = params.get('destination')
+    if (!originText || !destText) return
+
+    const resolve = async () => {
+      const [originResults, destResults] = await Promise.all([
+        geocodeSearch(originText),
+        geocodeSearch(destText),
+      ])
+      if (originResults.length > 0 && destResults.length > 0) {
+        routing.initRoute(originResults[0], destResults[0])
+        setActiveTab('route')
+        setSheetState('half')
+      }
+    }
+    resolve()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchStationData = async () => {
     setError(null)
