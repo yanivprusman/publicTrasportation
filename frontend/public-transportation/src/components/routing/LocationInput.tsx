@@ -8,9 +8,11 @@ interface LocationInputProps {
   value: GeocodeSuggestion | null
   onChange: (place: GeocodeSuggestion | null) => void
   placeholder?: string
+  onGpsClick?: () => void
+  gpsLoading?: boolean
 }
 
-export default function LocationInput({ label, value, onChange, placeholder }: LocationInputProps) {
+export default function LocationInput({ label, value, onChange, placeholder, onGpsClick, gpsLoading }: LocationInputProps) {
   const [text, setText] = useState(value?.name || '')
   const [suggestions, setSuggestions] = useState<GeocodeSuggestion[]>([])
   const [showDropdown, setShowDropdown] = useState(false)
@@ -72,6 +74,17 @@ export default function LocationInput({ label, value, onChange, placeholder }: L
           onBlur={handleBlur}
           placeholder={placeholder || `Search ${label.toLowerCase()}...`}
         />
+        {onGpsClick && !text && (
+          <button
+            className={styles.gpsBtn}
+            onClick={onGpsClick}
+            disabled={gpsLoading}
+            type="button"
+            title="Use my location"
+          >
+            {gpsLoading ? '...' : '\u2316'}
+          </button>
+        )}
         {text && (
           <button className={styles.clear} onClick={handleClear} type="button">&times;</button>
         )}

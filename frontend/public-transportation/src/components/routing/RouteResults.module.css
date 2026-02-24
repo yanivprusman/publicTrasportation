@@ -32,4 +32,36 @@
   border-radius: 8px;
   font-size: 13px;
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.noResults {
+  padding: 12px;
+  color: #1565c0;
+  background: #e3f2fd;
+  border-radius: 8px;
+  font-size: 13px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.retryBtn {
+  padding: 6px 16px;
+  border: 1px solid currentColor;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.retryBtn:hover {
+  opacity: 0.8;
 }

@@ -45,6 +45,21 @@
   line-height: 1;
 }
 
+.gpsBtn {
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: #2196F3;
+  padding: 0 10px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.gpsBtn:disabled {
+  color: #b0bec5;
+  cursor: not-allowed;
+}
+
 .dropdown {
   position: absolute;
   top: 100%;

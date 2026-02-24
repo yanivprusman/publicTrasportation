@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { searchStops, type StopResult } from '../../services/transport-api'
 import styles from './TransportControls.module.css'
 
 interface TransportControlsProps {
@@ -21,6 +22,22 @@ function TransportControls({
   setShowVehicleMarkers,
 }: TransportControlsProps) {
   const [agoText, setAgoText] = useState('')
+  const [stationText, setStationText] = useState('')
+  const [stationName, setStationName] = useState('')
+  const [suggestions, setSuggestions] = useState<StopResult[]>([])
+  const [showDropdown, setShowDropdown] = useState(false)
+  const timerRef = useRef<ReturnType<typeof setTimeout>>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  // Resolve initial station name on mount
+  useEffect(() => {
+    if (stationCode && !stationName) {
+      searchStops(stationCode).then(results => {
+        const match = results.find(s => s.stopCode === stationCode)
+        if (match) setStationName(match.stopName)
+      })
+    }
+  }, [])
 
   useEffect(() => {
     if (!lastUpdated) return
@@ -33,24 +50,80 @@ function TransportControls({
     return () => clearInterval(id)
   }, [lastUpdated])
 
+  const doSearch = useCallback((query: string) => {
+    if (timerRef.current) clearTimeout(timerRef.current)
+    if (!query.trim()) {
+      setSuggestions([])
+      return
+    }
+    timerRef.current = setTimeout(async () => {
+      const results = await searchStops(query)
+      setSuggestions(results)
+      setShowDropdown(results.length > 0)
+    }, 300)
+  }, [])
+
+  const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value
+    setStationText(val)
+    doSearch(val)
+  }
+
+  const handleSelect = (stop: StopResult) => {
+    setStationCode(stop.stopCode)
+    setStationName(stop.stopName)
+    setStationText('')
+    setSuggestions([])
+    setShowDropdown(false)
+  }
+
+  const handleClear = () => {
+    setStationText('')
+    setSuggestions([])
+    inputRef.current?.focus()
+  }
+
+  const handleBlur = () => {
+    setTimeout(() => setShowDropdown(false), 200)
+  }
+
   return (
     <div className={styles.panel}>
       <div className={styles.row}>
         <span className={styles.label}>Station</span>
-        <select
-          value={stationCode}
-          onChange={(e) => setStationCode(e.target.value)}
-          className={styles.select}
-        >
-          <option value="26472">מסוף עמידר (26472)</option>
-          <option value="20001">ת. רכבת תל אביב סבידור (20001)</option>
-          <option value="21256">ת. מרכזית ת&quot;א קומה 6 (21256)</option>
-          <option value="23009">שוק הכרמל/אלנבי (23009)</option>
-          <option value="21199">קניון רמת אביב (21199)</option>
-          <option value="20304">פנחס רוזן/קהילת יאסי (20304)</option>
-          <option value="20832">Station 20832</option>
-        </select>
+        <div className={styles.stationSearch}>
+          <div className={styles.stationInputRow}>
+            <input
+              ref={inputRef}
+              className={styles.stationInput}
+              value={stationText}
+              onChange={handleInput}
+              onFocus={() => suggestions.length > 0 && setShowDropdown(true)}
+              onBlur={handleBlur}
+              placeholder={stationName ? `${stationName} (${stationCode})` : 'Search station...'}
+            />
+            {stationText && (
+              <button className={styles.clearBtn} onClick={handleClear} type="button">&times;</button>
+            )}
+          </div>
+          {showDropdown && suggestions.length > 0 && (
+            <ul className={styles.stationDropdown}>
+              {suggestions.map(s => (
+                <li
+                  key={s.stopCode}
+                  className={styles.stationSuggestion}
+                  onMouseDown={() => handleSelect(s)}
+                >
+                  <span className={styles.stopName}>{s.stopName}</span>
+                  <span className={styles.stopCode}>{s.stopCode}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
         {lastUpdated && <span className={styles.updatedAgo}>Updated {agoText}</span>}
+      </div>
+      <div className={styles.row}>
         <span className={styles.label}>Filter</span>
         <input
           type="text"

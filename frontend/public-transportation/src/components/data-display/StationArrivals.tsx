@@ -1,4 +1,4 @@
-import { Fragment, useState } from 'react'
+import { Fragment, useState, useEffect } from 'react'
 import type { SiriData } from '../../types'
 
 interface StationArrivalsProps {
@@ -6,10 +6,17 @@ interface StationArrivalsProps {
   error: string | null
   stationCode: string
   lineFilter?: string
+  onVehicleSelect?: (lat: number, lon: number) => void
 }
 
-function StationArrivals({ siriData, error, stationCode, lineFilter }: StationArrivalsProps) {
+function StationArrivals({ siriData, error, stationCode, lineFilter, onVehicleSelect }: StationArrivalsProps) {
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null)
+  const [, setTick] = useState(0)
+
+  useEffect(() => {
+    const id = setInterval(() => setTick(t => t + 1), 30000)
+    return () => clearInterval(id)
+  }, [])
 
   if (error) return <h2>Error: {error}</h2>
   if (!siriData) return <h2>Loading...</h2>
@@ -56,12 +63,20 @@ function StationArrivals({ siriData, error, stationCode, lineFilter }: StationAr
               const monitoredCall = journey.MonitoredCall
               const isExpanded = expandedIndex === index
 
-              let arrivalTime = 'N/A'
+              let arrivalDisplay: { primary: string; secondary?: string } = { primary: 'N/A' }
               let fullArrivalTime = 'N/A'
               if (monitoredCall?.ExpectedArrivalTime) {
                 const date = new Date(monitoredCall.ExpectedArrivalTime)
-                arrivalTime = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                const absTime = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                 fullArrivalTime = date.toLocaleString()
+                const diffMin = Math.round((date.getTime() - Date.now()) / 60000)
+                if (diffMin < 1) {
+                  arrivalDisplay = { primary: diffMin < 0 ? absTime : 'now' }
+                } else if (diffMin <= 60) {
+                  arrivalDisplay = { primary: `in ${diffMin} min`, secondary: absTime }
+                } else {
+                  arrivalDisplay = { primary: absTime }
+                }
               }
 
               let distance = 'N/A'
@@ -81,7 +96,12 @@ function StationArrivals({ siriData, error, stationCode, lineFilter }: StationAr
                     <td>{journey.PublishedLineName || 'N/A'}</td>
                     <td>{journey.DirectionRef || 'N/A'}</td>
                     <td>{stopNames[journey.DestinationRef] || journey.DestinationRef || 'N/A'}</td>
-                    <td>{arrivalTime}</td>
+                    <td>
+                      {arrivalDisplay.primary}
+                      {arrivalDisplay.secondary && (
+                        <span style={{ marginLeft: 4, fontSize: '0.8em', color: '#888' }}>{arrivalDisplay.secondary}</span>
+                      )}
+                    </td>
                     <td>{distance}</td>
                   </tr>
                   {isExpanded && (
@@ -94,14 +114,32 @@ function StationArrivals({ siriData, error, stationCode, lineFilter }: StationAr
                           <div className="detail-item">
                             <span className="detail-label">Exact distance:</span> {exactMeters != null ? `${exactMeters} m` : 'N/A'}
                           </div>
-                          {vehicleLocation && (
-                            <div className="detail-item">
-                              <span className="detail-label">GPS:</span> {vehicleLocation.Latitude}, {vehicleLocation.Longitude}
-                            </div>
-                          )}
                           <div className="detail-item">
                             <span className="detail-label">Full arrival:</span> {fullArrivalTime}
                           </div>
+                          {vehicleLocation && onVehicleSelect && (
+                            <div className="detail-item">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  onVehicleSelect(vehicleLocation.Latitude, vehicleLocation.Longitude)
+                                }}
+                                style={{
+                                  padding: '4px 12px',
+                                  border: '1px solid #2196F3',
+                                  borderRadius: 6,
+                                  background: '#e3f2fd',
+                                  color: '#1565c0',
+                                  fontSize: 13,
+                                  fontWeight: 600,
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                Show on map
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </td>
                     </tr>

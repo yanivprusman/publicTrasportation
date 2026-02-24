@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, useRef, useEffect, useState } from 'react'
 import type { UseRoutingReturn } from '../../hooks/useRouting'
 import BottomSheet, { type SheetState } from './BottomSheet'
 import LocationInput from './LocationInput'
@@ -35,6 +35,28 @@ export default function RoutePlanner({
     onSheetStateChange('half')
   }, [onSheetStateChange])
 
+  const detailRef = useRef<HTMLDivElement>(null)
+  const [gpsLoading, setGpsLoading] = useState(false)
+
+  useEffect(() => {
+    if (routing.selectedItinerary && detailRef.current) {
+      detailRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    }
+  }, [routing.selectedIndex, routing.selectedItinerary])
+
+  const handleGpsClick = useCallback(() => {
+    if (!navigator.geolocation) return
+    setGpsLoading(true)
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        routing.setOriginFromCoords(pos.coords.latitude, pos.coords.longitude)
+        setGpsLoading(false)
+      },
+      () => setGpsLoading(false),
+      { enableHighAccuracy: true, timeout: 10000 }
+    )
+  }, [routing])
+
   return (
     <BottomSheet state={sheetState} onStateChange={onSheetStateChange}>
       <div className={styles.tabs}>
@@ -65,18 +87,33 @@ export default function RoutePlanner({
           ) : (
             <>
               <div className={styles.inputs}>
-                <LocationInput
-                  label="From"
-                  value={routing.origin}
-                  onChange={routing.setOrigin}
-                  placeholder="Origin"
-                />
-                <LocationInput
-                  label="To"
-                  value={routing.destination}
-                  onChange={routing.setDestination}
-                  placeholder="Destination"
-                />
+                <div className={styles.inputsRow}>
+                  <div className={styles.inputsFields}>
+                    <LocationInput
+                      label="From"
+                      value={routing.origin}
+                      onChange={routing.setOrigin}
+                      placeholder="Origin"
+                      onGpsClick={handleGpsClick}
+                      gpsLoading={gpsLoading}
+                    />
+                    <LocationInput
+                      label="To"
+                      value={routing.destination}
+                      onChange={routing.setDestination}
+                      placeholder="Destination"
+                    />
+                  </div>
+                  <button
+                    className={styles.swapBtn}
+                    onClick={routing.swapOriginDestination}
+                    disabled={!routing.origin && !routing.destination}
+                    type="button"
+                    title="Swap origin and destination"
+                  >
+                    &#8693;
+                  </button>
+                </div>
                 <TimePicker
                   departureTime={routing.departureTime}
                   setDepartureTime={routing.setDepartureTime}
@@ -127,10 +164,13 @@ export default function RoutePlanner({
                 onSelect={routing.setSelectedIndex}
                 loading={routing.loading}
                 error={routing.error}
+                onRetry={handleSearch}
               />
 
               {routing.selectedItinerary && (
-                <ItineraryDetail itinerary={routing.selectedItinerary} />
+                <div ref={detailRef}>
+                  <ItineraryDetail itinerary={routing.selectedItinerary} />
+                </div>
               )}
             </>
           )}

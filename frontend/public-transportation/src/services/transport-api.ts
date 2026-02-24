@@ -1,6 +1,19 @@
 import axios from 'axios'
 import type { SiriData, VehicleMarker, RouteShapeData } from '../types'
 
+export interface StopResult {
+  stopCode: string
+  stopName: string
+  lat: number
+  lon: number
+}
+
+export const searchStops = async (query: string): Promise<StopResult[]> => {
+  if (!query.trim()) return []
+  const response = await axios.get<StopResult[]>(`/api/stops?q=${encodeURIComponent(query)}`)
+  return response.data
+}
+
 export const fetchStationArrivals = async (stationCode: string, detailLevel = 'calls'): Promise<SiriData> => {
   try {
     const response = await axios.get<SiriData>(`/api/transport?station=${stationCode}&detail=${detailLevel}`)

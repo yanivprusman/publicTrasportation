@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import MapView from './components/map/MapView'
 import StationArrivals from './components/data-display/StationArrivals'
 import TransportControls from './components/controls/TransportControls'
@@ -96,10 +96,16 @@ function App() {
   }
 
   useEffect(() => {
+    if (activeTab !== 'arrivals') return
     fetchStationData()
     const interval = setInterval(fetchStationData, 15000)
     return () => clearInterval(interval)
-  }, [stationCode])
+  }, [stationCode, activeTab])
+
+  const handleVehicleSelect = useCallback((lat: number, lon: number) => {
+    setMapCenter([lat, lon])
+    setShowVehicleMarkers(true)
+  }, [setShowVehicleMarkers])
 
   const arrivalsContent = (
     <>
@@ -117,6 +123,7 @@ function App() {
         error={error}
         stationCode={stationCode}
         lineFilter={lineFilter}
+        onVehicleSelect={handleVehicleSelect}
       />
     </>
   )

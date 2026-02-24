@@ -8,15 +8,26 @@ interface RouteResultsProps {
   onSelect: (i: number) => void
   loading: boolean
   error: string | null
+  onRetry?: () => void
 }
 
-export default function RouteResults({ results, selectedIndex, onSelect, loading, error }: RouteResultsProps) {
+export default function RouteResults({ results, selectedIndex, onSelect, loading, error, onRetry }: RouteResultsProps) {
   if (loading) {
     return <div className={styles.status}><div className={styles.spinner} />Searching routes...</div>
   }
 
   if (error) {
-    return <div className={styles.error}>{error}</div>
+    const isNoResults = error === 'No routes found'
+    return (
+      <div className={isNoResults ? styles.noResults : styles.error}>
+        <span>{isNoResults ? 'No routes found between these locations' : error}</span>
+        {onRetry && (
+          <button className={styles.retryBtn} onClick={onRetry} type="button">
+            Try Again
+          </button>
+        )}
+      </div>
+    )
   }
 
   if (!results || results.itineraries.length === 0) {

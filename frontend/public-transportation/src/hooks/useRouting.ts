@@ -33,6 +33,7 @@ export interface UseRoutingReturn {
   setSelectedIndex: (i: number) => void
   loading: boolean
   error: string | null
+  swapOriginDestination: () => void
   search: () => Promise<void>
   selectedItinerary: Itinerary | null
 }
@@ -60,6 +61,13 @@ export function useRouting(): UseRoutingReturn {
       reverseGeocode(lat, lon).then(addr => setDestination(prev => prev && prev.lat === lat ? { ...prev, name: addr } : prev))
     }
   }, [])
+
+  const swapOriginDestination = useCallback(() => {
+    const prevOrigin = origin
+    const prevDest = destination
+    setOrigin(prevDest)
+    setDestination(prevOrigin)
+  }, [origin, destination])
 
   const search = useCallback(async () => {
     if (!origin || !destination) {
@@ -97,6 +105,7 @@ export function useRouting(): UseRoutingReturn {
   return {
     origin, destination, setOrigin, setDestination,
     setOriginFromCoords, setDestinationFromCoords,
+    swapOriginDestination,
     departureTime, setDepartureTime, arriveBy, setArriveBy,
     results, selectedIndex, setSelectedIndex,
     loading, error, search, selectedItinerary,
