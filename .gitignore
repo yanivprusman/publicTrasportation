@@ -1,26 +1,15 @@
 # --- Dependencies ---
 **/node_modules/
-**/vendor/
 **/package-lock.json
 **/yarn.lock
-**/composer.lock
 
 # --- Build & Output ---
-**/build/
-**/dist/
-**/out/
 **/.next/
 **/*.tsbuildinfo
-**/gtfs_cache/
-**/gtfs_data/
-**/public/storage
-**/storage/*.key
-bootstrap/cache/
 
 # --- Environment & Local Config ---
 **/.env*
 !**/.env.example
-backend/php-api/config.php
 
 # --- Logs & Temp ---
 *.log
@@ -35,14 +24,8 @@ prompt.txt
 *.swp
 *.swo
 
-# --- App Specific (GTFS & Legacy) ---
+# --- GTFS data ---
 gtfs/
-*.txt
-*.zip
-*.pdf
-old_react/
-old_scripts/
-react-public-transportation/
 
 # --- MOTIS (binary, imported data, raw data) ---
 motis/bin/
