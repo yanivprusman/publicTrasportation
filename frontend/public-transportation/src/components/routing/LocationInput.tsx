@@ -57,6 +57,23 @@ export default function LocationInput({ label, value, onChange, placeholder, onG
     inputRef.current?.focus()
   }
 
+  const handleKeyDown = async (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key !== 'Enter') return
+    e.preventDefault()
+    if (suggestions.length > 0) {
+      handleSelect(suggestions[0])
+      return
+    }
+    // No suggestions yet — fire geocode immediately
+    const query = text.trim()
+    if (!query) return
+    if (timerRef.current) clearTimeout(timerRef.current)
+    const results = await geocodeSearch(query)
+    if (results.length > 0) {
+      handleSelect(results[0])
+    }
+  }
+
   const handleBlur = () => {
     setTimeout(() => setShowDropdown(false), 200)
   }
@@ -70,6 +87,7 @@ export default function LocationInput({ label, value, onChange, placeholder, onG
           className={styles.input}
           value={text}
           onChange={handleInput}
+          onKeyDown={handleKeyDown}
           onFocus={() => suggestions.length > 0 && setShowDropdown(true)}
           onBlur={handleBlur}
           placeholder={placeholder || `Search ${label.toLowerCase()}...`}
