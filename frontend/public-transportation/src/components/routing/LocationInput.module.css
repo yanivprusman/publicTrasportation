@@ -88,6 +88,7 @@
   border-bottom: none;
 }
 
-.suggestion:hover {
+.suggestion:hover,
+.highlighted {
   background: #f0f8ff;
 }

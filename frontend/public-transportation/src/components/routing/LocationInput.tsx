@@ -16,6 +16,7 @@ export default function LocationInput({ label, value, onChange, placeholder, onG
   const [text, setText] = useState(value?.name || '')
   const [suggestions, setSuggestions] = useState<GeocodeSuggestion[]>([])
   const [showDropdown, setShowDropdown] = useState(false)
+  const [highlightIndex, setHighlightIndex] = useState(-1)
   const timerRef = useRef<ReturnType<typeof setTimeout>>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -33,6 +34,7 @@ export default function LocationInput({ label, value, onChange, placeholder, onG
       const results = await geocodeSearch(query)
       setSuggestions(results.slice(0, 5))
       setShowDropdown(results.length > 0)
+      setHighlightIndex(-1)
     }, 300)
   }, [])
 
@@ -58,10 +60,20 @@ export default function LocationInput({ label, value, onChange, placeholder, onG
   }
 
   const handleKeyDown = async (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'ArrowDown' && showDropdown && suggestions.length > 0) {
+      e.preventDefault()
+      setHighlightIndex(i => (i + 1) % suggestions.length)
+      return
+    }
+    if (e.key === 'ArrowUp' && showDropdown && suggestions.length > 0) {
+      e.preventDefault()
+      setHighlightIndex(i => (i - 1 + suggestions.length) % suggestions.length)
+      return
+    }
     if (e.key !== 'Enter') return
     e.preventDefault()
     if (suggestions.length > 0) {
-      handleSelect(suggestions[0])
+      handleSelect(suggestions[highlightIndex >= 0 ? highlightIndex : 0])
       return
     }
     // No suggestions yet — fire geocode immediately
@@ -110,7 +122,11 @@ export default function LocationInput({ label, value, onChange, placeholder, onG
       {showDropdown && suggestions.length > 0 && (
         <ul className={styles.dropdown}>
           {suggestions.map((s, i) => (
-            <li key={i} className={styles.suggestion} onMouseDown={() => handleSelect(s)}>
+            <li
+              key={i}
+              className={`${styles.suggestion} ${i === highlightIndex ? styles.highlighted : ''}`}
+              onMouseDown={() => handleSelect(s)}
+            >
               {s.name}
             </li>
           ))}
