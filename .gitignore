@@ -26,6 +26,7 @@ prompt.txt
 
 # --- GTFS data ---
 gtfs/
+backend/
 
 # --- MOTIS (binary, imported data, raw data) ---
 motis/bin/
