@@ -55,8 +55,24 @@ interface MotisItinerary {
   legs?: MotisLeg[];
 }
 
+function itineraryFingerprint(itin: MotisItinerary): string {
+  return (itin.legs || [])
+    .filter(leg => leg.mode && leg.mode !== 'WALK')
+    .map(leg => `${leg.mode}:${leg.routeShortName || ''}:${leg.from?.name || ''}:${leg.to?.name || ''}`)
+    .join('|');
+}
+
 function transformMotisResponse(motisData: { itineraries?: MotisItinerary[] }) {
-  const itineraries = (motisData.itineraries || []).map(itin => ({
+  const seen = new Set<string>();
+  const itineraries = (motisData.itineraries || [])
+    .filter(itin => {
+      const fp = itineraryFingerprint(itin);
+      if (!fp) return true; // walk-only routes are always unique
+      if (seen.has(fp)) return false;
+      seen.add(fp);
+      return true;
+    })
+    .map(itin => ({
     duration: itin.duration || 0,
     startTime: itin.startTime || '',
     endTime: itin.endTime || '',
