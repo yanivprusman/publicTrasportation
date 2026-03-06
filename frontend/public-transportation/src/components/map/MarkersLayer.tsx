@@ -1,6 +1,6 @@
 import { Marker, Popup } from 'react-leaflet'
 import L from 'leaflet'
-import { destinationIcon, centerIcon, createBusIcon, stopIcon } from './MapMarkers'
+import { originIcon, destinationIcon, centerIcon, createBusIcon, stopIcon } from './MapMarkers'
 import type { Coordinates, VehicleMarker, StopInfo } from '../../types'
 
 interface MarkersLayerProps {
@@ -28,14 +28,6 @@ const MarkersLayer = ({
   handleSetStartPoint,
   middlePoint
 }: MarkersLayerProps) => {
-  const positionIcon = L.icon({
-    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png',
-    iconRetinaUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
-    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-    iconSize: [25, 41],
-    iconAnchor: [12, 41],
-  })
-
   const middlePointIcon = L.icon({
     iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-violet.png',
     iconRetinaUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-violet.png',
@@ -46,9 +38,9 @@ const MarkersLayer = ({
 
   return (
     <>
-      <Marker position={position} icon={positionIcon}>
+      <Marker position={position} icon={originIcon}>
         <Popup>
-          <strong>Starting Point:</strong> {positionAddress}<br/>
+          <strong>Origin:</strong> {positionAddress}<br/>
           Coordinates: {position[0].toFixed(6)}, {position[1].toFixed(6)}
         </Popup>
       </Marker>

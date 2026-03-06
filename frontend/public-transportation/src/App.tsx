@@ -5,7 +5,7 @@ import TransportControls from './components/controls/TransportControls'
 import RoutePlanner from './components/routing/RoutePlanner'
 import { useRouting } from './hooks/useRouting'
 import { useSessionState } from './hooks/useSessionState'
-import { fetchStationArrivals, extractVehicleMarkers, fetchLineShape } from './services/transport-api'
+import { fetchStationArrivals, extractVehicleMarkers } from './services/transport-api'
 import { geocodeSearch } from './services/routing-api'
 import type { SheetState } from './components/routing/BottomSheet'
 import type { SiriData, VehicleMarker, Coordinates } from './types'
@@ -18,22 +18,34 @@ function App() {
   const [error, setError] = useState<string | null>(null)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [stationCode, setStationCode] = useSessionState('stationCode', '26472')
-  const [lineNumber, setLineNumber] = useSessionState('lineNumber', '60')
-  const [routeShape, setRouteShape] = useState<Coordinates[] | null>(null)
-  const [routeDirection, setRouteDirection] = useSessionState('routeDirection', '0')
 
   const [showVehicleMarkers, setShowVehicleMarkers] = useSessionState('showVehicleMarkers', false)
   const [vehicleMarkers, setVehicleMarkers] = useState<VehicleMarker[]>([])
-
-  const [startingPoint, setStartingPoint] = useState<Coordinates>(defaultStartingPoint)
-  const [destination, setDestination] = useState<Coordinates>(defaultDestination)
 
   const [mapCenter, setMapCenter] = useState<Coordinates>(defaultStartingPoint)
   const [calculateRoute, setCalculateRoute] = useState(false)
 
   const routing = useRouting()
+
+  // Initialize routing with defaults when no saved route exists
+  useEffect(() => {
+    if (!routing.origin) {
+      routing.setOriginFromCoords(defaultStartingPoint[0], defaultStartingPoint[1])
+    }
+    if (!routing.destination) {
+      routing.setDestinationFromCoords(defaultDestination[0], defaultDestination[1])
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Derive marker positions from routing state
+  const startingPoint: Coordinates = routing.origin
+    ? [routing.origin.lat, routing.origin.lon]
+    : defaultStartingPoint
+  const destination: Coordinates = routing.destination
+    ? [routing.destination.lat, routing.destination.lon]
+    : defaultDestination
   const [lineFilter, setLineFilter] = useSessionState('lineFilter', '')
-  const [sheetState, setSheetState] = useState<SheetState>('collapsed')
+  const [sheetState, setSheetState] = useState<SheetState>(routing.origin && routing.destination ? 'half' : 'collapsed')
   const [activeTab, setActiveTab] = useSessionState<'route' | 'arrivals'>('activeTab', 'route')
 
   // Handle debug route from URL params (?origin=...&destination=...)
@@ -71,48 +83,14 @@ function App() {
     }
   }
 
-  const handleFetchLineShape = async () => {
-    setError(null)
-    try {
-      if (!lineNumber.trim()) {
-        setError('Please enter a valid line number')
-        return
-      }
-
-      const data = await fetchLineShape(lineNumber)
-
-      if (data[routeDirection] && Array.isArray(data[routeDirection]) && data[routeDirection].length > 0) {
-        setRouteShape(data[routeDirection])
-        if (data[routeDirection][0] && data[routeDirection][0].length === 2) {
-          setMapCenter(data[routeDirection][0])
-        }
-      } else if (data['0'] && Array.isArray(data['0']) && data['0'].length > 0) {
-        setRouteShape(data['0'])
-        setMapCenter(data['0'][0])
-        setRouteDirection('0')
-      } else if (data['1'] && Array.isArray(data['1']) && data['1'].length > 0) {
-        setRouteShape(data['1'])
-        setMapCenter(data['1'][0])
-        setRouteDirection('1')
-      } else {
-        throw new Error('No valid shape data found in the API response')
-      }
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err)
-      setError(`Failed to load route shape: ${message}`)
-    }
-  }
-
   const handleRouteFrom = (lat: number, lon: number) => {
     routing.setOriginFromCoords(lat, lon)
-    setStartingPoint([lat, lon])
     setActiveTab('route')
     setSheetState('half')
   }
 
   const handleRouteTo = (lat: number, lon: number) => {
     routing.setDestinationFromCoords(lat, lon)
-    setDestination([lat, lon])
     setActiveTab('route')
     setSheetState('half')
   }
@@ -160,11 +138,10 @@ function App() {
         vehicleMarkers={showVehicleMarkers ? (lineFilter.trim()
           ? vehicleMarkers.filter(m => m.lineNumber.toLowerCase() === lineFilter.trim().toLowerCase())
           : vehicleMarkers) : []}
-        routeShape={routeShape}
         destination={destination}
-        onDestinationSet={setDestination}
+        onDestinationSet={(coords: Coordinates) => routing.setDestinationFromCoords(coords[0], coords[1])}
         startingPoint={startingPoint}
-        onStartingPointSet={setStartingPoint}
+        onStartingPointSet={(coords: Coordinates) => routing.setOriginFromCoords(coords[0], coords[1])}
         center={mapCenter}
         defaultStartingPoint={defaultStartingPoint}
         defaultDestination={defaultDestination}
@@ -182,11 +159,6 @@ function App() {
         activeTab={activeTab}
         onTabChange={setActiveTab}
         arrivalsContent={arrivalsContent}
-        lineNumber={lineNumber}
-        setLineNumber={setLineNumber}
-        routeDirection={routeDirection}
-        setRouteDirection={setRouteDirection}
-        onFetchLineShape={handleFetchLineShape}
       />
     </div>
   )
