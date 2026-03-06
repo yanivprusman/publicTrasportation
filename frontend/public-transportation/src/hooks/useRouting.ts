@@ -2,6 +2,7 @@ import { useState, useCallback, useMemo, useEffect } from 'react'
 import axios from 'axios'
 import type { GeocodeSuggestion, RouteResult, Itinerary } from '../types'
 import { searchRoute } from '../services/routing-api'
+import { buildAddressLabel } from '../components/map/MapUtilities'
 
 const ROUTE_STORAGE_KEY = 'pt-saved-route'
 
@@ -18,10 +19,7 @@ async function reverseGeocode(lat: number, lon: number): Promise<string> {
     const resp = await axios.get(
       `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=he&addressdetails=1&countrycodes=il`
     )
-    const name = resp.data.display_name
-    if (!name) return `${lat.toFixed(4)}, ${lon.toFixed(4)}`
-    // Return first two parts (street, city) for a concise label
-    return name.split(',').slice(0, 2).join(',').trim()
+    return buildAddressLabel(resp.data)
   } catch {
     return `${lat.toFixed(4)}, ${lon.toFixed(4)}`
   }

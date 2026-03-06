@@ -1,9 +1,21 @@
 import axios from 'axios'
 import type { Coordinates } from '../../types'
 
-export const simplifyAddress = (address: string): string => {
-  const parts = address.split(',').slice(0, 2)
-  return parts.join(',').trim()
+export const buildAddressLabel = (data: { display_name?: string; address?: Record<string, string> }): string => {
+  const addr = data.address
+  if (addr) {
+    const road = addr.road || addr.pedestrian || addr.neighbourhood || ''
+    const houseNumber = addr.house_number || ''
+    const city = addr.city || addr.town || addr.village || ''
+    const street = houseNumber ? `${road} ${houseNumber}`.trim() : road
+    if (street && city) return `${street}, ${city}`
+    if (city) return city
+    if (street) return street
+  }
+  if (data.display_name) {
+    return data.display_name.split(',').slice(0, 3).join(',').trim()
+  }
+  return 'Address not found'
 }
 
 export const fetchAddress = async (lat: number, lon: number, setAddress: (addr: string) => void) => {
@@ -11,8 +23,7 @@ export const fetchAddress = async (lat: number, lon: number, setAddress: (addr: 
     const response = await axios.get(
       `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=he&addressdetails=1&countrycodes=il`
     )
-    const fullAddress: string = response.data.display_name || 'Address not found'
-    setAddress(simplifyAddress(fullAddress))
+    setAddress(buildAddressLabel(response.data))
   } catch {
     setAddress('Error fetching address')
   }
