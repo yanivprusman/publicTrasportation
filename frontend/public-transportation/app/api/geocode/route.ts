@@ -21,6 +21,19 @@ export async function GET(request: NextRequest) {
     );
 
     const data = await response.json();
+
+    // Append city name from areas to each result's name so users can see which city a place is in
+    if (Array.isArray(data)) {
+      for (const item of data) {
+        if (item.name && Array.isArray(item.areas)) {
+          const city = item.areas.find((a: { default?: boolean }) => a.default);
+          if (city?.name && !item.name.includes(city.name)) {
+            item.name = `${item.name}, ${city.name}`;
+          }
+        }
+      }
+    }
+
     return NextResponse.json(data, { status: response.ok ? 200 : response.status });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
