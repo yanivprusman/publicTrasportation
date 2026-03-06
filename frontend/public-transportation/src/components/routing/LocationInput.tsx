@@ -1,6 +1,7 @@
-import { useState, useRef, useCallback, useEffect } from 'react'
+import { useEffect, useCallback } from 'react'
 import type { GeocodeSuggestion } from '../../types'
 import { geocodeSearch } from '../../services/routing-api'
+import { useAutocomplete } from '../../hooks/useAutocomplete'
 import styles from './LocationInput.module.css'
 
 interface LocationInputProps {
@@ -12,82 +13,41 @@ interface LocationInputProps {
   gpsLoading?: boolean
 }
 
+const searchFn = (query: string) => geocodeSearch(query)
+
 export default function LocationInput({ label, value, onChange, placeholder, onGpsClick, gpsLoading }: LocationInputProps) {
-  const [text, setText] = useState(value?.name || '')
-  const [suggestions, setSuggestions] = useState<GeocodeSuggestion[]>([])
-  const [showDropdown, setShowDropdown] = useState(false)
-  const [highlightIndex, setHighlightIndex] = useState(-1)
-  const timerRef = useRef<ReturnType<typeof setTimeout>>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const ac = useAutocomplete<GeocodeSuggestion>({ searchFn, maxResults: 5 })
 
   useEffect(() => {
-    setText(value?.name || '')
+    ac.setText(value?.name || '')
   }, [value])
 
-  const doSearch = useCallback((query: string) => {
-    if (timerRef.current) clearTimeout(timerRef.current)
-    if (!query.trim()) {
-      setSuggestions([])
-      return
-    }
-    timerRef.current = setTimeout(async () => {
-      const results = await geocodeSearch(query)
-      setSuggestions(results.slice(0, 5))
-      setShowDropdown(results.length > 0)
-      setHighlightIndex(-1)
-    }, 300)
-  }, [])
-
-  const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value
-    setText(val)
+  const onInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     onChange(null)
-    doSearch(val)
+    ac.handleInput(e)
   }
 
-  const handleSelect = (s: GeocodeSuggestion) => {
+  const selectItem = useCallback((s: GeocodeSuggestion) => {
     onChange(s)
-    setText(s.name)
-    setSuggestions([])
-    setShowDropdown(false)
-  }
+    ac.setText(s.name)
+    ac.handleSelect(s)
+  }, [onChange, ac])
 
-  const handleClear = () => {
-    setText('')
+  const onClear = () => {
     onChange(null)
-    setSuggestions([])
-    inputRef.current?.focus()
+    ac.handleClear()
   }
 
-  const handleKeyDown = async (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'ArrowDown' && showDropdown && suggestions.length > 0) {
+  const onKeyDown = async (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && ac.suggestions.length === 0) {
       e.preventDefault()
-      setHighlightIndex(i => (i + 1) % suggestions.length)
+      const query = ac.text.trim()
+      if (!query) return
+      const results = await ac.forceSearch(query)
+      if (results.length > 0) selectItem(results[0])
       return
     }
-    if (e.key === 'ArrowUp' && showDropdown && suggestions.length > 0) {
-      e.preventDefault()
-      setHighlightIndex(i => (i - 1 + suggestions.length) % suggestions.length)
-      return
-    }
-    if (e.key !== 'Enter') return
-    e.preventDefault()
-    if (suggestions.length > 0) {
-      handleSelect(suggestions[highlightIndex >= 0 ? highlightIndex : 0])
-      return
-    }
-    // No suggestions yet — fire geocode immediately
-    const query = text.trim()
-    if (!query) return
-    if (timerRef.current) clearTimeout(timerRef.current)
-    const results = await geocodeSearch(query)
-    if (results.length > 0) {
-      handleSelect(results[0])
-    }
-  }
-
-  const handleBlur = () => {
-    setTimeout(() => setShowDropdown(false), 200)
+    ac.handleKeyDown(e, selectItem)
   }
 
   return (
@@ -95,16 +55,16 @@ export default function LocationInput({ label, value, onChange, placeholder, onG
       <label className={styles.label}>{label}</label>
       <div className={styles.inputRow}>
         <input
-          ref={inputRef}
+          ref={ac.inputRef}
           className={styles.input}
-          value={text}
-          onChange={handleInput}
-          onKeyDown={handleKeyDown}
-          onFocus={() => suggestions.length > 0 && setShowDropdown(true)}
-          onBlur={handleBlur}
+          value={ac.text}
+          onChange={onInput}
+          onKeyDown={onKeyDown}
+          onFocus={ac.handleFocus}
+          onBlur={ac.handleBlur}
           placeholder={placeholder || `Search ${label.toLowerCase()}...`}
         />
-        {onGpsClick && !text && (
+        {onGpsClick && !ac.text && (
           <button
             className={styles.gpsBtn}
             onClick={onGpsClick}
@@ -115,17 +75,17 @@ export default function LocationInput({ label, value, onChange, placeholder, onG
             {gpsLoading ? '...' : '\u2316'}
           </button>
         )}
-        {text && (
-          <button className={styles.clear} onClick={handleClear} type="button">&times;</button>
+        {ac.text && (
+          <button className={styles.clear} onClick={onClear} type="button">&times;</button>
         )}
       </div>
-      {showDropdown && suggestions.length > 0 && (
+      {ac.showDropdown && ac.suggestions.length > 0 && (
         <ul className={styles.dropdown}>
-          {suggestions.map((s, i) => (
+          {ac.suggestions.map((s, i) => (
             <li
               key={i}
-              className={`${styles.suggestion} ${i === highlightIndex ? styles.highlighted : ''}`}
-              onMouseDown={() => handleSelect(s)}
+              className={`${styles.suggestion} ${i === ac.highlightIndex ? styles.highlighted : ''}`}
+              onMouseDown={() => selectItem(s)}
             >
               {s.name}
             </li>

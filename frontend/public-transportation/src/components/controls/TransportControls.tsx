@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { searchStops, type StopResult } from '../../services/transport-api'
+import { useAutocomplete } from '../../hooks/useAutocomplete'
 import styles from './TransportControls.module.css'
 
 interface TransportControlsProps {
@@ -12,6 +13,8 @@ interface TransportControlsProps {
   setShowVehicleMarkers: (show: boolean) => void
 }
 
+const searchFn = (query: string) => searchStops(query)
+
 function TransportControls({
   stationCode,
   setStationCode,
@@ -22,12 +25,8 @@ function TransportControls({
   setShowVehicleMarkers,
 }: TransportControlsProps) {
   const [agoText, setAgoText] = useState('')
-  const [stationText, setStationText] = useState('')
   const [stationName, setStationName] = useState('')
-  const [suggestions, setSuggestions] = useState<StopResult[]>([])
-  const [showDropdown, setShowDropdown] = useState(false)
-  const timerRef = useRef<ReturnType<typeof setTimeout>>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const ac = useAutocomplete<StopResult>({ searchFn })
 
   // Resolve initial station name on mount
   useEffect(() => {
@@ -50,42 +49,12 @@ function TransportControls({
     return () => clearInterval(id)
   }, [lastUpdated])
 
-  const doSearch = useCallback((query: string) => {
-    if (timerRef.current) clearTimeout(timerRef.current)
-    if (!query.trim()) {
-      setSuggestions([])
-      return
-    }
-    timerRef.current = setTimeout(async () => {
-      const results = await searchStops(query)
-      setSuggestions(results)
-      setShowDropdown(results.length > 0)
-    }, 300)
-  }, [])
-
-  const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value
-    setStationText(val)
-    doSearch(val)
-  }
-
-  const handleSelect = (stop: StopResult) => {
+  const selectStop = useCallback((stop: StopResult) => {
     setStationCode(stop.stopCode)
     setStationName(stop.stopName)
-    setStationText('')
-    setSuggestions([])
-    setShowDropdown(false)
-  }
-
-  const handleClear = () => {
-    setStationText('')
-    setSuggestions([])
-    inputRef.current?.focus()
-  }
-
-  const handleBlur = () => {
-    setTimeout(() => setShowDropdown(false), 200)
-  }
+    ac.setText('')
+    ac.handleSelect(stop)
+  }, [setStationCode, ac])
 
   return (
     <div className={styles.panel}>
@@ -94,25 +63,26 @@ function TransportControls({
         <div className={styles.stationSearch}>
           <div className={styles.stationInputRow}>
             <input
-              ref={inputRef}
+              ref={ac.inputRef}
               className={styles.stationInput}
-              value={stationText}
-              onChange={handleInput}
-              onFocus={() => suggestions.length > 0 && setShowDropdown(true)}
-              onBlur={handleBlur}
+              value={ac.text}
+              onChange={ac.handleInput}
+              onKeyDown={(e) => ac.handleKeyDown(e, selectStop)}
+              onFocus={ac.handleFocus}
+              onBlur={ac.handleBlur}
               placeholder={stationName ? `${stationName} (${stationCode})` : 'Search station...'}
             />
-            {stationText && (
-              <button className={styles.clearBtn} onClick={handleClear} type="button">&times;</button>
+            {ac.text && (
+              <button className={styles.clearBtn} onClick={ac.handleClear} type="button">&times;</button>
             )}
           </div>
-          {showDropdown && suggestions.length > 0 && (
+          {ac.showDropdown && ac.suggestions.length > 0 && (
             <ul className={styles.stationDropdown}>
-              {suggestions.map(s => (
+              {ac.suggestions.map((s, i) => (
                 <li
                   key={s.stopCode}
-                  className={styles.stationSuggestion}
-                  onMouseDown={() => handleSelect(s)}
+                  className={`${styles.stationSuggestion} ${i === ac.highlightIndex ? styles.highlighted : ''}`}
+                  onMouseDown={() => selectStop(s)}
                 >
                   <span className={styles.stopName}>{s.stopName}</span>
                   <span className={styles.stopCode}>{s.stopCode}</span>
