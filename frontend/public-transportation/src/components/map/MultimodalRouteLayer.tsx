@@ -53,19 +53,6 @@ export default function MultimodalRouteLayer({ itinerary }: MultimodalRouteLayer
           />
         )
       })}
-      {transferPoints.map((pos, i) => (
-        <CircleMarker
-          key={`transfer-${i}`}
-          center={pos}
-          radius={6}
-          pathOptions={{
-            color: '#fff',
-            weight: 2,
-            fillColor: '#333',
-            fillOpacity: 1,
-          }}
-        />
-      ))}
       {itinerary.legs.map((leg, i) => {
         if (leg.mode === 'WALK') return null
         const style = getModeStyle(leg.mode, leg.routeColor)
@@ -99,6 +86,19 @@ export default function MultimodalRouteLayer({ itinerary }: MultimodalRouteLayer
           )
         })
       })}
+      {transferPoints.map((pos, i) => (
+        <CircleMarker
+          key={`transfer-${i}`}
+          center={pos}
+          radius={6}
+          pathOptions={{
+            color: '#fff',
+            weight: 2,
+            fillColor: '#333',
+            fillOpacity: 1,
+          }}
+        />
+      ))}
     </>
   )
 }
