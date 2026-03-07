@@ -73,23 +73,31 @@ export default function MultimodalRouteLayer({ itinerary }: MultimodalRouteLayer
         if (leg.from?.name) stops.push(leg.from)
         if (leg.intermediateStops) stops.push(...leg.intermediateStops)
         if (leg.to?.name) stops.push(leg.to)
-        return stops.map((stop, j) => (
-          <CircleMarker
-            key={`stop-${i}-${j}`}
-            center={[stop.lat, stop.lon]}
-            radius={4}
-            pathOptions={{
-              color: style.color,
-              weight: 2,
-              fillColor: '#fff',
-              fillOpacity: 1,
-            }}
-          >
-            <Tooltip direction="top" offset={[0, -6]}>
-              {stop.name}
-            </Tooltip>
-          </CircleMarker>
-        ))
+        return stops.map((stop, j) => {
+          const isGetOff = j === stops.length - 1 && i < itinerary.legs.length - 1
+          return (
+            <CircleMarker
+              key={`stop-${i}-${j}`}
+              center={[stop.lat, stop.lon]}
+              radius={isGetOff ? 8 : 4}
+              pathOptions={isGetOff ? {
+                color: '#fff',
+                weight: 3,
+                fillColor: style.color,
+                fillOpacity: 1,
+              } : {
+                color: style.color,
+                weight: 2,
+                fillColor: '#fff',
+                fillOpacity: 1,
+              }}
+            >
+              <Tooltip direction="top" offset={[0, isGetOff ? -10 : -6]}>
+                {stop.name}
+              </Tooltip>
+            </CircleMarker>
+          )
+        })
       })}
     </>
   )
