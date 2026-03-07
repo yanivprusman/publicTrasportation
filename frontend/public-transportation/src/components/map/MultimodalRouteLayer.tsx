@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { Polyline, CircleMarker, useMap } from 'react-leaflet'
+import { Polyline, CircleMarker, Tooltip, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import type { Itinerary } from '../../types'
 import { decodePolyline } from '../../utils/polyline-decoder'
@@ -66,6 +66,31 @@ export default function MultimodalRouteLayer({ itinerary }: MultimodalRouteLayer
           }}
         />
       ))}
+      {itinerary.legs.map((leg, i) => {
+        if (leg.mode === 'WALK') return null
+        const style = getModeStyle(leg.mode, leg.routeColor)
+        const stops: { lat: number; lon: number; name: string }[] = []
+        if (leg.from?.name) stops.push(leg.from)
+        if (leg.intermediateStops) stops.push(...leg.intermediateStops)
+        if (leg.to?.name) stops.push(leg.to)
+        return stops.map((stop, j) => (
+          <CircleMarker
+            key={`stop-${i}-${j}`}
+            center={[stop.lat, stop.lon]}
+            radius={4}
+            pathOptions={{
+              color: style.color,
+              weight: 2,
+              fillColor: '#fff',
+              fillOpacity: 1,
+            }}
+          >
+            <Tooltip direction="top" offset={[0, -6]}>
+              {stop.name}
+            </Tooltip>
+          </CircleMarker>
+        ))
+      })}
     </>
   )
 }
