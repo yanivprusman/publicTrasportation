@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import { FeedbackChat } from '@automate/feedback-lib/FeedbackChat';
 
 export const metadata: Metadata = {
   title: 'Public Transportation',
@@ -11,6 +12,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body>
         {children}
+        <FeedbackChat />
       </body>
     </html>
   );

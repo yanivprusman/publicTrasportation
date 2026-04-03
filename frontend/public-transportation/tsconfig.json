@@ -16,7 +16,9 @@
     "plugins": [{ "name": "next" }],
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "@automate/feedback-lib": ["./lib/feedback-lib/index.ts"],
+      "@automate/feedback-lib/*": ["./lib/feedback-lib/*"]
     }
   },
   "include": [

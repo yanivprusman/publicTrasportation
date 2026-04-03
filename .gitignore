@@ -42,3 +42,8 @@ Thumbs.db
 
 # --- Claude Code ---
 .claude/settings.local.json
+
+# --- Bind-mounted from addnewfeature ---
+frontend/public-transportation/lib/feedback-lib/
+frontend/public-transportation/app/api/feedback/
+frontend/public-transportation/app/issues/
