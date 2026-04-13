@@ -71,4 +71,7 @@ dependencies {
 
     // Map
     implementation(libs.osmdroid)
+
+    // Feedback lib
+    implementation(project(":feedback-lib"))
 }
