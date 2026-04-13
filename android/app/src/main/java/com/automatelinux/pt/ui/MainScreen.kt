@@ -1,16 +1,23 @@
 package com.automatelinux.pt.ui
 
+import android.content.Intent
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Feedback
 import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
@@ -25,7 +32,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.automatelinux.pt.ui.arrivals.ArrivalsPanel
@@ -146,6 +155,7 @@ fun MainScreen(
         },
         sheetContainerColor = MaterialTheme.colorScheme.surface
     ) { innerPadding ->
+        val context = LocalContext.current
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -185,6 +195,24 @@ fun MainScreen(
                         visible = arrivalsState.showVehicleMarkers
                     )
                 }
+            }
+
+            FloatingActionButton(
+                onClick = {
+                    context.startActivity(Intent(context, FeedbackChatActivity::class.java))
+                },
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 48.dp, end = 12.dp)
+                    .size(40.dp),
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                elevation = FloatingActionButtonDefaults.elevation(2.dp),
+            ) {
+                Icon(
+                    Icons.Filled.Feedback,
+                    contentDescription = "Feedback",
+                    modifier = Modifier.size(20.dp)
+                )
             }
         }
     }
