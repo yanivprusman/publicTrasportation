@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="pt_blue">#FF1565C0</color>
+    <color name="pt_blue_dark">#FF0D47A1</color>
+    <color name="pt_blue_light">#FF90CAF9</color>
+    <color name="walk_grey">#FF888888</color>
+    <color name="bus_green">#FF4CAF50</color>
+    <color name="rail_blue">#FF2196F3</color>
+    <color name="tram_orange">#FFFF5722</color>
+    <color name="subway_purple">#FF9C27B0</color>
+    <color name="background_dark">#FF0A0A0A</color>
+    <color name="surface_dark">#FF1A1A1A</color>
+</resources>

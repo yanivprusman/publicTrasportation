@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Bus body -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M30,32h48c4.4,0 8,3.6 8,8v28c0,4.4 -3.6,8 -8,8H30c-4.4,0 -8,-3.6 -8,-8V40c0,-4.4 3.6,-8 8,-8z" />
+    <!-- Windows left -->
+    <path
+        android:fillColor="#90CAF9"
+        android:pathData="M28,38h18c1.1,0 2,0.9 2,2v8c0,1.1 -0.9,2 -2,2H28c-1.1,0 -2,-0.9 -2,-2V40c0,-1.1 0.9,-2 2,-2z" />
+    <!-- Windows right -->
+    <path
+        android:fillColor="#90CAF9"
+        android:pathData="M62,38h18c1.1,0 2,0.9 2,2v8c0,1.1 -0.9,2 -2,2H62c-1.1,0 -2,-0.9 -2,-2V40c0,-1.1 0.9,-2 2,-2z" />
+    <!-- Stripe -->
+    <path
+        android:fillColor="#0D47A1"
+        android:pathData="M22,54h64v3H22z" />
+    <!-- Door -->
+    <path
+        android:fillColor="#B3E5FC"
+        android:pathData="M48,50h12c0.5,0 1,0.5 1,1v8c0,0.5 -0.5,1 -1,1H48c-0.5,0 -1,-0.5 -1,-1V51c0,-0.5 0.5,-1 1,-1z" />
+    <!-- Headlights left -->
+    <path
+        android:fillColor="#FFC107"
+        android:pathData="M26,60h6c0.5,0 1,0.5 1,1v3c0,0.5 -0.5,1 -1,1H26c-0.5,0 -1,-0.5 -1,-1V61c0,-0.5 0.5,-1 1,-1z" />
+    <!-- Headlights right -->
+    <path
+        android:fillColor="#FFC107"
+        android:pathData="M76,60h6c0.5,0 1,0.5 1,1v3c0,0.5 -0.5,1 -1,1H76c-0.5,0 -1,-0.5 -1,-1V61c0,-0.5 0.5,-1 1,-1z" />
+    <!-- Wheel left -->
+    <path
+        android:fillColor="#333333"
+        android:pathData="M38,72m-4,0a4,4 0,1 1,8 0a4,4 0,1 1,-8 0" />
+    <!-- Wheel right -->
+    <path
+        android:fillColor="#333333"
+        android:pathData="M70,72m-4,0a4,4 0,1 1,8 0a4,4 0,1 1,-8 0" />
+</vector>
