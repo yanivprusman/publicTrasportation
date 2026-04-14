@@ -9,5 +9,5 @@
 .cxx
 /app/build
 
-# Shared feedback-lib (bind-mounted from automateLinux source of truth)
+# Shared feedback-lib (bind-mounted from addnewfeature source of truth)
 feedback-lib/
