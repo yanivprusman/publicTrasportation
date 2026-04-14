@@ -15,8 +15,8 @@ import androidx.compose.material.icons.filled.Feedback
 import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
+import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SheetValue
@@ -197,14 +197,13 @@ fun MainScreen(
                 }
             }
 
-            FloatingActionButton(
+            SmallFloatingActionButton(
                 onClick = {
                     context.startActivity(Intent(context, FeedbackChatActivity::class.java))
                 },
                 modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(top = 48.dp, end = 12.dp)
-                    .size(40.dp),
+                    .align(Alignment.BottomEnd)
+                    .padding(bottom = 16.dp, end = 12.dp),
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
                 elevation = FloatingActionButtonDefaults.elevation(2.dp),
             ) {
