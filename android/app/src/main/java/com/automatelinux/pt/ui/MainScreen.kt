@@ -11,7 +11,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Feedback
+import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -208,8 +208,8 @@ fun MainScreen(
                 elevation = FloatingActionButtonDefaults.elevation(2.dp),
             ) {
                 Icon(
-                    Icons.Filled.Feedback,
-                    contentDescription = "Feedback",
+                    Icons.AutoMirrored.Filled.Chat,
+                    contentDescription = "Issue Clarifier",
                     modifier = Modifier.size(20.dp)
                 )
             }
