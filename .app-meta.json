@@ -1,4 +1,5 @@
 {
   "description": "Public Transportation Route Planner",
-  "icon": "Bus"
+  "icon": "Bus",
+  "sharedLibs": ["android-feedback-lib"]
 }
