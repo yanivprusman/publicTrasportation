@@ -6,8 +6,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -65,8 +63,8 @@ fun RouteResults(
                 }
             }
             results != null && results.itineraries.isNotEmpty() -> {
-                LazyColumn {
-                    itemsIndexed(results.itineraries) { index, itinerary ->
+                Column {
+                    results.itineraries.forEachIndexed { index, itinerary ->
                         ItineraryCard(
                             itinerary = itinerary,
                             selected = index == selectedIndex,

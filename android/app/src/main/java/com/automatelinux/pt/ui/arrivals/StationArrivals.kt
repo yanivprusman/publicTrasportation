@@ -9,8 +9,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -90,9 +88,9 @@ fun StationArrivals(
         }
         HorizontalDivider()
 
-        LazyColumn {
-            itemsIndexed(visits) { index, visit ->
-                val journey = visit.monitoredVehicleJourney ?: return@itemsIndexed
+        Column {
+            visits.forEachIndexed { index, visit ->
+                val journey = visit.monitoredVehicleJourney ?: return@forEachIndexed
                 val call = journey.monitoredCall
                 val arrivalDisplay = formatArrivalTime(call?.expectedArrivalTime, tick)
                 val destName = getDestinationName(journey.destinationRef)
