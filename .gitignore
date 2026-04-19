@@ -46,4 +46,4 @@ Thumbs.db
 # --- Bind-mounted from addnewfeature ---
 frontend/public-transportation/lib/feedback-lib/
 frontend/public-transportation/app/api/feedback/
-frontend/public-transportation/app/issues/
+frontend/public-transportation/app/feedback-lib-issues/
