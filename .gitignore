@@ -6,6 +6,7 @@
 # --- Build & Output ---
 **/.next/
 **/*.tsbuildinfo
+**/next-env.d.ts
 
 # --- Environment & Local Config ---
 **/.env*
