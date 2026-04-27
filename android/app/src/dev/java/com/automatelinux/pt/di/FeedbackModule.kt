@@ -2,11 +2,15 @@ package com.automatelinux.pt.di
 
 import com.automatelinux.feedbacklib.FeedbackConfig
 import com.automatelinux.feedbacklib.data.api.FeedbackApi
+import com.automatelinux.pt.util.ServerConfig
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import okhttp3.Interceptor
 import okhttp3.OkHttpClient
+import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
@@ -18,9 +22,29 @@ object FeedbackModule {
 
     @Provides
     @Singleton
-    fun provideFeedbackApi(client: OkHttpClient): FeedbackApi {
-        val feedbackClient = client.newBuilder()
+    fun provideFeedbackApi(): FeedbackApi {
+        val baseUrlInterceptor = Interceptor { chain ->
+            val original = chain.request()
+            val activeUrl = ServerConfig.activeServer.toHttpUrlOrNull()
+                ?: return@Interceptor chain.proceed(original)
+            val newUrl = original.url.newBuilder()
+                .scheme(activeUrl.scheme)
+                .host(activeUrl.host)
+                .port(activeUrl.port)
+                .build()
+            chain.proceed(original.newBuilder().url(newUrl).build())
+        }
+
+        val logging = HttpLoggingInterceptor().apply {
+            level = HttpLoggingInterceptor.Level.BASIC
+        }
+
+        val feedbackClient = OkHttpClient.Builder()
+            .addInterceptor(baseUrlInterceptor)
+            .addInterceptor(logging)
+            .connectTimeout(10, TimeUnit.SECONDS)
             .readTimeout(3, TimeUnit.MINUTES)
+            .writeTimeout(15, TimeUnit.SECONDS)
             .build()
 
         return Retrofit.Builder()
