@@ -72,6 +72,13 @@ fun MainScreen(
         bottomSheetState = bottomSheetState
     )
 
+    LaunchedEffect(activeTab) {
+        com.automatelinux.pt.util.ScreenTracker.currentScreen = when (activeTab) {
+            ActiveTab.ROUTE -> "Route Planner"
+            ActiveTab.ARRIVALS -> "Station Arrivals"
+        }
+    }
+
     // Start/stop polling when arrivals tab is active
     DisposableEffect(activeTab) {
         if (activeTab == ActiveTab.ARRIVALS) {

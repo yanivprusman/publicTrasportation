@@ -58,5 +58,8 @@ object FeedbackModule {
     @Provides
     @Singleton
     fun provideFeedbackConfig(): FeedbackConfig =
-        FeedbackConfig(appName = "pt")
+        FeedbackConfig(
+            appName = "pt",
+            currentScreenProvider = { com.automatelinux.pt.util.ScreenTracker.currentScreen },
+        )
 }
