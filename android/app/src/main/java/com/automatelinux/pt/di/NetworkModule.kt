@@ -1,7 +1,5 @@
 package com.automatelinux.pt.di
 
-import com.automatelinux.feedbacklib.FeedbackConfig
-import com.automatelinux.feedbacklib.data.api.FeedbackApi
 import com.automatelinux.pt.data.api.PtApi
 import com.automatelinux.pt.util.ServerConfig
 import dagger.Module
@@ -64,19 +62,4 @@ object NetworkModule {
     @Singleton
     fun providePtApi(retrofit: Retrofit): PtApi =
         retrofit.create(PtApi::class.java)
-
-    @Provides
-    @Singleton
-    fun provideFeedbackApi(client: OkHttpClient): FeedbackApi =
-        Retrofit.Builder()
-            .baseUrl("http://localhost/")
-            .client(client)
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
-            .create(FeedbackApi::class.java)
-
-    @Provides
-    @Singleton
-    fun provideFeedbackConfig(): FeedbackConfig =
-        FeedbackConfig(appName = "pt")
 }

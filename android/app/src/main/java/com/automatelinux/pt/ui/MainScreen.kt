@@ -1,6 +1,7 @@
 package com.automatelinux.pt.ui
 
 import android.content.Intent
+import com.automatelinux.pt.BuildConfig
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -197,21 +198,27 @@ fun MainScreen(
                 }
             }
 
-            SmallFloatingActionButton(
-                onClick = {
-                    context.startActivity(Intent(context, FeedbackChatActivity::class.java))
-                },
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(bottom = 16.dp, end = 12.dp),
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                elevation = FloatingActionButtonDefaults.elevation(2.dp),
-            ) {
-                Icon(
-                    Icons.AutoMirrored.Filled.Chat,
-                    contentDescription = "Issue Clarifier",
-                    modifier = Modifier.size(20.dp)
-                )
+            if (BuildConfig.FEEDBACK_ENABLED) {
+                SmallFloatingActionButton(
+                    onClick = {
+                        val intent = Intent().setClassName(
+                            context.packageName,
+                            "com.automatelinux.pt.ui.FeedbackChatActivity"
+                        )
+                        context.startActivity(intent)
+                    },
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(bottom = 16.dp, end = 12.dp),
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    elevation = FloatingActionButtonDefaults.elevation(2.dp),
+                ) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.Chat,
+                        contentDescription = "Issue Clarifier",
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
         }
     }

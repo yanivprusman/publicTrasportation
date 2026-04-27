@@ -18,6 +18,21 @@ android {
         versionName = "1.0"
     }
 
+    flavorDimensions += "mode"
+    productFlavors {
+        create("dev") {
+            dimension = "mode"
+            applicationIdSuffix = ".dev"
+            buildConfigField("boolean", "FEEDBACK_ENABLED", "true")
+            buildConfigField("int", "SERVER_PORT", "3003")
+        }
+        create("prod") {
+            dimension = "mode"
+            buildConfigField("boolean", "FEEDBACK_ENABLED", "false")
+            buildConfigField("int", "SERVER_PORT", "3002")
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -36,6 +51,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -72,6 +88,6 @@ dependencies {
     // Map
     implementation(libs.osmdroid)
 
-    // Feedback lib
-    implementation(project(":feedback-lib"))
+    // Feedback lib (dev flavor only)
+    "devImplementation"(project(":feedback-lib"))
 }

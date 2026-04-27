@@ -24,12 +24,5 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity
-            android:name=".ui.FeedbackChatActivity"
-            android:theme="@style/Theme.PT" />
-
-        <activity
-            android:name=".ui.FeedbackIssuesActivity"
-            android:theme="@style/Theme.PT" />
     </application>
 </manifest>
