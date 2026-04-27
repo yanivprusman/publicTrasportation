@@ -9,6 +9,7 @@ import dagger.hilt.components.SingletonComponent
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
 
 @Module
@@ -17,13 +18,18 @@ object FeedbackModule {
 
     @Provides
     @Singleton
-    fun provideFeedbackApi(client: OkHttpClient): FeedbackApi =
-        Retrofit.Builder()
+    fun provideFeedbackApi(client: OkHttpClient): FeedbackApi {
+        val feedbackClient = client.newBuilder()
+            .readTimeout(3, TimeUnit.MINUTES)
+            .build()
+
+        return Retrofit.Builder()
             .baseUrl("http://localhost/")
-            .client(client)
+            .client(feedbackClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(FeedbackApi::class.java)
+    }
 
     @Provides
     @Singleton
