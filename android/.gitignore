@@ -11,3 +11,6 @@
 
 # Shared feedback-lib (bind-mounted from addnewfeature source of truth)
 feedback-lib/
+
+# Convention plugin (bind-mounted from addnewfeature)
+build-logic/

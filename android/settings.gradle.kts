@@ -19,6 +19,8 @@ dependencyResolutionManagement {
     }
 }
 
+includeBuild("build-logic")
+
 rootProject.name = "PT"
 include(":app")
 include(":feedback-lib")

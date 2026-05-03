@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
+    id("android-flavors")
 }
 
 android {
@@ -18,17 +19,11 @@ android {
         versionName = "1.0"
     }
 
-    flavorDimensions += "mode"
     productFlavors {
-        create("dev") {
-            dimension = "mode"
-            applicationIdSuffix = ".dev"
-            buildConfigField("boolean", "FEEDBACK_ENABLED", "true")
+        getByName("dev") {
             buildConfigField("int", "SERVER_PORT", "3003")
         }
-        create("prod") {
-            dimension = "mode"
-            buildConfigField("boolean", "FEEDBACK_ENABLED", "false")
+        getByName("prod") {
             buildConfigField("int", "SERVER_PORT", "3002")
         }
     }
@@ -51,7 +46,6 @@ android {
     }
     buildFeatures {
         compose = true
-        buildConfig = true
     }
 }
 
