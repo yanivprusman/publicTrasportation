@@ -64,7 +64,7 @@ export default function LocationInput({ label, value, onChange, placeholder, onG
           onBlur={ac.handleBlur}
           placeholder={placeholder || `Search ${label.toLowerCase()}...`}
         />
-        {onGpsClick && !ac.text && (
+        {onGpsClick && (
           <button
             className={styles.gpsBtn}
             onClick={onGpsClick}
