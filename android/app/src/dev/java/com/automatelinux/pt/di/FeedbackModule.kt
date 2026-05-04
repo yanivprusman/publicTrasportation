@@ -43,7 +43,7 @@ object FeedbackModule {
             .addInterceptor(baseUrlInterceptor)
             .addInterceptor(logging)
             .connectTimeout(10, TimeUnit.SECONDS)
-            .readTimeout(3, TimeUnit.MINUTES)
+            .readTimeout(5, TimeUnit.MINUTES)
             .writeTimeout(15, TimeUnit.SECONDS)
             .build()
 
