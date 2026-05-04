@@ -6,12 +6,14 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import kotlinx.coroutines.runBlocking
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import java.io.IOException
 import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
 
@@ -22,6 +24,17 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideOkHttpClient(): OkHttpClient {
+        val serverRediscoveryInterceptor = Interceptor { chain ->
+            try {
+                chain.proceed(chain.request())
+            } catch (e: IOException) {
+                val failedServer = ServerConfig.activeServer
+                val newServer = runBlocking { ServerConfig.findReachableServer() }
+                if (newServer == null || newServer == failedServer) throw e
+                chain.proceed(chain.request())
+            }
+        }
+
         val baseUrlInterceptor = Interceptor { chain ->
             val original = chain.request()
             val activeUrl = ServerConfig.activeServer.toHttpUrlOrNull()
@@ -41,6 +54,7 @@ object NetworkModule {
         }
 
         return OkHttpClient.Builder()
+            .addInterceptor(serverRediscoveryInterceptor)
             .addInterceptor(baseUrlInterceptor)
             .addInterceptor(logging)
             .connectTimeout(10, TimeUnit.SECONDS)
