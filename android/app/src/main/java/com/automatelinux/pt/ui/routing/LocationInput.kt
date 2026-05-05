@@ -1,7 +1,9 @@
 package com.automatelinux.pt.ui.routing
 
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MyLocation
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -12,6 +14,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import com.automatelinux.pt.data.model.GeocodeSuggestion
 import com.automatelinux.pt.ui.components.AutocompleteField
 
@@ -57,12 +60,20 @@ fun LocationInput(
         modifier = modifier,
         leadingIcon = if (showGpsButton && onGpsClick != null) {
             {
-                IconButton(onClick = onGpsClick) {
-                    Icon(
-                        Icons.Default.MyLocation,
-                        contentDescription = "Use current location",
-                        tint = MaterialTheme.colorScheme.primary
-                    )
+                IconButton(onClick = onGpsClick, enabled = !gpsLoading) {
+                    if (gpsLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    } else {
+                        Icon(
+                            Icons.Default.MyLocation,
+                            contentDescription = "Use current location",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
             }
         } else null

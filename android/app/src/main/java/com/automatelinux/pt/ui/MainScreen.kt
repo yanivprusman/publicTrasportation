@@ -78,21 +78,40 @@ fun MainScreen(
         LocationServices.getFusedLocationProviderClient(context)
     }
 
+    var gpsLoading by remember { mutableStateOf(false) }
+
+    val applyGpsLocation = { location: android.location.Location ->
+        gpsLoading = false
+        routingViewModel.setOriginFromCoords(
+            location.latitude, location.longitude, "Current Location"
+        )
+        mapView?.animateToPoint(GeoPoint(location.latitude, location.longitude), 15.0)
+    }
+
     val fetchCurrentLocation = {
         val hasPermission = ContextCompat.checkSelfPermission(
             context, Manifest.permission.ACCESS_FINE_LOCATION
         ) == PackageManager.PERMISSION_GRANTED
         if (hasPermission) {
-            fusedLocationClient.getCurrentLocation(
-                Priority.PRIORITY_HIGH_ACCURACY,
-                CancellationTokenSource().token
-            ).addOnSuccessListener { location ->
-                if (location != null) {
-                    routingViewModel.setOriginFromCoords(
-                        location.latitude, location.longitude, "Current Location"
-                    )
+            gpsLoading = true
+            fusedLocationClient.lastLocation
+                .addOnSuccessListener { cached ->
+                    if (cached != null) {
+                        applyGpsLocation(cached)
+                    } else {
+                        fusedLocationClient.getCurrentLocation(
+                            Priority.PRIORITY_HIGH_ACCURACY,
+                            CancellationTokenSource().token
+                        ).addOnSuccessListener { fresh ->
+                            if (fresh != null) {
+                                applyGpsLocation(fresh)
+                            } else {
+                                gpsLoading = false
+                            }
+                        }.addOnFailureListener { gpsLoading = false }
+                    }
                 }
-            }
+                .addOnFailureListener { gpsLoading = false }
         }
         Unit
     }
@@ -187,7 +206,8 @@ fun MainScreen(
                                 },
                                 onSelectItinerary = { routingViewModel.selectItinerary(it) },
                                 onGeocode = { routingViewModel.geocode(it) },
-                                onGpsClick = onGpsClick
+                                onGpsClick = onGpsClick,
+                                gpsLoading = gpsLoading
                             )
                         }
 

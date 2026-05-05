@@ -36,6 +36,7 @@ fun RoutePlannerPanel(
     onSelectItinerary: (Int) -> Unit,
     onGeocode: suspend (String) -> List<GeocodeSuggestion>,
     onGpsClick: (() -> Unit)? = null,
+    gpsLoading: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
@@ -47,6 +48,7 @@ fun RoutePlannerPanel(
             onGeocode = onGeocode,
             showGpsButton = true,
             onGpsClick = onGpsClick,
+            gpsLoading = gpsLoading,
             modifier = Modifier.fillMaxWidth()
         )
 
