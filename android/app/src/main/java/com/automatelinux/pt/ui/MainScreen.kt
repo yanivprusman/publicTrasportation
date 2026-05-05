@@ -1,7 +1,15 @@
 package com.automatelinux.pt.ui
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import com.automatelinux.pt.BuildConfig
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
+import com.google.android.gms.tasks.CancellationTokenSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -64,6 +72,47 @@ fun MainScreen(
     var activeTab by remember { mutableStateOf(ActiveTab.ROUTE) }
     var mapView by remember { mutableStateOf<MapView?>(null) }
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+
+    val fusedLocationClient = remember {
+        LocationServices.getFusedLocationProviderClient(context)
+    }
+
+    val fetchCurrentLocation = {
+        val hasPermission = ContextCompat.checkSelfPermission(
+            context, Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+        if (hasPermission) {
+            fusedLocationClient.getCurrentLocation(
+                Priority.PRIORITY_HIGH_ACCURACY,
+                CancellationTokenSource().token
+            ).addOnSuccessListener { location ->
+                if (location != null) {
+                    routingViewModel.setOriginFromCoords(
+                        location.latitude, location.longitude, "Current Location"
+                    )
+                }
+            }
+        }
+        Unit
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) fetchCurrentLocation()
+    }
+
+    val onGpsClick: () -> Unit = {
+        val hasPermission = ContextCompat.checkSelfPermission(
+            context, Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+        if (hasPermission) {
+            fetchCurrentLocation()
+        } else {
+            permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+        }
+    }
 
     val bottomSheetState = rememberStandardBottomSheetState(
         initialValue = SheetValue.PartiallyExpanded
@@ -137,7 +186,8 @@ fun MainScreen(
                                     }
                                 },
                                 onSelectItinerary = { routingViewModel.selectItinerary(it) },
-                                onGeocode = { routingViewModel.geocode(it) }
+                                onGeocode = { routingViewModel.geocode(it) },
+                                onGpsClick = onGpsClick
                             )
                         }
 
@@ -163,7 +213,6 @@ fun MainScreen(
         },
         sheetContainerColor = MaterialTheme.colorScheme.surface
     ) { innerPadding ->
-        val context = LocalContext.current
         Box(
             modifier = Modifier
                 .fillMaxSize()

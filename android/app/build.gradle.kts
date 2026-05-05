@@ -82,6 +82,9 @@ dependencies {
     // Map
     implementation(libs.osmdroid)
 
+    // Location
+    implementation(libs.play.services.location)
+
     // Feedback lib (dev flavor only)
     "devImplementation"(project(":feedback-lib"))
 }
