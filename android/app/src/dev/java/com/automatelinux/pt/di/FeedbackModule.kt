@@ -1,9 +1,7 @@
 package com.automatelinux.pt.di
 
-import android.os.Build
 import com.automatelinux.feedbacklib.FeedbackConfig
 import com.automatelinux.feedbacklib.data.api.FeedbackApi
-import com.automatelinux.pt.BuildConfig
 import com.automatelinux.pt.util.ServerConfig
 import dagger.Module
 import dagger.Provides
@@ -63,8 +61,5 @@ object FeedbackModule {
         FeedbackConfig(
             appName = "pt",
             currentScreenProvider = { com.automatelinux.pt.util.ScreenTracker.currentScreen },
-            platformContextProvider = {
-                "Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT}), ${Build.MANUFACTURER} ${Build.MODEL}, v${BuildConfig.VERSION_NAME}"
-            },
         )
 }
