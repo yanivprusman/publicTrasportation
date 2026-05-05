@@ -55,7 +55,7 @@ fun LocationInput(
             )
         },
         modifier = modifier,
-        leadingIcon = if (showGpsButton && text.isEmpty() && onGpsClick != null) {
+        leadingIcon = if (showGpsButton && onGpsClick != null) {
             {
                 IconButton(onClick = onGpsClick) {
                     Icon(
