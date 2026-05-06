@@ -7,6 +7,14 @@ plugins {
     id("android-flavors")
 }
 
+val gitCommitCount = providers.exec {
+    commandLine("git", "rev-list", "--count", "HEAD")
+}.standardOutput.asText.get().trim().toIntOrNull() ?: 1
+
+val gitShortHash = providers.exec {
+    commandLine("git", "rev-parse", "--short", "HEAD")
+}.standardOutput.asText.get().trim()
+
 android {
     namespace = "com.automatelinux.pt"
     compileSdk = 35
@@ -15,8 +23,8 @@ android {
         applicationId = "com.automatelinux.pt"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = gitCommitCount
+        versionName = "v${gitCommitCount} (${gitShortHash})"
     }
 
     productFlavors {

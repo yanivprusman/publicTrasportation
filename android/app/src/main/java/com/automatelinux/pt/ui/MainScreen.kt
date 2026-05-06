@@ -29,6 +29,8 @@ import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SheetValue
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.material3.rememberStandardBottomSheetState
@@ -79,6 +81,17 @@ fun MainScreen(
     }
 
     var gpsLoading by remember { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(Unit) {
+        val prefs = context.getSharedPreferences("pt_version", android.content.Context.MODE_PRIVATE)
+        val lastVersion = prefs.getString("last_version", null)
+        val currentVersion = BuildConfig.VERSION_NAME
+        if (lastVersion != currentVersion) {
+            prefs.edit().putString("last_version", currentVersion).apply()
+            snackbarHostState.showSnackbar("Updated to $currentVersion")
+        }
+    }
 
     val applyGpsLocation = { location: android.location.Location ->
         gpsLoading = false
@@ -273,6 +286,11 @@ fun MainScreen(
                     )
                 }
             }
+
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier.align(Alignment.TopCenter)
+            )
 
             if (BuildConfig.FEEDBACK_ENABLED) {
                 SmallFloatingActionButton(
