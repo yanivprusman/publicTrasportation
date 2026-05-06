@@ -32,12 +32,23 @@ export async function GET(request: NextRequest) {
           }
         }
       }
-      // Sort ADDRESS results first — POIs like "birding site" are less useful for routing
-      data.sort((a: { type?: string }, b: { type?: string }) => {
-        if (a.type === 'ADDRESS' && b.type !== 'ADDRESS') return -1;
-        if (a.type !== 'ADDRESS' && b.type === 'ADDRESS') return 1;
-        return 0;
-      });
+
+      const hasAddress = data.some((item: { type?: string }) => item.type === 'ADDRESS');
+      if (hasAddress) {
+        data.sort((a: { type?: string }, b: { type?: string }) => {
+          if (a.type === 'ADDRESS' && b.type !== 'ADDRESS') return -1;
+          if (a.type !== 'ADDRESS' && b.type === 'ADDRESS') return 1;
+          return 0;
+        });
+      } else if (data.length > 0) {
+        // No address data — synthesize an entry from the area/city name + coordinates
+        const first = data[0];
+        const areas = Array.isArray(first.areas) ? first.areas : [];
+        const city = areas.find((a: { default?: boolean }) => a.default);
+        const region = areas.find((a: { adminLevel?: number }) => a.adminLevel === 5);
+        const label = city?.name || region?.name || `${lat}, ${lon}`;
+        data.unshift({ type: 'ADDRESS', name: label, lat: Number(lat), lon: Number(lon), areas });
+      }
     }
 
     return NextResponse.json(data, { status: response.ok ? 200 : response.status });
