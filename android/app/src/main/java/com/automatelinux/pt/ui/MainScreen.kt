@@ -89,7 +89,11 @@ fun MainScreen(
         val currentVersion = BuildConfig.VERSION_NAME
         if (lastVersion != currentVersion) {
             prefs.edit().putString("last_version", currentVersion).apply()
-            snackbarHostState.showSnackbar("Updated to $currentVersion")
+            snackbarHostState.showSnackbar(
+                message = "Updated to $currentVersion",
+                duration = androidx.compose.material3.SnackbarDuration.Indefinite,
+                actionLabel = "OK"
+            )
         }
     }
 
