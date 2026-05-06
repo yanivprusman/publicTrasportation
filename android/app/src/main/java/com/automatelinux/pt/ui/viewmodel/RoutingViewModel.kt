@@ -67,9 +67,18 @@ class RoutingViewModel @Inject constructor(
         )
     }
 
-    fun setOriginFromCoords(lat: Double, lon: Double, name: String? = null) {
+    fun setOriginFromCoords(lat: Double, lon: Double, name: String? = null, resolveAddress: Boolean = false) {
         val displayName = name ?: "%.4f, %.4f".format(lat, lon)
         setOrigin(GeocodeSuggestion(name = displayName, lat = lat, lon = lon))
+        if (resolveAddress) {
+            viewModelScope.launch {
+                try {
+                    val results = api.reverseGeocode(lat, lon)
+                    val resolved = results.firstOrNull() ?: return@launch
+                    setOrigin(GeocodeSuggestion(name = resolved.name, lat = lat, lon = lon))
+                } catch (_: Exception) { }
+            }
+        }
     }
 
     fun setDestinationFromCoords(lat: Double, lon: Double, name: String? = null) {

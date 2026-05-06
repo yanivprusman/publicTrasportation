@@ -22,6 +22,12 @@ interface PtApi {
         @Query("text") text: String
     ): List<GeocodeSuggestion>
 
+    @GET("/api/reverse-geocode")
+    suspend fun reverseGeocode(
+        @Query("lat") lat: Double,
+        @Query("lon") lon: Double
+    ): List<GeocodeSuggestion>
+
     @GET("/api/stops")
     suspend fun searchStops(
         @Query("q") query: String
