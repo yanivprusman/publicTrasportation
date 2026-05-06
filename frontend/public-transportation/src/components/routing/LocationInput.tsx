@@ -99,7 +99,7 @@ export default function LocationInput({ label, value, onChange, placeholder, onG
             <li
               key={i}
               className={`${styles.suggestion} ${i === ac.highlightIndex ? styles.highlighted : ''}`}
-              onMouseDown={() => selectItem(s)}
+              onPointerDown={(e) => { e.preventDefault(); selectItem(s) }}
             >
               {s.name}
             </li>
