@@ -1,7 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const MOTIS_PORT = process.env.MOTIS_PORT || '3504';
-const MOTIS_BASE = `http://localhost:${MOTIS_PORT}`;
+interface NominatimAddress {
+  road?: string;
+  house_number?: string;
+  city?: string;
+  town?: string;
+  village?: string;
+  hamlet?: string;
+}
+
+interface NominatimResult {
+  display_name?: string;
+  address?: NominatimAddress;
+  lat?: string;
+  lon?: string;
+}
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -17,44 +30,31 @@ export async function GET(request: NextRequest) {
 
   try {
     const response = await fetch(
-      `${MOTIS_BASE}/api/v1/reverse-geocode?place=${lat},${lon}`,
-      { signal: AbortSignal.timeout(5000) }
+      `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=he`,
+      {
+        signal: AbortSignal.timeout(5000),
+        headers: { 'User-Agent': 'com.automatelinux.pt/1.0' }
+      }
     );
 
-    const data = await response.json();
+    const data: NominatimResult = await response.json();
+    const addr = data.address || {};
+    const road = addr.road;
+    const houseNumber = addr.house_number;
+    const city = addr.city || addr.town || addr.village || addr.hamlet;
 
-    if (Array.isArray(data)) {
-      for (const item of data) {
-        if (item.name && Array.isArray(item.areas)) {
-          const city = item.areas.find((a: { default?: boolean }) => a.default);
-          if (city?.name && !item.name.includes(city.name)) {
-            item.name = `${item.name}, ${city.name}`;
-          }
-        }
-      }
-
-      const hasAddress = data.some((item: { type?: string }) => item.type === 'ADDRESS');
-      if (hasAddress) {
-        data.sort((a: { type?: string }, b: { type?: string }) => {
-          if (a.type === 'ADDRESS' && b.type !== 'ADDRESS') return -1;
-          if (a.type !== 'ADDRESS' && b.type === 'ADDRESS') return 1;
-          return 0;
-        });
-      } else if (data.length > 0) {
-        // No address data — synthesize an entry from the area/city name + coordinates
-        const first = data[0];
-        const areas = Array.isArray(first.areas) ? first.areas : [];
-        const city = areas.find((a: { default?: boolean }) => a.default);
-        const region = areas.find((a: { adminLevel?: number }) => a.adminLevel === 5);
-        const label = city?.name || region?.name || `${lat}, ${lon}`;
-        data.unshift({ type: 'ADDRESS', name: label, lat: Number(lat), lon: Number(lon), areas });
-      }
+    const parts: string[] = [];
+    if (road) {
+      parts.push(houseNumber ? `${road} ${houseNumber}` : road);
     }
+    if (city) parts.push(city);
+    const name = parts.length > 0 ? parts.join(', ') : `${lat}, ${lon}`;
 
-    return NextResponse.json(data, { status: response.ok ? 200 : response.status });
+    const result = [{ type: 'ADDRESS', name, lat: Number(lat), lon: Number(lon) }];
+    return NextResponse.json(result);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error('Error fetching reverse-geocode from MOTIS:', message);
+    console.error('Error fetching reverse-geocode from Nominatim:', message);
     return NextResponse.json(
       { error: 'Failed to reverse geocode', message },
       { status: 502 }
