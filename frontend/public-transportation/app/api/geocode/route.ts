@@ -5,6 +5,8 @@ const MOTIS_BASE = `http://localhost:${MOTIS_PORT}`;
 
 interface NominatimResult {
   display_name?: string;
+  name?: string;
+  addresstype?: string;
   lat?: string;
   lon?: string;
   type?: string;
@@ -16,7 +18,27 @@ interface NominatimResult {
     village?: string;
     hamlet?: string;
     neighbourhood?: string;
+    [key: string]: string | undefined;
   };
+}
+
+function formatNominatimName(r: NominatimResult): string {
+  const addr = r.address || {};
+  const city = addr.city || addr.town || addr.village || addr.hamlet;
+
+  if (r.name && r.addresstype && r.addresstype !== 'road' && r.addresstype !== 'house') {
+    if (city && !r.name.includes(city)) return `${r.name}, ${city}`;
+    return r.name;
+  }
+
+  if (addr.road) {
+    const parts = [addr.house_number ? `${addr.road} ${addr.house_number}` : addr.road];
+    if (city) parts.push(city);
+    return parts.join(', ');
+  }
+
+  if (city && (r.display_name || '').length > 40) return city;
+  return r.display_name || '';
 }
 
 async function nominatimSearch(text: string): Promise<unknown[]> {
@@ -28,24 +50,26 @@ async function nominatimSearch(text: string): Promise<unknown[]> {
     }
   );
   const results: NominatimResult[] = await response.json();
-  return results.map(r => {
-    const addr = r.address || {};
-    const city = addr.city || addr.town || addr.village || addr.hamlet;
-    let name = r.display_name || '';
-    if (addr.road) {
-      const parts = [addr.house_number ? `${addr.road} ${addr.house_number}` : addr.road];
-      if (city) parts.push(city);
-      name = parts.join(', ');
-    } else if (city && name.length > 40) {
-      name = city;
-    }
-    return {
-      type: 'ADDRESS',
-      name,
-      lat: Number(r.lat),
-      lon: Number(r.lon),
-    };
-  });
+  return results.map(r => ({
+    type: 'ADDRESS',
+    name: formatNominatimName(r),
+    lat: Number(r.lat),
+    lon: Number(r.lon),
+  }));
+}
+
+interface GeoResult {
+  type: string;
+  name: string;
+  lat: number;
+  lon: number;
+  [key: string]: unknown;
+}
+
+function isDuplicate(a: GeoResult, b: GeoResult): boolean {
+  const dlat = a.lat - b.lat;
+  const dlon = a.lon - b.lon;
+  return Math.sqrt(dlat * dlat + dlon * dlon) < 0.005;
 }
 
 export async function GET(request: NextRequest) {
@@ -59,39 +83,44 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  try {
-    const response = await fetch(
-      `${MOTIS_BASE}/api/v1/geocode?text=${encodeURIComponent(text)}`,
-      { signal: AbortSignal.timeout(5000) }
-    );
+  const motisPromise = fetch(
+    `${MOTIS_BASE}/api/v1/geocode?text=${encodeURIComponent(text)}`,
+    { signal: AbortSignal.timeout(5000) }
+  ).then(r => r.json()).catch(() => []);
 
-    const data = await response.json();
+  const nominatimPromise = nominatimSearch(text).catch(() => []);
 
-    if (Array.isArray(data) && data.length > 0) {
-      for (const item of data) {
-        if (item.name && Array.isArray(item.areas)) {
-          const city = item.areas.find((a: { default?: boolean }) => a.default);
-          if (city?.name && !item.name.includes(city.name)) {
-            item.name = `${item.name}, ${city.name}`;
-          }
-        }
+  const [motisData, nominatimData] = await Promise.all([motisPromise, nominatimPromise]);
+
+  const motisResults: GeoResult[] = Array.isArray(motisData) ? motisData : [];
+  for (const item of motisResults) {
+    if (item.name && Array.isArray(item.areas)) {
+      const city = (item.areas as { name?: string; default?: boolean }[]).find(a => a.default);
+      if (city?.name && !item.name.includes(city.name)) {
+        item.name = `${item.name}, ${city.name}`;
       }
-      return NextResponse.json(data);
     }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    console.error('MOTIS geocode failed, falling back to Nominatim:', message);
   }
 
-  try {
-    const results = await nominatimSearch(text);
-    return NextResponse.json(results);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    console.error('Nominatim geocode also failed:', message);
-    return NextResponse.json(
-      { error: 'Failed to geocode', message },
-      { status: 502 }
-    );
+  const nominatimResults: GeoResult[] = Array.isArray(nominatimData) ? nominatimData as GeoResult[] : [];
+
+  if (motisResults.length === 0) {
+    return NextResponse.json(nominatimResults);
   }
+
+  const uniqueNominatim = nominatimResults.filter(
+    nr => !motisResults.some(mr => isDuplicate(mr, nr))
+  );
+
+  const merged: GeoResult[] = [];
+  let mi = 0;
+  let ni = 0;
+  while (mi < motisResults.length || ni < uniqueNominatim.length) {
+    if (mi < motisResults.length) merged.push(motisResults[mi++]);
+    if (mi < motisResults.length) merged.push(motisResults[mi++]);
+    if (mi < motisResults.length) merged.push(motisResults[mi++]);
+    if (ni < uniqueNominatim.length) merged.push(uniqueNominatim[ni++]);
+  }
+
+  return NextResponse.json(merged);
 }
