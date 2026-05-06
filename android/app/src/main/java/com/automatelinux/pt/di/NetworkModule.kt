@@ -1,7 +1,13 @@
 package com.automatelinux.pt.di
 
 import com.automatelinux.pt.data.api.PtApi
+import com.automatelinux.pt.data.model.TransitMode
 import com.automatelinux.pt.util.ServerConfig
+import com.google.gson.Gson
+import com.google.gson.GsonBuilder
+import com.google.gson.TypeAdapter
+import com.google.gson.stream.JsonReader
+import com.google.gson.stream.JsonWriter
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -51,11 +57,24 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideRetrofit(client: OkHttpClient): Retrofit =
+    fun provideGson(): Gson = GsonBuilder()
+        .registerTypeAdapter(TransitMode::class.java, object : TypeAdapter<TransitMode>() {
+            override fun write(out: JsonWriter, value: TransitMode?) {
+                out.value(value?.name ?: "WALK")
+            }
+            override fun read(`in`: JsonReader): TransitMode {
+                return TransitMode.fromString(`in`.nextString())
+            }
+        })
+        .create()
+
+    @Provides
+    @Singleton
+    fun provideRetrofit(client: OkHttpClient, gson: Gson): Retrofit =
         Retrofit.Builder()
             .baseUrl("http://localhost/")
             .client(client)
-            .addConverterFactory(GsonConverterFactory.create())
+            .addConverterFactory(GsonConverterFactory.create(gson))
             .build()
 
     @Provides

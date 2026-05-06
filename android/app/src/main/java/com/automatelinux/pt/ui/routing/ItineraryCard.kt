@@ -129,4 +129,5 @@ fun getModeLabel(mode: TransitMode): String = when (mode) {
     TransitMode.RAIL -> "Train"
     TransitMode.TRAM -> "Tram"
     TransitMode.SUBWAY -> "Subway"
+    TransitMode.FERRY -> "Ferry"
 }

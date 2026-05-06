@@ -7,11 +7,19 @@ data class Place(
 )
 
 enum class TransitMode {
-    WALK, BUS, RAIL, TRAM, SUBWAY;
+    WALK, BUS, RAIL, TRAM, SUBWAY, FERRY;
 
     companion object {
-        fun fromString(s: String): TransitMode =
-            entries.firstOrNull { it.name.equals(s, ignoreCase = true) } ?: WALK
+        fun fromString(s: String): TransitMode = when {
+            s.equals("WALK", ignoreCase = true) -> WALK
+            s.equals("BUS", ignoreCase = true) -> BUS
+            s.equals("TRAM", ignoreCase = true) -> TRAM
+            s.equals("SUBWAY", ignoreCase = true) -> SUBWAY
+            s.equals("METRO", ignoreCase = true) -> SUBWAY
+            s.equals("FERRY", ignoreCase = true) -> FERRY
+            s.contains("RAIL", ignoreCase = true) -> RAIL
+            else -> WALK
+        }
     }
 }
 

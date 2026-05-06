@@ -26,6 +26,7 @@ fun getModeColor(mode: TransitMode): Int = when (mode) {
     TransitMode.RAIL -> Color.parseColor("#2196F3")
     TransitMode.TRAM -> Color.parseColor("#FF5722")
     TransitMode.SUBWAY -> Color.parseColor("#9C27B0")
+    TransitMode.FERRY -> Color.parseColor("#00ACC1")
 }
 
 fun getModeColorWithRoute(mode: TransitMode, routeColor: String?): Int {
