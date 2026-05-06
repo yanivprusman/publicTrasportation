@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -91,8 +92,7 @@ fun MainScreen(
             prefs.edit().putString("last_version", currentVersion).apply()
             snackbarHostState.showSnackbar(
                 message = "Updated to $currentVersion",
-                duration = androidx.compose.material3.SnackbarDuration.Indefinite,
-                actionLabel = "OK"
+                duration = androidx.compose.material3.SnackbarDuration.Indefinite
             )
         }
     }
@@ -293,7 +293,9 @@ fun MainScreen(
 
             SnackbarHost(
                 hostState = snackbarHostState,
-                modifier = Modifier.align(Alignment.TopCenter)
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .clickable { snackbarHostState.currentSnackbarData?.dismiss() }
             )
 
             if (BuildConfig.FEEDBACK_ENABLED) {
