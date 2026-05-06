@@ -32,6 +32,12 @@ export async function GET(request: NextRequest) {
           }
         }
       }
+      // Sort ADDRESS results first — POIs like "birding site" are less useful for routing
+      data.sort((a: { type?: string }, b: { type?: string }) => {
+        if (a.type === 'ADDRESS' && b.type !== 'ADDRESS') return -1;
+        if (a.type !== 'ADDRESS' && b.type === 'ADDRESS') return 1;
+        return 0;
+      });
     }
 
     return NextResponse.json(data, { status: response.ok ? 200 : response.status });
