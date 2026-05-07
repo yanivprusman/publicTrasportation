@@ -58,4 +58,23 @@ object ServerConfig {
             }
             null
         }
+
+    fun findReachableServerBlocking(exclude: String? = null): String? {
+        for (server in servers) {
+            if (server == exclude) continue
+            try {
+                val connection = URL("$server/api/health").openConnection() as HttpURLConnection
+                connection.connectTimeout = 3000
+                connection.readTimeout = 3000
+                connection.requestMethod = "GET"
+                val code = connection.responseCode
+                connection.disconnect()
+                if (code in 200..299) {
+                    activeServer = server
+                    return server
+                }
+            } catch (_: Exception) { }
+        }
+        return null
+    }
 }
