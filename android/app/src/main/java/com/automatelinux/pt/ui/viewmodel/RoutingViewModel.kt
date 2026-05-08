@@ -67,23 +67,30 @@ class RoutingViewModel @Inject constructor(
         )
     }
 
-    fun setOriginFromCoords(lat: Double, lon: Double, name: String? = null, resolveAddress: Boolean = false) {
-        val displayName = name ?: "%.4f, %.4f".format(lat, lon)
+    fun setOriginFromCoords(lat: Double, lon: Double, name: String? = null) {
+        val displayName = name ?: MAP_LOCATION_LABEL
         setOrigin(GeocodeSuggestion(name = displayName, lat = lat, lon = lon))
-        if (resolveAddress) {
-            viewModelScope.launch {
-                try {
-                    val results = api.reverseGeocode(lat, lon)
-                    val resolved = results.firstOrNull() ?: return@launch
-                    setOrigin(GeocodeSuggestion(name = resolved.name, lat = lat, lon = lon))
-                } catch (_: Exception) { }
-            }
-        }
+        if (name == null) resolveAddress(lat, lon) { setOrigin(it) }
     }
 
     fun setDestinationFromCoords(lat: Double, lon: Double, name: String? = null) {
-        val displayName = name ?: "%.4f, %.4f".format(lat, lon)
+        val displayName = name ?: MAP_LOCATION_LABEL
         setDestination(GeocodeSuggestion(name = displayName, lat = lat, lon = lon))
+        if (name == null) resolveAddress(lat, lon) { setDestination(it) }
+    }
+
+    private fun resolveAddress(lat: Double, lon: Double, apply: (GeocodeSuggestion) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val results = api.reverseGeocode(lat, lon)
+                val resolved = results.firstOrNull() ?: return@launch
+                apply(GeocodeSuggestion(name = resolved.name, lat = lat, lon = lon))
+            } catch (_: Exception) { }
+        }
+    }
+
+    companion object {
+        private const val MAP_LOCATION_LABEL = "Selected location"
     }
 
     fun search() {

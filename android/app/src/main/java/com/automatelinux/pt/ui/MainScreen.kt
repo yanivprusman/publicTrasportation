@@ -99,9 +99,7 @@ fun MainScreen(
 
     val applyGpsLocation = { location: android.location.Location ->
         gpsLoading = false
-        routingViewModel.setOriginFromCoords(
-            location.latitude, location.longitude, resolveAddress = true
-        )
+        routingViewModel.setOriginFromCoords(location.latitude, location.longitude)
         mapView?.animateToPoint(GeoPoint(location.latitude, location.longitude), 15.0)
     }
 
