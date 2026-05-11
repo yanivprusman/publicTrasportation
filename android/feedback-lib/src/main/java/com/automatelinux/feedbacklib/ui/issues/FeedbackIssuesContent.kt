@@ -29,7 +29,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.GetApp
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Shield
-import androidx.compose.material.icons.filled.Warning
+
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
@@ -272,7 +272,7 @@ fun FeedbackIssuesScreen(
                                 onToggleExpand = { viewModel.toggleExpanded(issue.issueNumber) },
                                 onToggleSelect = { viewModel.toggleSelected(issue.issueNumber) },
                                 onClose = { viewModel.closeIssue(issue.issueNumber) },
-                                onReopen = { viewModel.reopenIssue(issue.issueNumber) },
+
                                 onDelete = { confirmDelete = issue },
                                 onFix = {
                                     val sessions = issue.claudeSessionIds
@@ -412,7 +412,6 @@ fun IssueCard(
     onToggleExpand: () -> Unit,
     onToggleSelect: () -> Unit,
     onClose: () -> Unit,
-    onReopen: () -> Unit,
     onDelete: () -> Unit,
     onFix: () -> Unit,
     onMarkFixed: () -> Unit,
@@ -554,17 +553,15 @@ fun IssueCard(
                                     Spacer(modifier = Modifier.width(4.dp))
                                     Text("Close for now")
                                 }
-                                if (onResumeClarifier != null) {
-                                    TextButton(onClick = onResumeClarifier) {
-                                        Icon(
-                                            Icons.AutoMirrored.Filled.Chat,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(14.dp),
-                                            tint = MaterialTheme.colorScheme.error,
-                                        )
-                                        Spacer(modifier = Modifier.width(4.dp))
-                                        Text("Resume Clarifier", color = MaterialTheme.colorScheme.error)
-                                    }
+                                TextButton(onClick = onResumeClarifier!!) {
+                                    Icon(
+                                        Icons.AutoMirrored.Filled.Chat,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(14.dp),
+                                        tint = MaterialTheme.colorScheme.error,
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("Resume Clarifier", color = MaterialTheme.colorScheme.error)
                                 }
                             }
                             isRegression -> {
@@ -592,15 +589,15 @@ fun IssueCard(
                                 }
                             }
                             isClosed -> {
-                                TextButton(onClick = onReopen) {
+                                TextButton(onClick = onResumeClarifier!!) {
                                     Icon(
-                                        Icons.Filled.Warning,
+                                        Icons.AutoMirrored.Filled.Chat,
                                         contentDescription = null,
                                         modifier = Modifier.size(14.dp),
                                         tint = MaterialTheme.colorScheme.error,
                                     )
                                     Spacer(modifier = Modifier.width(4.dp))
-                                    Text("Not Working", color = MaterialTheme.colorScheme.error)
+                                    Text("Resume Clarifier", color = MaterialTheme.colorScheme.error)
                                 }
                             }
                             else -> {
