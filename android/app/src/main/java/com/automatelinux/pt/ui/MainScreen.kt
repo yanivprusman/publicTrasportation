@@ -166,158 +166,156 @@ fun MainScreen(
         // Map centering is handled by RouteOverlay's fitBounds
     }
 
-    BottomSheetScaffold(
-        scaffoldState = scaffoldState,
-        sheetPeekHeight = 280.dp,
-        sheetContent = {
-            Column {
-                // Tab switcher
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 4.dp)
-                ) {
-                    FilterChip(
-                        selected = activeTab == ActiveTab.ROUTE,
-                        onClick = { activeTab = ActiveTab.ROUTE },
-                        label = { Text("Route Planner") },
-                        modifier = Modifier.padding(end = 8.dp)
-                    )
-                    FilterChip(
-                        selected = activeTab == ActiveTab.ARRIVALS,
-                        onClick = { activeTab = ActiveTab.ARRIVALS },
-                        label = { Text("Station Arrivals") }
-                    )
-                }
-
-                Column(
-                    modifier = Modifier.verticalScroll(rememberScrollState())
-                ) {
-                    when (activeTab) {
-                        ActiveTab.ROUTE -> {
-                            RoutePlannerPanel(
-                                state = routingState,
-                                onOriginSelect = { routingViewModel.setOrigin(it) },
-                                onDestinationSelect = { routingViewModel.setDestination(it) },
-                                onSwap = { routingViewModel.swapOriginDestination() },
-                                onTimeChange = { routingViewModel.setDepartureTime(it) },
-                                onArriveByChange = { routingViewModel.setArriveBy(it) },
-                                onSearch = {
-                                    routingViewModel.search()
-                                    scope.launch {
-                                        bottomSheetState.expand()
-                                    }
-                                },
-                                onSelectItinerary = { routingViewModel.selectItinerary(it) },
-                                onGeocode = { routingViewModel.geocode(it) },
-                                onGpsClick = onGpsClick,
-                                gpsLoading = gpsLoading
-                            )
-                        }
-
-                        ActiveTab.ARRIVALS -> {
-                            ArrivalsPanel(
-                                state = arrivalsState,
-                                onStationSelect = { code, name ->
-                                    arrivalsViewModel.setStationCode(code, name)
-                                },
-                                onLineFilterChange = { arrivalsViewModel.setLineFilter(it) },
-                                onShowVehicleMarkersChange = { arrivalsViewModel.setShowVehicleMarkers(it) },
-                                onSearchStops = { arrivalsViewModel.searchStops(it) },
-                                onVehicleSelect = { lat, lon ->
-                                    mapView?.animateToPoint(GeoPoint(lat, lon), 16.0)
-                                    scope.launch { bottomSheetState.partialExpand() }
-                                },
-                                getDestinationName = { arrivalsViewModel.getDestinationName(it) }
-                            )
-                        }
-                    }
-                }
-            }
-        },
-        sheetContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.82f)
-    ) { _ ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-        ) {
-            OsmMapView(
-                center = GeoPoint(31.77, 35.21),
-                zoom = 13.0,
-                onMapReady = { map -> mapView = map },
-                onLongPress = { point ->
-                    // Long press sets destination if origin exists, otherwise sets origin
-                    if (routingState.origin == null) {
-                        routingViewModel.setOriginFromCoords(point.latitude, point.longitude)
-                    } else {
-                        routingViewModel.setDestinationFromCoords(point.latitude, point.longitude)
-                    }
-                }
-            ) { map ->
-                // Route overlay
-                RouteOverlay(
-                    map = map,
-                    itinerary = routingState.selectedItinerary
-                )
-
-                // Origin/destination markers
-                OriginDestinationMarkers(
-                    map = map,
-                    origin = routingState.origin?.let { GeoPoint(it.lat, it.lon) },
-                    destination = routingState.destination?.let { GeoPoint(it.lat, it.lon) }
-                )
-
-                // Vehicle markers (arrivals tab)
-                if (activeTab == ActiveTab.ARRIVALS) {
-                    VehicleMarkerOverlay(
-                        map = map,
-                        markers = arrivalsState.vehicleMarkers,
-                        visible = arrivalsState.showVehicleMarkers
-                    )
-                }
-            }
-
-            com.automatelinux.feedbacklib.ui.VersionSnackbar(
-                modifier = Modifier.align(Alignment.TopCenter),
-            )
-
-            if (BuildConfig.FEEDBACK_ENABLED) {
-                SmallFloatingActionButton(
-                    onClick = {
-                        val intent = Intent().setClassName(
-                            context.packageName,
-                            "com.automatelinux.pt.ui.FeedbackChatActivity"
+    Box(modifier = Modifier.fillMaxSize()) {
+        BottomSheetScaffold(
+            scaffoldState = scaffoldState,
+            sheetPeekHeight = 280.dp,
+            sheetContent = {
+                Column {
+                    // Tab switcher
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 4.dp)
+                    ) {
+                        FilterChip(
+                            selected = activeTab == ActiveTab.ROUTE,
+                            onClick = { activeTab = ActiveTab.ROUTE },
+                            label = { Text("Route Planner") },
+                            modifier = Modifier.padding(end = 8.dp)
                         )
-                        context.startActivity(intent)
-                    },
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(bottom = 16.dp, end = 12.dp),
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    elevation = FloatingActionButtonDefaults.elevation(2.dp),
-                ) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.Chat,
-                        contentDescription = "Issue Clarifier",
-                        modifier = Modifier.size(20.dp)
+                        FilterChip(
+                            selected = activeTab == ActiveTab.ARRIVALS,
+                            onClick = { activeTab = ActiveTab.ARRIVALS },
+                            label = { Text("Station Arrivals") }
+                        )
+                    }
+
+                    Column(
+                        modifier = Modifier.verticalScroll(rememberScrollState())
+                    ) {
+                        when (activeTab) {
+                            ActiveTab.ROUTE -> {
+                                RoutePlannerPanel(
+                                    state = routingState,
+                                    onOriginSelect = { routingViewModel.setOrigin(it) },
+                                    onDestinationSelect = { routingViewModel.setDestination(it) },
+                                    onSwap = { routingViewModel.swapOriginDestination() },
+                                    onTimeChange = { routingViewModel.setDepartureTime(it) },
+                                    onArriveByChange = { routingViewModel.setArriveBy(it) },
+                                    onSearch = {
+                                        routingViewModel.search()
+                                        scope.launch {
+                                            bottomSheetState.expand()
+                                        }
+                                    },
+                                    onSelectItinerary = { routingViewModel.selectItinerary(it) },
+                                    onGeocode = { routingViewModel.geocode(it) },
+                                    onGpsClick = onGpsClick,
+                                    gpsLoading = gpsLoading
+                                )
+                            }
+
+                            ActiveTab.ARRIVALS -> {
+                                ArrivalsPanel(
+                                    state = arrivalsState,
+                                    onStationSelect = { code, name ->
+                                        arrivalsViewModel.setStationCode(code, name)
+                                    },
+                                    onLineFilterChange = { arrivalsViewModel.setLineFilter(it) },
+                                    onShowVehicleMarkersChange = { arrivalsViewModel.setShowVehicleMarkers(it) },
+                                    onSearchStops = { arrivalsViewModel.searchStops(it) },
+                                    onVehicleSelect = { lat, lon ->
+                                        mapView?.animateToPoint(GeoPoint(lat, lon), 16.0)
+                                        scope.launch { bottomSheetState.partialExpand() }
+                                    },
+                                    getDestinationName = { arrivalsViewModel.getDestinationName(it) }
+                                )
+                            }
+                        }
+                    }
+                }
+            },
+            sheetContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.82f)
+        ) { _ ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+            ) {
+                OsmMapView(
+                    center = GeoPoint(31.77, 35.21),
+                    zoom = 13.0,
+                    onMapReady = { map -> mapView = map },
+                    onLongPress = { point ->
+                        if (routingState.origin == null) {
+                            routingViewModel.setOriginFromCoords(point.latitude, point.longitude)
+                        } else {
+                            routingViewModel.setDestinationFromCoords(point.latitude, point.longitude)
+                        }
+                    }
+                ) { map ->
+                    RouteOverlay(
+                        map = map,
+                        itinerary = routingState.selectedItinerary
                     )
+
+                    OriginDestinationMarkers(
+                        map = map,
+                        origin = routingState.origin?.let { GeoPoint(it.lat, it.lon) },
+                        destination = routingState.destination?.let { GeoPoint(it.lat, it.lon) }
+                    )
+
+                    if (activeTab == ActiveTab.ARRIVALS) {
+                        VehicleMarkerOverlay(
+                            map = map,
+                            markers = arrivalsState.vehicleMarkers,
+                            visible = arrivalsState.showVehicleMarkers
+                        )
+                    }
+                }
+
+                com.automatelinux.feedbacklib.ui.VersionSnackbar(
+                    modifier = Modifier.align(Alignment.TopCenter),
+                )
+
+                if (bottomSheetState.currentValue == SheetValue.Hidden) {
+                    SmallFloatingActionButton(
+                        onClick = { scope.launch { bottomSheetState.partialExpand() } },
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(bottom = 16.dp),
+                        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.82f),
+                        elevation = FloatingActionButtonDefaults.elevation(4.dp),
+                    ) {
+                        Icon(
+                            Icons.Default.KeyboardArrowUp,
+                            contentDescription = "Show panel",
+                        )
+                    }
                 }
             }
+        }
 
-            if (bottomSheetState.currentValue == SheetValue.Hidden) {
-                SmallFloatingActionButton(
-                    onClick = { scope.launch { bottomSheetState.partialExpand() } },
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(bottom = 16.dp),
-                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.82f),
-                    elevation = FloatingActionButtonDefaults.elevation(4.dp),
-                ) {
-                    Icon(
-                        Icons.Default.KeyboardArrowUp,
-                        contentDescription = "Show panel",
+        if (BuildConfig.FEEDBACK_ENABLED) {
+            SmallFloatingActionButton(
+                onClick = {
+                    val intent = Intent().setClassName(
+                        context.packageName,
+                        "com.automatelinux.pt.ui.FeedbackChatActivity"
                     )
-                }
+                    context.startActivity(intent)
+                },
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(bottom = 16.dp, end = 12.dp),
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                elevation = FloatingActionButtonDefaults.elevation(2.dp),
+            ) {
+                Icon(
+                    Icons.AutoMirrored.Filled.Chat,
+                    contentDescription = "Issue Clarifier",
+                    modifier = Modifier.size(20.dp)
+                )
             }
         }
     }
