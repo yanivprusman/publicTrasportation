@@ -49,6 +49,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -307,6 +308,7 @@ fun MainScreen(
                 },
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
+                    .zIndex(Float.MAX_VALUE)
                     .padding(bottom = 16.dp, end = 12.dp),
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
                 elevation = FloatingActionButtonDefaults.elevation(2.dp),
