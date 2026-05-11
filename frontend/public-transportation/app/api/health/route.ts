@@ -12,6 +12,14 @@ function getGitCommit(): string | null {
   }
 }
 
+function getCommitCount(ref: string): number | null {
+  try {
+    return parseInt(execSync(`git rev-list --count ${ref}`, { encoding: 'utf-8' }).trim(), 10);
+  } catch {
+    return null;
+  }
+}
+
 function getApkCommit(): string | null {
   try {
     const aapt2 = '/home/yaniv/Android/Sdk/build-tools/35.0.1/aapt2';
@@ -36,12 +44,14 @@ function getApkCommit(): string | null {
 export async function GET() {
   const gitCommit = getGitCommit();
   const apkCommit = getApkCommit();
+  const gitVersion = getCommitCount('HEAD');
+  const apkVersion = apkCommit ? getCommitCount(apkCommit) : null;
   try {
     await fetch(`${MOTIS_BASE}/api/v1/geocode?text=test`, {
       signal: AbortSignal.timeout(3000),
     });
-    return NextResponse.json({ status: 'ok', motis: 'connected', gitCommit, apkCommit });
+    return NextResponse.json({ status: 'ok', motis: 'connected', gitCommit, apkCommit, gitVersion, apkVersion });
   } catch {
-    return NextResponse.json({ status: 'degraded', motis: 'unreachable', gitCommit, apkCommit });
+    return NextResponse.json({ status: 'degraded', motis: 'unreachable', gitCommit, apkCommit, gitVersion, apkVersion });
   }
 }

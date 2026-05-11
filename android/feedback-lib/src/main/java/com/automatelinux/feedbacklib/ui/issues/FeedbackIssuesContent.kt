@@ -73,6 +73,7 @@ fun FeedbackIssuesScreen(
     versionName: String? = null,
     hasUpdate: Boolean = false,
     needsBuild: Boolean = false,
+    newVersion: String? = null,
     onBuildComplete: () -> Unit = {},
 ) {
     @Suppress("NAME_SHADOWING")
@@ -134,7 +135,7 @@ fun FeedbackIssuesScreen(
                                             }
                                         } else {
                                             Text(
-                                                text = "update available",
+                                                text = if (newVersion != null) "update → v$newVersion" else "update available",
                                                 style = MaterialTheme.typography.labelSmall,
                                                 color = MaterialTheme.colorScheme.primary,
                                                 fontSize = 9.sp,
@@ -170,7 +171,7 @@ fun FeedbackIssuesScreen(
                                             }
                                         } else {
                                             Text(
-                                                text = "build needed",
+                                                text = if (newVersion != null) "build needed → v$newVersion" else "build needed",
                                                 style = MaterialTheme.typography.labelSmall,
                                                 color = orange,
                                                 fontSize = 9.sp,

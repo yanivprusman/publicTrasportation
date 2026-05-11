@@ -28,11 +28,13 @@ class FeedbackIssuesActivity : ComponentActivity() {
             PTTheme {
                 var hasUpdate by remember { mutableStateOf(false) }
                 var needsBuild by remember { mutableStateOf(false) }
+                var newVersion by remember { mutableStateOf<String?>(null) }
 
                 LaunchedEffect(Unit) {
                     val result = checkVersions()
-                    hasUpdate = result.first
-                    needsBuild = result.second
+                    hasUpdate = result.hasUpdate
+                    needsBuild = result.needsBuild
+                    newVersion = result.newVersion
                 }
 
                 FeedbackIssuesScreen(
@@ -40,6 +42,7 @@ class FeedbackIssuesActivity : ComponentActivity() {
                     versionName = BuildConfig.VERSION_NAME,
                     hasUpdate = hasUpdate,
                     needsBuild = needsBuild,
+                    newVersion = newVersion,
                     onBuildComplete = {
                         needsBuild = false
                         hasUpdate = true
@@ -49,9 +52,9 @@ class FeedbackIssuesActivity : ComponentActivity() {
         }
     }
 
-    private data class VersionCheck(val hasUpdate: Boolean, val needsBuild: Boolean)
+    private data class VersionCheck(val hasUpdate: Boolean, val needsBuild: Boolean, val newVersion: String?)
 
-    private suspend fun checkVersions(): Pair<Boolean, Boolean> = withContext(Dispatchers.IO) {
+    private suspend fun checkVersions(): VersionCheck = withContext(Dispatchers.IO) {
         try {
             val conn = URL("${ServerConfig.activeServer}/api/health").openConnection() as HttpURLConnection
             conn.connectTimeout = 5000
@@ -60,12 +63,19 @@ class FeedbackIssuesActivity : ComponentActivity() {
             conn.disconnect()
             val gitCommit = json.optString("gitCommit", "")
             val apkCommit = json.optString("apkCommit", "")
+            val gitVersion = if (json.has("gitVersion")) json.optInt("gitVersion", 0) else 0
+            val apkVersion = if (json.has("apkVersion")) json.optInt("apkVersion", 0) else 0
             val installedCommit = Regex("\\(([^)]+)\\)").find(BuildConfig.VERSION_NAME)?.groupValues?.get(1) ?: ""
             val hasUpdate = apkCommit.isNotBlank() && installedCommit.isNotBlank() && apkCommit != installedCommit
             val needsBuild = gitCommit.isNotBlank() && apkCommit.isNotBlank() && gitCommit != apkCommit
-            Pair(hasUpdate, needsBuild)
+            val newVersion = when {
+                hasUpdate && apkVersion > 0 -> apkVersion.toString()
+                needsBuild && gitVersion > 0 -> gitVersion.toString()
+                else -> null
+            }
+            VersionCheck(hasUpdate, needsBuild, newVersion)
         } catch (_: Exception) {
-            Pair(false, false)
+            VersionCheck(false, false, null)
         }
     }
 }
