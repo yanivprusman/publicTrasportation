@@ -17,6 +17,10 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class FeedbackChatActivity : ComponentActivity() {
 
+    companion object {
+        const val EXTRA_CLARIFIER_SESSION_ID = "clarifier_session_id"
+    }
+
     @Inject lateinit var feedbackConfig: FeedbackConfig
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -25,9 +29,14 @@ class FeedbackChatActivity : ComponentActivity() {
             PTTheme {
                 val viewModel: FeedbackChatViewModel = hiltViewModel()
 
-                LaunchedEffect(Unit) {
+                val clarifierSessionId = intent.getStringExtra(EXTRA_CLARIFIER_SESSION_ID)
+
+                LaunchedEffect(clarifierSessionId) {
                     ServerConfig.findReachableServer()
                     viewModel.setServerFound(true)
+                    if (clarifierSessionId != null) {
+                        viewModel.resumeClarifierSession(clarifierSessionId)
+                    }
                 }
 
                 FeedbackChatScreen(

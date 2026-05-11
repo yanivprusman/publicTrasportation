@@ -20,6 +20,7 @@ data class Issue(
     val insights: String?,
     @SerializedName("claudeSessionId") val claudeSessionId: String? = null,
     @SerializedName("claudeSessionIds") val claudeSessionIds: List<String>? = null,
+    @SerializedName("clarifierSessionId") val clarifierSessionId: String? = null,
     @SerializedName("claudeLaunchDir") val claudeLaunchDir: String? = null,
 )
 

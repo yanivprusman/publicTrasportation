@@ -1,5 +1,6 @@
 package com.automatelinux.pt.ui
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -39,6 +40,12 @@ class FeedbackIssuesActivity : ComponentActivity() {
 
                 FeedbackIssuesScreen(
                     onNavigateBack = { finish() },
+                    onResumeClarifier = { sessionId ->
+                        startActivity(
+                            Intent(this@FeedbackIssuesActivity, FeedbackChatActivity::class.java)
+                                .putExtra(FeedbackChatActivity.EXTRA_CLARIFIER_SESSION_ID, sessionId),
+                        )
+                    },
                     versionName = BuildConfig.VERSION_NAME,
                     hasUpdate = hasUpdate,
                     needsBuild = needsBuild,

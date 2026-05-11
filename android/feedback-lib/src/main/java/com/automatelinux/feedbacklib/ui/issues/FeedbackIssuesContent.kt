@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.CheckCircle
@@ -69,6 +70,7 @@ fun FeedbackIssuesScreen(
     viewModel: FeedbackIssuesViewModel = hiltViewModel(),
     onNavigateBack: () -> Unit,
     onNavigateToChat: (() -> Unit)? = null,
+    onResumeClarifier: ((clarifierSessionId: String) -> Unit)? = null,
     isProd: Boolean = false,
     versionName: String? = null,
     hasUpdate: Boolean = false,
@@ -282,6 +284,9 @@ fun FeedbackIssuesScreen(
                                 },
                                 onMarkFixed = { viewModel.markFixed(issue) },
                                 onClearRegression = { viewModel.clearRegression(issue.issueNumber) },
+                                onResumeClarifier = issue.clarifierSessionId?.let { sid ->
+                                    onResumeClarifier?.let { callback -> { callback(sid) } }
+                                },
                             )
                         }
                         item { Spacer(modifier = Modifier.height(8.dp)) }
@@ -412,6 +417,7 @@ fun IssueCard(
     onFix: () -> Unit,
     onMarkFixed: () -> Unit,
     onClearRegression: () -> Unit,
+    onResumeClarifier: (() -> Unit)? = null,
 ) {
     val isClosed = issue.status == "closed"
     val isReview = issue.status == "review"
@@ -547,6 +553,18 @@ fun IssueCard(
                                     )
                                     Spacer(modifier = Modifier.width(4.dp))
                                     Text("Close for now")
+                                }
+                                if (onResumeClarifier != null) {
+                                    TextButton(onClick = onResumeClarifier) {
+                                        Icon(
+                                            Icons.AutoMirrored.Filled.Chat,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(14.dp),
+                                            tint = MaterialTheme.colorScheme.error,
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text("Resume Clarifier", color = MaterialTheme.colorScheme.error)
+                                    }
                                 }
                             }
                             isRegression -> {

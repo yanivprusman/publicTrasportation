@@ -55,6 +55,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.automatelinux.pt.ui.arrivals.ArrivalsPanel
@@ -84,6 +85,7 @@ fun MainScreen(
     var mapView by remember { mutableStateOf<MapView?>(null) }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val keyboardController = LocalSoftwareKeyboardController.current
 
     val fusedLocationClient = remember {
         LocationServices.getFusedLocationProviderClient(context)
@@ -161,6 +163,12 @@ fun MainScreen(
         } else if (expandedByIme) {
             expandedByIme = false
             bottomSheetState.partialExpand()
+        }
+    }
+
+    LaunchedEffect(bottomSheetState.currentValue) {
+        if (bottomSheetState.currentValue != SheetValue.Expanded && imeVisible) {
+            keyboardController?.hide()
         }
     }
 
