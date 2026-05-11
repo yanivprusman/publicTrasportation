@@ -73,6 +73,7 @@ fun FeedbackIssuesScreen(
     versionName: String? = null,
     hasUpdate: Boolean = false,
     needsBuild: Boolean = false,
+    onBuildComplete: () -> Unit = {},
 ) {
     @Suppress("NAME_SHADOWING")
     val versionName = versionName ?: run {
@@ -120,21 +121,41 @@ fun FeedbackIssuesScreen(
                                             fontSize = 9.sp,
                                         )
                                     }
-                                } else if (needsBuild) {
+                                } else if (needsBuild || state.buildLoading) {
                                     Spacer(modifier = Modifier.width(6.dp))
                                     val orange = Color(0xFFFF9800)
                                     Box(
                                         modifier = Modifier
                                             .clip(RoundedCornerShape(6.dp))
                                             .background(orange.copy(alpha = 0.12f))
+                                            .clickable(enabled = !state.buildLoading) {
+                                                viewModel.buildApp(onComplete = onBuildComplete)
+                                            }
                                             .padding(horizontal = 6.dp, vertical = 1.dp),
                                     ) {
-                                        Text(
-                                            text = "build needed",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = orange,
-                                            fontSize = 9.sp,
-                                        )
+                                        if (state.buildLoading) {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                CircularProgressIndicator(
+                                                    modifier = Modifier.size(8.dp),
+                                                    strokeWidth = 1.dp,
+                                                    color = orange,
+                                                )
+                                                Spacer(modifier = Modifier.width(4.dp))
+                                                Text(
+                                                    text = "building…",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = orange,
+                                                    fontSize = 9.sp,
+                                                )
+                                            }
+                                        } else {
+                                            Text(
+                                                text = "build needed",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = orange,
+                                                fontSize = 9.sp,
+                                            )
+                                        }
                                     }
                                 }
                             }

@@ -40,6 +40,10 @@ class FeedbackIssuesActivity : ComponentActivity() {
                     versionName = BuildConfig.VERSION_NAME,
                     hasUpdate = hasUpdate,
                     needsBuild = needsBuild,
+                    onBuildComplete = {
+                        needsBuild = false
+                        hasUpdate = true
+                    },
                 )
             }
         }
