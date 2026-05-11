@@ -10,17 +10,23 @@ import com.automatelinux.pt.BuildConfig
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.google.android.gms.tasks.CancellationTokenSource
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -131,7 +137,8 @@ fun MainScreen(
     }
 
     val bottomSheetState = rememberStandardBottomSheetState(
-        initialValue = SheetValue.PartiallyExpanded
+        initialValue = SheetValue.PartiallyExpanded,
+        skipHiddenState = false
     )
     val scaffoldState = rememberBottomSheetScaffoldState(
         bottomSheetState = bottomSheetState
@@ -228,12 +235,11 @@ fun MainScreen(
                 }
             }
         },
-        sheetContainerColor = MaterialTheme.colorScheme.surface
-    ) { innerPadding ->
+        sheetContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.82f)
+    ) { _ ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
         ) {
             OsmMapView(
                 center = GeoPoint(31.77, 35.21),
@@ -294,6 +300,22 @@ fun MainScreen(
                         Icons.AutoMirrored.Filled.Chat,
                         contentDescription = "Issue Clarifier",
                         modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+
+            if (bottomSheetState.currentValue == SheetValue.Hidden) {
+                SmallFloatingActionButton(
+                    onClick = { scope.launch { bottomSheetState.partialExpand() } },
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 16.dp),
+                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.82f),
+                    elevation = FloatingActionButtonDefaults.elevation(4.dp),
+                ) {
+                    Icon(
+                        Icons.Default.KeyboardArrowUp,
+                        contentDescription = "Show panel",
                     )
                 }
             }
