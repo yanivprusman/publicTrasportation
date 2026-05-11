@@ -21,6 +21,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -68,7 +72,7 @@ import org.osmdroid.views.MapView
 
 enum class ActiveTab { ROUTE, ARRIVALS }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun MainScreen(
     routingViewModel: RoutingViewModel = hiltViewModel(),
@@ -145,6 +149,21 @@ fun MainScreen(
         bottomSheetState = bottomSheetState
     )
 
+    val imeVisible = WindowInsets.isImeVisible
+    var expandedByIme by remember { mutableStateOf(false) }
+
+    LaunchedEffect(imeVisible) {
+        if (imeVisible) {
+            if (bottomSheetState.currentValue != SheetValue.Expanded) {
+                expandedByIme = true
+                bottomSheetState.expand()
+            }
+        } else if (expandedByIme) {
+            expandedByIme = false
+            bottomSheetState.partialExpand()
+        }
+    }
+
     LaunchedEffect(activeTab) {
         com.automatelinux.pt.util.ScreenTracker.currentScreen = when (activeTab) {
             ActiveTab.ROUTE -> "Route Planner"
@@ -193,7 +212,9 @@ fun MainScreen(
                     }
 
                     Column(
-                        modifier = Modifier.verticalScroll(rememberScrollState())
+                        modifier = Modifier
+                            .imePadding()
+                            .verticalScroll(rememberScrollState())
                     ) {
                         when (activeTab) {
                             ActiveTab.ROUTE -> {
