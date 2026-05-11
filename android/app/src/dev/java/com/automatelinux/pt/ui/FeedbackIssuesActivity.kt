@@ -27,36 +27,41 @@ class FeedbackIssuesActivity : ComponentActivity() {
         setContent {
             PTTheme {
                 var hasUpdate by remember { mutableStateOf(false) }
+                var needsBuild by remember { mutableStateOf(false) }
 
                 LaunchedEffect(Unit) {
-                    hasUpdate = checkForUpdate()
+                    val result = checkVersions()
+                    hasUpdate = result.first
+                    needsBuild = result.second
                 }
 
                 FeedbackIssuesScreen(
                     onNavigateBack = { finish() },
                     versionName = BuildConfig.VERSION_NAME,
                     hasUpdate = hasUpdate,
+                    needsBuild = needsBuild,
                 )
             }
         }
     }
 
-    private suspend fun checkForUpdate(): Boolean = withContext(Dispatchers.IO) {
+    private data class VersionCheck(val hasUpdate: Boolean, val needsBuild: Boolean)
+
+    private suspend fun checkVersions(): Pair<Boolean, Boolean> = withContext(Dispatchers.IO) {
         try {
             val conn = URL("${ServerConfig.activeServer}/api/health").openConnection() as HttpURLConnection
             conn.connectTimeout = 5000
             conn.readTimeout = 5000
             val json = JSONObject(conn.inputStream.bufferedReader().readText())
             conn.disconnect()
-            val serverCommit = json.optString("apkCommit", "").ifBlank {
-                json.optString("gitCommit", "")
-            }
-            if (serverCommit.isBlank()) return@withContext false
-            val installedCommit = Regex("\\(([^)]+)\\)").find(BuildConfig.VERSION_NAME)?.groupValues?.get(1)
-                ?: return@withContext false
-            serverCommit != installedCommit
+            val gitCommit = json.optString("gitCommit", "")
+            val apkCommit = json.optString("apkCommit", "")
+            val installedCommit = Regex("\\(([^)]+)\\)").find(BuildConfig.VERSION_NAME)?.groupValues?.get(1) ?: ""
+            val hasUpdate = apkCommit.isNotBlank() && installedCommit.isNotBlank() && apkCommit != installedCommit
+            val needsBuild = gitCommit.isNotBlank() && apkCommit.isNotBlank() && gitCommit != apkCommit
+            Pair(hasUpdate, needsBuild)
         } catch (_: Exception) {
-            false
+            Pair(false, false)
         }
     }
 }
