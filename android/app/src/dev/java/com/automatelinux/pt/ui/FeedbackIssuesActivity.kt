@@ -48,7 +48,9 @@ class FeedbackIssuesActivity : ComponentActivity() {
             conn.readTimeout = 5000
             val json = JSONObject(conn.inputStream.bufferedReader().readText())
             conn.disconnect()
-            val serverCommit = json.optString("gitCommit", "")
+            val serverCommit = json.optString("apkCommit", "").ifBlank {
+                json.optString("gitCommit", "")
+            }
             if (serverCommit.isBlank()) return@withContext false
             val installedCommit = Regex("\\(([^)]+)\\)").find(BuildConfig.VERSION_NAME)?.groupValues?.get(1)
                 ?: return@withContext false
