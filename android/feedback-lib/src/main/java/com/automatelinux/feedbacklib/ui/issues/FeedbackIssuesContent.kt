@@ -112,34 +112,14 @@ fun FeedbackIssuesScreen(
                                         modifier = Modifier
                                             .clip(RoundedCornerShape(6.dp))
                                             .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
-                                            .clickable(enabled = !state.installLoading) {
-                                                viewModel.installFixedVersion()
-                                            }
                                             .padding(horizontal = 6.dp, vertical = 1.dp),
                                     ) {
-                                        if (state.installLoading) {
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                CircularProgressIndicator(
-                                                    modifier = Modifier.size(8.dp),
-                                                    strokeWidth = 1.dp,
-                                                    color = MaterialTheme.colorScheme.primary,
-                                                )
-                                                Spacer(modifier = Modifier.width(4.dp))
-                                                Text(
-                                                    text = "installing…",
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    color = MaterialTheme.colorScheme.primary,
-                                                    fontSize = 9.sp,
-                                                )
-                                            }
-                                        } else {
-                                            Text(
-                                                text = "update available",
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = MaterialTheme.colorScheme.primary,
-                                                fontSize = 9.sp,
-                                            )
-                                        }
+                                        Text(
+                                            text = "update available",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            fontSize = 9.sp,
+                                        )
                                     }
                                 } else if (needsBuild || state.buildLoading) {
                                     Spacer(modifier = Modifier.width(6.dp))
@@ -209,6 +189,25 @@ fun FeedbackIssuesScreen(
                             }
                         }
                     }
+                    TextButton(
+                            onClick = { viewModel.installFixedVersion() },
+                            enabled = !state.installLoading,
+                        ) {
+                            if (state.installLoading) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    strokeWidth = 2.dp,
+                                )
+                            } else {
+                                Icon(
+                                    Icons.Filled.GetApp,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp),
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Install")
+                        }
                     IconButton(onClick = viewModel::refresh) {
                         Icon(Icons.Filled.Refresh, contentDescription = "Refresh")
                     }
