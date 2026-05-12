@@ -6,10 +6,10 @@ export const buildAddressLabel = (data: { display_name?: string; address?: Recor
   if (addr) {
     const road = addr.road || addr.pedestrian || addr.neighbourhood || ''
     const houseNumber = addr.house_number || ''
-    const city = addr.city || addr.town || addr.village || ''
+    const settlement = addr.village || addr.hamlet || addr.town || addr.city || ''
     const street = houseNumber ? `${road} ${houseNumber}`.trim() : road
-    if (street && city) return `${street}, ${city}`
-    if (city) return city
+    if (street && settlement) return `${street}, ${settlement}`
+    if (settlement) return settlement
     if (street) return street
   }
   if (data.display_name) {
