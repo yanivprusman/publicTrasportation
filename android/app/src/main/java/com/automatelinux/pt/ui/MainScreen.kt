@@ -193,6 +193,17 @@ fun MainScreen(
         }
     }
 
+    LaunchedEffect(Unit) {
+        if (routingState.origin == null) {
+            val hasPermission = ContextCompat.checkSelfPermission(
+                context, Manifest.permission.ACCESS_FINE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
+            if (hasPermission) {
+                fetchCurrentLocation()
+            }
+        }
+    }
+
     // Start/stop polling when arrivals tab is active
     DisposableEffect(activeTab) {
         if (activeTab == ActiveTab.ARRIVALS) {
