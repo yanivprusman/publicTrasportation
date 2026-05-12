@@ -14,6 +14,6 @@ class SettingsStore @Inject constructor(
         context.getSharedPreferences("pt_settings", Context.MODE_PRIVATE)
 
     var sheetOpacity: Float
-        get() = prefs.getFloat("sheet_opacity", 0.82f)
+        get() = prefs.getFloat("sheet_opacity", 0.50f)
         set(value) = prefs.edit().putFloat("sheet_opacity", value).apply()
 }
