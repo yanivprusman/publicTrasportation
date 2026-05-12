@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
     const addr = data.address || {};
     const road = addr.road;
     const houseNumber = addr.house_number;
-    const city = addr.city || addr.town || addr.village || addr.hamlet;
+    const city = addr.village || addr.hamlet || addr.town || addr.city;
 
     const parts: string[] = [];
     if (road) {
