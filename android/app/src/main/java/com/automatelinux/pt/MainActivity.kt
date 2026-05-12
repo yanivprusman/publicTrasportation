@@ -26,10 +26,14 @@ import androidx.compose.ui.unit.dp
 import com.automatelinux.pt.ui.MainScreen
 import com.automatelinux.pt.ui.theme.PTTheme
 import com.automatelinux.pt.util.ServerConfig
+import com.automatelinux.pt.util.SettingsStore
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    @Inject lateinit var settingsStore: SettingsStore
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -39,7 +43,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    ServerCheckScreen()
+                    ServerCheckScreen(settingsStore)
                 }
             }
         }
@@ -47,7 +51,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun ServerCheckScreen() {
+private fun ServerCheckScreen(settingsStore: SettingsStore) {
     var serverReady by remember { mutableStateOf(false) }
     var checking by remember { mutableStateOf(true) }
     var failedServer by remember { mutableStateOf<String?>(null) }
@@ -63,7 +67,7 @@ private fun ServerCheckScreen() {
     }
 
     if (serverReady) {
-        MainScreen()
+        MainScreen(settingsStore = settingsStore)
     } else {
         Box(
             modifier = Modifier.fillMaxSize(),

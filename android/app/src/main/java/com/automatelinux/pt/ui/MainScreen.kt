@@ -12,9 +12,11 @@ import com.google.android.gms.location.Priority
 import com.google.android.gms.tasks.CancellationTokenSource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -31,11 +33,16 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.BottomSheetScaffold
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButtonDefaults
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.SmallFloatingActionButton
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SheetValue
@@ -47,6 +54,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -67,6 +75,7 @@ import com.automatelinux.pt.ui.map.animateToPoint
 import com.automatelinux.pt.ui.routing.RoutePlannerPanel
 import com.automatelinux.pt.ui.viewmodel.ArrivalsViewModel
 import com.automatelinux.pt.ui.viewmodel.RoutingViewModel
+import com.automatelinux.pt.util.SettingsStore
 import kotlinx.coroutines.launch
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
@@ -76,6 +85,7 @@ enum class ActiveTab { ROUTE, ARRIVALS }
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun MainScreen(
+    settingsStore: SettingsStore,
     routingViewModel: RoutingViewModel = hiltViewModel(),
     arrivalsViewModel: ArrivalsViewModel = hiltViewModel()
 ) {
@@ -86,6 +96,10 @@ fun MainScreen(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val keyboardController = LocalSoftwareKeyboardController.current
+
+    var menuExpanded by remember { mutableStateOf(false) }
+    var showOpacitySlider by remember { mutableStateOf(false) }
+    var sheetOpacity by remember { mutableFloatStateOf(settingsStore.sheetOpacity) }
 
     val fusedLocationClient = remember {
         LocationServices.getFusedLocationProviderClient(context)
@@ -200,11 +214,11 @@ fun MainScreen(
             sheetPeekHeight = 280.dp,
             sheetContent = {
                 Column {
-                    // Tab switcher
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 4.dp)
+                            .padding(horizontal = 12.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         FilterChip(
                             selected = activeTab == ActiveTab.ROUTE,
@@ -217,6 +231,33 @@ fun MainScreen(
                             onClick = { activeTab = ActiveTab.ARRIVALS },
                             label = { Text("Station Arrivals") }
                         )
+                        Spacer(Modifier.weight(1f))
+                        Box {
+                            IconButton(onClick = { menuExpanded = true }) {
+                                Icon(
+                                    Icons.Default.Settings,
+                                    contentDescription = "Settings",
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
+                            DropdownMenu(
+                                expanded = menuExpanded,
+                                onDismissRequest = { menuExpanded = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            if (showOpacitySlider) "Hide Opacity Slider"
+                                            else "Set Opacity"
+                                        )
+                                    },
+                                    onClick = {
+                                        showOpacitySlider = !showOpacitySlider
+                                        menuExpanded = false
+                                    }
+                                )
+                            }
+                        }
                     }
 
                     Column(
@@ -266,7 +307,7 @@ fun MainScreen(
                     }
                 }
             },
-            sheetContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.82f)
+            sheetContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = sheetOpacity)
         ) { _ ->
             Box(
                 modifier = Modifier
@@ -308,13 +349,41 @@ fun MainScreen(
                     modifier = Modifier.align(Alignment.TopCenter),
                 )
 
+                if (showOpacitySlider) {
+                    Row(
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(bottom = 8.dp, start = 16.dp, end = 16.dp)
+                            .fillMaxWidth()
+                            .background(
+                                MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+                                RoundedCornerShape(12.dp)
+                            )
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            "${(sheetOpacity * 100).toInt()}%",
+                            style = MaterialTheme.typography.labelMedium
+                        )
+                        Slider(
+                            value = sheetOpacity,
+                            onValueChange = { sheetOpacity = it },
+                            onValueChangeFinished = { settingsStore.sheetOpacity = sheetOpacity },
+                            valueRange = 0.3f..1f,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+
                 if (bottomSheetState.currentValue == SheetValue.Hidden) {
                     SmallFloatingActionButton(
                         onClick = { scope.launch { bottomSheetState.partialExpand() } },
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
                             .padding(bottom = 16.dp),
-                        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.82f),
+                        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = sheetOpacity),
                         elevation = FloatingActionButtonDefaults.elevation(4.dp),
                     ) {
                         Icon(
