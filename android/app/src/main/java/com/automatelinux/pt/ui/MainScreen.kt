@@ -27,7 +27,9 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.isImeVisible
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.ui.input.pointer.PointerEventPass
+import kotlin.math.abs
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -229,19 +231,44 @@ fun MainScreen(
             sheetContent = {
                 Column(
                     modifier = Modifier.pointerInput(Unit) {
-                        var totalDragX = 0f
-                        detectHorizontalDragGestures(
-                            onDragStart = { totalDragX = 0f },
-                            onDragEnd = {
-                                if (totalDragX > size.width * 0.25f) {
-                                    scope.launch { bottomSheetState.hide() }
+                        awaitEachGesture {
+                            val downEvent = awaitPointerEvent(PointerEventPass.Initial)
+                            val down = downEvent.changes.firstOrNull() ?: return@awaitEachGesture
+                            if (!down.pressed) return@awaitEachGesture
+
+                            val startX = down.position.x
+                            val startY = down.position.y
+                            var decided = false
+                            var isRightSwipe = false
+                            var lastX = startX
+
+                            while (true) {
+                                val event = awaitPointerEvent(PointerEventPass.Initial)
+                                val change = event.changes.firstOrNull() ?: break
+                                if (!change.pressed) {
+                                    if (isRightSwipe && (lastX - startX) > size.width * 0.25f) {
+                                        scope.launch { bottomSheetState.hide() }
+                                    }
+                                    break
                                 }
-                            },
-                            onDragCancel = { totalDragX = 0f },
-                            onHorizontalDrag = { _, dragAmount ->
-                                totalDragX = (totalDragX + dragAmount).coerceAtLeast(0f)
+
+                                val dx = change.position.x - startX
+                                val dy = change.position.y - startY
+
+                                if (!decided) {
+                                    val slop = viewConfiguration.touchSlop
+                                    if (abs(dx) > slop || abs(dy) > slop) {
+                                        decided = true
+                                        isRightSwipe = dx > 0 && abs(dx) > abs(dy)
+                                    }
+                                }
+
+                                if (isRightSwipe) {
+                                    change.consume()
+                                    lastX = change.position.x
+                                }
                             }
-                        )
+                        }
                     }
                 ) {
                     Row(

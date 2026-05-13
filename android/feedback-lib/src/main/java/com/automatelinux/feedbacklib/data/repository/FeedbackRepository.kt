@@ -154,6 +154,10 @@ class FeedbackRepository @Inject constructor(
         api.buildApp(BuildAppRequest(app = config.appName))
     }
 
+    suspend fun cleanBuildApp(): Result<BuildAppResponse> = apiCall {
+        api.buildApp(BuildAppRequest(action = "cleanBuild", app = config.appName))
+    }
+
     suspend fun installApp(force: Boolean = false): Result<InstallAppResponse> = apiCall {
         api.installApp(InstallAppRequest(
             app = config.appName,
@@ -161,4 +165,12 @@ class FeedbackRepository @Inject constructor(
             force = if (force) true else null,
         ))
     }
+
+    suspend fun getSessionHistory(sessionId: String): Result<SessionHistoryResponse> = apiCall {
+        api.getSessionHistory(sessionId)
+    }
+
+    suspend fun checkHealth(): Result<HealthResponse> = apiCall { api.getHealth() }
+
+    suspend fun checkFeedbackLibVersion(): Result<FeedbackLibVersionResponse> = apiCall { api.getFeedbackLibVersion() }
 }

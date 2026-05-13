@@ -69,4 +69,16 @@ interface FeedbackApi {
     suspend fun installApp(
         @Body request: InstallAppRequest,
     ): Response<InstallAppResponse>
+
+    @GET("api/feedback/session-history")
+    suspend fun getSessionHistory(
+        @Query("sessionId") sessionId: String,
+        @Query("app") app: String? = null,
+    ): Response<SessionHistoryResponse>
+
+    @GET("api/health")
+    suspend fun getHealth(): Response<HealthResponse>
+
+    @GET("api/feedback/version")
+    suspend fun getFeedbackLibVersion(): Response<FeedbackLibVersionResponse>
 }

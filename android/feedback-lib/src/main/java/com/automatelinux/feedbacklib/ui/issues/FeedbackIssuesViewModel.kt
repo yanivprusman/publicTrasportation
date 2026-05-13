@@ -5,7 +5,9 @@ import androidx.lifecycle.viewModelScope
 import com.automatelinux.feedbacklib.data.model.FixIssueItem
 import com.automatelinux.feedbacklib.data.model.Issue
 import com.automatelinux.feedbacklib.data.repository.FeedbackRepository
+import com.automatelinux.feedbacklib.data.repository.FeedbackSessionStore
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -24,6 +26,13 @@ data class FeedbackIssuesUiState(
     val buildLoading: Boolean = false,
     val installLoading: Boolean = false,
     val showSameVersionDialog: Boolean = false,
+    val hasUpdate: Boolean = false,
+    val needsBuild: Boolean = false,
+    val buildFailed: Boolean = false,
+    val newVersion: String? = null,
+    val newFlVersion: String? = null,
+    val flVersion: String? = null,
+    val flStale: Boolean = false,
     val error: String? = null,
     val successMessage: String? = null,
 )
@@ -31,17 +40,47 @@ data class FeedbackIssuesUiState(
 @HiltViewModel
 class FeedbackIssuesViewModel @Inject constructor(
     private val feedbackRepository: FeedbackRepository,
+    private val sessionStore: FeedbackSessionStore,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(FeedbackIssuesUiState())
     val uiState: StateFlow<FeedbackIssuesUiState> = _uiState.asStateFlow()
 
     init {
-        viewModelScope.launch { fetchIssues(initial = true) }
+        if (sessionStore.isInstallInProgress()) {
+            _uiState.update { it.copy(installLoading = true, hasUpdate = true) }
+            pollInstallCompletion()
+        }
+        viewModelScope.launch {
+            fetchIssues(initial = true)
+            checkVersions()
+        }
+    }
+
+    private fun pollInstallCompletion() {
+        viewModelScope.launch {
+            while (sessionStore.isInstallInProgress()) {
+                delay(3000)
+                val health = feedbackRepository.checkHealth().getOrNull() ?: continue
+                val installedCommit = Regex("\\(([^)]+)\\)").find(
+                    feedbackRepository.versionName
+                )?.groupValues?.get(1) ?: ""
+                val apkCommit = health.apkCommit ?: ""
+                if (apkCommit.isNotBlank() && installedCommit.isNotBlank() && apkCommit == installedCommit) {
+                    sessionStore.clearInstallStarted()
+                    _uiState.update { it.copy(installLoading = false, hasUpdate = false, successMessage = "Installed successfully") }
+                    return@launch
+                }
+            }
+            _uiState.update { it.copy(installLoading = false) }
+        }
     }
 
     fun refresh() {
-        viewModelScope.launch { fetchIssues(initial = false) }
+        viewModelScope.launch {
+            fetchIssues(initial = false)
+            checkVersions()
+        }
     }
 
     private suspend fun fetchIssues(initial: Boolean) {
@@ -210,25 +249,79 @@ class FeedbackIssuesViewModel @Inject constructor(
         }
     }
 
+    private suspend fun checkVersions() {
+        feedbackRepository.checkHealth()
+            .onSuccess { health ->
+                val installedCommit = Regex("\\(([^)]+)\\)").find(
+                    feedbackRepository.versionName
+                )?.groupValues?.get(1) ?: ""
+                val gitCommit = health.gitCommit ?: ""
+                val apkCommit = health.apkCommit ?: ""
+                val appNeedsBuild = gitCommit.isNotBlank() && apkCommit.isNotBlank() && gitCommit != apkCommit
+                val hasUpdate = apkCommit.isNotBlank() && installedCommit.isNotBlank() && apkCommit != installedCommit
+                val newVersion = when {
+                    hasUpdate && (health.apkVersion ?: 0) > 0 -> health.apkVersion.toString()
+                    appNeedsBuild && (health.gitVersion ?: 0) > 0 -> health.gitVersion.toString()
+                    else -> null
+                }
+                _uiState.update { it.copy(hasUpdate = hasUpdate, needsBuild = appNeedsBuild, newVersion = newVersion) }
+            }
+        checkFeedbackLibVersion()
+    }
+
+    private suspend fun checkFeedbackLibVersion() {
+        val builtCommit = com.automatelinux.feedbacklib.BuildConfig.FEEDBACK_LIB_COMMIT
+        if (builtCommit.isBlank()) return
+        feedbackRepository.checkFeedbackLibVersion()
+            .onSuccess { data ->
+                val serverCommit = data.feedbackLibCommit ?: return@onSuccess
+                val flVer = data.feedbackLibVersion?.toString()
+                val stale = serverCommit != builtCommit
+                _uiState.update {
+                    it.copy(
+                        needsBuild = if (stale) true else it.needsBuild,
+                        newFlVersion = if (stale) flVer else null,
+                        flVersion = flVer,
+                        flStale = stale,
+                    )
+                }
+            }
+    }
+
     fun buildApp(onComplete: () -> Unit = {}) {
-        _uiState.update { it.copy(buildLoading = true, error = null, successMessage = null) }
+        _uiState.update { it.copy(buildLoading = true, buildFailed = false, error = null, successMessage = null) }
         viewModelScope.launch {
             feedbackRepository.buildApp()
                 .onSuccess {
-                    _uiState.update { it.copy(buildLoading = false, successMessage = "Build complete") }
+                    _uiState.update { it.copy(buildLoading = false, needsBuild = false, hasUpdate = true, successMessage = "Build complete") }
                     onComplete()
                 }
                 .onFailure { e ->
-                    _uiState.update { it.copy(buildLoading = false, error = e.message ?: "Build failed") }
+                    _uiState.update { it.copy(buildLoading = false, buildFailed = true, error = e.message ?: "Build failed") }
+                }
+        }
+    }
+
+    fun cleanBuildApp() {
+        _uiState.update { it.copy(buildLoading = true, buildFailed = false, error = null, successMessage = null) }
+        viewModelScope.launch {
+            feedbackRepository.cleanBuildApp()
+                .onSuccess {
+                    _uiState.update { it.copy(buildLoading = false, needsBuild = false, hasUpdate = true, successMessage = "Clean build complete") }
+                }
+                .onFailure { e ->
+                    _uiState.update { it.copy(buildLoading = false, buildFailed = true, error = e.message ?: "Clean build failed") }
                 }
         }
     }
 
     fun installFixedVersion(force: Boolean = false) {
         _uiState.update { it.copy(installLoading = true, error = null, successMessage = null, showSameVersionDialog = false) }
+        sessionStore.markInstallStarted()
         viewModelScope.launch {
             feedbackRepository.installApp(force = force)
                 .onSuccess { response ->
+                    sessionStore.clearInstallStarted()
                     if (response.sameVersion == true && !force) {
                         _uiState.update { it.copy(installLoading = false, showSameVersionDialog = true) }
                     } else {
@@ -236,6 +329,7 @@ class FeedbackIssuesViewModel @Inject constructor(
                     }
                 }
                 .onFailure { e ->
+                    sessionStore.clearInstallStarted()
                     _uiState.update {
                         it.copy(installLoading = false, error = e.message ?: "Install failed")
                     }
@@ -248,7 +342,7 @@ class FeedbackIssuesViewModel @Inject constructor(
     }
 
     fun dismissError() {
-        _uiState.update { it.copy(error = null) }
+        _uiState.update { it.copy(error = null, buildFailed = false) }
     }
 
     fun dismissSuccess() {

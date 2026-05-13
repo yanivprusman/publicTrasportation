@@ -57,7 +57,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -73,10 +76,6 @@ fun FeedbackIssuesScreen(
     onResumeClarifier: ((clarifierSessionId: String) -> Unit)? = null,
     isProd: Boolean = false,
     versionName: String? = null,
-    hasUpdate: Boolean = false,
-    needsBuild: Boolean = false,
-    newVersion: String? = null,
-    onBuildComplete: () -> Unit = {},
 ) {
     @Suppress("NAME_SHADOWING")
     val versionName = versionName ?: run {
@@ -104,12 +103,24 @@ fun FeedbackIssuesScreen(
                         Text("Issues")
                         if (versionName != null) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = versionName,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                                )
-                                if (hasUpdate) {
+                                if (state.flVersion != null) {
+                                    val dimColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                                    val flColor = if (state.flStale) Color(0xFFFF9800) else dimColor
+                                    Text(
+                                        text = buildAnnotatedString {
+                                            withStyle(SpanStyle(color = dimColor)) { append(versionName) }
+                                            withStyle(SpanStyle(color = flColor)) { append(" FL${state.flVersion}") }
+                                        },
+                                        style = MaterialTheme.typography.bodySmall,
+                                    )
+                                } else {
+                                    Text(
+                                        text = versionName,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                                    )
+                                }
+                                if (state.hasUpdate) {
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Box(
                                         modifier = Modifier
@@ -136,15 +147,27 @@ fun FeedbackIssuesScreen(
                                                 )
                                             }
                                         } else {
-                                            Text(
-                                                text = if (newVersion != null) "update → v$newVersion" else "update available",
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = MaterialTheme.colorScheme.primary,
-                                                fontSize = 9.sp,
-                                            )
+                                            val baseText = if (state.newVersion != null) "update → v${state.newVersion}" else "update available"
+                                            if (state.newFlVersion != null) {
+                                                Text(
+                                                    text = buildAnnotatedString {
+                                                        withStyle(SpanStyle(color = MaterialTheme.colorScheme.primary)) { append(baseText) }
+                                                        withStyle(SpanStyle(color = Color(0xFFFF9800))) { append(" FL${state.newFlVersion}") }
+                                                    },
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    fontSize = 9.sp,
+                                                )
+                                            } else {
+                                                Text(
+                                                    text = baseText,
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = MaterialTheme.colorScheme.primary,
+                                                    fontSize = 9.sp,
+                                                )
+                                            }
                                         }
                                     }
-                                } else if (needsBuild || state.buildLoading) {
+                                } else if (state.needsBuild || state.buildLoading) {
                                     Spacer(modifier = Modifier.width(6.dp))
                                     val orange = Color(0xFFFF9800)
                                     Box(
@@ -152,7 +175,7 @@ fun FeedbackIssuesScreen(
                                             .clip(RoundedCornerShape(6.dp))
                                             .background(orange.copy(alpha = 0.12f))
                                             .clickable(enabled = !state.buildLoading) {
-                                                viewModel.buildApp(onComplete = onBuildComplete)
+                                                viewModel.buildApp()
                                             }
                                             .padding(horizontal = 6.dp, vertical = 1.dp),
                                     ) {
@@ -172,12 +195,33 @@ fun FeedbackIssuesScreen(
                                                 )
                                             }
                                         } else {
-                                            Text(
-                                                text = if (newVersion != null) "build needed → v$newVersion" else "build needed",
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = orange,
-                                                fontSize = 9.sp,
-                                            )
+                                            val hasVersionInfo = state.newVersion != null || state.newFlVersion != null
+                                            if (hasVersionInfo) {
+                                                val currentAppVer = versionName?.let { Regex("v(\\d+)").find(it)?.groupValues?.get(1) }
+                                                val dimColor = orange.copy(alpha = 0.45f)
+                                                Text(
+                                                    text = buildAnnotatedString {
+                                                        withStyle(SpanStyle(color = orange)) { append("build needed → ") }
+                                                        val appVer = state.newVersion ?: currentAppVer
+                                                        if (appVer != null) {
+                                                            val appColor = if (state.newVersion != null) orange else dimColor
+                                                            withStyle(SpanStyle(color = appColor)) { append("V$appVer") }
+                                                        }
+                                                        if (state.newFlVersion != null) {
+                                                            withStyle(SpanStyle(color = orange)) { append("FL${state.newFlVersion}") }
+                                                        }
+                                                    },
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    fontSize = 9.sp,
+                                                )
+                                            } else {
+                                                Text(
+                                                    text = "build needed",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = orange,
+                                                    fontSize = 9.sp,
+                                                )
+                                            }
                                         }
                                     }
                                 }
@@ -343,6 +387,9 @@ fun FeedbackIssuesScreen(
                             style = MaterialTheme.typography.bodySmall,
                             modifier = Modifier.weight(1f),
                         )
+                        if (state.buildFailed) {
+                            TextButton(onClick = viewModel::cleanBuildApp) { Text("Clean & Rebuild") }
+                        }
                         TextButton(onClick = viewModel::dismissError) { Text("OK") }
                     }
                 }
