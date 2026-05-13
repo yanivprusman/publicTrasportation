@@ -6,19 +6,19 @@
   margin-bottom: 8px;
   cursor: pointer;
   transition: border-color 0.15s, background 0.15s, opacity 0.15s, box-shadow 0.15s;
-  opacity: var(--card-opacity, 0.6);
+  opacity: 0.6;
 }
 
 .card:hover {
-  opacity: calc(var(--card-opacity, 0.6) + 0.15);
+  opacity: 0.85;
   background: #eef2f7;
 }
 
 .card.selected {
-  border-color: #222;
-  background: #f0f0f0;
+  border-color: #2196F3;
+  background: #e3f0ff;
   opacity: 1;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 1px 4px rgba(33, 150, 243, 0.3);
 }
 
 .header {
