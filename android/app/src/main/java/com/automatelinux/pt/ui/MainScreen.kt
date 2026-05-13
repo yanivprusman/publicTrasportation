@@ -229,7 +229,8 @@ fun MainScreen(
             scaffoldState = scaffoldState,
             sheetPeekHeight = 280.dp,
             sheetContent = {
-                Column {
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.weight(1f)) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -321,6 +322,37 @@ fun MainScreen(
                                 )
                             }
                         }
+                    }
+                    }
+                    Box(
+                        modifier = Modifier
+                            .padding(top = 8.dp)
+                            .width(20.dp)
+                            .draggable(
+                                state = rememberDraggableState { delta ->
+                                    swipeDragX = (swipeDragX + delta).coerceAtLeast(0f)
+                                },
+                                orientation = Orientation.Horizontal,
+                                onDragStarted = { swipeDragX = 0f },
+                                onDragStopped = { velocity ->
+                                    if (swipeDragX > 200f || velocity > 1000f) {
+                                        bottomSheetState.hide()
+                                    }
+                                    swipeDragX = 0f
+                                }
+                            ),
+                        contentAlignment = Alignment.TopCenter
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .padding(top = 8.dp)
+                                .width(4.dp)
+                                .height(32.dp)
+                                .background(
+                                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                                    RoundedCornerShape(2.dp)
+                                )
+                        )
                     }
                 }
             },
