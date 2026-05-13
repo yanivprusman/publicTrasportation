@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.isImeVisible
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -61,6 +62,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -225,7 +227,23 @@ fun MainScreen(
             scaffoldState = scaffoldState,
             sheetPeekHeight = 280.dp,
             sheetContent = {
-                Column {
+                Column(
+                    modifier = Modifier.pointerInput(Unit) {
+                        var totalDragX = 0f
+                        detectHorizontalDragGestures(
+                            onDragStart = { totalDragX = 0f },
+                            onDragEnd = {
+                                if (totalDragX > size.width * 0.25f) {
+                                    scope.launch { bottomSheetState.hide() }
+                                }
+                            },
+                            onDragCancel = { totalDragX = 0f },
+                            onHorizontalDrag = { _, dragAmount ->
+                                totalDragX = (totalDragX + dragAmount).coerceAtLeast(0f)
+                            }
+                        )
+                    }
+                ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
