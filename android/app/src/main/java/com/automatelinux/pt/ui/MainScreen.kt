@@ -27,8 +27,9 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.isImeVisible
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
-import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -232,23 +233,7 @@ fun MainScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 4.dp)
-                            .pointerInput(Unit) {
-                                val threshold = 100.dp.toPx()
-                                detectHorizontalDragGestures(
-                                    onDragStart = { swipeDragX = 0f },
-                                    onDragEnd = {
-                                        if (swipeDragX > threshold) {
-                                            scope.launch { bottomSheetState.hide() }
-                                        }
-                                        swipeDragX = 0f
-                                    },
-                                    onDragCancel = { swipeDragX = 0f },
-                                    onHorizontalDrag = { _, dragAmount ->
-                                        swipeDragX = (swipeDragX + dragAmount).coerceAtLeast(0f)
-                                    }
-                                )
-                            },
+                            .padding(horizontal = 12.dp, vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         FilterChip(
