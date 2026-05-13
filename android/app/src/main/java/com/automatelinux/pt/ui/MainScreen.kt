@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -329,7 +328,8 @@ fun MainScreen(
                         modifier = Modifier
                             .align(Alignment.CenterStart)
                             .width(24.dp)
-                            .fillMaxHeight()
+                            .matchParentSize()
+                            .zIndex(1f)
                             .draggable(
                                 state = rememberDraggableState { delta ->
                                     swipeDragX = (swipeDragX + delta).coerceAtLeast(0f)
@@ -338,7 +338,7 @@ fun MainScreen(
                                 onDragStarted = { swipeDragX = 0f },
                                 onDragStopped = { velocity ->
                                     if (swipeDragX > 150f || velocity > 800f) {
-                                        bottomSheetState.hide()
+                                        scope.launch { bottomSheetState.hide() }
                                     }
                                     swipeDragX = 0f
                                 }
