@@ -50,10 +50,13 @@ fun ItineraryCard(
             )
             .clickable(onClick = onClick),
         colors = CardDefaults.cardColors(
-            containerColor = if (selected) Color(0xFFF0F0F0)
+            containerColor = if (selected) Color(0xFF1A1A1A)
             else MaterialTheme.colorScheme.surface
         )
     ) {
+        val textColor = if (selected) Color.White else Color.Unspecified
+        val secondaryTextColor = if (selected) Color(0xFFBBBBBB)
+            else MaterialTheme.colorScheme.onSurfaceVariant
         Column(modifier = Modifier.padding(12.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -63,17 +66,18 @@ fun ItineraryCard(
                 Text(
                     text = formatDuration(itinerary.duration),
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = textColor
                 )
                 Text(
                     text = if (itinerary.transfers == 0) "Direct" else "${itinerary.transfers} transfer${if (itinerary.transfers > 1) "s" else ""}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = secondaryTextColor
                 )
                 Text(
                     text = "${formatTime(itinerary.startTime)} - ${formatTime(itinerary.endTime)}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = secondaryTextColor
                 )
             }
 
