@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -229,8 +230,8 @@ fun MainScreen(
             scaffoldState = scaffoldState,
             sheetPeekHeight = 280.dp,
             sheetContent = {
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    Column(modifier = Modifier.weight(1f)) {
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    Column {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -326,8 +327,9 @@ fun MainScreen(
                     }
                     Box(
                         modifier = Modifier
-                            .padding(top = 8.dp)
-                            .width(20.dp)
+                            .align(Alignment.CenterStart)
+                            .width(24.dp)
+                            .fillMaxHeight()
                             .draggable(
                                 state = rememberDraggableState { delta ->
                                     swipeDragX = (swipeDragX + delta).coerceAtLeast(0f)
@@ -335,17 +337,16 @@ fun MainScreen(
                                 orientation = Orientation.Horizontal,
                                 onDragStarted = { swipeDragX = 0f },
                                 onDragStopped = { velocity ->
-                                    if (swipeDragX > 200f || velocity > 1000f) {
+                                    if (swipeDragX > 150f || velocity > 800f) {
                                         bottomSheetState.hide()
                                     }
                                     swipeDragX = 0f
                                 }
                             ),
-                        contentAlignment = Alignment.TopCenter
+                        contentAlignment = Alignment.Center
                     ) {
                         Box(
                             modifier = Modifier
-                                .padding(top = 8.dp)
                                 .width(4.dp)
                                 .height(32.dp)
                                 .background(
