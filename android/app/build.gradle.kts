@@ -15,6 +15,7 @@ val gitShortHash = providers.exec {
     commandLine("git", "rev-parse", "--short", "HEAD")
 }.standardOutput.asText.get().trim()
 
+
 android {
     namespace = "com.automatelinux.pt"
     compileSdk = 35
@@ -96,3 +97,4 @@ dependencies {
     // Feedback lib (dev flavor only)
     "devImplementation"(project(":feedback-lib"))
 }
+
