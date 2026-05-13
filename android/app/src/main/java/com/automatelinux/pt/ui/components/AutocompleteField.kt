@@ -44,8 +44,13 @@ fun <T> AutocompleteField(
     var suggestions by remember { mutableStateOf<List<T>>(emptyList()) }
     var showDropdown by remember { mutableStateOf(false) }
     var hasFocus by remember { mutableStateOf(false) }
+    var justSelected by remember { mutableStateOf(false) }
 
     LaunchedEffect(value) {
+        if (justSelected) {
+            justSelected = false
+            return@LaunchedEffect
+        }
         if (value.length < 2) {
             suggestions = emptyList()
             return@LaunchedEffect
@@ -104,6 +109,7 @@ fun <T> AutocompleteField(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable {
+                                    justSelected = true
                                     onSelect(item)
                                     showDropdown = false
                                     suggestions = emptyList()
