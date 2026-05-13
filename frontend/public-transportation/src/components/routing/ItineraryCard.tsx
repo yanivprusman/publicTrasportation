@@ -7,13 +7,15 @@ interface ItineraryCardProps {
   itinerary: Itinerary
   selected: boolean
   onClick: () => void
+  cardOpacity?: number
 }
 
-export default function ItineraryCard({ itinerary, selected, onClick }: ItineraryCardProps) {
+export default function ItineraryCard({ itinerary, selected, onClick, cardOpacity }: ItineraryCardProps) {
   return (
     <div
       className={`${styles.card} ${selected ? styles.selected : ''}`}
       onClick={onClick}
+      style={!selected && cardOpacity !== undefined ? { '--card-opacity': cardOpacity } as React.CSSProperties : undefined}
     >
       <div className={styles.header}>
         <span className={styles.duration}>{formatDuration(itinerary.duration)}</span>

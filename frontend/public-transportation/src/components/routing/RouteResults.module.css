@@ -65,3 +65,23 @@
 .retryBtn:hover {
   opacity: 0.8;
 }
+
+.opacityControl {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 4px 6px;
+}
+
+.opacityLabel {
+  font-size: 11px;
+  color: #888;
+  white-space: nowrap;
+}
+
+.opacitySlider {
+  flex: 1;
+  height: 4px;
+  accent-color: #222;
+  cursor: pointer;
+}
