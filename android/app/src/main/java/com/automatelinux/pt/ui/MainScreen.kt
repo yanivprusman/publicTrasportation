@@ -100,6 +100,7 @@ fun MainScreen(
     var menuExpanded by remember { mutableStateOf(false) }
     var showOpacitySlider by remember { mutableStateOf(false) }
     var sheetOpacity by remember { mutableFloatStateOf(settingsStore.sheetOpacity) }
+    var cardOpacity by remember { mutableFloatStateOf(settingsStore.cardOpacity) }
 
     val fusedLocationClient = remember {
         LocationServices.getFusedLocationProviderClient(context)
@@ -258,8 +259,8 @@ fun MainScreen(
                                 DropdownMenuItem(
                                     text = {
                                         Text(
-                                            if (showOpacitySlider) "Hide Opacity Slider"
-                                            else "Set Opacity"
+                                            if (showOpacitySlider) "Hide Opacity Settings"
+                                            else "Opacity Settings"
                                         )
                                     },
                                     onClick = {
@@ -294,7 +295,8 @@ fun MainScreen(
                                     onSelectItinerary = { routingViewModel.selectItinerary(it) },
                                     onGeocode = { routingViewModel.geocode(it) },
                                     onGpsClick = onGpsClick,
-                                    gpsLoading = gpsLoading
+                                    gpsLoading = gpsLoading,
+                                    cardOpacity = cardOpacity
                                 )
                             }
 
@@ -361,7 +363,7 @@ fun MainScreen(
                 )
 
                 if (showOpacitySlider) {
-                    Row(
+                    Column(
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
                             .padding(bottom = 8.dp, start = 16.dp, end = 16.dp)
@@ -371,20 +373,50 @@ fun MainScreen(
                                 RoundedCornerShape(12.dp)
                             )
                             .padding(horizontal = 16.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        Text(
-                            "${(sheetOpacity * 100).toInt()}%",
-                            style = MaterialTheme.typography.labelMedium
-                        )
-                        Slider(
-                            value = sheetOpacity,
-                            onValueChange = { sheetOpacity = it },
-                            onValueChangeFinished = { settingsStore.sheetOpacity = sheetOpacity },
-                            valueRange = 0.3f..1f,
-                            modifier = Modifier.weight(1f)
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                "Sheet",
+                                style = MaterialTheme.typography.labelMedium,
+                                modifier = Modifier.width(40.dp)
+                            )
+                            Slider(
+                                value = sheetOpacity,
+                                onValueChange = { sheetOpacity = it },
+                                onValueChangeFinished = { settingsStore.sheetOpacity = sheetOpacity },
+                                valueRange = 0.3f..1f,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Text(
+                                "${(sheetOpacity * 100).toInt()}%",
+                                style = MaterialTheme.typography.labelMedium
+                            )
+                        }
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                "Cards",
+                                style = MaterialTheme.typography.labelMedium,
+                                modifier = Modifier.width(40.dp)
+                            )
+                            Slider(
+                                value = cardOpacity,
+                                onValueChange = { cardOpacity = it },
+                                onValueChangeFinished = { settingsStore.cardOpacity = cardOpacity },
+                                valueRange = 0.2f..1f,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Text(
+                                "${(cardOpacity * 100).toInt()}%",
+                                style = MaterialTheme.typography.labelMedium
+                            )
+                        }
                     }
                 }
 

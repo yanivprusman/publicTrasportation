@@ -37,6 +37,7 @@ fun RoutePlannerPanel(
     onGeocode: suspend (String) -> List<GeocodeSuggestion>,
     onGpsClick: (() -> Unit)? = null,
     gpsLoading: Boolean = false,
+    cardOpacity: Float = 0.6f,
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
@@ -102,7 +103,8 @@ fun RoutePlannerPanel(
             onSelect = onSelectItinerary,
             loading = state.loading,
             error = state.error,
-            onRetry = onSearch
+            onRetry = onSearch,
+            cardOpacity = cardOpacity
         )
 
         state.selectedItinerary?.let { itinerary ->
