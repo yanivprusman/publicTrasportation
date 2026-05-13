@@ -33,23 +33,24 @@ fun ItineraryCard(
     itinerary: Itinerary,
     selected: Boolean,
     onClick: () -> Unit,
+    cardOpacity: Float = 0.6f,
     modifier: Modifier = Modifier
 ) {
     Card(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 8.dp, vertical = 4.dp)
-            .alpha(if (selected) 1f else 0.6f)
+            .alpha(if (selected) 1f else cardOpacity)
             .then(
                 if (selected) Modifier.border(
                     2.dp,
-                    MaterialTheme.colorScheme.primary,
+                    Color(0xFF222222),
                     RoundedCornerShape(12.dp)
                 ) else Modifier
             )
             .clickable(onClick = onClick),
         colors = CardDefaults.cardColors(
-            containerColor = if (selected) MaterialTheme.colorScheme.primaryContainer
+            containerColor = if (selected) Color(0xFFF0F0F0)
             else MaterialTheme.colorScheme.surface
         )
     ) {
