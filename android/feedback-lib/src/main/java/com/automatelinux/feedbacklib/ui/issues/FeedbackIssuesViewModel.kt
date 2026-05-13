@@ -33,6 +33,7 @@ data class FeedbackIssuesUiState(
     val newFlVersion: String? = null,
     val flVersion: String? = null,
     val flStale: Boolean = false,
+    val vStale: Boolean = false,
     val error: String? = null,
     val successMessage: String? = null,
 )
@@ -264,24 +265,25 @@ class FeedbackIssuesViewModel @Inject constructor(
                     appNeedsBuild && (health.gitVersion ?: 0) > 0 -> health.gitVersion.toString()
                     else -> null
                 }
-                _uiState.update { it.copy(hasUpdate = hasUpdate, needsBuild = appNeedsBuild, newVersion = newVersion) }
+                _uiState.update { it.copy(hasUpdate = hasUpdate, needsBuild = appNeedsBuild, newVersion = newVersion, vStale = hasUpdate || appNeedsBuild) }
             }
         checkFeedbackLibVersion()
     }
 
     private suspend fun checkFeedbackLibVersion() {
         val builtCommit = com.automatelinux.feedbacklib.BuildConfig.FEEDBACK_LIB_COMMIT
+        val builtVersion = com.automatelinux.feedbacklib.BuildConfig.FEEDBACK_LIB_VERSION
         if (builtCommit.isBlank()) return
         feedbackRepository.checkFeedbackLibVersion()
             .onSuccess { data ->
                 val serverCommit = data.feedbackLibCommit ?: return@onSuccess
-                val flVer = data.feedbackLibVersion?.toString()
+                val serverVer = data.feedbackLibVersion?.toString()
                 val stale = serverCommit != builtCommit
                 _uiState.update {
                     it.copy(
                         needsBuild = if (stale) true else it.needsBuild,
-                        newFlVersion = if (stale) flVer else null,
-                        flVersion = flVer,
+                        newFlVersion = if (stale) serverVer else null,
+                        flVersion = builtVersion.toString(),
                         flStale = stale,
                     )
                 }
