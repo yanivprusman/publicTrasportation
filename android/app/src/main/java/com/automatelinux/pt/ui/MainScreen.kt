@@ -27,9 +27,9 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.isImeVisible
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.ui.input.pointer.PointerEventPass
-import kotlin.math.abs
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -64,7 +64,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -101,6 +100,7 @@ fun MainScreen(
     val context = LocalContext.current
     val keyboardController = LocalSoftwareKeyboardController.current
 
+    var swipeDragX by remember { mutableFloatStateOf(0f) }
     var menuExpanded by remember { mutableStateOf(false) }
     var showOpacitySlider by remember { mutableStateOf(false) }
     var sheetOpacity by remember { mutableFloatStateOf(settingsStore.sheetOpacity) }
@@ -230,46 +230,19 @@ fun MainScreen(
             sheetPeekHeight = 280.dp,
             sheetContent = {
                 Column(
-                    modifier = Modifier.pointerInput(Unit) {
-                        awaitEachGesture {
-                            val downEvent = awaitPointerEvent(PointerEventPass.Initial)
-                            val down = downEvent.changes.firstOrNull() ?: return@awaitEachGesture
-                            if (!down.pressed) return@awaitEachGesture
-
-                            val startX = down.position.x
-                            val startY = down.position.y
-                            var decided = false
-                            var isRightSwipe = false
-                            var lastX = startX
-
-                            while (true) {
-                                val event = awaitPointerEvent(PointerEventPass.Initial)
-                                val change = event.changes.firstOrNull() ?: break
-                                if (!change.pressed) {
-                                    if (isRightSwipe && (lastX - startX) > size.width * 0.25f) {
-                                        scope.launch { bottomSheetState.hide() }
-                                    }
-                                    break
-                                }
-
-                                val dx = change.position.x - startX
-                                val dy = change.position.y - startY
-
-                                if (!decided) {
-                                    val slop = viewConfiguration.touchSlop
-                                    if (abs(dx) > slop || abs(dy) > slop) {
-                                        decided = true
-                                        isRightSwipe = dx > 0 && abs(dx) > abs(dy)
-                                    }
-                                }
-
-                                if (isRightSwipe) {
-                                    change.consume()
-                                    lastX = change.position.x
-                                }
+                    modifier = Modifier.draggable(
+                        state = rememberDraggableState { delta ->
+                            swipeDragX = (swipeDragX + delta).coerceAtLeast(0f)
+                        },
+                        orientation = Orientation.Horizontal,
+                        onDragStarted = { swipeDragX = 0f },
+                        onDragStopped = { velocity ->
+                            if (swipeDragX > 200f || velocity > 1000f) {
+                                bottomSheetState.hide()
                             }
+                            swipeDragX = 0f
                         }
-                    }
+                    )
                 ) {
                     Row(
                         modifier = Modifier
