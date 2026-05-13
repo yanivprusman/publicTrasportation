@@ -18,10 +18,15 @@ class FeedbackIssuesActivity : ComponentActivity() {
             PTTheme {
                 FeedbackIssuesScreen(
                     onNavigateBack = { finish() },
-                    onResumeClarifier = { sessionId ->
+                    onResumeClarifier = { issue ->
                         startActivity(
                             Intent(this@FeedbackIssuesActivity, FeedbackChatActivity::class.java)
-                                .putExtra(FeedbackChatActivity.EXTRA_CLARIFIER_SESSION_ID, sessionId),
+                                .putExtra(FeedbackChatActivity.EXTRA_CLARIFIER_SESSION_ID, issue.clarifierSessionId)
+                                .putExtra(FeedbackChatActivity.EXTRA_ISSUE_NUMBER, issue.issueNumber)
+                                .putExtra(FeedbackChatActivity.EXTRA_ISSUE_TITLE, issue.title)
+                                .putExtra(FeedbackChatActivity.EXTRA_ISSUE_DESCRIPTION, issue.description)
+                                .putExtra(FeedbackChatActivity.EXTRA_ISSUE_STATUS, issue.status)
+                                .putExtra(FeedbackChatActivity.EXTRA_ISSUE_INSIGHTS, issue.insights),
                         )
                     },
                     versionName = BuildConfig.VERSION_NAME,
