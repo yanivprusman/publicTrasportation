@@ -314,7 +314,32 @@ fun MainScreen(
                         }
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    BottomSheetDefaults.DragHandle()
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        BottomSheetDefaults.DragHandle(
+                            modifier = Modifier.align(Alignment.Center)
+                        )
+                        Icon(
+                            Icons.Default.BugReport,
+                            contentDescription = "Debug fill",
+                            tint = if (routingState.loading) MaterialTheme.colorScheme.tertiary.copy(alpha = 0.38f)
+                                   else MaterialTheme.colorScheme.tertiary,
+                            modifier = Modifier
+                                .align(Alignment.CenterEnd)
+                                .padding(end = 12.dp)
+                                .size(36.dp)
+                                .combinedClickable(
+                                    enabled = !routingState.loading,
+                                    onClick = {
+                                        routingViewModel.debugFill(autoSearch = settingsStore.debugAutoSearch)
+                                        if (settingsStore.debugExpandSheet) {
+                                            scope.launch { bottomSheetState.expand() }
+                                        }
+                                    },
+                                    onLongClick = { showDebugSettings = true }
+                                )
+                                .padding(6.dp)
+                        )
+                    }
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -333,25 +358,6 @@ fun MainScreen(
                             label = { Text("Station Arrivals") }
                         )
                         Spacer(Modifier.weight(1f))
-                        Icon(
-                            Icons.Default.BugReport,
-                            contentDescription = "Debug fill",
-                            tint = if (routingState.loading) MaterialTheme.colorScheme.tertiary.copy(alpha = 0.38f)
-                                   else MaterialTheme.colorScheme.tertiary,
-                            modifier = Modifier
-                                .size(36.dp)
-                                .combinedClickable(
-                                    enabled = !routingState.loading,
-                                    onClick = {
-                                        routingViewModel.debugFill(autoSearch = settingsStore.debugAutoSearch)
-                                        if (settingsStore.debugExpandSheet) {
-                                            scope.launch { bottomSheetState.expand() }
-                                        }
-                                    },
-                                    onLongClick = { showDebugSettings = true }
-                                )
-                                .padding(6.dp)
-                        )
                         Box {
                             IconButton(onClick = { menuExpanded = true }) {
                                 Icon(
