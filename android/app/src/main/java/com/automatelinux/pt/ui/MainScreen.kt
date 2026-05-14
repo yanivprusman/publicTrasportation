@@ -10,7 +10,9 @@ import com.automatelinux.pt.BuildConfig
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.google.android.gms.tasks.CancellationTokenSource
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -48,6 +50,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.BottomSheetDefaults
@@ -101,7 +104,7 @@ import org.osmdroid.views.MapView
 
 enum class ActiveTab { ROUTE, ARRIVALS }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun MainScreen(
     settingsStore: SettingsStore,
@@ -330,6 +333,25 @@ fun MainScreen(
                             label = { Text("Station Arrivals") }
                         )
                         Spacer(Modifier.weight(1f))
+                        Icon(
+                            Icons.Default.BugReport,
+                            contentDescription = "Debug fill",
+                            tint = if (routingState.loading) MaterialTheme.colorScheme.tertiary.copy(alpha = 0.38f)
+                                   else MaterialTheme.colorScheme.tertiary,
+                            modifier = Modifier
+                                .size(36.dp)
+                                .combinedClickable(
+                                    enabled = !routingState.loading,
+                                    onClick = {
+                                        routingViewModel.debugFill(autoSearch = settingsStore.debugAutoSearch)
+                                        if (settingsStore.debugExpandSheet) {
+                                            scope.launch { bottomSheetState.expand() }
+                                        }
+                                    },
+                                    onLongClick = { showDebugSettings = true }
+                                )
+                                .padding(6.dp)
+                        )
                         Box {
                             IconButton(onClick = { menuExpanded = true }) {
                                 Icon(
@@ -382,14 +404,7 @@ fun MainScreen(
                                     onGeocode = { routingViewModel.geocode(it) },
                                     onGpsClick = onGpsClick,
                                     gpsLoading = gpsLoading,
-                                    cardOpacity = cardOpacity,
-                                    onDebugFill = {
-                                        routingViewModel.debugFill(autoSearch = settingsStore.debugAutoSearch)
-                                        if (settingsStore.debugExpandSheet) {
-                                            scope.launch { bottomSheetState.expand() }
-                                        }
-                                    },
-                                    onDebugLongPress = { showDebugSettings = true }
+                                    cardOpacity = cardOpacity
                                 )
                             }
 
