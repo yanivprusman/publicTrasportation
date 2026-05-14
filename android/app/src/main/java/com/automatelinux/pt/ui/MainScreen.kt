@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -40,6 +41,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.BottomSheetScaffold
@@ -106,6 +108,7 @@ fun MainScreen(
     val keyboardController = LocalSoftwareKeyboardController.current
 
     val sheetOffsetX = remember { Animatable(0f) }
+    var dismissedBySwipeRight by remember { mutableStateOf(false) }
     var menuExpanded by remember { mutableStateOf(false) }
     var showOpacitySlider by remember { mutableStateOf(false) }
     var sheetOpacity by remember { mutableFloatStateOf(settingsStore.sheetOpacity) }
@@ -251,6 +254,7 @@ fun MainScreen(
                                     if (!change.pressed) {
                                         if (claimed) {
                                             if (sheetOffsetX.value > dismissThreshold) {
+                                                dismissedBySwipeRight = true
                                                 scope.launch {
                                                     sheetOffsetX.animateTo(size.width.toFloat())
                                                     bottomSheetState.hide()
@@ -486,15 +490,25 @@ fun MainScreen(
 
                 if (bottomSheetState.currentValue == SheetValue.Hidden) {
                     SmallFloatingActionButton(
-                        onClick = { scope.launch { bottomSheetState.partialExpand() } },
+                        onClick = {
+                            dismissedBySwipeRight = false
+                            scope.launch { bottomSheetState.partialExpand() }
+                        },
                         modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .padding(bottom = 16.dp),
+                            .align(
+                                if (dismissedBySwipeRight) Alignment.CenterEnd
+                                else Alignment.BottomCenter
+                            )
+                            .padding(
+                                if (dismissedBySwipeRight) PaddingValues(end = 4.dp)
+                                else PaddingValues(bottom = 16.dp)
+                            ),
                         containerColor = MaterialTheme.colorScheme.surface.copy(alpha = sheetOpacity),
                         elevation = FloatingActionButtonDefaults.elevation(4.dp),
                     ) {
                         Icon(
-                            Icons.Default.KeyboardArrowUp,
+                            if (dismissedBySwipeRight) Icons.AutoMirrored.Filled.KeyboardArrowLeft
+                            else Icons.Default.KeyboardArrowUp,
                             contentDescription = "Show panel",
                         )
                     }
