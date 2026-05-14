@@ -70,6 +70,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.material3.rememberStandardBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -85,7 +86,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.automatelinux.pt.ui.arrivals.ArrivalsPanel
@@ -330,8 +333,8 @@ fun MainScreen(
                             tint = if (routingState.loading) MaterialTheme.colorScheme.tertiary.copy(alpha = 0.38f)
                                    else MaterialTheme.colorScheme.tertiary,
                             modifier = Modifier
-                                .align(Alignment.CenterEnd)
-                                .padding(end = 12.dp)
+                                .align(AbsoluteAlignment.CenterRight)
+                                .absolutePadding(right = 12.dp)
                                 .size(36.dp)
                                 .combinedClickable(
                                     enabled = !routingState.loading,
@@ -616,11 +619,13 @@ fun MainScreen(
                         containerColor = MaterialTheme.colorScheme.surface.copy(alpha = sheetOpacity),
                         elevation = FloatingActionButtonDefaults.elevation(4.dp),
                     ) {
-                        Icon(
-                            if (dismissedBySwipeRight) Icons.AutoMirrored.Filled.KeyboardArrowLeft
-                            else Icons.Default.KeyboardArrowUp,
-                            contentDescription = strings.showPanel,
-                        )
+                        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                            Icon(
+                                if (dismissedBySwipeRight) Icons.AutoMirrored.Filled.KeyboardArrowLeft
+                                else Icons.Default.KeyboardArrowUp,
+                                contentDescription = strings.showPanel,
+                            )
+                        }
                     }
                 }
             }
@@ -653,9 +658,9 @@ fun MainScreen(
                     context.startActivity(intent)
                 },
                 modifier = Modifier
-                    .align(Alignment.BottomEnd)
+                    .align(AbsoluteAlignment.BottomRight)
                     .zIndex(Float.MAX_VALUE)
-                    .padding(bottom = 16.dp, end = 12.dp),
+                    .absolutePadding(bottom = 16.dp, right = 12.dp),
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
                 elevation = FloatingActionButtonDefaults.elevation(2.dp),
             ) {
