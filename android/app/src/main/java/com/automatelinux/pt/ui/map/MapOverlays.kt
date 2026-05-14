@@ -1,8 +1,15 @@
 package com.automatelinux.pt.ui.map
 
+import android.animation.ValueAnimator
+import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.DashPathEffect
+import android.graphics.LinearGradient
 import android.graphics.Paint
+import android.graphics.Point
+import android.graphics.RadialGradient
+import android.graphics.Shader
+import android.view.animation.LinearInterpolator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import com.automatelinux.pt.data.model.Itinerary
@@ -12,10 +19,8 @@ import com.automatelinux.pt.util.PolylineDecoder
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
+import org.osmdroid.views.overlay.Overlay
 import org.osmdroid.views.overlay.Polyline
-import org.osmdroid.views.overlay.simplefastpoint.SimplePointTheme
-import org.osmdroid.views.overlay.simplefastpoint.SimpleFastPointOverlay
-import org.osmdroid.views.overlay.simplefastpoint.SimpleFastPointOverlayOptions
 
 private const val TAG_ROUTE = "route_overlay"
 private const val TAG_MARKER = "map_marker"
@@ -131,27 +136,21 @@ fun OriginDestinationMarkers(
     destination: GeoPoint?
 ) {
     LaunchedEffect(origin, destination) {
-        map.overlays.removeAll { (it as? Marker)?.id == "origin" || (it as? Marker)?.id == "dest" }
+        map.overlays.filterIsInstance<AnimatedOriginOverlay>().forEach { it.stopAnimation() }
+        map.overlays.removeAll { it is AnimatedOriginOverlay }
+        map.overlays.removeAll { (it as? Marker)?.id == "dest" }
 
         origin?.let { pt ->
-            val marker = Marker(map).apply {
-                id = "origin"
-                position = pt
-                setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                title = "Origin"
-                icon = createCircleDrawable(Color.parseColor("#00BCD4"), 16, Color.WHITE, 3f)
-                setInfoWindow(null)
-            }
-            map.overlays.add(marker)
+            map.overlays.add(AnimatedOriginOverlay(pt, map))
         }
 
         destination?.let { pt ->
+            val density = map.resources.displayMetrics.density
             val marker = Marker(map).apply {
                 id = "dest"
                 position = pt
                 setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                title = "Destination"
-                icon = createCircleDrawable(Color.parseColor("#FF9800"), 16, Color.WHITE, 3f)
+                icon = createDiamondPinDrawable(density)
                 setInfoWindow(null)
             }
             map.overlays.add(marker)
@@ -220,5 +219,157 @@ private fun createCircleDrawable(
 
         @Deprecated("Deprecated")
         override fun getOpacity() = android.graphics.PixelFormat.TRANSLUCENT
+    }
+}
+
+private fun createDiamondPinDrawable(density: Float): android.graphics.drawable.Drawable {
+    val width = (30 * density).toInt()
+    val height = (40 * density).toInt()
+
+    return object : android.graphics.drawable.Drawable() {
+        override fun draw(canvas: Canvas) {
+            val cx = bounds.centerX().toFloat()
+            val d = density
+            val diamondCy = 11f * d
+
+            // Stem
+            val stemPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                shader = LinearGradient(
+                    cx, 20f * d, cx, height.toFloat(),
+                    Color.parseColor("#E65100"), Color.parseColor("#BF360C"),
+                    Shader.TileMode.CLAMP
+                )
+            }
+            canvas.drawRoundRect(
+                cx - 1.5f * d, 20f * d,
+                cx + 1.5f * d, height.toFloat(),
+                1.5f * d, 1.5f * d, stemPaint
+            )
+
+            // Diamond (rotated square)
+            canvas.save()
+            canvas.rotate(45f, cx, diamondCy)
+
+            val dSize = 15f * d
+            val diamondPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                shader = LinearGradient(
+                    cx - dSize / 2f, diamondCy - dSize / 2f,
+                    cx + dSize / 2f, diamondCy + dSize / 2f,
+                    intArrayOf(
+                        Color.parseColor("#FFB74D"),
+                        Color.parseColor("#E65100"),
+                        Color.parseColor("#FF8A65")
+                    ),
+                    floatArrayOf(0f, 0.5f, 1f),
+                    Shader.TileMode.CLAMP
+                )
+            }
+            canvas.drawRoundRect(
+                cx - dSize / 2f, diamondCy - dSize / 2f,
+                cx + dSize / 2f, diamondCy + dSize / 2f,
+                3f * d, 3f * d, diamondPaint
+            )
+
+            // Inner white diamond
+            val innerSize = 5.5f * d
+            val innerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.argb(216, 255, 255, 255)
+            }
+            canvas.drawRoundRect(
+                cx - innerSize / 2f, diamondCy - innerSize / 2f,
+                cx + innerSize / 2f, diamondCy + innerSize / 2f,
+                1f * d, 1f * d, innerPaint
+            )
+
+            canvas.restore()
+        }
+
+        override fun getIntrinsicWidth() = width
+        override fun getIntrinsicHeight() = height
+        override fun setAlpha(alpha: Int) {}
+        override fun setColorFilter(colorFilter: android.graphics.ColorFilter?) {}
+        @Deprecated("Deprecated")
+        override fun getOpacity() = android.graphics.PixelFormat.TRANSLUCENT
+    }
+}
+
+class AnimatedOriginOverlay(
+    private val position: GeoPoint,
+    mapView: MapView
+) : Overlay() {
+
+    private var progress = 0f
+    private val density = mapView.resources.displayMetrics.density
+
+    private val animator = ValueAnimator.ofFloat(0f, 1f).apply {
+        duration = 2400L
+        repeatCount = ValueAnimator.INFINITE
+        interpolator = LinearInterpolator()
+        addUpdateListener { anim ->
+            progress = anim.animatedFraction
+            mapView.postInvalidate()
+        }
+        start()
+    }
+
+    override fun draw(canvas: Canvas, mapView: MapView, shadow: Boolean) {
+        if (shadow) return
+
+        val screenPoint = Point()
+        mapView.projection.toPixels(position, screenPoint)
+        val cx = screenPoint.x.toFloat()
+        val cy = screenPoint.y.toFloat()
+        val coreRadius = 7f * density
+
+        // Glow
+        val glowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.FILL
+            shader = RadialGradient(
+                cx, cy, coreRadius * 2.5f,
+                Color.argb(70, 0, 188, 212), Color.TRANSPARENT,
+                Shader.TileMode.CLAMP
+            )
+        }
+        canvas.drawCircle(cx, cy, coreRadius * 2.5f, glowPaint)
+
+        // 3 staggered ripple rings
+        val ringPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.STROKE
+            strokeWidth = 2.5f * density
+        }
+        for (i in 0..2) {
+            val ringProgress = (progress + i / 3f) % 1f
+            val scale = 0.5f + ringProgress * 1.7f
+            ringPaint.color = Color.parseColor("#00BCD4")
+            ringPaint.alpha = ((1f - ringProgress) * 178).toInt().coerceIn(0, 255)
+            canvas.drawCircle(cx, cy, coreRadius * scale, ringPaint)
+        }
+
+        // White border
+        val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.FILL
+            color = Color.WHITE
+        }
+        canvas.drawCircle(cx, cy, coreRadius + 2f * density, borderPaint)
+
+        // Core with radial gradient
+        val corePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.FILL
+            shader = RadialGradient(
+                cx - coreRadius * 0.15f, cy - coreRadius * 0.15f, coreRadius,
+                Color.parseColor("#4DD0E1"), Color.parseColor("#00838F"),
+                Shader.TileMode.CLAMP
+            )
+        }
+        canvas.drawCircle(cx, cy, coreRadius, corePaint)
+    }
+
+    fun stopAnimation() {
+        animator.cancel()
+    }
+
+    override fun onDetach(mapView: MapView) {
+        animator.cancel()
+        super.onDetach(mapView)
     }
 }
