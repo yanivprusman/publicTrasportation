@@ -229,20 +229,22 @@ private fun createDiamondPinDrawable(density: Float): android.graphics.drawable.
     return object : android.graphics.drawable.Drawable() {
         override fun draw(canvas: Canvas) {
             val cx = bounds.centerX().toFloat()
+            val top = bounds.top.toFloat()
+            val bottom = bounds.bottom.toFloat()
             val d = density
-            val diamondCy = 11f * d
+            val diamondCy = top + 11f * d
 
             // Stem
             val stemPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 shader = LinearGradient(
-                    cx, 20f * d, cx, height.toFloat(),
+                    cx, top + 20f * d, cx, bottom,
                     Color.parseColor("#E65100"), Color.parseColor("#BF360C"),
                     Shader.TileMode.CLAMP
                 )
             }
             canvas.drawRoundRect(
-                cx - 1.5f * d, 20f * d,
-                cx + 1.5f * d, height.toFloat(),
+                cx - 1.5f * d, top + 20f * d,
+                cx + 1.5f * d, bottom,
                 1.5f * d, 1.5f * d, stemPaint
             )
 
