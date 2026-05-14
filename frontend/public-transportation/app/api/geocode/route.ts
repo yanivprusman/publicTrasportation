@@ -24,7 +24,7 @@ interface NominatimResult {
 
 function formatNominatimName(r: NominatimResult): string {
   const addr = r.address || {};
-  const city = addr.city || addr.town || addr.village || addr.hamlet;
+  const city = addr.village || addr.city || addr.town || addr.hamlet;
 
   if (r.name && r.addresstype && r.addresstype !== 'road' && r.addresstype !== 'house') {
     if (city && !r.name.includes(city)) return `${r.name}, ${city}`;
