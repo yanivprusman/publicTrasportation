@@ -39,7 +39,8 @@ fun <T> AutocompleteField(
     modifier: Modifier = Modifier,
     onClear: () -> Unit = {},
     leadingIcon: @Composable (() -> Unit)? = null,
-    debounceMs: Long = 300
+    debounceMs: Long = 300,
+    suppressSearch: Boolean = false
 ) {
     var suggestions by remember { mutableStateOf<List<T>>(emptyList()) }
     var showDropdown by remember { mutableStateOf(false) }
@@ -47,7 +48,7 @@ fun <T> AutocompleteField(
     var justSelected by remember { mutableStateOf(false) }
 
     LaunchedEffect(value) {
-        if (justSelected) {
+        if (justSelected || suppressSearch) {
             justSelected = false
             return@LaunchedEffect
         }

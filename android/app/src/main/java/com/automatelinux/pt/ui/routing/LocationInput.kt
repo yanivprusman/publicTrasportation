@@ -9,6 +9,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -31,10 +32,16 @@ fun LocationInput(
     gpsLoading: Boolean = false
 ) {
     var text by remember(value) { mutableStateOf(value?.name ?: "") }
+    var programmatic by remember { mutableStateOf(false) }
+
+    LaunchedEffect(value) {
+        programmatic = true
+    }
 
     AutocompleteField(
         value = text,
         onValueChange = { newText ->
+            programmatic = false
             text = newText
             if (newText != value?.name) {
                 onClear()
@@ -46,6 +53,7 @@ fun LocationInput(
             text = suggestion.name
             onSelect(suggestion)
         },
+        suppressSearch = programmatic,
         onClear = {
             text = ""
             onClear()
