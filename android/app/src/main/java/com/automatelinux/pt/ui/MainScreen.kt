@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
@@ -111,6 +112,7 @@ fun MainScreen(
     val sheetOffsetX = remember { Animatable(0f) }
     var dismissedBySwipeRight by remember { mutableStateOf(false) }
     var wasExpandedWhenDismissed by remember { mutableStateOf(false) }
+    var hidingViaSwipeRight by remember { mutableStateOf(false) }
     val sheetScrollState = rememberScrollState()
     var menuExpanded by remember { mutableStateOf(false) }
     var showOpacitySlider by remember { mutableStateOf(false) }
@@ -262,7 +264,9 @@ fun MainScreen(
                                                 wasExpandedWhenDismissed = bottomSheetState.currentValue == SheetValue.Expanded
                                                 scope.launch {
                                                     sheetOffsetX.animateTo(size.width.toFloat())
+                                                    hidingViaSwipeRight = true
                                                     bottomSheetState.hide()
+                                                    hidingViaSwipeRight = false
                                                     sheetOffsetX.snapTo(0f)
                                                 }
                                             } else {
@@ -393,7 +397,8 @@ fun MainScreen(
                     }
                 }
             },
-            sheetContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = sheetOpacity)
+            sheetContainerColor = if (hidingViaSwipeRight) Color.Transparent
+                else MaterialTheme.colorScheme.surface.copy(alpha = sheetOpacity)
         ) { _ ->
             Box(
                 modifier = Modifier
