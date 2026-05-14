@@ -27,8 +27,12 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.isImeVisible
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChange
+import kotlin.math.abs
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -99,7 +103,6 @@ fun MainScreen(
     val context = LocalContext.current
     val keyboardController = LocalSoftwareKeyboardController.current
 
-    var swipeDragX by remember { mutableFloatStateOf(0f) }
     var menuExpanded by remember { mutableStateOf(false) }
     var showOpacitySlider by remember { mutableStateOf(false) }
     var sheetOpacity by remember { mutableFloatStateOf(settingsStore.sheetOpacity) }
@@ -228,7 +231,45 @@ fun MainScreen(
             scaffoldState = scaffoldState,
             sheetPeekHeight = 280.dp,
             sheetContent = {
-                Box(modifier = Modifier.fillMaxWidth()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .pointerInput(Unit) {
+                            awaitEachGesture {
+                                awaitFirstDown(pass = PointerEventPass.Initial)
+                                var cumX = 0f
+                                var cumY = 0f
+                                var claimed = false
+                                while (true) {
+                                    val event = awaitPointerEvent(pass = PointerEventPass.Initial)
+                                    val change = event.changes.firstOrNull() ?: break
+                                    if (!change.pressed) {
+                                        if (claimed && cumX > 150f) {
+                                            scope.launch { bottomSheetState.hide() }
+                                        }
+                                        break
+                                    }
+                                    val delta = change.positionChange()
+                                    cumX += delta.x
+                                    cumY += delta.y
+                                    if (!claimed) {
+                                        if (abs(cumX) > viewConfiguration.touchSlop ||
+                                            abs(cumY) > viewConfiguration.touchSlop
+                                        ) {
+                                            if (cumX > abs(cumY)) {
+                                                claimed = true
+                                                change.consume()
+                                            } else {
+                                                break
+                                            }
+                                        }
+                                    } else {
+                                        change.consume()
+                                    }
+                                }
+                            }
+                        }
+                ) {
                     Column {
                     Row(
                         modifier = Modifier
@@ -322,40 +363,6 @@ fun MainScreen(
                             }
                         }
                     }
-                    }
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.CenterStart)
-                            .matchParentSize()
-                            .width(24.dp)
-                            .zIndex(1f)
-                            .pointerInput(Unit) {
-                                detectHorizontalDragGestures(
-                                    onDragStart = { swipeDragX = 0f },
-                                    onDragEnd = {
-                                        if (swipeDragX > 150f) {
-                                            scope.launch { bottomSheetState.hide() }
-                                        }
-                                        swipeDragX = 0f
-                                    },
-                                    onDragCancel = { swipeDragX = 0f },
-                                    onHorizontalDrag = { change, dragAmount ->
-                                        change.consume()
-                                        swipeDragX = (swipeDragX + dragAmount).coerceAtLeast(0f)
-                                    }
-                                )
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .width(4.dp)
-                                .height(32.dp)
-                                .background(
-                                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                                    RoundedCornerShape(2.dp)
-                                )
-                        )
                     }
                 }
             },
