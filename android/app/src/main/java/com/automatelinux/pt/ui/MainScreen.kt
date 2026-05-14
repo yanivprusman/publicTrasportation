@@ -109,6 +109,7 @@ fun MainScreen(
 
     val sheetOffsetX = remember { Animatable(0f) }
     var dismissedBySwipeRight by remember { mutableStateOf(false) }
+    val sheetScrollState = rememberScrollState()
     var menuExpanded by remember { mutableStateOf(false) }
     var showOpacitySlider by remember { mutableStateOf(false) }
     var sheetOpacity by remember { mutableFloatStateOf(settingsStore.sheetOpacity) }
@@ -342,7 +343,7 @@ fun MainScreen(
                     Column(
                         modifier = Modifier
                             .imePadding()
-                            .verticalScroll(rememberScrollState())
+                            .verticalScroll(sheetScrollState)
                     ) {
                         when (activeTab) {
                             ActiveTab.ROUTE -> {
