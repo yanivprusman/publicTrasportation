@@ -136,7 +136,8 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const routeTime = time || new Date().toISOString();
+  // MOTIS interprets time as local — toISOString() is UTC, which is wrong
+  const routeTime = time || new Date().toLocaleString('sv-SE', { timeZone: 'Asia/Jerusalem' }).replace(' ', 'T');
   const isArriveBy = arriveBy === 'true';
   const cacheKey = `${from}|${to}|${routeTime}|${isArriveBy}`;
 
