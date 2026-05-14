@@ -20,12 +20,12 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.absolutePadding
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -80,6 +80,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.AbsoluteAlignment
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.zIndex
@@ -602,14 +603,15 @@ fun MainScreen(
                         },
                         modifier = Modifier
                             .align(
-                                if (dismissedBySwipeRight && wasExpandedWhenDismissed) Alignment.CenterEnd
-                                else if (dismissedBySwipeRight) Alignment.BottomEnd
+                                if (dismissedBySwipeRight && wasExpandedWhenDismissed) AbsoluteAlignment.CenterRight
+                                else if (dismissedBySwipeRight) AbsoluteAlignment.BottomRight
                                 else Alignment.BottomCenter
                             )
-                            .padding(
-                                if (dismissedBySwipeRight && wasExpandedWhenDismissed) PaddingValues(end = 4.dp)
-                                else if (dismissedBySwipeRight) PaddingValues(end = 4.dp, bottom = 120.dp)
-                                else PaddingValues(bottom = 16.dp)
+                            .absolutePadding(
+                                right = if (dismissedBySwipeRight) 4.dp else 0.dp,
+                                bottom = if (dismissedBySwipeRight && wasExpandedWhenDismissed) 0.dp
+                                         else if (dismissedBySwipeRight) 120.dp
+                                         else 16.dp
                             ),
                         containerColor = MaterialTheme.colorScheme.surface.copy(alpha = sheetOpacity),
                         elevation = FloatingActionButtonDefaults.elevation(4.dp),
