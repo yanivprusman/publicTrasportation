@@ -27,8 +27,10 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.isImeVisible
+import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
@@ -103,6 +105,7 @@ fun MainScreen(
     val context = LocalContext.current
     val keyboardController = LocalSoftwareKeyboardController.current
 
+    val sheetOffsetX = remember { Animatable(0f) }
     var menuExpanded by remember { mutableStateOf(false) }
     var showOpacitySlider by remember { mutableStateOf(false) }
     var sheetOpacity by remember { mutableFloatStateOf(settingsStore.sheetOpacity) }
@@ -234,7 +237,9 @@ fun MainScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .graphicsLayer { translationX = sheetOffsetX.value }
                         .pointerInput(Unit) {
+                            val dismissThreshold = size.width * 0.4f
                             awaitEachGesture {
                                 awaitFirstDown(pass = PointerEventPass.Initial)
                                 var cumX = 0f
@@ -244,8 +249,16 @@ fun MainScreen(
                                     val event = awaitPointerEvent(pass = PointerEventPass.Initial)
                                     val change = event.changes.firstOrNull() ?: break
                                     if (!change.pressed) {
-                                        if (claimed && cumX > 150f) {
-                                            scope.launch { bottomSheetState.hide() }
+                                        if (claimed) {
+                                            if (sheetOffsetX.value > dismissThreshold) {
+                                                scope.launch {
+                                                    sheetOffsetX.animateTo(size.width.toFloat())
+                                                    bottomSheetState.hide()
+                                                    sheetOffsetX.snapTo(0f)
+                                                }
+                                            } else {
+                                                scope.launch { sheetOffsetX.animateTo(0f) }
+                                            }
                                         }
                                         break
                                     }
@@ -265,6 +278,11 @@ fun MainScreen(
                                         }
                                     } else {
                                         change.consume()
+                                        scope.launch {
+                                            sheetOffsetX.snapTo(
+                                                (sheetOffsetX.value + delta.x).coerceAtLeast(0f)
+                                            )
+                                        }
                                     }
                                 }
                             }
