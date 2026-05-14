@@ -32,6 +32,7 @@ import com.automatelinux.pt.ui.map.getModeColorWithRoute
 @Composable
 fun ItineraryDetail(
     itinerary: Itinerary,
+    onLegClick: ((RouteLeg) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier.padding(8.dp)) {
@@ -44,7 +45,7 @@ fun ItineraryDetail(
         Spacer(Modifier.height(8.dp))
 
         for ((index, leg) in itinerary.legs.withIndex()) {
-            LegDetail(leg = leg)
+            LegDetail(leg = leg, onClick = onLegClick?.let { { it(leg) } })
             if (index < itinerary.legs.lastIndex) {
                 HorizontalDivider(
                     modifier = Modifier.padding(vertical = 4.dp),
@@ -56,11 +57,18 @@ fun ItineraryDetail(
 }
 
 @Composable
-private fun LegDetail(leg: RouteLeg) {
+private fun LegDetail(leg: RouteLeg, onClick: (() -> Unit)? = null) {
     var showStops by remember { mutableStateOf(false) }
     val color = Color(getModeColorWithRoute(leg.mode, leg.routeColor))
 
-    Row(modifier = Modifier.fillMaxWidth()) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(if (onClick != null) Modifier.clickable {
+                if (!leg.intermediateStops.isNullOrEmpty()) showStops = true
+                onClick()
+            } else Modifier)
+    ) {
         Box(
             modifier = Modifier
                 .width(4.dp)

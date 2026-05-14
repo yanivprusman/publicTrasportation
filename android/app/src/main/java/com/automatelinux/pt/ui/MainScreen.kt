@@ -93,6 +93,8 @@ import com.automatelinux.pt.ui.map.OriginDestinationMarkers
 import com.automatelinux.pt.ui.map.RouteOverlay
 import com.automatelinux.pt.ui.map.VehicleMarkerOverlay
 import com.automatelinux.pt.ui.map.animateToPoint
+import com.automatelinux.pt.ui.map.fitBounds
+import com.automatelinux.pt.util.PolylineDecoder
 import com.automatelinux.pt.ui.routing.DebugSettingsDialog
 import com.automatelinux.pt.ui.routing.RoutePlannerPanel
 import com.automatelinux.pt.ui.viewmodel.ArrivalsViewModel
@@ -411,6 +413,19 @@ fun MainScreen(
                                         }
                                     },
                                     onSelectItinerary = { routingViewModel.selectItinerary(it) },
+                                    onLegClick = { leg ->
+                                        val points = if (leg.polyline.isNotBlank()) {
+                                            PolylineDecoder.decode(leg.polyline)
+                                        } else {
+                                            listOf(
+                                                GeoPoint(leg.from.lat, leg.from.lon),
+                                                GeoPoint(leg.to.lat, leg.to.lon)
+                                            )
+                                        }
+                                        if (points.isNotEmpty()) {
+                                            mapView?.fitBounds(points)
+                                        }
+                                    },
                                     onGeocode = { routingViewModel.geocode(it) },
                                     onGpsClick = onGpsClick,
                                     gpsLoading = gpsLoading,

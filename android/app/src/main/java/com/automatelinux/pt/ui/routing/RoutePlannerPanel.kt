@@ -20,6 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.automatelinux.pt.data.model.GeocodeSuggestion
+import com.automatelinux.pt.data.model.RouteLeg
 import com.automatelinux.pt.ui.viewmodel.RoutingState
 import java.time.ZonedDateTime
 
@@ -34,6 +35,7 @@ fun RoutePlannerPanel(
     onSearch: () -> Unit,
     onSelectItinerary: (Int) -> Unit,
     onGeocode: suspend (String) -> List<GeocodeSuggestion>,
+    onLegClick: ((RouteLeg) -> Unit)? = null,
     onGpsClick: (() -> Unit)? = null,
     gpsLoading: Boolean = false,
     cardOpacity: Float = 0.6f,
@@ -108,7 +110,7 @@ fun RoutePlannerPanel(
 
         state.selectedItinerary?.let { itinerary ->
             Spacer(Modifier.height(8.dp))
-            ItineraryDetail(itinerary = itinerary)
+            ItineraryDetail(itinerary = itinerary, onLegClick = onLegClick)
         }
     }
 }
