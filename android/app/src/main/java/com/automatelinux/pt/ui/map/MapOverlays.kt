@@ -21,7 +21,7 @@ private const val TAG_ROUTE = "route_overlay"
 private const val TAG_MARKER = "map_marker"
 
 fun getModeColor(mode: TransitMode): Int = when (mode) {
-    TransitMode.WALK -> Color.parseColor("#888888")
+    TransitMode.WALK -> Color.parseColor("#4A90D9")
     TransitMode.BUS -> Color.parseColor("#4CAF50")
     TransitMode.RAIL -> Color.parseColor("#2196F3")
     TransitMode.TRAM -> Color.parseColor("#FF5722")
@@ -65,14 +65,16 @@ fun RouteOverlay(
 
             val color = getModeColorWithRoute(leg.mode, leg.routeColor)
 
+            val isWalk = leg.mode == TransitMode.WALK
             val polyline = Polyline(map).apply {
                 id = TAG_ROUTE
                 setPoints(points)
                 outlinePaint.color = color
-                outlinePaint.strokeWidth = 8f
+                outlinePaint.strokeWidth = if (isWalk) 14f else 8f
                 outlinePaint.isAntiAlias = true
-                if (leg.mode == TransitMode.WALK) {
-                    outlinePaint.pathEffect = DashPathEffect(floatArrayOf(12f, 16f), 0f)
+                outlinePaint.strokeCap = Paint.Cap.ROUND
+                if (isWalk) {
+                    outlinePaint.pathEffect = DashPathEffect(floatArrayOf(24f, 14f), 0f)
                 }
             }
             map.overlays.add(polyline)

@@ -112,14 +112,15 @@ export async function GET(request: NextRequest) {
     nr => !motisResults.some(mr => isDuplicate(mr, nr))
   );
 
-  const merged: GeoResult[] = [];
-  let mi = 0;
-  let ni = 0;
-  while (mi < motisResults.length || ni < uniqueNominatim.length) {
-    if (mi < motisResults.length) merged.push(motisResults[mi++]);
-    if (mi < motisResults.length) merged.push(motisResults[mi++]);
-    if (mi < motisResults.length) merged.push(motisResults[mi++]);
-    if (ni < uniqueNominatim.length) merged.push(uniqueNominatim[ni++]);
+  const merged = [...motisResults, ...uniqueNominatim];
+
+  const queryWords = text.split(/\s+/).filter(w => w.length >= 2);
+  if (queryWords.length > 0) {
+    merged.sort((a, b) => {
+      const aHits = queryWords.filter(w => a.name.includes(w)).length;
+      const bHits = queryWords.filter(w => b.name.includes(w)).length;
+      return bHits - aHits;
+    });
   }
 
   return NextResponse.json(merged);

@@ -597,8 +597,8 @@ fun MainScreen(
             DebugSettingsDialog(
                 autoSearch = settingsStore.debugAutoSearch,
                 expandSheet = settingsStore.debugExpandSheet,
-                fromAddress = routingState.origin?.name ?: settingsStore.debugFrom,
-                toAddress = routingState.destination?.name ?: settingsStore.debugTo,
+                fromAddress = settingsStore.debugFrom,
+                toAddress = settingsStore.debugTo,
                 onConfirm = { autoSearch, expandSheet, from, to ->
                     settingsStore.debugAutoSearch = autoSearch
                     settingsStore.debugExpandSheet = expandSheet
