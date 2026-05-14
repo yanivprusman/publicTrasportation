@@ -11,6 +11,7 @@ import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.google.android.gms.tasks.CancellationTokenSource
 import androidx.compose.foundation.background
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -21,6 +22,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -34,7 +36,9 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
 import kotlin.math.abs
@@ -46,6 +50,7 @@ import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -67,6 +72,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -112,8 +118,8 @@ fun MainScreen(
     val sheetOffsetX = remember { Animatable(0f) }
     var dismissedBySwipeRight by remember { mutableStateOf(false) }
     var wasExpandedWhenDismissed by remember { mutableStateOf(false) }
-    var hidingViaSwipeRight by remember { mutableStateOf(false) }
     val sheetScrollState = rememberScrollState()
+    var sheetContentHeightPx by remember { mutableIntStateOf(0) }
     var menuExpanded by remember { mutableStateOf(false) }
     var showOpacitySlider by remember { mutableStateOf(false) }
     var sheetOpacity by remember { mutableFloatStateOf(settingsStore.sheetOpacity) }
@@ -241,12 +247,16 @@ fun MainScreen(
         BottomSheetScaffold(
             scaffoldState = scaffoldState,
             sheetPeekHeight = 280.dp,
+            sheetDragHandle = { },
             sheetContent = {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .fillMaxHeight()
+                        .onGloballyPositioned { sheetContentHeightPx = it.size.height }
                         .graphicsLayer { translationX = sheetOffsetX.value }
+                        .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
+                        .background(MaterialTheme.colorScheme.surface.copy(alpha = sheetOpacity))
                         .pointerInput(Unit) {
                             val dismissThreshold = size.width * 0.4f
                             awaitEachGesture {
@@ -264,10 +274,7 @@ fun MainScreen(
                                                 wasExpandedWhenDismissed = bottomSheetState.currentValue == SheetValue.Expanded
                                                 scope.launch {
                                                     sheetOffsetX.animateTo(size.width.toFloat())
-                                                    hidingViaSwipeRight = true
                                                     bottomSheetState.hide()
-                                                    hidingViaSwipeRight = false
-                                                    sheetOffsetX.snapTo(0f)
                                                 }
                                             } else {
                                                 scope.launch { sheetOffsetX.animateTo(0f) }
@@ -301,7 +308,8 @@ fun MainScreen(
                             }
                         }
                 ) {
-                    Column {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    BottomSheetDefaults.DragHandle()
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -395,10 +403,25 @@ fun MainScreen(
                         }
                     }
                     }
+                    Box(
+                        modifier = Modifier
+                            .offset {
+                                val offset = try { bottomSheetState.requireOffset() } catch (_: Exception) { 0f }
+                                val visibleHeight = sheetContentHeightPx - offset
+                                val centerY = (visibleHeight / 2f - 16.dp.toPx()).toInt()
+                                IntOffset(4.dp.roundToPx(), maxOf(0, centerY))
+                            }
+                            .width(4.dp)
+                            .height(32.dp)
+                            .background(
+                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                                RoundedCornerShape(2.dp)
+                            )
+                    )
                 }
             },
-            sheetContainerColor = if (hidingViaSwipeRight) Color.Transparent
-                else MaterialTheme.colorScheme.surface.copy(alpha = sheetOpacity)
+            sheetContainerColor = Color.Transparent,
+            sheetShadowElevation = 0.dp
         ) { _ ->
             Box(
                 modifier = Modifier
@@ -501,15 +524,16 @@ fun MainScreen(
                 if (bottomSheetState.currentValue == SheetValue.Hidden) {
                     SmallFloatingActionButton(
                         onClick = {
-                            val restore = if (dismissedBySwipeRight && wasExpandedWhenDismissed) {
-                                suspend { bottomSheetState.expand() }
-                            } else if (dismissedBySwipeRight) {
-                                suspend { bottomSheetState.partialExpand() }
+                            if (dismissedBySwipeRight) {
+                                scope.launch {
+                                    if (wasExpandedWhenDismissed) bottomSheetState.expand()
+                                    else bottomSheetState.partialExpand()
+                                    sheetOffsetX.animateTo(0f)
+                                    dismissedBySwipeRight = false
+                                }
                             } else {
-                                suspend { bottomSheetState.partialExpand() }
+                                scope.launch { bottomSheetState.partialExpand() }
                             }
-                            dismissedBySwipeRight = false
-                            scope.launch { restore() }
                         },
                         modifier = Modifier
                             .align(
