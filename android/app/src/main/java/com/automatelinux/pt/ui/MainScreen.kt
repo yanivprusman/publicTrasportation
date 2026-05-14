@@ -27,9 +27,8 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.isImeVisible
-import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.draggable
-import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -327,22 +326,25 @@ fun MainScreen(
                     Box(
                         modifier = Modifier
                             .align(Alignment.CenterStart)
-                            .width(24.dp)
                             .matchParentSize()
+                            .width(24.dp)
                             .zIndex(1f)
-                            .draggable(
-                                state = rememberDraggableState { delta ->
-                                    swipeDragX = (swipeDragX + delta).coerceAtLeast(0f)
-                                },
-                                orientation = Orientation.Horizontal,
-                                onDragStarted = { swipeDragX = 0f },
-                                onDragStopped = { velocity ->
-                                    if (swipeDragX > 150f || velocity > 800f) {
-                                        scope.launch { bottomSheetState.hide() }
+                            .pointerInput(Unit) {
+                                detectHorizontalDragGestures(
+                                    onDragStart = { swipeDragX = 0f },
+                                    onDragEnd = {
+                                        if (swipeDragX > 150f) {
+                                            scope.launch { bottomSheetState.hide() }
+                                        }
+                                        swipeDragX = 0f
+                                    },
+                                    onDragCancel = { swipeDragX = 0f },
+                                    onHorizontalDrag = { change, dragAmount ->
+                                        change.consume()
+                                        swipeDragX = (swipeDragX + dragAmount).coerceAtLeast(0f)
                                     }
-                                    swipeDragX = 0f
-                                }
-                            ),
+                                )
+                            },
                         contentAlignment = Alignment.Center
                     ) {
                         Box(
