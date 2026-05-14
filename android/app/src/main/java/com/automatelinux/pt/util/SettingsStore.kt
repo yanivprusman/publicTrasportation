@@ -28,4 +28,12 @@ class SettingsStore @Inject constructor(
     var debugExpandSheet: Boolean
         get() = prefs.getBoolean("debug_expand_sheet", true)
         set(value) = prefs.edit().putBoolean("debug_expand_sheet", value).apply()
+
+    var debugFrom: String
+        get() = prefs.getString("debug_from", "אלרום 6 רמת גן") ?: "אלרום 6 רמת גן"
+        set(value) = prefs.edit().putString("debug_from", value).apply()
+
+    var debugTo: String
+        get() = prefs.getString("debug_to", "המסגר 51 תל אביב") ?: "המסגר 51 תל אביב"
+        set(value) = prefs.edit().putString("debug_to", value).apply()
 }

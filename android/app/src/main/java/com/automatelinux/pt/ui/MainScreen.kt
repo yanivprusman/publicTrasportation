@@ -330,7 +330,11 @@ fun MainScreen(
                                 .combinedClickable(
                                     enabled = !routingState.loading,
                                     onClick = {
-                                        routingViewModel.debugFill(autoSearch = settingsStore.debugAutoSearch)
+                                        routingViewModel.debugFill(
+                                            autoSearch = settingsStore.debugAutoSearch,
+                                            from = settingsStore.debugFrom,
+                                            to = settingsStore.debugTo
+                                        )
                                         if (settingsStore.debugExpandSheet) {
                                             scope.launch { bottomSheetState.expand() }
                                         }
@@ -593,9 +597,13 @@ fun MainScreen(
             DebugSettingsDialog(
                 autoSearch = settingsStore.debugAutoSearch,
                 expandSheet = settingsStore.debugExpandSheet,
-                onConfirm = { autoSearch, expandSheet ->
+                fromAddress = routingState.origin?.name ?: settingsStore.debugFrom,
+                toAddress = routingState.destination?.name ?: settingsStore.debugTo,
+                onConfirm = { autoSearch, expandSheet, from, to ->
                     settingsStore.debugAutoSearch = autoSearch
                     settingsStore.debugExpandSheet = expandSheet
+                    settingsStore.debugFrom = from
+                    settingsStore.debugTo = to
                     showDebugSettings = false
                 },
                 onDismiss = { showDebugSettings = false }
