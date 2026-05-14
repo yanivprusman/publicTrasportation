@@ -62,9 +62,10 @@ function itineraryFingerprint(itin: MotisItinerary): string {
     .join('|');
 }
 
-function transformMotisResponse(motisData: { itineraries?: MotisItinerary[] }) {
+function transformMotisResponse(motisData: { itineraries?: MotisItinerary[]; direct?: MotisItinerary[] }) {
   const seen = new Set<string>();
-  const itineraries = (motisData.itineraries || [])
+  const allItineraries = [...(motisData.itineraries || []), ...(motisData.direct || [])];
+  const itineraries = allItineraries
     .filter(itin => {
       const fp = itineraryFingerprint(itin);
       if (!fp) return true; // walk-only routes are always unique
