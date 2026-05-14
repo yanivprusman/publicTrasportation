@@ -90,6 +90,7 @@ import com.automatelinux.pt.ui.map.OriginDestinationMarkers
 import com.automatelinux.pt.ui.map.RouteOverlay
 import com.automatelinux.pt.ui.map.VehicleMarkerOverlay
 import com.automatelinux.pt.ui.map.animateToPoint
+import com.automatelinux.pt.ui.routing.DebugSettingsDialog
 import com.automatelinux.pt.ui.routing.RoutePlannerPanel
 import com.automatelinux.pt.ui.viewmodel.ArrivalsViewModel
 import com.automatelinux.pt.ui.viewmodel.RoutingViewModel
@@ -122,6 +123,7 @@ fun MainScreen(
     var sheetContentHeightPx by remember { mutableIntStateOf(0) }
     var menuExpanded by remember { mutableStateOf(false) }
     var showOpacitySlider by remember { mutableStateOf(false) }
+    var showDebugSettings by remember { mutableStateOf(false) }
     var sheetOpacity by remember { mutableFloatStateOf(settingsStore.sheetOpacity) }
     var cardOpacity by remember { mutableFloatStateOf(settingsStore.cardOpacity) }
 
@@ -382,11 +384,12 @@ fun MainScreen(
                                     gpsLoading = gpsLoading,
                                     cardOpacity = cardOpacity,
                                     onDebugFill = {
-                                        routingViewModel.debugFill()
-                                        scope.launch {
-                                            bottomSheetState.expand()
+                                        routingViewModel.debugFill(autoSearch = settingsStore.debugAutoSearch)
+                                        if (settingsStore.debugExpandSheet) {
+                                            scope.launch { bottomSheetState.expand() }
                                         }
-                                    }
+                                    },
+                                    onDebugLongPress = { showDebugSettings = true }
                                 )
                             }
 
@@ -563,6 +566,19 @@ fun MainScreen(
                     }
                 }
             }
+        }
+
+        if (showDebugSettings) {
+            DebugSettingsDialog(
+                autoSearch = settingsStore.debugAutoSearch,
+                expandSheet = settingsStore.debugExpandSheet,
+                onConfirm = { autoSearch, expandSheet ->
+                    settingsStore.debugAutoSearch = autoSearch
+                    settingsStore.debugExpandSheet = expandSheet
+                    showDebugSettings = false
+                },
+                onDismiss = { showDebugSettings = false }
+            )
         }
 
         if (BuildConfig.FEEDBACK_ENABLED) {

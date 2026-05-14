@@ -121,7 +121,7 @@ class RoutingViewModel @Inject constructor(
         }
     }
 
-    fun debugFill() {
+    fun debugFill(autoSearch: Boolean = true) {
         viewModelScope.launch {
             _state.value = _state.value.copy(loading = true, error = null)
             try {
@@ -130,19 +130,23 @@ class RoutingViewModel @Inject constructor(
                     ?: throw Exception("No geocode results for origin")
                 _state.value = _state.value.copy(origin = origin)
 
-                val destResults = api.geocode("המסגר")
+                val destResults = api.geocode("המסגר 51 תל אביב")
                 val dest = destResults.firstOrNull()
                     ?: throw Exception("No geocode results for destination")
                 _state.value = _state.value.copy(destination = dest)
 
-                val from = "${origin.lat},${origin.lon}"
-                val to = "${dest.lat},${dest.lon}"
-                val result = api.searchRoute(from = from, to = to)
-                _state.value = _state.value.copy(
-                    results = result,
-                    selectedIndex = 0,
-                    loading = false
-                )
+                if (autoSearch) {
+                    val from = "${origin.lat},${origin.lon}"
+                    val to = "${dest.lat},${dest.lon}"
+                    val result = api.searchRoute(from = from, to = to)
+                    _state.value = _state.value.copy(
+                        results = result,
+                        selectedIndex = 0,
+                        loading = false
+                    )
+                } else {
+                    _state.value = _state.value.copy(loading = false)
+                }
             } catch (e: Exception) {
                 _state.value = _state.value.copy(
                     loading = false,

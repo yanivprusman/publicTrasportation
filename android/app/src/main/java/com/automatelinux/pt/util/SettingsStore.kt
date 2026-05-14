@@ -20,4 +20,12 @@ class SettingsStore @Inject constructor(
     var cardOpacity: Float
         get() = prefs.getFloat("card_opacity", 0.6f)
         set(value) = prefs.edit().putFloat("card_opacity", value).apply()
+
+    var debugAutoSearch: Boolean
+        get() = prefs.getBoolean("debug_auto_search", true)
+        set(value) = prefs.edit().putBoolean("debug_auto_search", value).apply()
+
+    var debugExpandSheet: Boolean
+        get() = prefs.getBoolean("debug_expand_sheet", true)
+        set(value) = prefs.edit().putBoolean("debug_expand_sheet", value).apply()
 }

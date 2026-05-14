@@ -1,5 +1,7 @@
 package com.automatelinux.pt.ui.routing
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -7,6 +9,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Search
@@ -17,7 +20,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -25,6 +27,7 @@ import com.automatelinux.pt.data.model.GeocodeSuggestion
 import com.automatelinux.pt.ui.viewmodel.RoutingState
 import java.time.ZonedDateTime
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun RoutePlannerPanel(
     state: RoutingState,
@@ -40,6 +43,7 @@ fun RoutePlannerPanel(
     gpsLoading: Boolean = false,
     cardOpacity: Float = 0.6f,
     onDebugFill: (() -> Unit)? = null,
+    onDebugLongPress: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
@@ -102,13 +106,20 @@ fun RoutePlannerPanel(
                 Text("  Search Routes", modifier = Modifier.padding(start = 4.dp))
             }
             if (onDebugFill != null) {
-                IconButton(onClick = onDebugFill, enabled = !state.loading) {
-                    Icon(
-                        Icons.Default.BugReport,
-                        contentDescription = "Debug fill",
-                        tint = MaterialTheme.colorScheme.tertiary
-                    )
-                }
+                Icon(
+                    Icons.Default.BugReport,
+                    contentDescription = "Debug fill",
+                    tint = if (state.loading) MaterialTheme.colorScheme.tertiary.copy(alpha = 0.38f)
+                           else MaterialTheme.colorScheme.tertiary,
+                    modifier = Modifier
+                        .size(48.dp)
+                        .combinedClickable(
+                            enabled = !state.loading,
+                            onClick = { onDebugFill() },
+                            onLongClick = { onDebugLongPress?.invoke() }
+                        )
+                        .padding(12.dp)
+                )
             }
         }
 
