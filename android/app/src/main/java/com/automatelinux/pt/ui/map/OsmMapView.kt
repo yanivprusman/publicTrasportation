@@ -46,6 +46,7 @@ fun OsmMapView(
             MapView(ctx).apply {
                 setTileSource(TileSourceFactory.MAPNIK)
                 setMultiTouchControls(true)
+                zoomController.setVisibility(org.osmdroid.views.CustomZoomButtonsController.Visibility.NEVER)
                 controller.setZoom(zoom)
                 controller.setCenter(center)
                 minZoomLevel = 5.0
