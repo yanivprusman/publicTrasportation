@@ -380,7 +380,13 @@ fun MainScreen(
                                     onGeocode = { routingViewModel.geocode(it) },
                                     onGpsClick = onGpsClick,
                                     gpsLoading = gpsLoading,
-                                    cardOpacity = cardOpacity
+                                    cardOpacity = cardOpacity,
+                                    onDebugFill = {
+                                        routingViewModel.debugFill()
+                                        scope.launch {
+                                            bottomSheetState.expand()
+                                        }
+                                    }
                                 )
                             }
 

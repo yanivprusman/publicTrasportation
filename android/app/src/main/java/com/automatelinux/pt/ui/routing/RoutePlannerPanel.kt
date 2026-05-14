@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material3.Button
@@ -38,6 +39,7 @@ fun RoutePlannerPanel(
     onGpsClick: (() -> Unit)? = null,
     gpsLoading: Boolean = false,
     cardOpacity: Float = 0.6f,
+    onDebugFill: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
@@ -86,13 +88,28 @@ fun RoutePlannerPanel(
 
         Spacer(Modifier.height(8.dp))
 
-        Button(
-            onClick = onSearch,
+        Row(
             modifier = Modifier.fillMaxWidth(),
-            enabled = state.origin != null && state.destination != null && !state.loading
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(Icons.Default.Search, contentDescription = null)
-            Text("  Search Routes", modifier = Modifier.padding(start = 4.dp))
+            Button(
+                onClick = onSearch,
+                modifier = Modifier.weight(1f),
+                enabled = state.origin != null && state.destination != null && !state.loading
+            ) {
+                Icon(Icons.Default.Search, contentDescription = null)
+                Text("  Search Routes", modifier = Modifier.padding(start = 4.dp))
+            }
+            if (onDebugFill != null) {
+                IconButton(onClick = onDebugFill, enabled = !state.loading) {
+                    Icon(
+                        Icons.Default.BugReport,
+                        contentDescription = "Debug fill",
+                        tint = MaterialTheme.colorScheme.tertiary
+                    )
+                }
+            }
         }
 
         Spacer(Modifier.height(8.dp))
