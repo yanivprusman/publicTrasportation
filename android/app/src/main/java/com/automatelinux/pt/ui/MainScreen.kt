@@ -555,7 +555,7 @@ fun MainScreen(
                     }
                 }
 
-                if (dismissedBySwipeRight || bottomSheetState.currentValue == SheetValue.Hidden) {
+                if (dismissedBySwipeRight || bottomSheetState.currentValue == SheetValue.Hidden || bottomSheetState.targetValue == SheetValue.Hidden) {
                     SmallFloatingActionButton(
                         onClick = {
                             if (dismissedBySwipeRight) {
