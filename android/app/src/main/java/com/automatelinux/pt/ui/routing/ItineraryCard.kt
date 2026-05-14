@@ -26,6 +26,8 @@ import com.automatelinux.pt.data.model.Itinerary
 import com.automatelinux.pt.data.model.TransitMode
 import com.automatelinux.pt.ui.map.getModeColor
 import com.automatelinux.pt.ui.map.getModeColorWithRoute
+import com.automatelinux.pt.util.AppStrings
+import com.automatelinux.pt.util.LocalAppStrings
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -36,6 +38,8 @@ fun ItineraryCard(
     cardOpacity: Float = 0.6f,
     modifier: Modifier = Modifier
 ) {
+    val strings = LocalAppStrings.current
+
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -64,13 +68,13 @@ fun ItineraryCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = formatDuration(itinerary.duration),
+                    text = strings.formatDuration(itinerary.duration),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = textColor
                 )
                 Text(
-                    text = if (itinerary.transfers == 0) "Direct" else "${itinerary.transfers} transfer${if (itinerary.transfers > 1) "s" else ""}",
+                    text = if (itinerary.transfers == 0) strings.direct else strings.transferCount(itinerary.transfers),
                     style = MaterialTheme.typography.bodySmall,
                     color = secondaryTextColor
                 )
@@ -89,8 +93,8 @@ fun ItineraryCard(
                 for (leg in itinerary.legs) {
                     val color = Color(getModeColorWithRoute(leg.mode, leg.routeColor))
                     val label = when (leg.mode) {
-                        TransitMode.WALK -> "Walk ${formatDuration(leg.duration)}"
-                        else -> "${getModeLabel(leg.mode)} ${leg.routeShortName ?: ""}"
+                        TransitMode.WALK -> "${strings.walkMode} ${strings.formatDuration(leg.duration)}"
+                        else -> "${getModeLabel(leg.mode, strings)} ${leg.routeShortName ?: ""}"
                     }
                     Text(
                         text = label,
@@ -104,15 +108,6 @@ fun ItineraryCard(
                 }
             }
         }
-    }
-}
-
-fun formatDuration(seconds: Long): String {
-    val mins = seconds / 60
-    return when {
-        mins < 60 -> "${mins} min"
-        mins % 60 == 0L -> "${mins / 60}h"
-        else -> "${mins / 60}h ${mins % 60}min"
     }
 }
 
@@ -130,11 +125,11 @@ fun formatTime(isoString: String): String {
     }
 }
 
-fun getModeLabel(mode: TransitMode): String = when (mode) {
-    TransitMode.WALK -> "Walk"
-    TransitMode.BUS -> "Bus"
-    TransitMode.RAIL -> "Train"
-    TransitMode.TRAM -> "Tram"
-    TransitMode.SUBWAY -> "Subway"
-    TransitMode.FERRY -> "Ferry"
+fun getModeLabel(mode: TransitMode, strings: AppStrings): String = when (mode) {
+    TransitMode.WALK -> strings.walkMode
+    TransitMode.BUS -> strings.busMode
+    TransitMode.RAIL -> strings.trainMode
+    TransitMode.TRAM -> strings.tramMode
+    TransitMode.SUBWAY -> strings.subwayMode
+    TransitMode.FERRY -> strings.ferryMode
 }

@@ -28,6 +28,7 @@ import com.automatelinux.pt.data.model.Itinerary
 import com.automatelinux.pt.data.model.RouteLeg
 import com.automatelinux.pt.data.model.TransitMode
 import com.automatelinux.pt.ui.map.getModeColorWithRoute
+import com.automatelinux.pt.util.LocalAppStrings
 
 @Composable
 fun ItineraryDetail(
@@ -35,9 +36,12 @@ fun ItineraryDetail(
     onLegClick: ((RouteLeg) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
+    val strings = LocalAppStrings.current
+    val transferText = if (itinerary.transfers != 1) strings.transferCount(itinerary.transfers) else strings.transferCount(1)
+
     Column(modifier = modifier.padding(8.dp)) {
         Text(
-            text = "${formatTime(itinerary.startTime)} - ${formatTime(itinerary.endTime)} · ${formatDuration(itinerary.duration)} · ${itinerary.transfers} transfer${if (itinerary.transfers != 1) "s" else ""}",
+            text = "${formatTime(itinerary.startTime)} - ${formatTime(itinerary.endTime)} · ${strings.formatDuration(itinerary.duration)} · $transferText",
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.Bold
         )
@@ -58,6 +62,7 @@ fun ItineraryDetail(
 
 @Composable
 private fun LegDetail(leg: RouteLeg, onClick: (() -> Unit)? = null) {
+    val strings = LocalAppStrings.current
     var showStops by remember { mutableStateOf(false) }
     val color = Color(getModeColorWithRoute(leg.mode, leg.routeColor))
 
@@ -86,10 +91,10 @@ private fun LegDetail(leg: RouteLeg, onClick: (() -> Unit)? = null) {
             )
 
             val description = when (leg.mode) {
-                TransitMode.WALK -> "Walk ${formatDuration(leg.duration)} to ${leg.to.name}"
+                TransitMode.WALK -> strings.walkDescription(strings.formatDuration(leg.duration), leg.to.name)
                 else -> {
                     val route = leg.routeShortName?.let { " $it" } ?: ""
-                    "${getModeLabel(leg.mode)}$route toward ${leg.to.name} — ${formatDuration(leg.duration)}"
+                    strings.transitDescription(getModeLabel(leg.mode, strings), route, leg.to.name, strings.formatDuration(leg.duration))
                 }
             }
             Text(
@@ -109,7 +114,7 @@ private fun LegDetail(leg: RouteLeg, onClick: (() -> Unit)? = null) {
             val stops = leg.intermediateStops
             if (!stops.isNullOrEmpty()) {
                 Text(
-                    text = if (showStops) "Hide ${stops.size} stops" else "Show ${stops.size} stops",
+                    text = if (showStops) strings.hideStops(stops.size) else strings.showStops(stops.size),
                     modifier = Modifier
                         .clickable { showStops = !showStops }
                         .padding(vertical = 4.dp),

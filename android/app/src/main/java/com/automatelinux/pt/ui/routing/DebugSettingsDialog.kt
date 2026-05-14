@@ -23,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import com.automatelinux.pt.util.LocalAppStrings
 
 @Composable
 fun DebugSettingsDialog(
@@ -33,6 +34,7 @@ fun DebugSettingsDialog(
     onConfirm: (autoSearch: Boolean, expandSheet: Boolean, from: String, to: String) -> Unit,
     onDismiss: () -> Unit
 ) {
+    val strings = LocalAppStrings.current
     var localAutoSearch by remember { mutableStateOf(autoSearch) }
     var localExpandSheet by remember { mutableStateOf(expandSheet) }
     var localFrom by remember { mutableStateOf(fromAddress) }
@@ -40,11 +42,11 @@ fun DebugSettingsDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Debug Settings") },
+        title = { Text(strings.debugSettings) },
         text = {
             Column {
                 Text(
-                    "Configure what happens when the debug button is tapped.",
+                    strings.debugDescription,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -53,7 +55,7 @@ fun DebugSettingsDialog(
                     OutlinedTextField(
                         value = localFrom,
                         onValueChange = { localFrom = it },
-                        label = { Text("From") },
+                        label = { Text(strings.from) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -61,7 +63,7 @@ fun DebugSettingsDialog(
                     OutlinedTextField(
                         value = localTo,
                         onValueChange = { localTo = it },
-                        label = { Text("To") },
+                        label = { Text(strings.to) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -76,7 +78,7 @@ fun DebugSettingsDialog(
                         onCheckedChange = { localAutoSearch = it }
                     )
                     Text(
-                        "Auto-search routes",
+                        strings.autoSearchRoutes,
                         modifier = Modifier.padding(start = 4.dp)
                     )
                 }
@@ -89,7 +91,7 @@ fun DebugSettingsDialog(
                         onCheckedChange = { localExpandSheet = it }
                     )
                     Text(
-                        "Expand bottom sheet",
+                        strings.expandBottomSheet,
                         modifier = Modifier.padding(start = 4.dp)
                     )
                 }
@@ -97,12 +99,12 @@ fun DebugSettingsDialog(
         },
         confirmButton = {
             TextButton(onClick = { onConfirm(localAutoSearch, localExpandSheet, localFrom, localTo) }) {
-                Text("Save")
+                Text(strings.save)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(strings.cancel)
             }
         }
     )

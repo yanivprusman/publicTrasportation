@@ -26,6 +26,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.unit.dp
+import com.automatelinux.pt.util.LocalAppStrings
 import kotlinx.coroutines.delay
 
 @Composable
@@ -42,6 +43,7 @@ fun <T> AutocompleteField(
     debounceMs: Long = 300,
     suppressSearch: Boolean = false
 ) {
+    val strings = LocalAppStrings.current
     var suggestions by remember { mutableStateOf<List<T>>(emptyList()) }
     var showDropdown by remember { mutableStateOf(false) }
     var hasFocus by remember { mutableStateOf(false) }
@@ -89,7 +91,7 @@ fun <T> AutocompleteField(
                         showDropdown = false
                         onClear()
                     }) {
-                        Icon(Icons.Default.Clear, contentDescription = "Clear")
+                        Icon(Icons.Default.Clear, contentDescription = strings.clear)
                     }
                 }
             }

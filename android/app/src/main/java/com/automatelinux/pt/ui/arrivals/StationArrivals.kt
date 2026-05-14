@@ -24,6 +24,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.automatelinux.pt.data.model.MonitoredStopVisit
+import com.automatelinux.pt.util.AppStrings
+import com.automatelinux.pt.util.LocalAppStrings
 import kotlinx.coroutines.delay
 import java.time.Duration
 import java.time.ZonedDateTime
@@ -37,6 +39,7 @@ fun StationArrivals(
     onVehicleSelect: ((Double, Double) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
+    val strings = LocalAppStrings.current
     var expandedIndex by remember { mutableIntStateOf(-1) }
     var tick by remember { mutableLongStateOf(0L) }
 
@@ -58,7 +61,7 @@ fun StationArrivals(
         }
 
         Text(
-            text = "Monitored Vehicles: ${visits.size}",
+            text = strings.monitoredVehicles(visits.size),
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
@@ -66,7 +69,7 @@ fun StationArrivals(
 
         if (visits.isEmpty() && !loading) {
             Text(
-                text = "No vehicles found",
+                text = strings.noVehiclesFound,
                 modifier = Modifier.padding(16.dp),
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -80,11 +83,11 @@ fun StationArrivals(
                 .padding(horizontal = 12.dp, vertical = 4.dp),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text("Line", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.7f))
-            Text("Dir", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.5f))
-            Text("Dest", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1.5f))
-            Text("Arrival", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-            Text("Dist", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.7f))
+            Text(strings.headerLine, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.7f))
+            Text(strings.headerDir, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.5f))
+            Text(strings.headerDest, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1.5f))
+            Text(strings.headerArrival, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+            Text(strings.headerDist, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.7f))
         }
         HorizontalDivider()
 
@@ -92,7 +95,7 @@ fun StationArrivals(
             visits.forEachIndexed { index, visit ->
                 val journey = visit.monitoredVehicleJourney ?: return@forEachIndexed
                 val call = journey.monitoredCall
-                val arrivalDisplay = formatArrivalTime(call?.expectedArrivalTime, tick)
+                val arrivalDisplay = formatArrivalTime(call?.expectedArrivalTime, tick, strings)
                 val destName = getDestinationName(journey.destinationRef)
                 val distance = call?.distanceFromStop?.let { "${it}m" } ?: ""
                 val isExpanded = index == expandedIndex
@@ -121,18 +124,18 @@ fun StationArrivals(
 
                     AnimatedVisibility(visible = isExpanded) {
                         Column(modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)) {
-                            Text("Vehicle: ${journey.vehicleRef ?: "N/A"}", style = MaterialTheme.typography.bodySmall)
+                            Text(strings.vehicleRef(journey.vehicleRef ?: strings.notAvailable), style = MaterialTheme.typography.bodySmall)
                             call?.distanceFromStop?.let {
-                                Text("Distance: ${it}m", style = MaterialTheme.typography.bodySmall)
+                                Text(strings.distanceMeters(it), style = MaterialTheme.typography.bodySmall)
                             }
                             call?.expectedArrivalTime?.let {
-                                Text("Full arrival: $it", style = MaterialTheme.typography.bodySmall)
+                                Text(strings.fullArrival(it), style = MaterialTheme.typography.bodySmall)
                             }
                             val loc = journey.vehicleLocation
                             if (loc != null && onVehicleSelect != null) {
                                 Spacer(Modifier.height(4.dp))
                                 Button(onClick = { onVehicleSelect(loc.latitude, loc.longitude) }) {
-                                    Text("Show on map")
+                                    Text(strings.showOnMap)
                                 }
                             }
                         }
@@ -147,7 +150,7 @@ fun StationArrivals(
 
 data class ArrivalDisplay(val primary: String, val secondary: String? = null)
 
-fun formatArrivalTime(isoString: String?, tick: Long): ArrivalDisplay {
+fun formatArrivalTime(isoString: String?, tick: Long, strings: AppStrings): ArrivalDisplay {
     if (isoString == null) return ArrivalDisplay("—")
     return try {
         val arrival = ZonedDateTime.parse(isoString)
@@ -157,8 +160,8 @@ fun formatArrivalTime(isoString: String?, tick: Long): ArrivalDisplay {
         val timeStr = arrival.toLocalTime().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))
 
         when {
-            minutes <= 0 -> ArrivalDisplay("now", timeStr)
-            minutes <= 60 -> ArrivalDisplay("in ${minutes}min", timeStr)
+            minutes <= 0 -> ArrivalDisplay(strings.arrivalNow, timeStr)
+            minutes <= 60 -> ArrivalDisplay(strings.arrivalInMin(minutes), timeStr)
             else -> ArrivalDisplay(timeStr)
         }
     } catch (_: Exception) {

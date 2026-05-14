@@ -23,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.automatelinux.pt.data.model.StopResult
 import com.automatelinux.pt.ui.components.AutocompleteField
+import com.automatelinux.pt.util.LocalAppStrings
 import kotlinx.coroutines.delay
 
 @Composable
@@ -38,6 +39,7 @@ fun TransportControls(
     onSearchStops: suspend (String) -> List<StopResult>,
     modifier: Modifier = Modifier
 ) {
+    val strings = LocalAppStrings.current
     var stationText by remember(stationName) { mutableStateOf(stationName) }
     var agoText by remember { mutableStateOf("") }
     var tick by remember { mutableLongStateOf(0L) }
@@ -53,9 +55,9 @@ fun TransportControls(
         if (lastUpdated != null) {
             val seconds = (System.currentTimeMillis() - lastUpdated) / 1000
             agoText = when {
-                seconds < 5 -> "just now"
-                seconds < 60 -> "${seconds}s ago"
-                else -> "${seconds / 60}m ago"
+                seconds < 5 -> strings.justNow
+                seconds < 60 -> strings.secondsAgo(seconds)
+                else -> strings.minutesAgo(seconds / 60)
             }
         }
     }
@@ -64,7 +66,7 @@ fun TransportControls(
         AutocompleteField(
             value = stationText,
             onValueChange = { stationText = it },
-            label = "Station",
+            label = strings.station,
             onSearch = onSearchStops,
             onSelect = { stop ->
                 stationText = "${stop.stopName} (${stop.stopCode})"
@@ -89,7 +91,7 @@ fun TransportControls(
 
         if (lastUpdated != null && agoText.isNotEmpty()) {
             Text(
-                text = "Updated $agoText",
+                text = strings.updatedAgo(agoText),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 4.dp)
@@ -105,7 +107,7 @@ fun TransportControls(
             OutlinedTextField(
                 value = lineFilter,
                 onValueChange = onLineFilterChange,
-                label = { Text("Filter by line") },
+                label = { Text(strings.filterByLine) },
                 modifier = Modifier.weight(1f),
                 singleLine = true
             )
@@ -117,7 +119,7 @@ fun TransportControls(
                     checked = showVehicleMarkers,
                     onCheckedChange = onShowVehicleMarkersChange
                 )
-                Text("Vehicles", style = MaterialTheme.typography.bodySmall)
+                Text(strings.vehicles, style = MaterialTheme.typography.bodySmall)
             }
         }
     }

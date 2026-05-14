@@ -15,6 +15,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -22,9 +23,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.automatelinux.pt.ui.MainScreen
 import com.automatelinux.pt.ui.theme.PTTheme
+import com.automatelinux.pt.util.EnStrings
+import com.automatelinux.pt.util.HeStrings
+import com.automatelinux.pt.util.LocalAppStrings
 import com.automatelinux.pt.util.ServerConfig
 import com.automatelinux.pt.util.SettingsStore
 import dagger.hilt.android.AndroidEntryPoint
@@ -38,12 +44,24 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            PTTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    ServerCheckScreen(settingsStore)
+            var language by remember { mutableStateOf(settingsStore.language) }
+            val strings = if (language == "he") HeStrings else EnStrings
+            val layoutDirection = if (language == "he") LayoutDirection.Rtl else LayoutDirection.Ltr
+
+            CompositionLocalProvider(
+                LocalAppStrings provides strings,
+                LocalLayoutDirection provides layoutDirection,
+            ) {
+                PTTheme {
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        color = MaterialTheme.colorScheme.background
+                    ) {
+                        ServerCheckScreen(settingsStore) { newLang ->
+                            settingsStore.language = newLang
+                            language = newLang
+                        }
+                    }
                 }
             }
         }
@@ -51,7 +69,11 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun ServerCheckScreen(settingsStore: SettingsStore) {
+private fun ServerCheckScreen(
+    settingsStore: SettingsStore,
+    onLanguageChange: (String) -> Unit
+) {
+    val strings = LocalAppStrings.current
     var serverReady by remember { mutableStateOf(false) }
     var checking by remember { mutableStateOf(true) }
     var failedServer by remember { mutableStateOf<String?>(null) }
@@ -61,13 +83,13 @@ private fun ServerCheckScreen(settingsStore: SettingsStore) {
         if (server != null) {
             serverReady = true
         } else {
-            failedServer = "No PT server reachable"
+            failedServer = strings.noServerReachable
         }
         checking = false
     }
 
     if (serverReady) {
-        MainScreen(settingsStore = settingsStore)
+        MainScreen(settingsStore = settingsStore, onLanguageChange = onLanguageChange)
     } else {
         Box(
             modifier = Modifier.fillMaxSize(),
@@ -78,17 +100,17 @@ private fun ServerCheckScreen(settingsStore: SettingsStore) {
                     CircularProgressIndicator()
                     Spacer(Modifier.height(16.dp))
                     Text(
-                        "Connecting to PT server...",
+                        strings.connectingToServer,
                         color = MaterialTheme.colorScheme.onBackground
                     )
                 } else {
                     Text(
-                        failedServer ?: "Connection failed",
+                        failedServer ?: strings.connectionFailed,
                         color = MaterialTheme.colorScheme.error
                     )
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        "Servers tried: ${ServerConfig.servers.joinToString(", ")}",
+                        strings.serversTried(ServerConfig.servers.joinToString(", ")),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(horizontal = 32.dp)

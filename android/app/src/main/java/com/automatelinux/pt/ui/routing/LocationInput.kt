@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.automatelinux.pt.data.model.GeocodeSuggestion
 import com.automatelinux.pt.ui.components.AutocompleteField
+import com.automatelinux.pt.util.LocalAppStrings
 
 @Composable
 fun LocationInput(
@@ -31,6 +32,7 @@ fun LocationInput(
     onGpsClick: (() -> Unit)? = null,
     gpsLoading: Boolean = false
 ) {
+    val strings = LocalAppStrings.current
     var text by remember(value) { mutableStateOf(value?.name ?: "") }
     var programmatic by remember { mutableStateOf(false) }
 
@@ -78,7 +80,7 @@ fun LocationInput(
                     } else {
                         Icon(
                             Icons.Default.MyLocation,
-                            contentDescription = "Use current location",
+                            contentDescription = strings.useCurrentLocation,
                             tint = MaterialTheme.colorScheme.primary
                         )
                     }

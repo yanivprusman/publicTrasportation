@@ -15,6 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.automatelinux.pt.data.model.RouteResult
+import com.automatelinux.pt.util.LocalAppStrings
 
 @Composable
 fun RouteResults(
@@ -27,6 +28,8 @@ fun RouteResults(
     cardOpacity: Float = 0.6f,
     modifier: Modifier = Modifier
 ) {
+    val strings = LocalAppStrings.current
+
     Column(modifier = modifier) {
         when {
             loading -> {
@@ -39,7 +42,7 @@ fun RouteResults(
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         CircularProgressIndicator()
                         Spacer(Modifier.height(8.dp))
-                        Text("Searching routes...", style = MaterialTheme.typography.bodySmall)
+                        Text(strings.searchingRoutes, style = MaterialTheme.typography.bodySmall)
                     }
                 }
             }
@@ -58,7 +61,7 @@ fun RouteResults(
                     if (onRetry != null) {
                         Spacer(Modifier.height(8.dp))
                         Button(onClick = onRetry) {
-                            Text("Retry")
+                            Text(strings.retry)
                         }
                     }
                 }

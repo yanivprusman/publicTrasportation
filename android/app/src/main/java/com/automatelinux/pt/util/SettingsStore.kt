@@ -36,4 +36,8 @@ class SettingsStore @Inject constructor(
     var debugTo: String
         get() = prefs.getString("debug_to", "המסגר 51 תל אביב") ?: "המסגר 51 תל אביב"
         set(value) = prefs.edit().putString("debug_to", value).apply()
+
+    var language: String
+        get() = prefs.getString("language", "en") ?: "en"
+        set(value) = prefs.edit().putString("language", value).apply()
 }

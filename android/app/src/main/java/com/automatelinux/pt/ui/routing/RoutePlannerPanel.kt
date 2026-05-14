@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import com.automatelinux.pt.data.model.GeocodeSuggestion
 import com.automatelinux.pt.data.model.RouteLeg
 import com.automatelinux.pt.ui.viewmodel.RoutingState
+import com.automatelinux.pt.util.LocalAppStrings
 import java.time.ZonedDateTime
 
 @Composable
@@ -41,9 +42,11 @@ fun RoutePlannerPanel(
     cardOpacity: Float = 0.6f,
     modifier: Modifier = Modifier
 ) {
+    val strings = LocalAppStrings.current
+
     Column(modifier = modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
         LocationInput(
-            label = "From",
+            label = strings.from,
             value = state.origin,
             onSelect = { onOriginSelect(it) },
             onClear = { onOriginSelect(null) },
@@ -61,14 +64,14 @@ fun RoutePlannerPanel(
             IconButton(onClick = onSwap) {
                 Icon(
                     Icons.Default.SwapVert,
-                    contentDescription = "Swap origin and destination",
+                    contentDescription = strings.swapOriginDestination,
                     tint = MaterialTheme.colorScheme.primary
                 )
             }
         }
 
         LocationInput(
-            label = "To",
+            label = strings.to,
             value = state.destination,
             onSelect = { onDestinationSelect(it) },
             onClear = { onDestinationSelect(null) },
@@ -93,7 +96,7 @@ fun RoutePlannerPanel(
             enabled = state.origin != null && state.destination != null && !state.loading
         ) {
             Icon(Icons.Default.Search, contentDescription = null)
-            Text("  Search Routes", modifier = Modifier.padding(start = 4.dp))
+            Text("  ${strings.searchRoutes}", modifier = Modifier.padding(start = 4.dp))
         }
 
         Spacer(Modifier.height(8.dp))

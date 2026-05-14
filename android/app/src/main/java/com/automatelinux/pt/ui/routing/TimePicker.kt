@@ -22,6 +22,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.automatelinux.pt.util.LocalAppStrings
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
@@ -40,6 +41,7 @@ fun TimePickerSection(
     onArriveByChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val strings = LocalAppStrings.current
     var mode by remember { mutableStateOf(TimeMode.NOW) }
     var showDatePicker by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
@@ -58,7 +60,7 @@ fun TimePickerSection(
                     onTimeChange(null)
                     onArriveByChange(false)
                 },
-                label = { Text("Now") }
+                label = { Text(strings.now) }
             )
             FilterChip(
                 selected = mode == TimeMode.DEPART,
@@ -67,7 +69,7 @@ fun TimePickerSection(
                     onArriveByChange(false)
                     showDatePicker = true
                 },
-                label = { Text("Depart At") }
+                label = { Text(strings.departAt) }
             )
             FilterChip(
                 selected = mode == TimeMode.ARRIVE,
@@ -76,7 +78,7 @@ fun TimePickerSection(
                     onArriveByChange(true)
                     showDatePicker = true
                 },
-                label = { Text("Arrive By") }
+                label = { Text(strings.arriveBy) }
             )
         }
 
@@ -103,10 +105,10 @@ fun TimePickerSection(
                     }
                     showDatePicker = false
                     showTimePicker = true
-                }) { Text("Next") }
+                }) { Text(strings.next) }
             },
             dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) { Text("Cancel") }
+                TextButton(onClick = { showDatePicker = false }) { Text(strings.cancel) }
             }
         ) {
             DatePicker(state = datePickerState)
@@ -127,10 +129,10 @@ fun TimePickerSection(
                     val zdt = ZonedDateTime.of(selectedDate, selectedTime, ZoneId.systemDefault())
                     onTimeChange(zdt)
                     showTimePicker = false
-                }) { Text("OK") }
+                }) { Text(strings.ok) }
             },
             dismissButton = {
-                TextButton(onClick = { showTimePicker = false }) { Text("Cancel") }
+                TextButton(onClick = { showTimePicker = false }) { Text(strings.cancel) }
             },
             text = { M3TimePicker(state = timePickerState) }
         )

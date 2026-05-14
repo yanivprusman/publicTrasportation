@@ -99,6 +99,7 @@ import com.automatelinux.pt.ui.routing.DebugSettingsDialog
 import com.automatelinux.pt.ui.routing.RoutePlannerPanel
 import com.automatelinux.pt.ui.viewmodel.ArrivalsViewModel
 import com.automatelinux.pt.ui.viewmodel.RoutingViewModel
+import com.automatelinux.pt.util.LocalAppStrings
 import com.automatelinux.pt.util.SettingsStore
 import kotlinx.coroutines.launch
 import org.osmdroid.util.GeoPoint
@@ -110,9 +111,11 @@ enum class ActiveTab { ROUTE, ARRIVALS }
 @Composable
 fun MainScreen(
     settingsStore: SettingsStore,
+    onLanguageChange: (String) -> Unit,
     routingViewModel: RoutingViewModel = hiltViewModel(),
     arrivalsViewModel: ArrivalsViewModel = hiltViewModel()
 ) {
+    val strings = LocalAppStrings.current
     val routingState by routingViewModel.state.collectAsState()
     val arrivalsState by arrivalsViewModel.state.collectAsState()
     var activeTab by remember { mutableStateOf(ActiveTab.ROUTE) }
@@ -322,7 +325,7 @@ fun MainScreen(
                         )
                         Icon(
                             Icons.Default.BugReport,
-                            contentDescription = "Debug fill",
+                            contentDescription = strings.debugFill,
                             tint = if (routingState.loading) MaterialTheme.colorScheme.tertiary.copy(alpha = 0.38f)
                                    else MaterialTheme.colorScheme.tertiary,
                             modifier = Modifier
@@ -355,20 +358,20 @@ fun MainScreen(
                         FilterChip(
                             selected = activeTab == ActiveTab.ROUTE,
                             onClick = { activeTab = ActiveTab.ROUTE },
-                            label = { Text("Route Planner") },
+                            label = { Text(strings.routePlanner) },
                             modifier = Modifier.padding(end = 8.dp)
                         )
                         FilterChip(
                             selected = activeTab == ActiveTab.ARRIVALS,
                             onClick = { activeTab = ActiveTab.ARRIVALS },
-                            label = { Text("Station Arrivals") }
+                            label = { Text(strings.stationArrivals) }
                         )
                         Spacer(Modifier.weight(1f))
                         Box {
                             IconButton(onClick = { menuExpanded = true }) {
                                 Icon(
                                     Icons.Default.Settings,
-                                    contentDescription = "Settings",
+                                    contentDescription = strings.settings,
                                     modifier = Modifier.size(22.dp)
                                 )
                             }
@@ -379,12 +382,25 @@ fun MainScreen(
                                 DropdownMenuItem(
                                     text = {
                                         Text(
-                                            if (showOpacitySlider) "Hide Opacity Settings"
-                                            else "Opacity Settings"
+                                            if (showOpacitySlider) strings.hideOpacitySettings
+                                            else strings.opacitySettings
                                         )
                                     },
                                     onClick = {
                                         showOpacitySlider = !showOpacitySlider
+                                        menuExpanded = false
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            if (settingsStore.language == "he") "English"
+                                            else "עברית"
+                                        )
+                                    },
+                                    onClick = {
+                                        val newLang = if (settingsStore.language == "he") "en" else "he"
+                                        onLanguageChange(newLang)
                                         menuExpanded = false
                                     }
                                 )
@@ -530,7 +546,7 @@ fun MainScreen(
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Text(
-                                "Sheet",
+                                strings.sheet,
                                 style = MaterialTheme.typography.labelMedium,
                                 modifier = Modifier.width(40.dp)
                             )
@@ -551,7 +567,7 @@ fun MainScreen(
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Text(
-                                "Cards",
+                                strings.cards,
                                 style = MaterialTheme.typography.labelMedium,
                                 modifier = Modifier.width(40.dp)
                             )
@@ -601,7 +617,7 @@ fun MainScreen(
                         Icon(
                             if (dismissedBySwipeRight) Icons.AutoMirrored.Filled.KeyboardArrowLeft
                             else Icons.Default.KeyboardArrowUp,
-                            contentDescription = "Show panel",
+                            contentDescription = strings.showPanel,
                         )
                     }
                 }
@@ -643,7 +659,7 @@ fun MainScreen(
             ) {
                 Icon(
                     Icons.AutoMirrored.Filled.Chat,
-                    contentDescription = "Issue Clarifier",
+                    contentDescription = strings.issueClarifier,
                     modifier = Modifier.size(20.dp)
                 )
             }
