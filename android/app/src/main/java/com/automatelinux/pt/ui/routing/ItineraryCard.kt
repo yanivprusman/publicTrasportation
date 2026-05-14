@@ -112,13 +112,15 @@ fun ItineraryCard(
 }
 
 fun formatTime(isoString: String): String {
+    val localZone = java.time.ZoneId.systemDefault()
+    val fmt = java.time.format.DateTimeFormatter.ofPattern("HH:mm")
     return try {
         val zdt = java.time.ZonedDateTime.parse(isoString)
-        zdt.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))
+        zdt.withZoneSameInstant(localZone).format(fmt)
     } catch (_: Exception) {
         try {
             val odt = java.time.OffsetDateTime.parse(isoString)
-            odt.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))
+            odt.atZoneSameInstant(localZone).format(fmt)
         } catch (_: Exception) {
             isoString.substringAfter("T").take(5)
         }
