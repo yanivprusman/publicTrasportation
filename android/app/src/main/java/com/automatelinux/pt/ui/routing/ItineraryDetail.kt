@@ -21,6 +21,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -129,14 +131,16 @@ private fun LegDetail(leg: RouteLeg, onClick: (() -> Unit)? = null, onStopClick:
                 )
 
                 AnimatedVisibility(visible = showStops) {
+                    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
                     Column(
                         modifier = Modifier
                             .padding(start = 8.dp, top = 4.dp)
                             .drawBehind {
+                                val x = if (isRtl) size.width else 0f
                                 drawLine(
                                     color = TimelineLineColor,
-                                    start = Offset(0f, 0f),
-                                    end = Offset(0f, size.height),
+                                    start = Offset(x, 0f),
+                                    end = Offset(x, size.height),
                                     strokeWidth = 2.dp.toPx()
                                 )
                             }
