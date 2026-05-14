@@ -75,6 +75,9 @@ fun ItineraryCard(
                 )
                 Text(
                     text = if (itinerary.transfers == 0) strings.direct else strings.transferCount(itinerary.transfers),
+                    modifier = Modifier
+                        .background(Color(0xFF2A2A2A), RoundedCornerShape(4.dp))
+                        .padding(horizontal = 6.dp, vertical = 2.dp),
                     style = MaterialTheme.typography.bodySmall,
                     color = secondaryTextColor
                 )

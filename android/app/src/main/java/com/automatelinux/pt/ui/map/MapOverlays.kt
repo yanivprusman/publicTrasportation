@@ -93,7 +93,7 @@ fun RouteOverlay(
                         id = TAG_MARKER
                         position = stop
                         setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
-                        icon = createCircleDrawable(color, 8)
+                        icon = createCircleDrawable(Color.WHITE, 5, color, 2f)
                         setInfoWindow(null)
                     }
                     map.overlays.add(marker)

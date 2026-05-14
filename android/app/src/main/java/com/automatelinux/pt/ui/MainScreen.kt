@@ -446,6 +446,9 @@ fun MainScreen(
                                             mapView?.fitBounds(points)
                                         }
                                     },
+                                    onStopClick = { stop ->
+                                        mapView?.animateToPoint(GeoPoint(stop.lat, stop.lon), 17.0)
+                                    },
                                     onGeocode = { routingViewModel.geocode(it) },
                                     onGpsClick = onGpsClick,
                                     gpsLoading = gpsLoading,

@@ -21,19 +21,25 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.automatelinux.pt.data.model.Itinerary
+import com.automatelinux.pt.data.model.Place
 import com.automatelinux.pt.data.model.RouteLeg
 import com.automatelinux.pt.data.model.TransitMode
 import com.automatelinux.pt.ui.map.getModeColorWithRoute
 import com.automatelinux.pt.util.LocalAppStrings
 
+private val TimelineLineColor = Color(0xFF444444)
+
 @Composable
 fun ItineraryDetail(
     itinerary: Itinerary,
     onLegClick: ((RouteLeg) -> Unit)? = null,
+    onStopClick: ((Place) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val strings = LocalAppStrings.current
@@ -49,7 +55,7 @@ fun ItineraryDetail(
         Spacer(Modifier.height(8.dp))
 
         for ((index, leg) in itinerary.legs.withIndex()) {
-            LegDetail(leg = leg, onClick = onLegClick?.let { { it(leg) } })
+            LegDetail(leg = leg, onClick = onLegClick?.let { { it(leg) } }, onStopClick = onStopClick)
             if (index < itinerary.legs.lastIndex) {
                 HorizontalDivider(
                     modifier = Modifier.padding(vertical = 4.dp),
@@ -61,7 +67,7 @@ fun ItineraryDetail(
 }
 
 @Composable
-private fun LegDetail(leg: RouteLeg, onClick: (() -> Unit)? = null) {
+private fun LegDetail(leg: RouteLeg, onClick: (() -> Unit)? = null, onStopClick: ((Place) -> Unit)? = null) {
     val strings = LocalAppStrings.current
     var showStops by remember { mutableStateOf(false) }
     val color = Color(getModeColorWithRoute(leg.mode, leg.routeColor))
@@ -123,12 +129,29 @@ private fun LegDetail(leg: RouteLeg, onClick: (() -> Unit)? = null) {
                 )
 
                 AnimatedVisibility(visible = showStops) {
-                    Column(modifier = Modifier.padding(start = 8.dp)) {
+                    Column(
+                        modifier = Modifier
+                            .padding(start = 8.dp, top = 4.dp)
+                            .drawBehind {
+                                drawLine(
+                                    color = TimelineLineColor,
+                                    start = Offset(0f, 0f),
+                                    end = Offset(0f, size.height),
+                                    strokeWidth = 2.dp.toPx()
+                                )
+                            }
+                            .padding(start = 12.dp)
+                    ) {
                         for (stop in stops) {
                             Text(
-                                text = "· ${stop.name}",
+                                text = stop.name,
+                                modifier = if (onStopClick != null) Modifier
+                                    .clickable { onStopClick(stop) }
+                                    .padding(vertical = 2.dp)
+                                else Modifier.padding(vertical = 2.dp),
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = if (onStopClick != null) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
