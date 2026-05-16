@@ -257,7 +257,10 @@ fun MainScreen(
         // Map centering is handled by RouteOverlay's fitBounds
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    com.automatelinux.feedbacklib.ui.FeedbackOverlay(
+        modifier = Modifier.fillMaxSize(),
+        showFab = BuildConfig.FEEDBACK_ENABLED,
+    ) {
         BottomSheetScaffold(
             scaffoldState = scaffoldState,
             sheetPeekHeight = 280.dp,
@@ -531,10 +534,6 @@ fun MainScreen(
                     }
                 }
 
-                com.automatelinux.feedbacklib.ui.VersionSnackbar(
-                    modifier = Modifier.align(Alignment.TopCenter),
-                )
-
                 if (showOpacitySlider) {
                     Column(
                         modifier = Modifier
@@ -651,19 +650,5 @@ fun MainScreen(
             )
         }
 
-        if (BuildConfig.FEEDBACK_ENABLED) {
-            com.automatelinux.feedbacklib.ui.FeedbackFab(
-                onLongPress = {
-                    val intent = Intent().setClassName(
-                        context.packageName,
-                        "com.automatelinux.pt.ui.FeedbackChatActivity"
-                    )
-                    context.startActivity(intent)
-                },
-                modifier = Modifier
-                    .align(AbsoluteAlignment.BottomRight)
-                    .absolutePadding(bottom = 16.dp, right = 12.dp),
-            )
-        }
     }
 }
