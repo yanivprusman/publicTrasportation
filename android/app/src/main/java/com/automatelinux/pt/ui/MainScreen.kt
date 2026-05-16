@@ -652,8 +652,8 @@ fun MainScreen(
         }
 
         if (BuildConfig.FEEDBACK_ENABLED) {
-            SmallFloatingActionButton(
-                onClick = {
+            com.automatelinux.feedbacklib.ui.FeedbackFab(
+                onLongPress = {
                     val intent = Intent().setClassName(
                         context.packageName,
                         "com.automatelinux.pt.ui.FeedbackChatActivity"
@@ -662,17 +662,8 @@ fun MainScreen(
                 },
                 modifier = Modifier
                     .align(AbsoluteAlignment.BottomRight)
-                    .zIndex(Float.MAX_VALUE)
                     .absolutePadding(bottom = 16.dp, right = 12.dp),
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                elevation = FloatingActionButtonDefaults.elevation(2.dp),
-            ) {
-                Icon(
-                    Icons.AutoMirrored.Filled.Chat,
-                    contentDescription = strings.issueClarifier,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
+            )
         }
     }
 }
