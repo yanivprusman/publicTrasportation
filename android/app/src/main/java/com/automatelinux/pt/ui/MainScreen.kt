@@ -91,6 +91,8 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.automatelinux.feedbacklib.ui.DismissibleSheet
+import com.automatelinux.feedbacklib.ui.rememberDismissibleSheetState
 import com.automatelinux.pt.ui.arrivals.ArrivalsPanel
 import com.automatelinux.pt.ui.map.OsmMapView
 import com.automatelinux.pt.ui.map.OriginDestinationMarkers
@@ -128,9 +130,6 @@ fun MainScreen(
     val context = LocalContext.current
     val keyboardController = LocalSoftwareKeyboardController.current
 
-    val sheetOffsetX = remember { Animatable(0f) }
-    var dismissedBySwipeRight by remember { mutableStateOf(false) }
-    var wasExpandedWhenDismissed by remember { mutableStateOf(false) }
     val sheetScrollState = rememberScrollState()
     var sheetContentHeightPx by remember { mutableIntStateOf(0) }
     var menuExpanded by remember { mutableStateOf(false) }
@@ -195,13 +194,11 @@ fun MainScreen(
         }
     }
 
-    val bottomSheetState = rememberStandardBottomSheetState(
+    val sheetState = rememberDismissibleSheetState(
         initialValue = SheetValue.PartiallyExpanded,
-        skipHiddenState = false
+        skipHiddenState = false,
     )
-    val scaffoldState = rememberBottomSheetScaffoldState(
-        bottomSheetState = bottomSheetState
-    )
+    val bottomSheetState = sheetState.bottomSheetState
 
     val imeVisible = WindowInsets.isImeVisible
     var expandedByIme by remember { mutableStateOf(false) }
@@ -261,71 +258,17 @@ fun MainScreen(
         modifier = Modifier.fillMaxSize(),
         showFab = BuildConfig.FEEDBACK_ENABLED,
     ) {
-        BottomSheetScaffold(
-            scaffoldState = scaffoldState,
-            sheetPeekHeight = 280.dp,
-            sheetDragHandle = { },
+        DismissibleSheet(
+            state = sheetState,
+            peekHeight = 280.dp,
+            sheetOpacity = sheetOpacity,
             sheetContent = {
-                Box(
+                Column(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .fillMaxHeight()
-                        .onGloballyPositioned { sheetContentHeightPx = it.size.height }
-                        .graphicsLayer { translationX = sheetOffsetX.value }
-                        .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
-                        .background(MaterialTheme.colorScheme.surface.copy(alpha = sheetOpacity))
-                        .pointerInput(Unit) {
-                            val dismissThreshold = size.width * 0.4f
-                            awaitEachGesture {
-                                awaitFirstDown(pass = PointerEventPass.Initial)
-                                var cumX = 0f
-                                var cumY = 0f
-                                var claimed = false
-                                while (true) {
-                                    val event = awaitPointerEvent(pass = PointerEventPass.Initial)
-                                    val change = event.changes.firstOrNull() ?: break
-                                    if (!change.pressed) {
-                                        if (claimed) {
-                                            if (sheetOffsetX.value > dismissThreshold) {
-                                                dismissedBySwipeRight = true
-                                                wasExpandedWhenDismissed = bottomSheetState.currentValue == SheetValue.Expanded
-                                                scope.launch {
-                                                    sheetOffsetX.animateTo(size.width.toFloat())
-                                                    bottomSheetState.hide()
-                                                }
-                                            } else {
-                                                scope.launch { sheetOffsetX.animateTo(0f) }
-                                            }
-                                        }
-                                        break
-                                    }
-                                    val delta = change.positionChange()
-                                    cumX += delta.x
-                                    cumY += delta.y
-                                    if (!claimed) {
-                                        if (abs(cumX) > viewConfiguration.touchSlop ||
-                                            abs(cumY) > viewConfiguration.touchSlop
-                                        ) {
-                                            if (cumX > abs(cumY)) {
-                                                claimed = true
-                                                change.consume()
-                                            } else {
-                                                break
-                                            }
-                                        }
-                                    } else {
-                                        change.consume()
-                                        scope.launch {
-                                            sheetOffsetX.snapTo(
-                                                (sheetOffsetX.value + delta.x).coerceAtLeast(0f)
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
+                        .fillMaxSize()
+                        .onGloballyPositioned { sheetContentHeightPx = it.size.height },
+                    horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Box(modifier = Modifier.fillMaxWidth()) {
                         BottomSheetDefaults.DragHandle(
                             modifier = Modifier.align(Alignment.Center)
@@ -344,8 +287,8 @@ fun MainScreen(
                                     onClick = {
                                         routingViewModel.debugFill(
                                             autoSearch = settingsStore.debugAutoSearch,
-                                            from = settingsStore.debugFrom,
-                                            to = settingsStore.debugTo
+                                            origin = settingsStore.debugFrom,
+                                            destination = settingsStore.debugTo
                                         )
                                         if (settingsStore.debugExpandSheet) {
                                             scope.launch { bottomSheetState.expand() }
@@ -477,7 +420,6 @@ fun MainScreen(
                             }
                         }
                     }
-                    }
                     Box(
                         modifier = Modifier
                             .offset {
@@ -495,9 +437,7 @@ fun MainScreen(
                     )
                 }
             },
-            sheetContainerColor = Color.Transparent,
-            sheetShadowElevation = 0.dp
-        ) { _ ->
+            content = { _ ->
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -591,54 +531,16 @@ fun MainScreen(
                         }
                     }
                 }
-
-                if (dismissedBySwipeRight || bottomSheetState.currentValue == SheetValue.Hidden || bottomSheetState.targetValue == SheetValue.Hidden) {
-                    SmallFloatingActionButton(
-                        onClick = {
-                            if (dismissedBySwipeRight) {
-                                scope.launch {
-                                    if (wasExpandedWhenDismissed) bottomSheetState.expand()
-                                    else bottomSheetState.partialExpand()
-                                    sheetOffsetX.animateTo(0f)
-                                    dismissedBySwipeRight = false
-                                }
-                            } else {
-                                scope.launch { bottomSheetState.partialExpand() }
-                            }
-                        },
-                        modifier = Modifier
-                            .align(
-                                if (dismissedBySwipeRight && wasExpandedWhenDismissed) AbsoluteAlignment.CenterRight
-                                else if (dismissedBySwipeRight) AbsoluteAlignment.BottomRight
-                                else Alignment.BottomCenter
-                            )
-                            .absolutePadding(
-                                right = if (dismissedBySwipeRight) 4.dp else 0.dp,
-                                bottom = if (dismissedBySwipeRight && wasExpandedWhenDismissed) 0.dp
-                                         else if (dismissedBySwipeRight) 120.dp
-                                         else 16.dp
-                            ),
-                        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = sheetOpacity),
-                        elevation = FloatingActionButtonDefaults.elevation(4.dp),
-                    ) {
-                        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-                            Icon(
-                                if (dismissedBySwipeRight) Icons.AutoMirrored.Filled.KeyboardArrowLeft
-                                else Icons.Default.KeyboardArrowUp,
-                                contentDescription = strings.showPanel,
-                            )
-                        }
-                    }
-                }
             }
-        }
+            }
+        )
 
         if (showDebugSettings) {
             DebugSettingsDialog(
                 autoSearch = settingsStore.debugAutoSearch,
                 expandSheet = settingsStore.debugExpandSheet,
-                fromAddress = settingsStore.debugFrom,
-                toAddress = settingsStore.debugTo,
+                fromSuggestion = settingsStore.debugFrom,
+                toSuggestion = settingsStore.debugTo,
                 onConfirm = { autoSearch, expandSheet, from, to ->
                     settingsStore.debugAutoSearch = autoSearch
                     settingsStore.debugExpandSheet = expandSheet
@@ -646,7 +548,8 @@ fun MainScreen(
                     settingsStore.debugTo = to
                     showDebugSettings = false
                 },
-                onDismiss = { showDebugSettings = false }
+                onDismiss = { showDebugSettings = false },
+                onGeocode = { routingViewModel.geocode(it) }
             )
         }
 

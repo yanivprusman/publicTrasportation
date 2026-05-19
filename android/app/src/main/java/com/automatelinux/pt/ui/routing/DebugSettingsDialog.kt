@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -23,22 +22,24 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import com.automatelinux.pt.data.model.GeocodeSuggestion
 import com.automatelinux.pt.util.LocalAppStrings
 
 @Composable
 fun DebugSettingsDialog(
     autoSearch: Boolean,
     expandSheet: Boolean,
-    fromAddress: String,
-    toAddress: String,
-    onConfirm: (autoSearch: Boolean, expandSheet: Boolean, from: String, to: String) -> Unit,
-    onDismiss: () -> Unit
+    fromSuggestion: GeocodeSuggestion,
+    toSuggestion: GeocodeSuggestion,
+    onConfirm: (autoSearch: Boolean, expandSheet: Boolean, from: GeocodeSuggestion, to: GeocodeSuggestion) -> Unit,
+    onDismiss: () -> Unit,
+    onGeocode: suspend (String) -> List<GeocodeSuggestion>
 ) {
     val strings = LocalAppStrings.current
     var localAutoSearch by remember { mutableStateOf(autoSearch) }
     var localExpandSheet by remember { mutableStateOf(expandSheet) }
-    var localFrom by remember { mutableStateOf(fromAddress) }
-    var localTo by remember { mutableStateOf(toAddress) }
+    var localFrom by remember { mutableStateOf(fromSuggestion) }
+    var localTo by remember { mutableStateOf(toSuggestion) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -52,19 +53,21 @@ fun DebugSettingsDialog(
                 )
                 Spacer(Modifier.height(12.dp))
                 CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                    OutlinedTextField(
+                    LocationInput(
+                        label = strings.from,
                         value = localFrom,
-                        onValueChange = { localFrom = it },
-                        label = { Text(strings.from) },
-                        singleLine = true,
+                        onSelect = { localFrom = it },
+                        onClear = { },
+                        onGeocode = onGeocode,
                         modifier = Modifier.fillMaxWidth()
                     )
                     Spacer(Modifier.height(8.dp))
-                    OutlinedTextField(
+                    LocationInput(
+                        label = strings.to,
                         value = localTo,
-                        onValueChange = { localTo = it },
-                        label = { Text(strings.to) },
-                        singleLine = true,
+                        onSelect = { localTo = it },
+                        onClear = { },
+                        onGeocode = onGeocode,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
