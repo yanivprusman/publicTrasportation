@@ -314,7 +314,14 @@ fun MainScreen(
         val hasPermission = ContextCompat.checkSelfPermission(
             context, Manifest.permission.ACCESS_FINE_LOCATION
         ) == PackageManager.PERMISSION_GRANTED
-        if (hasPermission && locationOverlay == null) {
+        if (hasPermission) {
+            // Remove any previous location overlay
+            locationOverlay?.let { old ->
+                old.disableMyLocation()
+                map.overlays.remove(old)
+            }
+            map.overlays.removeAll { it is MyLocationNewOverlay }
+
             val provider = FusedLocationOverlayProvider(fusedLocationClient)
             val overlay = MyLocationNewOverlay(provider, map)
             val density = map.resources.displayMetrics.density
