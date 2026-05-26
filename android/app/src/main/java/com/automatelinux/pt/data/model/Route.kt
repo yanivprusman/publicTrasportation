@@ -43,7 +43,29 @@ data class Itinerary(
     val endTime: String,
     val transfers: Int,
     val legs: List<RouteLeg>
-)
+) {
+    val walkDuration: Long
+        get() = legs.filter { it.mode == TransitMode.WALK }.sumOf { it.duration }
+
+    fun estimateFare(): Double {
+        var fare = 0.0
+        for (leg in legs) {
+            when (leg.mode) {
+                TransitMode.BUS -> fare += 5.50
+                TransitMode.TRAM -> fare += 5.50
+                TransitMode.SUBWAY -> fare += 5.50
+                TransitMode.RAIL -> fare += 15.0
+                TransitMode.FERRY -> fare += 25.0
+                TransitMode.WALK -> {}
+            }
+        }
+        return fare
+    }
+}
+
+enum class RouteSortMode {
+    FASTEST, FEWER_TRANSFERS, LESS_WALKING
+}
 
 data class RouteResult(
     val itineraries: List<Itinerary>

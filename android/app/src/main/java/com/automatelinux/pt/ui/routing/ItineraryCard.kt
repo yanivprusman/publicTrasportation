@@ -73,6 +73,17 @@ fun ItineraryCard(
                     fontWeight = FontWeight.Bold,
                     color = textColor
                 )
+                val fare = itinerary.estimateFare()
+                if (fare > 0) {
+                    Text(
+                        text = strings.fareEstimate("₪${String.format("%.0f", fare)}"),
+                        modifier = Modifier
+                            .background(Color(0xFF1B5E20).copy(alpha = 0.3f), RoundedCornerShape(4.dp))
+                            .padding(horizontal = 6.dp, vertical = 2.dp),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFF81C784)
+                    )
+                }
                 Text(
                     text = if (itinerary.transfers == 0) strings.direct else strings.transferCount(itinerary.transfers),
                     modifier = Modifier

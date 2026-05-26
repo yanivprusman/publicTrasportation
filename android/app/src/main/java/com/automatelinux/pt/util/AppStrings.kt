@@ -72,6 +72,12 @@ data class AppStrings(
     val notAvailable: String,
     val nextArrival: String,
     val followMyLocation: String,
+    val earlier: String,
+    val later: String,
+    val fastest: String,
+    val fewerTransfers: String,
+    val lessWalking: String,
+    val fareEstimate: (String) -> String,
 )
 
 val EnStrings = AppStrings(
@@ -151,6 +157,12 @@ val EnStrings = AppStrings(
     notAvailable = "N/A",
     nextArrival = "Next Arrival",
     followMyLocation = "Follow my location",
+    earlier = "Earlier",
+    later = "Later",
+    fastest = "Fastest",
+    fewerTransfers = "Fewer transfers",
+    lessWalking = "Less walking",
+    fareEstimate = { amount -> "~$amount" },
 )
 
 val HeStrings = AppStrings(
@@ -230,6 +242,12 @@ val HeStrings = AppStrings(
     notAvailable = "לא זמין",
     nextArrival = "הגעה הבאה",
     followMyLocation = "עקוב אחרי המיקום שלי",
+    earlier = "מוקדם יותר",
+    later = "מאוחר יותר",
+    fastest = "המהיר ביותר",
+    fewerTransfers = "פחות החלפות",
+    lessWalking = "פחות הליכה",
+    fareEstimate = { amount -> "~$amount" },
 )
 
 val LocalAppStrings = compositionLocalOf { EnStrings }

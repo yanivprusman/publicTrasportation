@@ -6,6 +6,7 @@ import com.automatelinux.pt.data.api.PtApi
 import com.automatelinux.pt.data.model.GeocodeSuggestion
 import com.automatelinux.pt.data.model.Itinerary
 import com.automatelinux.pt.data.model.RouteResult
+import com.automatelinux.pt.data.model.RouteSortMode
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -23,10 +24,21 @@ data class RoutingState(
     val results: RouteResult? = null,
     val selectedIndex: Int = 0,
     val loading: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    val sortMode: RouteSortMode = RouteSortMode.FASTEST
 ) {
+    val sortedItineraries: List<Itinerary>
+        get() {
+            val itineraries = results?.itineraries ?: return emptyList()
+            return when (sortMode) {
+                RouteSortMode.FASTEST -> itineraries.sortedBy { it.duration }
+                RouteSortMode.FEWER_TRANSFERS -> itineraries.sortedBy { it.transfers }
+                RouteSortMode.LESS_WALKING -> itineraries.sortedBy { it.walkDuration }
+            }
+        }
+
     val selectedItinerary: Itinerary?
-        get() = results?.itineraries?.getOrNull(selectedIndex)
+        get() = sortedItineraries.getOrNull(selectedIndex)
 }
 
 @HiltViewModel
@@ -55,6 +67,42 @@ class RoutingViewModel @Inject constructor(
 
     fun selectItinerary(index: Int) {
         _state.value = _state.value.copy(selectedIndex = index)
+    }
+
+    fun setSortMode(mode: RouteSortMode) {
+        _state.value = _state.value.copy(sortMode = mode, selectedIndex = 0)
+    }
+
+    fun searchEarlier() {
+        val s = _state.value
+        val earliest = s.results?.itineraries?.minByOrNull { it.startTime }?.startTime
+        if (earliest != null) {
+            try {
+                val t = ZonedDateTime.parse(earliest).minusMinutes(30)
+                _state.value = _state.value.copy(departureTime = t, arriveBy = false)
+                search()
+            } catch (_: Exception) { search() }
+        } else {
+            val t = (s.departureTime ?: ZonedDateTime.now()).minusMinutes(30)
+            _state.value = _state.value.copy(departureTime = t, arriveBy = false)
+            search()
+        }
+    }
+
+    fun searchLater() {
+        val s = _state.value
+        val latest = s.results?.itineraries?.maxByOrNull { it.startTime }?.startTime
+        if (latest != null) {
+            try {
+                val t = ZonedDateTime.parse(latest).plusMinutes(5)
+                _state.value = _state.value.copy(departureTime = t, arriveBy = false)
+                search()
+            } catch (_: Exception) { search() }
+        } else {
+            val t = (s.departureTime ?: ZonedDateTime.now()).plusMinutes(30)
+            _state.value = _state.value.copy(departureTime = t, arriveBy = false)
+            search()
+        }
     }
 
     fun swapOriginDestination() {

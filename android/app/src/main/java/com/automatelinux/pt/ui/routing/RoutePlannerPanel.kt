@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import com.automatelinux.pt.data.model.GeocodeSuggestion
 import com.automatelinux.pt.data.model.Place
 import com.automatelinux.pt.data.model.RouteLeg
+import com.automatelinux.pt.data.model.RouteSortMode
 import com.automatelinux.pt.ui.components.PreSuggestion
 import com.automatelinux.pt.ui.viewmodel.RoutingState
 import com.automatelinux.pt.util.LocalAppStrings
@@ -45,6 +46,10 @@ fun RoutePlannerPanel(
     cardOpacity: Float = 0.6f,
     preSuggestions: List<PreSuggestion> = emptyList(),
     onLongPressSuggestion: ((GeocodeSuggestion) -> Unit)? = null,
+    sortMode: RouteSortMode = RouteSortMode.FASTEST,
+    onSortChange: ((RouteSortMode) -> Unit)? = null,
+    onEarlier: (() -> Unit)? = null,
+    onLater: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val strings = LocalAppStrings.current
@@ -111,12 +116,16 @@ fun RoutePlannerPanel(
         Spacer(Modifier.height(8.dp))
 
         RouteResults(
-            results = state.results,
+            sortedItineraries = state.sortedItineraries,
             selectedIndex = state.selectedIndex,
             onSelect = onSelectItinerary,
             loading = state.loading,
             error = state.error,
             onRetry = onSearch,
+            sortMode = sortMode,
+            onSortChange = if (state.results != null && state.results.itineraries.isNotEmpty()) onSortChange else null,
+            onEarlier = if (state.results != null && state.results.itineraries.isNotEmpty()) onEarlier else null,
+            onLater = if (state.results != null && state.results.itineraries.isNotEmpty()) onLater else null,
             cardOpacity = cardOpacity
         )
 

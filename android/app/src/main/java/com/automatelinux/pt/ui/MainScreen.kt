@@ -501,7 +501,11 @@ fun MainScreen(
                                     preSuggestions = preSuggestions,
                                     onLongPressSuggestion = { suggestion ->
                                         savePlaceTarget = suggestion
-                                    }
+                                    },
+                                    sortMode = routingState.sortMode,
+                                    onSortChange = { routingViewModel.setSortMode(it) },
+                                    onEarlier = { routingViewModel.searchEarlier() },
+                                    onLater = { routingViewModel.searchLater() }
                                 )
                             }
 
