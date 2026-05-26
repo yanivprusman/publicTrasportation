@@ -126,6 +126,8 @@ import com.google.android.gms.location.LocationResult
 import kotlinx.coroutines.launch
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
+import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
+import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 
 enum class ActiveTab { ROUTE, ARRIVALS, LINES }
 
@@ -158,6 +160,7 @@ fun MainScreen(
     var recentSearchesVersion by remember { mutableIntStateOf(0) }
 
     var followingLocation by remember { mutableStateOf(false) }
+    var locationOverlay by remember { mutableStateOf<MyLocationNewOverlay?>(null) }
     var nearbyStops by remember { mutableStateOf<List<StopResult>>(emptyList()) }
     var currentMapZoom by remember { mutableStateOf(13.0) }
     var currentMapCenter by remember { mutableStateOf(GeoPoint(31.77, 35.21)) }
@@ -317,12 +320,21 @@ fun MainScreen(
         }
     }
 
-    DisposableEffect(followingLocation) {
-        if (followingLocation) {
+    DisposableEffect(followingLocation, mapView) {
+        val map = mapView
+        if (followingLocation && map != null) {
             val hasPermission = ContextCompat.checkSelfPermission(
                 context, Manifest.permission.ACCESS_FINE_LOCATION
             ) == PackageManager.PERMISSION_GRANTED
             if (hasPermission) {
+                val overlay = locationOverlay ?: MyLocationNewOverlay(
+                    GpsMyLocationProvider(context), map
+                ).also {
+                    it.enableMyLocation()
+                    map.overlays.add(0, it)
+                    locationOverlay = it
+                }
+                overlay.enableFollowLocation()
                 val request = LocationRequest.Builder(
                     Priority.PRIORITY_HIGH_ACCURACY, 5000L
                 ).setMinUpdateIntervalMillis(2000L).build()
@@ -334,6 +346,8 @@ fun MainScreen(
             } else {
                 followingLocation = false
             }
+        } else {
+            locationOverlay?.disableFollowLocation()
         }
         onDispose {
             fusedLocationClient.removeLocationUpdates(locationCallback)
