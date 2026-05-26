@@ -306,19 +306,25 @@ fun MainScreen(
         }
     }
 
-    DisposableEffect(mapView) {
+    var locationIconStyle by remember { mutableStateOf(settingsStore.locationIconStyle) }
+
+    DisposableEffect(mapView, locationIconStyle) {
         val map = mapView ?: return@DisposableEffect onDispose {}
         val hasPermission = ContextCompat.checkSelfPermission(
             context, Manifest.permission.ACCESS_FINE_LOCATION
         ) == PackageManager.PERMISSION_GRANTED
         if (hasPermission) {
+            map.overlays.filterIsInstance<MyLocationNewOverlay>().forEach { it.disableMyLocation() }
+            map.overlays.removeAll { it is MyLocationNewOverlay }
             val overlay = MyLocationNewOverlay(map)
-            val dot = GpsLocationOverlay.createBlueDotBitmap(map.resources.displayMetrics.density)
-            overlay.setPersonIcon(dot)
-            overlay.setPersonHotspot(dot.width / 2f, dot.height / 2f)
-            overlay.setDirectionIcon(dot)
-            overlay.setDirectionAnchor(0.5f, 0.5f)
-            overlay.isDrawAccuracyEnabled = false
+            if (locationIconStyle == "dot") {
+                val dot = GpsLocationOverlay.createBlueDotBitmap(map.resources.displayMetrics.density)
+                overlay.setPersonIcon(dot)
+                overlay.setPersonHotspot(dot.width / 2f, dot.height / 2f)
+                overlay.setDirectionIcon(dot)
+                overlay.setDirectionAnchor(0.5f, 0.5f)
+                overlay.isDrawAccuracyEnabled = false
+            }
             overlay.enableMyLocation()
             map.overlays.add(overlay)
             map.invalidate()
@@ -909,6 +915,7 @@ fun MainScreen(
                     settingsStore.debugAutoSearch = autoSearch
                     settingsStore.debugExpandSheet = expandSheet
                     settingsStore.locationIconStyle = iconStyle
+                    locationIconStyle = iconStyle
                     settingsStore.debugFrom = from
                     settingsStore.debugTo = to
                     showDebugSettings = false

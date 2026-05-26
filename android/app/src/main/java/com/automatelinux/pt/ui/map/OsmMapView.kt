@@ -1,6 +1,7 @@
 package com.automatelinux.pt.ui.map
 
 import android.view.MotionEvent
+import java.lang.ref.WeakReference
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -22,6 +23,16 @@ import org.osmdroid.util.BoundingBox
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.MapEventsOverlay
+
+object MapZoomHandler {
+    private var mapRef: WeakReference<MapView>? = null
+
+    fun register(map: MapView) { mapRef = WeakReference(map) }
+    fun clear() { mapRef = null }
+
+    fun zoomIn() { mapRef?.get()?.controller?.zoomIn() }
+    fun zoomOut() { mapRef?.get()?.controller?.zoomOut() }
+}
 
 @Composable
 fun OsmMapView(
@@ -95,6 +106,7 @@ fun OsmMapView(
                 })
 
                 mapView = this
+                MapZoomHandler.register(this)
                 onMapReady(this)
             }
         },

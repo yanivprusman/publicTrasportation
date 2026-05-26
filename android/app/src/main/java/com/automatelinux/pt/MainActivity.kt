@@ -1,6 +1,7 @@
 package com.automatelinux.pt
 
 import android.os.Bundle
+import android.view.KeyEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -33,6 +34,7 @@ import com.automatelinux.pt.util.HeStrings
 import com.automatelinux.pt.util.LocalAppStrings
 import com.automatelinux.pt.util.ServerConfig
 import com.automatelinux.pt.util.SettingsStore
+import com.automatelinux.pt.ui.map.MapZoomHandler
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -40,9 +42,25 @@ import javax.inject.Inject
 class MainActivity : ComponentActivity() {
     @Inject lateinit var settingsStore: SettingsStore
 
+    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        when (keyCode) {
+            KeyEvent.KEYCODE_PLUS, KeyEvent.KEYCODE_EQUALS,
+            KeyEvent.KEYCODE_VOLUME_UP -> {
+                MapZoomHandler.zoomIn()
+                return true
+            }
+            KeyEvent.KEYCODE_MINUS, KeyEvent.KEYCODE_VOLUME_DOWN -> {
+                MapZoomHandler.zoomOut()
+                return true
+            }
+        }
+        return super.onKeyDown(keyCode, event)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        MapZoomHandler.clear()
         setContent {
             var language by remember { mutableStateOf(settingsStore.language) }
             val strings = if (language == "he") HeStrings else EnStrings
