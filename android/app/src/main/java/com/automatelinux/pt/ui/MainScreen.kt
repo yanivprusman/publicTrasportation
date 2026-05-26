@@ -126,8 +126,7 @@ import com.google.android.gms.location.LocationResult
 import kotlinx.coroutines.launch
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
-import org.osmdroid.views.overlay.mylocation.IMyLocationConsumer
-import org.osmdroid.views.overlay.mylocation.IMyLocationProvider
+import com.automatelinux.pt.ui.map.FusedLocationOverlayProvider
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 
 enum class ActiveTab { ROUTE, ARRIVALS, LINES }
@@ -328,46 +327,36 @@ fun MainScreen(
                 context, Manifest.permission.ACCESS_FINE_LOCATION
             ) == PackageManager.PERMISSION_GRANTED
             if (hasPermission) {
-                val overlay = locationOverlay ?: run {
-                    val provider = object : IMyLocationProvider {
-                        private var consumer: IMyLocationConsumer? = null
-                        private var lastLoc: android.location.Location? = null
-                        private val fusedCallback = object : LocationCallback() {
-                            override fun onLocationResult(result: LocationResult) {
-                                val loc = result.lastLocation ?: return
-                                lastLoc = loc
-                                consumer?.onLocationChanged(loc, this@run)
-                            }
+                if (locationOverlay == null) {
+                    val provider = FusedLocationOverlayProvider(fusedLocationClient)
+                    val newOverlay = MyLocationNewOverlay(provider, map)
+                    if (settingsStore.locationIconStyle == "dot") {
+                        val density = map.resources.displayMetrics.density
+                        val dotSize = (24 * density).toInt()
+                        val dotBitmap = android.graphics.Bitmap.createBitmap(dotSize, dotSize, android.graphics.Bitmap.Config.ARGB_8888)
+                        val canvas = android.graphics.Canvas(dotBitmap)
+                        val cx = dotSize / 2f
+                        val cy = dotSize / 2f
+                        val radius = dotSize / 2f - 2 * density
+                        val borderPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+                            color = android.graphics.Color.WHITE
+                            style = android.graphics.Paint.Style.FILL
                         }
-                        override fun startLocationProvider(c: IMyLocationConsumer?): Boolean {
-                            consumer = c
-                            val req = LocationRequest.Builder(
-                                Priority.PRIORITY_HIGH_ACCURACY, 3000L
-                            ).setMinUpdateIntervalMillis(1500L).build()
-                            try {
-                                fusedLocationClient.requestLocationUpdates(req, fusedCallback, null)
-                                fusedLocationClient.lastLocation.addOnSuccessListener { loc ->
-                                    if (loc != null) {
-                                        lastLoc = loc
-                                        consumer?.onLocationChanged(loc, this)
-                                    }
-                                }
-                            } catch (_: SecurityException) {}
-                            return true
+                        canvas.drawCircle(cx, cy, radius + 2 * density, borderPaint)
+                        val corePaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+                            color = android.graphics.Color.parseColor("#4285F4")
+                            style = android.graphics.Paint.Style.FILL
                         }
-                        override fun stopLocationProvider() {
-                            fusedLocationClient.removeLocationUpdates(fusedCallback)
-                            consumer = null
-                        }
-                        override fun getLastKnownLocation() = lastLoc
-                        override fun destroy() { stopLocationProvider() }
+                        canvas.drawCircle(cx, cy, radius, corePaint)
+                        newOverlay.setPersonIcon(dotBitmap)
+                        newOverlay.setDirectionIcon(dotBitmap)
+                        newOverlay.setPersonHotspot(cx, cy)
                     }
-                    MyLocationNewOverlay(provider, map).also {
-                        it.enableMyLocation()
-                        map.overlays.add(0, it)
-                        locationOverlay = it
-                    }
+                    newOverlay.enableMyLocation()
+                    map.overlays.add(0, newOverlay)
+                    locationOverlay = newOverlay
                 }
+                val overlay = locationOverlay!!
                 overlay.enableFollowLocation()
                 val request = LocationRequest.Builder(
                     Priority.PRIORITY_HIGH_ACCURACY, 5000L
@@ -957,13 +946,20 @@ fun MainScreen(
             DebugSettingsDialog(
                 autoSearch = settingsStore.debugAutoSearch,
                 expandSheet = settingsStore.debugExpandSheet,
+                locationIconStyle = settingsStore.locationIconStyle,
                 fromSuggestion = settingsStore.debugFrom,
                 toSuggestion = settingsStore.debugTo,
-                onConfirm = { autoSearch, expandSheet, from, to ->
+                onConfirm = { autoSearch, expandSheet, iconStyle, from, to ->
                     settingsStore.debugAutoSearch = autoSearch
                     settingsStore.debugExpandSheet = expandSheet
+                    settingsStore.locationIconStyle = iconStyle
                     settingsStore.debugFrom = from
                     settingsStore.debugTo = to
+                    locationOverlay?.let { overlay ->
+                        mapView?.overlays?.remove(overlay)
+                        overlay.disableMyLocation()
+                    }
+                    locationOverlay = null
                     showDebugSettings = false
                 },
                 onDismiss = { showDebugSettings = false },

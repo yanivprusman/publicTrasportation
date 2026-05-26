@@ -56,6 +56,10 @@ class SettingsStore @Inject constructor(
             .putFloat("debug_to_lon", value.lon.toFloat())
             .apply()
 
+    var locationIconStyle: String
+        get() = prefs.getString("location_icon_style", "dot") ?: "dot"
+        set(value) = prefs.edit().putString("location_icon_style", value).apply()
+
     var language: String
         get() = prefs.getString("language", "en") ?: "en"
         set(value) = prefs.edit().putString("language", value).apply()

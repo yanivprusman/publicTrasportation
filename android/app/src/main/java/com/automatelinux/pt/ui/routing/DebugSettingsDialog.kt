@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -29,15 +30,17 @@ import com.automatelinux.pt.util.LocalAppStrings
 fun DebugSettingsDialog(
     autoSearch: Boolean,
     expandSheet: Boolean,
+    locationIconStyle: String,
     fromSuggestion: GeocodeSuggestion,
     toSuggestion: GeocodeSuggestion,
-    onConfirm: (autoSearch: Boolean, expandSheet: Boolean, from: GeocodeSuggestion, to: GeocodeSuggestion) -> Unit,
+    onConfirm: (autoSearch: Boolean, expandSheet: Boolean, locationIconStyle: String, from: GeocodeSuggestion, to: GeocodeSuggestion) -> Unit,
     onDismiss: () -> Unit,
     onGeocode: suspend (String) -> List<GeocodeSuggestion>
 ) {
     val strings = LocalAppStrings.current
     var localAutoSearch by remember { mutableStateOf(autoSearch) }
     var localExpandSheet by remember { mutableStateOf(expandSheet) }
+    var localLocationIcon by remember { mutableStateOf(locationIconStyle) }
     var localFrom by remember { mutableStateOf(fromSuggestion) }
     var localTo by remember { mutableStateOf(toSuggestion) }
 
@@ -98,10 +101,24 @@ fun DebugSettingsDialog(
                         modifier = Modifier.padding(start = 4.dp)
                     )
                 }
+                Spacer(Modifier.height(8.dp))
+                Text("Location icon", style = MaterialTheme.typography.bodyMedium)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    RadioButton(
+                        selected = localLocationIcon == "dot",
+                        onClick = { localLocationIcon = "dot" }
+                    )
+                    Text("Blue dot", modifier = Modifier.padding(end = 16.dp))
+                    RadioButton(
+                        selected = localLocationIcon == "person",
+                        onClick = { localLocationIcon = "person" }
+                    )
+                    Text("Person")
+                }
             }
         },
         confirmButton = {
-            TextButton(onClick = { onConfirm(localAutoSearch, localExpandSheet, localFrom, localTo) }) {
+            TextButton(onClick = { onConfirm(localAutoSearch, localExpandSheet, localLocationIcon, localFrom, localTo) }) {
                 Text(strings.save)
             }
         },
