@@ -514,6 +514,20 @@ fun MainScreen(
                                 DropdownMenuItem(
                                     text = {
                                         Text(
+                                            if (locationIconStyle == "dot") strings.locationIconPerson
+                                            else strings.locationIconDot
+                                        )
+                                    },
+                                    onClick = {
+                                        val newStyle = if (locationIconStyle == "dot") "person" else "dot"
+                                        settingsStore.locationIconStyle = newStyle
+                                        locationIconStyle = newStyle
+                                        menuExpanded = false
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
                                             if (settingsStore.language == "he") "English"
                                             else "עברית"
                                         )
