@@ -328,6 +328,49 @@ fun StopMarkersOverlay(
 }
 
 @Composable
+fun LineShapeOverlay(
+    map: MapView,
+    directions: Map<String, List<List<Double>>>
+) {
+    LaunchedEffect(directions) {
+        map.overlays.removeAll { (it as? Polyline)?.id == "line_shape" }
+
+        if (directions.isNotEmpty()) {
+            val allPoints = mutableListOf<GeoPoint>()
+            val colors = listOf(
+                Color.parseColor("#2196F3"),
+                Color.parseColor("#FF5722")
+            )
+            var colorIdx = 0
+            for ((_, points) in directions) {
+                val geoPoints = points.mapNotNull { coord ->
+                    if (coord.size >= 2) GeoPoint(coord[0], coord[1]) else null
+                }
+                if (geoPoints.isEmpty()) continue
+                allPoints.addAll(geoPoints)
+
+                val polyline = Polyline(map).apply {
+                    id = "line_shape"
+                    setPoints(geoPoints)
+                    outlinePaint.color = colors[colorIdx % colors.size]
+                    outlinePaint.strokeWidth = 6f
+                    outlinePaint.isAntiAlias = true
+                    outlinePaint.strokeCap = Paint.Cap.ROUND
+                }
+                map.overlays.add(polyline)
+                colorIdx++
+            }
+
+            if (allPoints.isNotEmpty()) {
+                map.fitBounds(allPoints)
+            }
+        }
+
+        map.invalidate()
+    }
+}
+
+@Composable
 fun TrackedBusOverlay(
     map: MapView,
     marker: VehicleMarker?

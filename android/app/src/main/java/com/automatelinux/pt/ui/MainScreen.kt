@@ -105,6 +105,9 @@ import com.automatelinux.pt.ui.map.OsmMapView
 import com.automatelinux.pt.ui.map.OriginDestinationMarkers
 import com.automatelinux.pt.ui.map.RouteOverlay
 import com.automatelinux.pt.ui.map.StopMarkersOverlay
+import com.automatelinux.pt.ui.lines.LinesBrowserPanel
+import com.automatelinux.pt.ui.lines.LineShapeData
+import com.automatelinux.pt.ui.map.LineShapeOverlay
 import com.automatelinux.pt.ui.map.TrackedBusOverlay
 import com.automatelinux.pt.ui.map.VehicleMarkerOverlay
 import com.automatelinux.pt.ui.map.animateToPoint
@@ -124,7 +127,7 @@ import kotlinx.coroutines.launch
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 
-enum class ActiveTab { ROUTE, ARRIVALS }
+enum class ActiveTab { ROUTE, ARRIVALS, LINES }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
@@ -162,6 +165,8 @@ fun MainScreen(
     var favoriteStations by remember { mutableStateOf(settingsStore.getFavoriteStations()) }
     var reminderLegIndex by remember { mutableStateOf<Int?>(null) }
     var reminderJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+    var selectedLine by remember { mutableStateOf<String?>(null) }
+    var lineShapeData by remember { mutableStateOf(LineShapeData()) }
 
     val preSuggestions = remember(recentSearchesVersion) {
         buildList {
@@ -311,6 +316,7 @@ fun MainScreen(
         com.automatelinux.pt.util.ScreenTracker.currentScreen = when (activeTab) {
             ActiveTab.ROUTE -> "Route Planner"
             ActiveTab.ARRIVALS -> "Station Arrivals"
+            ActiveTab.LINES -> "Lines"
         }
     }
 
@@ -407,6 +413,12 @@ fun MainScreen(
                             selected = activeTab == ActiveTab.ARRIVALS,
                             onClick = { activeTab = ActiveTab.ARRIVALS },
                             label = { Text(strings.stationArrivals) }
+                        )
+                        FilterChip(
+                            selected = activeTab == ActiveTab.LINES,
+                            onClick = { activeTab = ActiveTab.LINES },
+                            label = { Text(strings.linesBrowser) },
+                            modifier = Modifier.padding(start = 8.dp)
                         )
                         Spacer(Modifier.weight(1f))
                         Box {
@@ -570,6 +582,26 @@ fun MainScreen(
                                 )
                             }
 
+                            ActiveTab.LINES -> {
+                                LinesBrowserPanel(
+                                    selectedLine = selectedLine,
+                                    lineShapeData = lineShapeData,
+                                    onSelectLine = { line ->
+                                        selectedLine = line
+                                        lineShapeData = LineShapeData(loading = true)
+                                        scope.launch {
+                                            try {
+                                                val shape = routingViewModel.getLineShape(line)
+                                                lineShapeData = LineShapeData(directions = shape)
+                                            } catch (e: Exception) {
+                                                lineShapeData = LineShapeData(error = e.message ?: "Failed to load")
+                                            }
+                                        }
+                                    },
+                                    favoriteLines = favoriteLines
+                                )
+                            }
+
                             ActiveTab.ARRIVALS -> {
                                 ArrivalsPanel(
                                     state = arrivalsState,
@@ -668,6 +700,13 @@ fun MainScreen(
                         map = map,
                         marker = routingState.trackedBus?.marker
                     )
+
+                    if (activeTab == ActiveTab.LINES) {
+                        LineShapeOverlay(
+                            map = map,
+                            directions = lineShapeData.directions
+                        )
+                    }
 
                     StopMarkersOverlay(
                         map = map,

@@ -53,6 +53,11 @@ interface PtApi {
         @Query("n") n: Int = 20
     ): Any
 
+    @GET("/api/line-shape")
+    suspend fun getLineShape(
+        @Query("line") line: String
+    ): Map<String, List<List<Double>>>
+
     @GET("/api/health")
     suspend fun health(): Any
 }

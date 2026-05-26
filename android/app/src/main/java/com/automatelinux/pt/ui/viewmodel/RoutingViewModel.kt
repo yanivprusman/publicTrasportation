@@ -218,6 +218,10 @@ class RoutingViewModel @Inject constructor(
         }
     }
 
+    suspend fun getLineShape(line: String): Map<String, List<List<Double>>> {
+        return api.getLineShape(line)
+    }
+
     suspend fun geocode(text: String): List<GeocodeSuggestion> {
         return try {
             api.geocode(text)
