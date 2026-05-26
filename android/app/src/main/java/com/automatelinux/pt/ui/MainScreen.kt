@@ -123,8 +123,7 @@ import com.automatelinux.pt.util.SettingsStore
 import kotlinx.coroutines.launch
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
-import com.automatelinux.pt.ui.map.FusedLocationOverlayProvider
-import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
+import com.automatelinux.pt.ui.map.GpsLocationOverlay
 
 enum class ActiveTab { ROUTE, ARRIVALS, LINES }
 
@@ -157,8 +156,7 @@ fun MainScreen(
     var recentSearchesVersion by remember { mutableIntStateOf(0) }
 
     var followingLocation by remember { mutableStateOf(false) }
-    var locationOverlay by remember { mutableStateOf<MyLocationNewOverlay?>(null) }
-    var locationIconVersion by remember { mutableIntStateOf(0) }
+    var locationOverlay by remember { mutableStateOf<GpsLocationOverlay?>(null) }
     var nearbyStops by remember { mutableStateOf<List<StopResult>>(emptyList()) }
     var currentMapZoom by remember { mutableStateOf(13.0) }
     var currentMapCenter by remember { mutableStateOf(GeoPoint(31.77, 35.21)) }
@@ -308,66 +306,24 @@ fun MainScreen(
         }
     }
 
-    // Create the location overlay once when map becomes available
-    DisposableEffect(mapView, locationIconVersion) {
+    DisposableEffect(mapView) {
         val map = mapView ?: return@DisposableEffect onDispose {}
         val hasPermission = ContextCompat.checkSelfPermission(
             context, Manifest.permission.ACCESS_FINE_LOCATION
         ) == PackageManager.PERMISSION_GRANTED
         if (hasPermission) {
-            // Remove any previous location overlay
-            locationOverlay?.let { old ->
-                old.disableMyLocation()
-                map.overlays.remove(old)
-            }
-            map.overlays.removeAll { it is MyLocationNewOverlay }
-
-            val provider = FusedLocationOverlayProvider(fusedLocationClient)
-            val overlay = MyLocationNewOverlay(provider, map)
-            val density = map.resources.displayMetrics.density
-            if (settingsStore.locationIconStyle == "dot") {
-                val dotSize = (16 * density).toInt()
-                val dotBitmap = android.graphics.Bitmap.createBitmap(dotSize, dotSize, android.graphics.Bitmap.Config.ARGB_8888)
-                val canvas = android.graphics.Canvas(dotBitmap)
-                val cx = dotSize / 2f
-                val cy = dotSize / 2f
-                val radius = dotSize / 2f - 2 * density
-                val borderPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-                    color = android.graphics.Color.WHITE
-                    style = android.graphics.Paint.Style.FILL
-                }
-                canvas.drawCircle(cx, cy, radius + 2 * density, borderPaint)
-                val corePaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-                    color = android.graphics.Color.parseColor("#4285F4")
-                    style = android.graphics.Paint.Style.FILL
-                }
-                canvas.drawCircle(cx, cy, radius, corePaint)
-                overlay.setPersonIcon(dotBitmap)
-                overlay.setDirectionIcon(dotBitmap)
-                overlay.setPersonHotspot(cx, cy)
-            }
-            overlay.setDrawAccuracyEnabled(false)
-            overlay.enableMyLocation()
+            val overlay = GpsLocationOverlay(map, fusedLocationClient)
+            overlay.startUpdates()
             map.overlays.add(overlay)
             locationOverlay = overlay
             map.invalidate()
         }
         onDispose {
             locationOverlay?.let { overlay ->
-                overlay.disableMyLocation()
+                overlay.stopUpdates()
                 map.overlays.remove(overlay)
             }
             locationOverlay = null
-        }
-    }
-
-    // Toggle follow (auto-center) separately — never recreate the overlay
-    LaunchedEffect(followingLocation) {
-        val overlay = locationOverlay ?: return@LaunchedEffect
-        if (followingLocation) {
-            overlay.enableFollowLocation()
-        } else {
-            overlay.disableFollowLocation()
         }
     }
 
@@ -951,7 +907,6 @@ fun MainScreen(
                     settingsStore.locationIconStyle = iconStyle
                     settingsStore.debugFrom = from
                     settingsStore.debugTo = to
-                    locationIconVersion++
                     showDebugSettings = false
                 },
                 onDismiss = { showDebugSettings = false },
