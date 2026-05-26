@@ -371,7 +371,13 @@ fun MainScreen(
                 followingLocation = false
             }
         } else {
-            locationOverlay?.disableFollowLocation()
+            locationOverlay?.let { overlay ->
+                overlay.disableFollowLocation()
+                overlay.disableMyLocation()
+                map?.overlays?.remove(overlay)
+                map?.invalidate()
+            }
+            locationOverlay = null
         }
         onDispose {
             fusedLocationClient.removeLocationUpdates(locationCallback)
