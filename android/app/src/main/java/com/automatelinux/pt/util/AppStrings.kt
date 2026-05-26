@@ -78,6 +78,13 @@ data class AppStrings(
     val fewerTransfers: String,
     val lessWalking: String,
     val fareEstimate: (String) -> String,
+    val nearbyStops: String,
+    val noNearbyStops: String,
+    val walkingDistance: (Int) -> String,
+    val serviceAlerts: String,
+    val noAlerts: String,
+    val peakHoursNotice: String,
+    val normalServiceNotice: String,
 )
 
 val EnStrings = AppStrings(
@@ -163,6 +170,13 @@ val EnStrings = AppStrings(
     fewerTransfers = "Fewer transfers",
     lessWalking = "Less walking",
     fareEstimate = { amount -> "~$amount" },
+    nearbyStops = "Nearby Stops",
+    noNearbyStops = "No stops found nearby",
+    walkingDistance = { m -> "${m}m walk" },
+    serviceAlerts = "Service Alerts",
+    noAlerts = "No active alerts",
+    peakHoursNotice = "Peak hours — expect delays on busy lines",
+    normalServiceNotice = "All lines operating normally",
 )
 
 val HeStrings = AppStrings(
@@ -248,6 +262,13 @@ val HeStrings = AppStrings(
     fewerTransfers = "פחות החלפות",
     lessWalking = "פחות הליכה",
     fareEstimate = { amount -> "~$amount" },
+    nearbyStops = "תחנות קרובות",
+    noNearbyStops = "לא נמצאו תחנות בסביבה",
+    walkingDistance = { m -> "${m} מ׳ הליכה" },
+    serviceAlerts = "התראות שירות",
+    noAlerts = "אין התראות פעילות",
+    peakHoursNotice = "שעות עומס — צפו לעיכובים בקווים עמוסים",
+    normalServiceNotice = "כל הקווים פועלים כסדרם",
 )
 
 val LocalAppStrings = compositionLocalOf { EnStrings }

@@ -522,7 +522,8 @@ fun MainScreen(
                                         mapView?.animateToPoint(GeoPoint(lat, lon), 16.0)
                                         scope.launch { bottomSheetState.partialExpand() }
                                     },
-                                    getDestinationName = { arrivalsViewModel.getDestinationName(it) }
+                                    getDestinationName = { arrivalsViewModel.getDestinationName(it) },
+                                    nearbyStops = nearbyStops
                                 )
                             }
                         }

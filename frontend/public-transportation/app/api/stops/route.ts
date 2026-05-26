@@ -68,16 +68,20 @@ export async function GET(request: NextRequest) {
     const latDelta = radius * degPerMeter;
     const lonDelta = radius * degPerMeter / Math.cos(lat * Math.PI / 180);
 
-    const nearby: Stop[] = [];
+    const nearby: { stopCode: string; stopName: string; lat: number; lon: number; distanceMeters: number }[] = [];
     for (const stop of stops) {
       if (
         Math.abs(stop.lat - lat) <= latDelta &&
         Math.abs(stop.lon - lon) <= lonDelta
       ) {
-        nearby.push(stop);
+        const dlat = (stop.lat - lat) * 111320;
+        const dlon = (stop.lon - lon) * 111320 * Math.cos(lat * Math.PI / 180);
+        const dist = Math.round(Math.sqrt(dlat * dlat + dlon * dlon));
+        nearby.push({ ...stop, distanceMeters: dist });
         if (nearby.length >= 100) break;
       }
     }
+    nearby.sort((a, b) => a.distanceMeters - b.distanceMeters);
     return NextResponse.json(nearby);
   }
 
