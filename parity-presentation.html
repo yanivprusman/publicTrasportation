@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PT App — Moovit Parity Implementation</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #121212;
+    color: #e0e0e0;
+    line-height: 1.6;
+  }
+  .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+
+  /* Header */
+  .header {
+    text-align: center;
+    padding: 60px 20px 40px;
+    border-bottom: 1px solid #333;
+    margin-bottom: 40px;
+  }
+  .header h1 {
+    font-size: 2.4em;
+    color: #90CAF9;
+    margin-bottom: 8px;
+  }
+  .header .subtitle {
+    font-size: 1.1em;
+    color: #888;
+    margin-bottom: 24px;
+  }
+  .header .date {
+    font-size: 0.9em;
+    color: #666;
+  }
+
+  /* Summary */
+  .summary {
+    background: #1e1e1e;
+    border-radius: 12px;
+    padding: 30px;
+    margin-bottom: 50px;
+    border: 1px solid #333;
+  }
+  .summary h2 {
+    color: #90CAF9;
+    font-size: 1.4em;
+    margin-bottom: 16px;
+  }
+  .feature-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 12px;
+  }
+  .feature-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 12px;
+    background: #262626;
+    border-radius: 8px;
+  }
+  .feature-item .batch {
+    background: #90CAF9;
+    color: #121212;
+    font-size: 0.7em;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+    margin-top: 2px;
+  }
+  .feature-item .desc {
+    font-size: 0.9em;
+  }
+
+  /* Section */
+  .section {
+    margin-bottom: 60px;
+  }
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #333;
+  }
+  .section-number {
+    background: #90CAF9;
+    color: #121212;
+    font-weight: 700;
+    font-size: 0.9em;
+    padding: 4px 12px;
+    border-radius: 6px;
+  }
+  .section-title {
+    font-size: 1.5em;
+    color: #fff;
+  }
+
+  /* Image grid */
+  .image-row {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+  .image-card {
+    flex: 1;
+    min-width: 200px;
+    max-width: 320px;
+    background: #1e1e1e;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid #333;
+  }
+  .image-card img {
+    width: 100%;
+    display: block;
+    border-bottom: 1px solid #333;
+  }
+  .image-card .caption {
+    padding: 10px 12px;
+    font-size: 0.82em;
+    color: #aaa;
+  }
+  .image-card .tag {
+    display: inline-block;
+    font-size: 0.7em;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 3px;
+    margin-bottom: 4px;
+  }
+  .tag-before { background: #4a3030; color: #ef9a9a; }
+  .tag-after { background: #2e4a30; color: #a5d6a7; }
+  .tag-moovit { background: #3a3a50; color: #b39ddb; }
+
+  /* Comparison row */
+  .comparison {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  .comparison .image-card { flex: 1; min-width: 250px; }
+
+  /* Stats */
+  .stats {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin: 30px 0;
+  }
+  .stat-box {
+    background: #1e1e1e;
+    border: 1px solid #333;
+    border-radius: 10px;
+    padding: 20px 30px;
+    text-align: center;
+    min-width: 140px;
+  }
+  .stat-box .number {
+    font-size: 2em;
+    font-weight: 700;
+    color: #90CAF9;
+  }
+  .stat-box .label {
+    font-size: 0.85em;
+    color: #888;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+<div class="header">
+  <h1>PT App — Moovit Parity</h1>
+  <div class="subtitle">Feature implementation bringing PT to feature parity with Moovit</div>
+  <div class="date">May 26, 2026 — Native Android (Kotlin/Compose), OSM maps, self-hosted MOTIS backend</div>
+</div>
+
+<div class="stats">
+  <div class="stat-box"><div class="number">8</div><div class="label">Feature Batches</div></div>
+  <div class="stat-box"><div class="number">22</div><div class="label">Features Added</div></div>
+  <div class="stat-box"><div class="number">10</div><div class="label">Commits</div></div>
+  <div class="stat-box"><div class="number">36</div><div class="label">Screenshots</div></div>
+  <div class="stat-box"><div class="number">3</div><div class="label">Tabs</div></div>
+</div>
+
+<div class="summary">
+  <h2>Features Implemented</h2>
+  <div class="feature-grid">
+    <div class="feature-item"><span class="batch">B1</span><span class="desc">Saved Home/Work places with icons</span></div>
+    <div class="feature-item"><span class="batch">B1</span><span class="desc">Recent searches history</span></div>
+    <div class="feature-item"><span class="batch">B1</span><span class="desc">Pre-suggestions dropdown (favorites + recents)</span></div>
+    <div class="feature-item"><span class="batch">B2</span><span class="desc">Color-coded line badges (operator colors)</span></div>
+    <div class="feature-item"><span class="batch">B2</span><span class="desc">Large visual arrival countdown</span></div>
+    <div class="feature-item"><span class="batch">B3</span><span class="desc">Follow-my-location FAB</span></div>
+    <div class="feature-item"><span class="batch">B3</span><span class="desc">Stop markers on map at zoom level</span></div>
+    <div class="feature-item"><span class="batch">B3</span><span class="desc">Tap stop on map for arrivals</span></div>
+    <div class="feature-item"><span class="batch">B4</span><span class="desc">Route sorting chips (fastest/fewer transfers/less walking)</span></div>
+    <div class="feature-item"><span class="batch">B4</span><span class="desc">Earlier/Later alternative departures</span></div>
+    <div class="feature-item"><span class="batch">B4</span><span class="desc">Route fare estimates</span></div>
+    <div class="feature-item"><span class="batch">B5</span><span class="desc">Service alert banner (peak/normal)</span></div>
+    <div class="feature-item"><span class="batch">B5</span><span class="desc">Nearby stops list with walking distances</span></div>
+    <div class="feature-item"><span class="batch">B6</span><span class="desc">Favorite lines (star toggle in arrivals)</span></div>
+    <div class="feature-item"><span class="batch">B6</span><span class="desc">Favorite stations (star toggle)</span></div>
+    <div class="feature-item"><span class="batch">B6</span><span class="desc">Frequent route card (Home to Work)</span></div>
+    <div class="feature-item"><span class="batch">B6</span><span class="desc">Favorites section in arrivals panel</span></div>
+    <div class="feature-item"><span class="batch">B7</span><span class="desc">Live bus tracking on selected route</span></div>
+    <div class="feature-item"><span class="batch">B7</span><span class="desc">Departure reminder notifications</span></div>
+    <div class="feature-item"><span class="batch">B8</span><span class="desc">Lines browser with search</span></div>
+    <div class="feature-item"><span class="batch">B8</span><span class="desc">Line route drawn on map (GTFS shapes)</span></div>
+    <div class="feature-item"><span class="batch">B8</span><span class="desc">Favorite lines in Lines tab</span></div>
+  </div>
+</div>
+
+<!-- Baseline -->
+<div class="section">
+  <div class="section-header">
+    <span class="section-number">BASELINE</span>
+    <span class="section-title">PT App Before Parity Work</span>
+  </div>
+  <div class="image-row">
+    <div class="image-card">
+      <img src="file:///tmp/parity-presentation/00-baseline-prod/01-home-route-planner.png" alt="Before: Route Planner">
+      <div class="caption"><span class="tag tag-before">BEFORE</span><br>Route Planner — two tabs only, basic From/To fields, no saved places or suggestions</div>
+    </div>
+    <div class="image-card">
+      <img src="file:///tmp/parity-presentation/00-baseline-prod/02-station-arrivals.png" alt="Before: Station Arrivals">
+      <div class="caption"><span class="tag tag-before">BEFORE</span><br>Station Arrivals — plain text, no color badges, no countdown hero, no service alerts</div>
+    </div>
+    <div class="image-card">
+      <img src="file:///tmp/parity-presentation/00-baseline-prod/04-route-search-results.png" alt="Before: Route Results">
+      <div class="caption"><span class="tag tag-before">BEFORE</span><br>Route results — no sorting chips, no fare estimates, no earlier/later buttons</div>
+    </div>
+  </div>
+</div>
+
+<!-- Batch 1 -->
+<div class="section">
+  <div class="section-header">
+    <span class="section-number">BATCH 1</span>
+    <span class="section-title">Search &amp; Personalization</span>
+  </div>
+  <div class="image-row">
+    <div class="image-card">
+      <img src="file:///tmp/parity-presentation/01-search-personalization/01-presuggestions-home-work.png" alt="Pre-suggestions">
+      <div class="caption"><span class="tag tag-after">AFTER</span><br>Pre-suggestions dropdown showing Home (Tel Aviv) and Work (Beer Sheva) with icons, plus recent search history below</div>
+    </div>
+    <div class="image-card">
+      <img src="file:///tmp/parity-presentation/01-search-personalization/02-save-as-dialog.png" alt="Save as dialog">
+      <div class="caption"><span class="tag tag-after">AFTER</span><br>Long-press a suggestion to save it as Home or Work — dialog with two options</div>
+    </div>
+    <div class="image-card">
+      <img src="file:///tmp/parity-presentation/00-moovit-reference/02-search-recent-favorites.png" alt="Moovit search">
+      <div class="caption"><span class="tag tag-moovit">MOOVIT</span><br>Moovit's search with favorites + recents — PT now matches this pattern</div>
+    </div>
+  </div>
+</div>
+
+<!-- Batch 2 -->
+<div class="section">
+  <div class="section-header">
+    <span class="section-number">BATCH 2</span>
+    <span class="section-title">Arrivals UX — Color Badges &amp; Countdown</span>
+  </div>
+  <div class="image-row">
+    <div class="image-card">
+      <img src="file:///tmp/parity-presentation/02-arrivals-ux/01-station-arrivals-hero.png" alt="Color badges">
+      <div class="caption"><span class="tag tag-after">AFTER</span><br>Color-coded line badges (61 green, 267 yellow, 39 red, 60 blue) with large "in 9min" countdown hero at top</div>
+    </div>
+    <div class="image-card">
+      <img src="file:///tmp/parity-presentation/02-arrivals-ux/02-arrivals-scrolled-variety.png" alt="Arrivals variety">
+      <div class="caption"><span class="tag tag-after">AFTER</span><br>Scrolled arrivals list showing variety of color-coded lines with distance and time columns</div>
+    </div>
+    <div class="image-card">
+      <img src="file:///tmp/parity-presentation/00-moovit-reference/06-stations.png" alt="Moovit stations">
+      <div class="caption"><span class="tag tag-moovit">MOOVIT</span><br>Moovit's station view with color badges — PT now matches this visual style</div>
+    </div>
+  </div>
+</div>
+
+<!-- Batch 3 -->
+<div class="section">
+  <div class="section-header">
+    <span class="section-number">BATCH 3</span>
+    <span class="section-title">Map Features — Stop Markers &amp; Follow Location</span>
+  </div>
+  <div class="image-row">
+    <div class="image-card">
+      <img src="file:///tmp/parity-presentation/03-map-features/01-stop-markers-tel-aviv.png" alt="Stop markers Tel Aviv">
+      <div class="caption"><span class="tag tag-after">AFTER</span><br>Blue stop markers visible on the map in central Tel Aviv — tap any to load arrivals</div>
+    </div>
+    <div class="image-card">
+      <img src="file:///tmp/parity-presentation/03-map-features/02-follow-location-fab-active.png" alt="Follow location">
+      <div class="caption"><span class="tag tag-after">AFTER</span><br>Follow-my-location FAB (top right, highlighted blue) — map continuously tracks user position</div>
+    </div>
+    <div class="image-card">
+      <img src="file:///tmp/parity-presentation/03-map-features/03-stop-markers-street-level.png" alt="Street level stops">
+      <div class="caption"><span class="tag tag-after">AFTER</span><br>Street-level zoom showing individual stop markers — tapping loads arrivals and expands sheet</div>
+    </div>
+  </div>
+</div>
+
+<!-- Batch 4 -->
+<div class="section">
+  <div class="section-header">
+    <span class="section-number">BATCH 4</span>
+    <span class="section-title">Route Planning — Sorting, Fares &amp; Alternatives</span>
+  </div>
+  <div class="image-row">
+    <div class="image-card">
+      <img src="file:///tmp/parity-presentation/04-route-planning/01-route-sorting-chips-fare-estimate.png" alt="Sorting chips">
+      <div class="caption"><span class="tag tag-after">AFTER</span><br>Sorting chips: Fastest / Fewer transfers / Less walking. Fare estimate badge (~11.0) on route cards</div>
+    </div>
+    <div class="image-card">
+      <img src="file:///tmp/parity-presentation/04-route-planning/02-sorting-earlier-fare-all-features.png" alt="All features">
+      <div class="caption"><span class="tag tag-after">AFTER</span><br>Full route planning UX: sorting, Earlier/Later buttons, fare estimates all visible together</div>
+    </div>
+    <div class="image-card">
+      <img src="file:///tmp/parity-presentation/04-route-planning/03-fewer-transfers-sorted.png" alt="Fewer transfers">
+      <div class="caption"><span class="tag tag-after">AFTER</span><br>Sorted by "Fewer transfers" — direct routes shown first, fare estimates on each card</div>
+    </div>
+  </div>
+</div>
+
+<!-- Batch 5 -->
+<div class="section">
+  <div class="section-header">
+    <span class="section-number">BATCH 5</span>
+    <span class="section-title">Service Alerts &amp; Nearby Stops</span>
+  </div>
+  <div class="image-row">
+    <div class="image-card">
+      <img src="file:///tmp/parity-presentation/05-alerts-nearby/02-service-alert-banner.png" alt="Service alert">
+      <div class="caption"><span class="tag tag-after">AFTER</span><br>Green service alert banner: "All lines operating normally" — turns amber during peak hours with delay warning</div>
+    </div>
+    <div class="image-card">
+      <img src="file:///tmp/parity-presentation/05-alerts-nearby/01-nearby-stops-list.png" alt="Nearby stops">
+      <div class="caption"><span class="tag tag-after">AFTER</span><br>Nearby Stops section below arrivals — shows stop name, code, and walking distance (50m, 123m, 175m walk)</div>
+    </div>
+  </div>
+</div>
+
+<!-- Batch 6 -->
+<div class="section">
+  <div class="section-header">
+    <span class="section-number">BATCH 6</span>
+    <span class="section-title">Favorites — Lines, Stations &amp; Quick Route</span>
+  </div>
+  <div class="image-row">
+    <div class="image-card">
+      <img src="file:///tmp/parity-presentation/06-favorites/01-frequent-route-card.png" alt="Quick Route">
+      <div class="caption"><span class="tag tag-after">AFTER</span><br>Quick Route card on Route Planner: Home (Tel Aviv) → Work (Beer Sheva) — one-tap commute search</div>
+    </div>
+    <div class="image-card">
+      <img src="file:///tmp/parity-presentation/06-favorites/03-station-favorited.png" alt="Station favorited">
+      <div class="caption"><span class="tag tag-after">AFTER</span><br>Gold star next to "Updated just now" — station is now favorited, appears in favorites section</div>
+    </div>
+    <div class="image-card">
+      <img src="file:///tmp/parity-presentation/06-favorites/05-line-favorited.png" alt="Line favorited">
+      <div class="caption"><span class="tag tag-after">AFTER</span><br>Expanded arrival detail with gold star — line 39 favorited. Star next to "Show on map" button</div>
+    </div>
+  </div>
+</div>
+
+<!-- Batch 7 -->
+<div class="section">
+  <div class="section-header">
+    <span class="section-number">BATCH 7</span>
+    <span class="section-title">Live Bus Tracking &amp; Departure Reminder</span>
+  </div>
+  <div class="image-row">
+    <div class="image-card">
+      <img src="file:///tmp/parity-presentation/07-tracking/01-track-buttons.png" alt="Track buttons">
+      <div class="caption"><span class="tag tag-after">AFTER</span><br>Itinerary detail with Track Bus (GPS icon) and Departure Reminder (bell icon) buttons on every transit leg</div>
+    </div>
+    <div class="image-card">
+      <img src="file:///tmp/parity-presentation/07-tracking/02-tracking-active.png" alt="Tracking active">
+      <div class="caption"><span class="tag tag-after">AFTER</span><br>Bus 56 tracking active — button turns tertiary color showing "Tracking..." with real-time SIRI polling</div>
+    </div>
+    <div class="image-card">
+      <img src="file:///tmp/parity-presentation/07-tracking/03-reminder-set.png" alt="Reminder">
+      <div class="caption"><span class="tag tag-after">AFTER</span><br>Departure reminder set — button turns red "Reminder cancelled" for cancel action, 5-min-before toast notification</div>
+    </div>
+  </div>
+</div>
+
+<!-- Batch 8 -->
+<div class="section">
+  <div class="section-header">
+    <span class="section-number">BATCH 8</span>
+    <span class="section-title">Lines Browser &amp; Route on Map</span>
+  </div>
+  <div class="image-row">
+    <div class="image-card">
+      <img src="file:///tmp/parity-presentation/08-lines/01-lines-browser.png" alt="Lines browser">
+      <div class="caption"><span class="tag tag-after">AFTER</span><br>New "Lines" tab with search field, Favorite Lines section (line 39), and Common Lines grid of 31 bus lines</div>
+    </div>
+    <div class="image-card">
+      <img src="file:///tmp/parity-presentation/08-lines/02-line-route-on-map.png" alt="Line route on map">
+      <div class="caption"><span class="tag tag-after">AFTER</span><br>Line 60 selected — full GTFS route shape drawn on map in blue/orange per direction (1779 points, Beer Sheva to Tel Aviv coast)</div>
+    </div>
+    <div class="image-card">
+      <img src="file:///tmp/parity-presentation/00-moovit-reference/07-lines.png" alt="Moovit lines">
+      <div class="caption"><span class="tag tag-moovit">MOOVIT</span><br>Moovit's lines browser — PT now has equivalent browsing + route visualization</div>
+    </div>
+  </div>
+</div>
+
+<!-- Footer -->
+<div style="text-align: center; padding: 40px 0 60px; border-top: 1px solid #333; margin-top: 40px;">
+  <div style="color: #666; font-size: 0.9em;">
+    PT App — Built with Kotlin/Jetpack Compose, osmdroid, self-hosted MOTIS, GTFS Israel MOT data<br>
+    All features verified on Samsung Galaxy A53 (Android)
+  </div>
+</div>
+
+</div>
+</body>
+</html>

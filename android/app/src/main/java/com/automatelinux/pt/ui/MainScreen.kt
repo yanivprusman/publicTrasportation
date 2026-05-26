@@ -187,9 +187,15 @@ fun MainScreen(
     }
 
     var gpsLoading by remember { mutableStateOf(false) }
+    var gpsLoadingDestination by remember { mutableStateOf(false) }
     val applyGpsLocation = { location: android.location.Location ->
         gpsLoading = false
         routingViewModel.setOriginFromCoords(location.latitude, location.longitude)
+        mapView?.animateToPoint(GeoPoint(location.latitude, location.longitude), 15.0)
+    }
+    val applyGpsLocationDestination = { location: android.location.Location ->
+        gpsLoadingDestination = false
+        routingViewModel.setDestinationFromCoords(location.latitude, location.longitude)
         mapView?.animateToPoint(GeoPoint(location.latitude, location.longitude), 15.0)
     }
 
@@ -221,6 +227,58 @@ fun MainScreen(
         Unit
     }
 
+    val fetchCurrentLocationForDestination = {
+        val hasPermission = ContextCompat.checkSelfPermission(
+            context, Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+        if (hasPermission) {
+            gpsLoadingDestination = true
+            fusedLocationClient.lastLocation
+                .addOnSuccessListener { cached ->
+                    if (cached != null) {
+                        applyGpsLocationDestination(cached)
+                    } else {
+                        fusedLocationClient.getCurrentLocation(
+                            Priority.PRIORITY_HIGH_ACCURACY,
+                            CancellationTokenSource().token
+                        ).addOnSuccessListener { fresh ->
+                            if (fresh != null) {
+                                applyGpsLocationDestination(fresh)
+                            } else {
+                                gpsLoadingDestination = false
+                            }
+                        }.addOnFailureListener { gpsLoadingDestination = false }
+                    }
+                }
+                .addOnFailureListener { gpsLoadingDestination = false }
+        }
+        Unit
+    }
+
+    val centerMapOnCurrentLocation = {
+        val hasPermission = ContextCompat.checkSelfPermission(
+            context, Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+        if (hasPermission) {
+            fusedLocationClient.lastLocation
+                .addOnSuccessListener { cached ->
+                    if (cached != null) {
+                        mapView?.animateToPoint(GeoPoint(cached.latitude, cached.longitude), 15.0)
+                    } else {
+                        fusedLocationClient.getCurrentLocation(
+                            Priority.PRIORITY_HIGH_ACCURACY,
+                            CancellationTokenSource().token
+                        ).addOnSuccessListener { fresh ->
+                            if (fresh != null) {
+                                mapView?.animateToPoint(GeoPoint(fresh.latitude, fresh.longitude), 15.0)
+                            }
+                        }
+                    }
+                }
+        }
+        Unit
+    }
+
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
@@ -233,6 +291,17 @@ fun MainScreen(
         ) == PackageManager.PERMISSION_GRANTED
         if (hasPermission) {
             fetchCurrentLocation()
+        } else {
+            permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+        }
+    }
+
+    val onGpsClickDestination: () -> Unit = {
+        val hasPermission = ContextCompat.checkSelfPermission(
+            context, Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+        if (hasPermission) {
+            fetchCurrentLocationForDestination()
         } else {
             permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
         }
@@ -514,6 +583,8 @@ fun MainScreen(
                                     onGeocode = { routingViewModel.geocode(it) },
                                     onGpsClick = onGpsClick,
                                     gpsLoading = gpsLoading,
+                                    onGpsClickDestination = onGpsClickDestination,
+                                    gpsLoadingDestination = gpsLoadingDestination,
                                     cardOpacity = cardOpacity,
                                     preSuggestions = preSuggestions,
                                     onLongPressSuggestion = { suggestion ->
@@ -726,7 +797,7 @@ fun MainScreen(
                         ) == PackageManager.PERMISSION_GRANTED
                         if (hasPermission) {
                             followingLocation = !followingLocation
-                            if (followingLocation) fetchCurrentLocation()
+                            if (followingLocation) centerMapOnCurrentLocation()
                         } else {
                             permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
                         }

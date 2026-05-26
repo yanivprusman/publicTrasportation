@@ -53,6 +53,8 @@ fun RoutePlannerPanel(
     onStopClick: ((Place) -> Unit)? = null,
     onGpsClick: (() -> Unit)? = null,
     gpsLoading: Boolean = false,
+    onGpsClickDestination: (() -> Unit)? = null,
+    gpsLoadingDestination: Boolean = false,
     cardOpacity: Float = 0.6f,
     preSuggestions: List<PreSuggestion> = emptyList(),
     onLongPressSuggestion: ((GeocodeSuggestion) -> Unit)? = null,
@@ -115,6 +117,9 @@ fun RoutePlannerPanel(
             onSelect = { onDestinationSelect(it) },
             onClear = { onDestinationSelect(null) },
             onGeocode = onGeocode,
+            showGpsButton = true,
+            onGpsClick = onGpsClickDestination,
+            gpsLoading = gpsLoadingDestination,
             preSuggestions = preSuggestions,
             onLongPressSuggestion = onLongPressSuggestion,
             modifier = Modifier.fillMaxWidth()
