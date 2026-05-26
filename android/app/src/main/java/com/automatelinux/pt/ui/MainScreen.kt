@@ -338,7 +338,7 @@ fun MainScreen(
     }
 
     LaunchedEffect(currentMapCenter, currentMapZoom) {
-        if (currentMapZoom >= 15.0) {
+        if (currentMapZoom >= 14.5) {
             kotlinx.coroutines.delay(300)
             val stops = arrivalsViewModel.fetchNearbyStops(
                 currentMapCenter.latitude,
@@ -346,7 +346,8 @@ fun MainScreen(
                 500
             )
             nearbyStops = stops
-        } else {
+        } else if (nearbyStops.isNotEmpty()) {
+            kotlinx.coroutines.delay(300)
             nearbyStops = emptyList()
         }
     }
