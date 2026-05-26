@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import com.automatelinux.pt.data.model.GeocodeSuggestion
 import com.automatelinux.pt.data.model.Place
 import com.automatelinux.pt.data.model.RouteLeg
+import com.automatelinux.pt.ui.components.PreSuggestion
 import com.automatelinux.pt.ui.viewmodel.RoutingState
 import com.automatelinux.pt.util.LocalAppStrings
 import java.time.ZonedDateTime
@@ -42,6 +43,8 @@ fun RoutePlannerPanel(
     onGpsClick: (() -> Unit)? = null,
     gpsLoading: Boolean = false,
     cardOpacity: Float = 0.6f,
+    preSuggestions: List<PreSuggestion> = emptyList(),
+    onLongPressSuggestion: ((GeocodeSuggestion) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val strings = LocalAppStrings.current
@@ -56,6 +59,8 @@ fun RoutePlannerPanel(
             showGpsButton = true,
             onGpsClick = onGpsClick,
             gpsLoading = gpsLoading,
+            preSuggestions = preSuggestions,
+            onLongPressSuggestion = onLongPressSuggestion,
             modifier = Modifier.fillMaxWidth()
         )
 
@@ -78,6 +83,8 @@ fun RoutePlannerPanel(
             onSelect = { onDestinationSelect(it) },
             onClear = { onDestinationSelect(null) },
             onGeocode = onGeocode,
+            preSuggestions = preSuggestions,
+            onLongPressSuggestion = onLongPressSuggestion,
             modifier = Modifier.fillMaxWidth()
         )
 

@@ -51,8 +51,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.BugReport
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Work
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.DropdownMenu
@@ -94,6 +99,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.automatelinux.feedbacklib.ui.DismissibleSheet
 import com.automatelinux.feedbacklib.ui.rememberDismissibleSheetState
 import com.automatelinux.pt.ui.arrivals.ArrivalsPanel
+import com.automatelinux.pt.ui.components.PreSuggestion
 import com.automatelinux.pt.ui.map.OsmMapView
 import com.automatelinux.pt.ui.map.OriginDestinationMarkers
 import com.automatelinux.pt.ui.map.RouteOverlay
@@ -137,6 +143,23 @@ fun MainScreen(
     var showDebugSettings by remember { mutableStateOf(false) }
     var sheetOpacity by remember { mutableFloatStateOf(settingsStore.sheetOpacity) }
     var cardOpacity by remember { mutableFloatStateOf(settingsStore.cardOpacity) }
+
+    var savePlaceTarget by remember { mutableStateOf<com.automatelinux.pt.data.model.GeocodeSuggestion?>(null) }
+    var recentSearchesVersion by remember { mutableIntStateOf(0) }
+
+    val preSuggestions = remember(recentSearchesVersion) {
+        buildList {
+            settingsStore.homePlace?.let {
+                add(PreSuggestion(it, Icons.Default.Home, "Home"))
+            }
+            settingsStore.workPlace?.let {
+                add(PreSuggestion(it, Icons.Default.Work, "Work"))
+            }
+            settingsStore.getRecentSearches().forEach {
+                add(PreSuggestion(it, Icons.Default.History))
+            }
+        }
+    }
 
     val fusedLocationClient = remember {
         LocationServices.getFusedLocationProviderClient(context)
@@ -367,8 +390,20 @@ fun MainScreen(
                             ActiveTab.ROUTE -> {
                                 RoutePlannerPanel(
                                     state = routingState,
-                                    onOriginSelect = { routingViewModel.setOrigin(it) },
-                                    onDestinationSelect = { routingViewModel.setDestination(it) },
+                                    onOriginSelect = { s ->
+                                        routingViewModel.setOrigin(s)
+                                        if (s != null) {
+                                            settingsStore.addRecentSearch(s)
+                                            recentSearchesVersion++
+                                        }
+                                    },
+                                    onDestinationSelect = { s ->
+                                        routingViewModel.setDestination(s)
+                                        if (s != null) {
+                                            settingsStore.addRecentSearch(s)
+                                            recentSearchesVersion++
+                                        }
+                                    },
                                     onSwap = { routingViewModel.swapOriginDestination() },
                                     onTimeChange = { routingViewModel.setDepartureTime(it) },
                                     onArriveByChange = { routingViewModel.setArriveBy(it) },
@@ -398,7 +433,11 @@ fun MainScreen(
                                     onGeocode = { routingViewModel.geocode(it) },
                                     onGpsClick = onGpsClick,
                                     gpsLoading = gpsLoading,
-                                    cardOpacity = cardOpacity
+                                    cardOpacity = cardOpacity,
+                                    preSuggestions = preSuggestions,
+                                    onLongPressSuggestion = { suggestion ->
+                                        savePlaceTarget = suggestion
+                                    }
                                 )
                             }
 
@@ -534,6 +573,28 @@ fun MainScreen(
             }
             }
         )
+
+        savePlaceTarget?.let { target ->
+            AlertDialog(
+                onDismissRequest = { savePlaceTarget = null },
+                title = { Text("Save as") },
+                text = { Text(target.name) },
+                confirmButton = {
+                    TextButton(onClick = {
+                        settingsStore.homePlace = target
+                        recentSearchesVersion++
+                        savePlaceTarget = null
+                    }) { Text("Home") }
+                },
+                dismissButton = {
+                    TextButton(onClick = {
+                        settingsStore.workPlace = target
+                        recentSearchesVersion++
+                        savePlaceTarget = null
+                    }) { Text("Work") }
+                }
+            )
+        }
 
         if (showDebugSettings) {
             DebugSettingsDialog(

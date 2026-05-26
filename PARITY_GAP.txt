@@ -1,0 +1,132 @@
+PT APP vs MOOVIT — PARITY GAP ANALYSIS
+Generated: 2026-05-26
+Intent: Keep PT's feel (map-first, OSM, clean sheet). List gaps only.
+
+══════════════════════════════════════════════════
+WHAT PT ALREADY HAS (Android APK)
+══════════════════════════════════════════════════
+
+Route Planner:
+  ✓ From/To geocode autocomplete (MOTIS + Nominatim)
+  ✓ GPS button (current location, permission flow)
+  ✓ Swap origin/destination
+  ✓ Time picker: Now / Depart At / Arrive By
+  ✓ Route results list (duration, transfers, time range, mode pills)
+  ✓ Itinerary detail: per-leg colored bar, times, agency, stops toggle
+  ✓ Tap stop in detail → pan map
+  ✓ Tap leg → fit map to that segment
+  ✓ Colored polylines on map per mode (walk/bus/rail/tram)
+
+Station Arrivals:
+  ✓ Stop search (name or code autocomplete)
+  ✓ Line number filter
+  ✓ Vehicle markers on map (toggle)
+  ✓ Arrivals table: line, direction, destination, countdown, distance
+  ✓ Expandable row: vehicle ref, exact time, "Show on Map"
+  ✓ Auto-polling with "updated X ago" indicator
+
+General:
+  ✓ Bottom sheet (peek / half / expanded), dismissible
+  ✓ Long-press map → set origin or destination
+  ✓ Hebrew / English toggle (full RTL)
+  ✓ Sheet + card opacity sliders
+  ✓ OSM map (full-screen, no Google dependency)
+  ✓ Self-hosted MOTIS backend, multi-peer server failover
+  ✓ Dark theme, no ads, no tracking
+
+══════════════════════════════════════════════════
+GAPS — WHAT MOOVIT HAS THAT PT DOESN'T
+══════════════════════════════════════════════════
+
+── SEARCH & PERSONALIZATION ──────────────────────
+  ✗ Saved favorite places (Home, Work, custom)
+  ✗ Recent searches history (origin/destination)
+  ✗ Combined search: favorites → recents → suggestions
+  ✗ Nearby stops list from current location (with walk time)
+  ✗ Favorite lines (quick-access to schedules for 586, 286…)
+  ✗ Favorite stations (bookmarked stops for fast arrivals)
+  ✗ Frequent route card ("My Frequent Destination" — one-tap commute)
+
+── ROUTE PLANNING ────────────────────────────────
+  ✗ Earlier/Later alternative departures from results screen
+  ✗ Route cost estimate (fare: Moovit shows ₪47 per route)
+  ✗ Route sorting (fewer transfers / less walking / least cost)
+  ✗ Accessibility-friendly route filter
+  ✗ Service alert / disruption warning on route cards
+  ✗ Walking distance / step count per route
+  ✗ Walk-only route option
+  ✗ Save / bookmark a trip for later
+  ✗ Route sharing (send trip link to someone)
+  ✗ Combined transit + bike routes (Tel-O-Fun etc.)
+
+── LIVE NAVIGATION ("GO MODE") ───────────────────
+  ✗ Active trip mode: step-by-step guidance while traveling
+  ✗ Real-time bus position on the selected route
+      (see exactly where your bus is while waiting)
+  ✗ "I'm on the bus" — track progress through stops
+  ✗ Walking turn-by-turn directions (not just polyline)
+  ✗ Departure reminder notification (alert before bus leaves)
+  ✗ Notification when to get off
+  ✗ "Let someone know you're on your way" (live location sharing)
+  ✗ "Alternative trip" suggestion when a bus is missed
+
+── MAP ───────────────────────────────────────────
+  ✗ Tap any stop on map → see arrivals inline
+  ✗ Stop markers visible at zoom level (not just on route)
+  ✗ "Follow my location" mode (map keeps you centered)
+  ✗ Transit lines visible on map (not just on route)
+  ✗ Map type toggle (standard / satellite)
+
+── STATION ARRIVALS ──────────────────────────────
+  ✗ Large visual countdown (prominent number, not table row)
+  ✗ Color-coded line badges (matching operator colors)
+  ✗ Scheduled vs. real-time merged timetable
+  ✗ Service alert banner for the selected stop
+  ✗ Nearby stops list (not just one stop at a time)
+  ✗ Platform / direction filter by visual buttons (not text field)
+  ✗ Seat availability indicator per vehicle
+  ✗ Accessibility info per vehicle (wheelchair flag)
+  ✗ Platform / gate detail ("Enter at שער ראשי")
+
+── LINES & SCHEDULES ─────────────────────────────
+  ✗ Browse all lines (bus / light rail / train tabs)
+  ✗ Full timetable view for a specific line
+  ✗ Line route drawn on map (see entire line path)
+
+── GENERAL / PLATFORM ────────────────────────────
+  ✗ Push notifications (alerts, departure reminders)
+  ✗ Offline schedule cache (schedules work without data)
+  ✗ User account (sync favorites, history across devices)
+  ✗ Android home screen widget (next bus from saved stop)
+  ✗ Onboarding / first-run walkthrough
+  ✗ "Report a transit data problem" flow
+  ✗ Accessibility mode (larger text, high contrast, TalkBack)
+
+══════════════════════════════════════════════════
+PRIORITY SUGGESTION (keep PT feel)
+══════════════════════════════════════════════════
+
+High impact, low complexity:
+  1. Tap stop on map → arrivals popup
+  2. Recent searches history
+  3. Saved Home / Work places
+  4. Color-coded line badges in arrivals
+  5. Follow-my-location map mode
+  6. Earlier/Later alternative departures
+
+Medium effort, high value:
+  7. Real-time bus position on selected route
+  8. Departure reminder notification
+  9. Nearby stops list (with walk time)
+ 10. Route cost estimate (fare)
+ 11. Favorite lines + favorite stations
+ 12. Service disruption alerts
+ 13. Route sorting (fewer transfers / less walking)
+ 14. Large visual countdown for arrivals
+
+Bigger lift (later):
+ 15. Active "Go" navigation mode (step-by-step + get-off alert)
+ 16. Offline schedule cache
+ 17. Home screen widget
+ 18. Browse all lines / full timetable view
+ 19. User accounts + cross-device sync

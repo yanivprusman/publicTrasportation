@@ -4,6 +4,8 @@ import android.content.Context
 import android.content.SharedPreferences
 import com.automatelinux.pt.data.model.GeocodeSuggestion
 import dagger.hilt.android.qualifiers.ApplicationContext
+import org.json.JSONArray
+import org.json.JSONObject
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -57,4 +59,66 @@ class SettingsStore @Inject constructor(
     var language: String
         get() = prefs.getString("language", "en") ?: "en"
         set(value) = prefs.edit().putString("language", value).apply()
+
+    fun getRecentSearches(): List<GeocodeSuggestion> {
+        val json = prefs.getString("recent_searches", null) ?: return emptyList()
+        return try {
+            val arr = JSONArray(json)
+            (0 until arr.length()).map { i ->
+                val obj = arr.getJSONObject(i)
+                GeocodeSuggestion(
+                    name = obj.getString("name"),
+                    lat = obj.getDouble("lat"),
+                    lon = obj.getDouble("lon")
+                )
+            }
+        } catch (_: Exception) { emptyList() }
+    }
+
+    fun addRecentSearch(suggestion: GeocodeSuggestion) {
+        val current = getRecentSearches().toMutableList()
+        current.removeAll { it.name == suggestion.name && it.lat == suggestion.lat && it.lon == suggestion.lon }
+        current.add(0, suggestion)
+        val trimmed = current.take(10)
+        val arr = JSONArray()
+        trimmed.forEach { s ->
+            arr.put(JSONObject().apply {
+                put("name", s.name)
+                put("lat", s.lat)
+                put("lon", s.lon)
+            })
+        }
+        prefs.edit().putString("recent_searches", arr.toString()).apply()
+    }
+
+    var homePlace: GeocodeSuggestion?
+        get() = getSavedPlace("home")
+        set(value) = setSavedPlace("home", value)
+
+    var workPlace: GeocodeSuggestion?
+        get() = getSavedPlace("work")
+        set(value) = setSavedPlace("work", value)
+
+    private fun getSavedPlace(key: String): GeocodeSuggestion? {
+        val name = prefs.getString("saved_${key}_name", null) ?: return null
+        val lat = prefs.getFloat("saved_${key}_lat", 0f).toDouble()
+        val lon = prefs.getFloat("saved_${key}_lon", 0f).toDouble()
+        return GeocodeSuggestion(name = name, lat = lat, lon = lon)
+    }
+
+    private fun setSavedPlace(key: String, value: GeocodeSuggestion?) {
+        if (value == null) {
+            prefs.edit()
+                .remove("saved_${key}_name")
+                .remove("saved_${key}_lat")
+                .remove("saved_${key}_lon")
+                .apply()
+        } else {
+            prefs.edit()
+                .putString("saved_${key}_name", value.name)
+                .putFloat("saved_${key}_lat", value.lat.toFloat())
+                .putFloat("saved_${key}_lon", value.lon.toFloat())
+                .apply()
+        }
+    }
 }

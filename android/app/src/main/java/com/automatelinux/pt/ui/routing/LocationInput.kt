@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.automatelinux.pt.data.model.GeocodeSuggestion
 import com.automatelinux.pt.ui.components.AutocompleteField
+import com.automatelinux.pt.ui.components.PreSuggestion
 import com.automatelinux.pt.util.LocalAppStrings
 
 @Composable
@@ -30,7 +31,9 @@ fun LocationInput(
     modifier: Modifier = Modifier,
     showGpsButton: Boolean = false,
     onGpsClick: (() -> Unit)? = null,
-    gpsLoading: Boolean = false
+    gpsLoading: Boolean = false,
+    preSuggestions: List<PreSuggestion> = emptyList(),
+    onLongPressSuggestion: ((GeocodeSuggestion) -> Unit)? = null
 ) {
     val strings = LocalAppStrings.current
     var text by remember(value) { mutableStateOf(value?.name ?: "") }
@@ -68,6 +71,8 @@ fun LocationInput(
             )
         },
         modifier = modifier,
+        preSuggestions = preSuggestions,
+        onLongPressSuggestion = onLongPressSuggestion,
         leadingIcon = if (showGpsButton && onGpsClick != null) {
             {
                 IconButton(onClick = onGpsClick, enabled = !gpsLoading) {
