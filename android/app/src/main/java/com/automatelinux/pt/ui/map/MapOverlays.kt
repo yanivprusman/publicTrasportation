@@ -6,9 +6,10 @@ import android.graphics.Color
 import android.graphics.DashPathEffect
 import android.graphics.LinearGradient
 import android.graphics.Paint
-import android.graphics.Point
+import android.graphics.PixelFormat
 import android.graphics.RadialGradient
 import android.graphics.Shader
+import android.graphics.drawable.Drawable
 import android.view.animation.LinearInterpolator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -18,9 +19,7 @@ import com.automatelinux.pt.data.model.VehicleMarker
 import com.automatelinux.pt.util.PolylineDecoder
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
-import org.osmdroid.views.Projection
 import org.osmdroid.views.overlay.Marker
-import org.osmdroid.views.overlay.Overlay
 import org.osmdroid.views.overlay.Polyline
 
 private const val TAG_ROUTE = "route_overlay"
@@ -137,12 +136,23 @@ fun OriginDestinationMarkers(
     destination: GeoPoint?
 ) {
     LaunchedEffect(origin, destination) {
-        map.overlays.filterIsInstance<AnimatedOriginOverlay>().forEach { it.stopAnimation() }
-        map.overlays.removeAll { it is AnimatedOriginOverlay }
+        (map.overlays.firstOrNull { (it as? Marker)?.id == "origin" }
+            as? Marker)?.let { m ->
+            (m.icon as? AnimatedOriginDrawable)?.stopAnimation()
+        }
+        map.overlays.removeAll { (it as? Marker)?.id == "origin" }
         map.overlays.removeAll { (it as? Marker)?.id == "dest" }
 
         origin?.let { pt ->
-            map.overlays.add(AnimatedOriginOverlay(pt, map))
+            val density = map.resources.displayMetrics.density
+            val marker = Marker(map).apply {
+                id = "origin"
+                position = pt
+                setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+                icon = AnimatedOriginDrawable(density, map)
+                setInfoWindow(null)
+            }
+            map.overlays.add(marker)
         }
 
         destination?.let { pt ->
@@ -396,13 +406,16 @@ fun TrackedBusOverlay(
     }
 }
 
-class AnimatedOriginOverlay(
-    private val position: GeoPoint,
-    mapView: MapView
-) : Overlay() {
+class AnimatedOriginDrawable(
+    private val density: Float,
+    private val mapView: MapView
+) : Drawable() {
 
     private var progress = 0f
-    private val density = mapView.resources.displayMetrics.density
+    private val coreRadius = 7f * density
+    private val maxRippleRadius = coreRadius * 2.2f
+    private val totalRadius = maxRippleRadius + 3f * density
+    private val size = (totalRadius * 2).toInt()
 
     private val animator = ValueAnimator.ofFloat(0f, 1f).apply {
         duration = 2400L
@@ -410,20 +423,16 @@ class AnimatedOriginOverlay(
         interpolator = LinearInterpolator()
         addUpdateListener { anim ->
             progress = anim.animatedFraction
+            invalidateSelf()
             mapView.postInvalidate()
         }
         start()
     }
 
-    override fun draw(canvas: Canvas, projection: Projection) {
-        val point = Point()
-        projection.toPixels(position, point)
-        val cx = point.x.toFloat()
-        val cy = point.y.toFloat()
+    override fun draw(canvas: Canvas) {
+        val cx = bounds.centerX().toFloat()
+        val cy = bounds.centerY().toFloat()
 
-        val coreRadius = 7f * density
-
-        // Glow
         val glowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             style = Paint.Style.FILL
             shader = RadialGradient(
@@ -434,7 +443,6 @@ class AnimatedOriginOverlay(
         }
         canvas.drawCircle(cx, cy, coreRadius * 2.5f, glowPaint)
 
-        // 3 staggered ripple rings
         val ringPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             style = Paint.Style.STROKE
             strokeWidth = 2.5f * density
@@ -447,14 +455,12 @@ class AnimatedOriginOverlay(
             canvas.drawCircle(cx, cy, coreRadius * scale, ringPaint)
         }
 
-        // White border
         val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             style = Paint.Style.FILL
             color = Color.WHITE
         }
         canvas.drawCircle(cx, cy, coreRadius + 2f * density, borderPaint)
 
-        // Core with radial gradient
         val corePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             style = Paint.Style.FILL
             shader = RadialGradient(
@@ -466,12 +472,15 @@ class AnimatedOriginOverlay(
         canvas.drawCircle(cx, cy, coreRadius, corePaint)
     }
 
+    override fun getIntrinsicWidth() = size
+    override fun getIntrinsicHeight() = size
+
+    override fun setAlpha(alpha: Int) {}
+    override fun setColorFilter(colorFilter: android.graphics.ColorFilter?) {}
+    @Deprecated("Deprecated")
+    override fun getOpacity() = PixelFormat.TRANSLUCENT
+
     fun stopAnimation() {
         animator.cancel()
-    }
-
-    override fun onDetach(mapView: MapView) {
-        animator.cancel()
-        super.onDetach(mapView)
     }
 }
