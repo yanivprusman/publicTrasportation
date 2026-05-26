@@ -54,6 +54,7 @@ import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Work
 import androidx.compose.material3.AlertDialog
@@ -103,9 +104,11 @@ import com.automatelinux.pt.ui.components.PreSuggestion
 import com.automatelinux.pt.ui.map.OsmMapView
 import com.automatelinux.pt.ui.map.OriginDestinationMarkers
 import com.automatelinux.pt.ui.map.RouteOverlay
+import com.automatelinux.pt.ui.map.StopMarkersOverlay
 import com.automatelinux.pt.ui.map.VehicleMarkerOverlay
 import com.automatelinux.pt.ui.map.animateToPoint
 import com.automatelinux.pt.ui.map.fitBounds
+import com.automatelinux.pt.data.model.StopResult
 import com.automatelinux.pt.util.PolylineDecoder
 import com.automatelinux.pt.ui.routing.DebugSettingsDialog
 import com.automatelinux.pt.ui.routing.RoutePlannerPanel
@@ -113,6 +116,9 @@ import com.automatelinux.pt.ui.viewmodel.ArrivalsViewModel
 import com.automatelinux.pt.ui.viewmodel.RoutingViewModel
 import com.automatelinux.pt.util.LocalAppStrings
 import com.automatelinux.pt.util.SettingsStore
+import com.google.android.gms.location.LocationCallback
+import com.google.android.gms.location.LocationRequest
+import com.google.android.gms.location.LocationResult
 import kotlinx.coroutines.launch
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
@@ -146,6 +152,11 @@ fun MainScreen(
 
     var savePlaceTarget by remember { mutableStateOf<com.automatelinux.pt.data.model.GeocodeSuggestion?>(null) }
     var recentSearchesVersion by remember { mutableIntStateOf(0) }
+
+    var followingLocation by remember { mutableStateOf(false) }
+    var nearbyStops by remember { mutableStateOf<List<StopResult>>(emptyList()) }
+    var currentMapZoom by remember { mutableStateOf(13.0) }
+    var currentMapCenter by remember { mutableStateOf(GeoPoint(31.77, 35.21)) }
 
     val preSuggestions = remember(recentSearchesVersion) {
         buildList {
@@ -217,6 +228,53 @@ fun MainScreen(
         }
     }
 
+    val locationCallback = remember {
+        object : LocationCallback() {
+            override fun onLocationResult(result: LocationResult) {
+                val loc = result.lastLocation ?: return
+                val point = GeoPoint(loc.latitude, loc.longitude)
+                mapView?.animateToPoint(point)
+            }
+        }
+    }
+
+    DisposableEffect(followingLocation) {
+        if (followingLocation) {
+            val hasPermission = ContextCompat.checkSelfPermission(
+                context, Manifest.permission.ACCESS_FINE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
+            if (hasPermission) {
+                val request = LocationRequest.Builder(
+                    Priority.PRIORITY_HIGH_ACCURACY, 5000L
+                ).setMinUpdateIntervalMillis(2000L).build()
+                try {
+                    fusedLocationClient.requestLocationUpdates(request, locationCallback, null)
+                } catch (_: SecurityException) {
+                    followingLocation = false
+                }
+            } else {
+                followingLocation = false
+            }
+        }
+        onDispose {
+            fusedLocationClient.removeLocationUpdates(locationCallback)
+        }
+    }
+
+    LaunchedEffect(currentMapCenter, currentMapZoom) {
+        if (currentMapZoom >= 15.0) {
+            kotlinx.coroutines.delay(300)
+            val stops = arrivalsViewModel.fetchNearbyStops(
+                currentMapCenter.latitude,
+                currentMapCenter.longitude,
+                500
+            )
+            nearbyStops = stops
+        } else {
+            nearbyStops = emptyList()
+        }
+    }
+
     val sheetState = rememberDismissibleSheetState(
         initialValue = SheetValue.PartiallyExpanded,
         skipHiddenState = false,
@@ -248,6 +306,12 @@ fun MainScreen(
         com.automatelinux.pt.util.ScreenTracker.currentScreen = when (activeTab) {
             ActiveTab.ROUTE -> "Route Planner"
             ActiveTab.ARRIVALS -> "Station Arrivals"
+        }
+    }
+
+    LaunchedEffect(routingState.origin) {
+        routingState.origin?.let { origin ->
+            mapView?.animateToPoint(GeoPoint(origin.lat, origin.lon), 15.0)
         }
     }
 
@@ -491,6 +555,11 @@ fun MainScreen(
                         } else {
                             routingViewModel.setDestinationFromCoords(point.latitude, point.longitude)
                         }
+                    },
+                    onUserPan = { followingLocation = false },
+                    onMapChanged = { center, zoom ->
+                        currentMapCenter = center
+                        currentMapZoom = zoom
                     }
                 ) { map ->
                     RouteOverlay(
@@ -511,6 +580,48 @@ fun MainScreen(
                             visible = arrivalsState.showVehicleMarkers
                         )
                     }
+
+                    StopMarkersOverlay(
+                        map = map,
+                        stops = nearbyStops,
+                        onStopTap = { stop ->
+                            activeTab = ActiveTab.ARRIVALS
+                            arrivalsViewModel.setStationCode(stop.stopCode, stop.stopName)
+                            scope.launch { bottomSheetState.expand() }
+                        }
+                    )
+                }
+
+                SmallFloatingActionButton(
+                    onClick = {
+                        val hasPermission = ContextCompat.checkSelfPermission(
+                            context, Manifest.permission.ACCESS_FINE_LOCATION
+                        ) == PackageManager.PERMISSION_GRANTED
+                        if (hasPermission) {
+                            followingLocation = !followingLocation
+                            if (followingLocation) fetchCurrentLocation()
+                        } else {
+                            permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+                        }
+                    },
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(top = 48.dp, end = 12.dp),
+                    containerColor = if (followingLocation)
+                        MaterialTheme.colorScheme.primary
+                    else
+                        MaterialTheme.colorScheme.surface,
+                    contentColor = if (followingLocation)
+                        MaterialTheme.colorScheme.onPrimary
+                    else
+                        MaterialTheme.colorScheme.primary,
+                    elevation = FloatingActionButtonDefaults.elevation(4.dp)
+                ) {
+                    Icon(
+                        Icons.Default.MyLocation,
+                        contentDescription = strings.followMyLocation,
+                        modifier = Modifier.size(22.dp)
+                    )
                 }
 
                 if (showOpacitySlider) {

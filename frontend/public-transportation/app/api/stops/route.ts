@@ -52,9 +52,37 @@ function loadStops(): Stop[] {
 
 export async function GET(request: NextRequest) {
   const q = request.nextUrl.searchParams.get('q')?.trim() || '';
-  if (!q) return NextResponse.json([]);
+  const latParam = request.nextUrl.searchParams.get('lat');
+  const lonParam = request.nextUrl.searchParams.get('lon');
+  const radiusParam = request.nextUrl.searchParams.get('radius');
 
   const stops = loadStops();
+
+  if (latParam && lonParam) {
+    const lat = parseFloat(latParam);
+    const lon = parseFloat(lonParam);
+    const radius = radiusParam ? parseFloat(radiusParam) : 500;
+    if (isNaN(lat) || isNaN(lon)) return NextResponse.json([]);
+
+    const degPerMeter = 1 / 111320;
+    const latDelta = radius * degPerMeter;
+    const lonDelta = radius * degPerMeter / Math.cos(lat * Math.PI / 180);
+
+    const nearby: Stop[] = [];
+    for (const stop of stops) {
+      if (
+        Math.abs(stop.lat - lat) <= latDelta &&
+        Math.abs(stop.lon - lon) <= lonDelta
+      ) {
+        nearby.push(stop);
+        if (nearby.length >= 100) break;
+      }
+    }
+    return NextResponse.json(nearby);
+  }
+
+  if (!q) return NextResponse.json([]);
+
   const qLower = q.toLowerCase();
   const results: Stop[] = [];
 

@@ -111,6 +111,14 @@ class ArrivalsViewModel @Inject constructor(
         }
     }
 
+    suspend fun fetchNearbyStops(lat: Double, lon: Double, radius: Int = 500): List<StopResult> {
+        return try {
+            api.nearbyStops(lat, lon, radius)
+        } catch (_: Exception) {
+            emptyList()
+        }
+    }
+
     fun getDestinationName(destinationRef: String?): String {
         if (destinationRef == null) return ""
         return _state.value.siriData?.stopNames?.get(destinationRef) ?: destinationRef

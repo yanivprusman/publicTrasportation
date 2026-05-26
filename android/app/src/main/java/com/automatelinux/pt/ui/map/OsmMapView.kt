@@ -14,6 +14,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import org.osmdroid.config.Configuration
 import org.osmdroid.events.MapEventsReceiver
+import org.osmdroid.events.MapListener
+import org.osmdroid.events.ScrollEvent
+import org.osmdroid.events.ZoomEvent
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.BoundingBox
 import org.osmdroid.util.GeoPoint
@@ -28,6 +31,8 @@ fun OsmMapView(
     onMapReady: (MapView) -> Unit = {},
     onLongPress: ((GeoPoint) -> Unit)? = null,
     onMapMoved: ((GeoPoint) -> Unit)? = null,
+    onUserPan: (() -> Unit)? = null,
+    onMapChanged: ((center: GeoPoint, zoom: Double) -> Unit)? = null,
     overlayContent: @Composable (MapView) -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -62,16 +67,32 @@ fun OsmMapView(
                     }))
                 }
 
-                if (onMapMoved != null) {
-                    addOnFirstLayoutListener { _, _, _, _, _ ->
-                        setOnTouchListener { _, event ->
-                            if (event.action == MotionEvent.ACTION_UP) {
-                                onMapMoved(GeoPoint(mapCenter.latitude, mapCenter.longitude))
-                            }
-                            false
+                addOnFirstLayoutListener { _, _, _, _, _ ->
+                    setOnTouchListener { _, event ->
+                        if (event.action == MotionEvent.ACTION_UP) {
+                            onMapMoved?.invoke(GeoPoint(mapCenter.latitude, mapCenter.longitude))
+                            onUserPan?.invoke()
                         }
+                        false
                     }
                 }
+
+                addMapListener(object : MapListener {
+                    override fun onScroll(event: ScrollEvent?): Boolean {
+                        onMapChanged?.invoke(
+                            GeoPoint(mapCenter.latitude, mapCenter.longitude),
+                            zoomLevelDouble
+                        )
+                        return false
+                    }
+                    override fun onZoom(event: ZoomEvent?): Boolean {
+                        onMapChanged?.invoke(
+                            GeoPoint(mapCenter.latitude, mapCenter.longitude),
+                            zoomLevelDouble
+                        )
+                        return false
+                    }
+                })
 
                 mapView = this
                 onMapReady(this)

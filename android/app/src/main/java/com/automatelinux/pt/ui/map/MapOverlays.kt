@@ -295,6 +295,38 @@ private fun createDiamondPinDrawable(density: Float): android.graphics.drawable.
     }
 }
 
+@Composable
+fun StopMarkersOverlay(
+    map: MapView,
+    stops: List<com.automatelinux.pt.data.model.StopResult>,
+    onStopTap: ((com.automatelinux.pt.data.model.StopResult) -> Unit)? = null
+) {
+    LaunchedEffect(stops) {
+        map.overlays.removeAll { (it as? Marker)?.id == "stop_marker" }
+
+        for (stop in stops) {
+            val marker = Marker(map).apply {
+                id = "stop_marker"
+                position = GeoPoint(stop.lat, stop.lon)
+                setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+                title = stop.stopName
+                snippet = stop.stopCode
+                icon = createCircleDrawable(Color.parseColor("#1976D2"), 16, Color.WHITE, 3f)
+                setInfoWindow(null)
+                if (onStopTap != null) {
+                    setOnMarkerClickListener { _, _ ->
+                        onStopTap(stop)
+                        true
+                    }
+                }
+            }
+            map.overlays.add(marker)
+        }
+
+        map.invalidate()
+    }
+}
+
 class AnimatedOriginOverlay(
     private val position: GeoPoint,
     mapView: MapView

@@ -71,6 +71,7 @@ data class AppStrings(
     val issueClarifier: String,
     val notAvailable: String,
     val nextArrival: String,
+    val followMyLocation: String,
 )
 
 val EnStrings = AppStrings(
@@ -149,6 +150,7 @@ val EnStrings = AppStrings(
     issueClarifier = "Issue Clarifier",
     notAvailable = "N/A",
     nextArrival = "Next Arrival",
+    followMyLocation = "Follow my location",
 )
 
 val HeStrings = AppStrings(
@@ -227,6 +229,7 @@ val HeStrings = AppStrings(
     issueClarifier = "דיווח על בעיה",
     notAvailable = "לא זמין",
     nextArrival = "הגעה הבאה",
+    followMyLocation = "עקוב אחרי המיקום שלי",
 )
 
 val LocalAppStrings = compositionLocalOf { EnStrings }

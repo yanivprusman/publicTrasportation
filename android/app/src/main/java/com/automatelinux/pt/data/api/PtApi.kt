@@ -33,6 +33,13 @@ interface PtApi {
         @Query("q") query: String
     ): List<StopResult>
 
+    @GET("/api/stops")
+    suspend fun nearbyStops(
+        @Query("lat") lat: Double,
+        @Query("lon") lon: Double,
+        @Query("radius") radius: Int = 500
+    ): List<StopResult>
+
     @GET("/api/transport")
     suspend fun getTransport(
         @Query("station") station: String,
