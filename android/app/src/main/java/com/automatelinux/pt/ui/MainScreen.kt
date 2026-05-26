@@ -330,9 +330,9 @@ fun MainScreen(
                 if (locationOverlay == null) {
                     val provider = FusedLocationOverlayProvider(fusedLocationClient)
                     val newOverlay = MyLocationNewOverlay(provider, map)
+                    val density = map.resources.displayMetrics.density
                     if (settingsStore.locationIconStyle == "dot") {
-                        val density = map.resources.displayMetrics.density
-                        val dotSize = (24 * density).toInt()
+                        val dotSize = (16 * density).toInt()
                         val dotBitmap = android.graphics.Bitmap.createBitmap(dotSize, dotSize, android.graphics.Bitmap.Config.ARGB_8888)
                         val canvas = android.graphics.Canvas(dotBitmap)
                         val cx = dotSize / 2f
@@ -353,6 +353,7 @@ fun MainScreen(
                         newOverlay.setPersonHotspot(cx, cy)
                     }
                     newOverlay.enableMyLocation()
+                    newOverlay.setDrawAccuracyEnabled(false)
                     map.overlays.add(0, newOverlay)
                     locationOverlay = newOverlay
                 }
