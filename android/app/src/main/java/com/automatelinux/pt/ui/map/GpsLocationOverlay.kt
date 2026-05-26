@@ -4,12 +4,14 @@ import android.annotation.SuppressLint
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.Point
 import android.location.Location
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.Priority
+import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.Projection
 import org.osmdroid.views.overlay.Overlay
@@ -21,6 +23,7 @@ class GpsLocationOverlay(
 ) : Overlay() {
 
     private var location: Location? = null
+    private val drawPixel = Point()
 
     private val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.WHITE
@@ -62,8 +65,9 @@ class GpsLocationOverlay(
 
     override fun draw(canvas: Canvas, projection: Projection) {
         val loc = location ?: return
-        val x = projection.getLongPixelXFromLongitude(loc.longitude).toFloat()
-        val y = projection.getLongPixelYFromLatitude(loc.latitude).toFloat()
+        projection.toPixels(GeoPoint(loc.latitude, loc.longitude), drawPixel)
+        val x = drawPixel.x.toFloat()
+        val y = drawPixel.y.toFloat()
         canvas.drawCircle(x, y, dotRadius + borderWidth, borderPaint)
         canvas.drawCircle(x, y, dotRadius, dotPaint)
     }
