@@ -124,6 +124,7 @@ import kotlinx.coroutines.launch
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import com.automatelinux.pt.ui.map.GpsLocationOverlay
+import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 
 enum class ActiveTab { ROUTE, ARRIVALS, LINES }
 
@@ -156,7 +157,6 @@ fun MainScreen(
     var recentSearchesVersion by remember { mutableIntStateOf(0) }
 
     var followingLocation by remember { mutableStateOf(false) }
-    var locationOverlay by remember { mutableStateOf<GpsLocationOverlay?>(null) }
     var nearbyStops by remember { mutableStateOf<List<StopResult>>(emptyList()) }
     var currentMapZoom by remember { mutableStateOf(13.0) }
     var currentMapCenter by remember { mutableStateOf(GeoPoint(31.77, 35.21)) }
@@ -312,18 +312,22 @@ fun MainScreen(
             context, Manifest.permission.ACCESS_FINE_LOCATION
         ) == PackageManager.PERMISSION_GRANTED
         if (hasPermission) {
-            val wrapper = GpsLocationOverlay(map, fusedLocationClient)
-            wrapper.startUpdates()
-            map.overlays.add(wrapper.overlay)
-            locationOverlay = wrapper
+            val overlay = MyLocationNewOverlay(map)
+            val dot = GpsLocationOverlay.createBlueDotBitmap(map.resources.displayMetrics.density)
+            overlay.setPersonIcon(dot)
+            overlay.setPersonHotspot(dot.width / 2f, dot.height / 2f)
+            overlay.setDirectionIcon(dot)
+            overlay.setDirectionAnchor(0.5f, 0.5f)
+            overlay.isDrawAccuracyEnabled = false
+            overlay.enableMyLocation()
+            map.overlays.add(overlay)
             map.invalidate()
         }
         onDispose {
-            locationOverlay?.let { wrapper ->
-                wrapper.stopUpdates()
-                map.overlays.remove(wrapper.overlay)
+            map.overlays.filterIsInstance<MyLocationNewOverlay>().forEach {
+                it.disableMyLocation()
             }
-            locationOverlay = null
+            map.overlays.removeAll { it is MyLocationNewOverlay }
         }
     }
 

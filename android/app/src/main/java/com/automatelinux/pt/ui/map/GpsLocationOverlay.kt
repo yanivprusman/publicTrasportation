@@ -37,9 +37,9 @@ class GpsLocationOverlay(
     }
 
     companion object {
-        private fun createBlueDotBitmap(density: Float): Bitmap {
-            val dotRadius = 6f * density
-            val borderWidth = 2.5f * density
+        fun createBlueDotBitmap(density: Float): Bitmap {
+            val dotRadius = 10f * density
+            val borderWidth = 3f * density
             val size = ((dotRadius + borderWidth) * 2).toInt() + 2
             val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
             val canvas = Canvas(bitmap)

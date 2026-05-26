@@ -98,9 +98,7 @@ fun OsmMapView(
                 onMapReady(this)
             }
         },
-        update = { view ->
-            mapView = view
-        }
+        update = { _ -> }
     )
 
     mapView?.let { map ->
