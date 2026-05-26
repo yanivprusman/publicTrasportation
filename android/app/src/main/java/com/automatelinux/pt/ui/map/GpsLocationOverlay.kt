@@ -4,14 +4,12 @@ import android.annotation.SuppressLint
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
-import android.graphics.Point
 import android.location.Location
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.Priority
-import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.Projection
 import org.osmdroid.views.overlay.Overlay
@@ -23,7 +21,6 @@ class GpsLocationOverlay(
 ) : Overlay() {
 
     private var location: Location? = null
-    private val screenPoint = Point()
 
     private val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.WHITE
@@ -65,20 +62,8 @@ class GpsLocationOverlay(
 
     override fun draw(canvas: Canvas, projection: Projection) {
         val loc = location ?: return
-        val geoPoint = GeoPoint(loc.latitude, loc.longitude)
-        projection.toPixels(geoPoint, screenPoint)
-
-        // Check if the point is within reasonable screen bounds
-        // At low zoom levels, canvas clipping can remove off-center points
-        val screenRect = projection.screenRect ?: return
-        val margin = 100
-        if (screenPoint.x < screenRect.left - margin || screenPoint.x > screenRect.right + margin ||
-            screenPoint.y < screenRect.top - margin || screenPoint.y > screenRect.bottom + margin) {
-            return
-        }
-
-        val x = screenPoint.x.toFloat()
-        val y = screenPoint.y.toFloat()
+        val x = projection.getLongPixelXFromLongitude(loc.longitude).toFloat()
+        val y = projection.getLongPixelYFromLatitude(loc.latitude).toFloat()
         canvas.drawCircle(x, y, dotRadius + borderWidth, borderPaint)
         canvas.drawCircle(x, y, dotRadius, dotPaint)
     }
