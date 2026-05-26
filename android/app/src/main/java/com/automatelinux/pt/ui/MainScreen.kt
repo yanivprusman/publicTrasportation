@@ -312,16 +312,16 @@ fun MainScreen(
             context, Manifest.permission.ACCESS_FINE_LOCATION
         ) == PackageManager.PERMISSION_GRANTED
         if (hasPermission) {
-            val overlay = GpsLocationOverlay(map, fusedLocationClient)
-            overlay.startUpdates()
-            map.overlays.add(overlay)
-            locationOverlay = overlay
+            val wrapper = GpsLocationOverlay(map, fusedLocationClient)
+            wrapper.startUpdates()
+            map.overlays.add(wrapper.overlay)
+            locationOverlay = wrapper
             map.invalidate()
         }
         onDispose {
-            locationOverlay?.let { overlay ->
-                overlay.stopUpdates()
-                map.overlays.remove(overlay)
+            locationOverlay?.let { wrapper ->
+                wrapper.stopUpdates()
+                map.overlays.remove(wrapper.overlay)
             }
             locationOverlay = null
         }

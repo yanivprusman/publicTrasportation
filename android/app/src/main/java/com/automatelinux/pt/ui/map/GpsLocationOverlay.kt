@@ -1,74 +1,61 @@
 package com.automatelinux.pt.ui.map
 
 import android.annotation.SuppressLint
+import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
-import android.graphics.Point
-import android.location.Location
 import com.google.android.gms.location.FusedLocationProviderClient
-import com.google.android.gms.location.LocationCallback
-import com.google.android.gms.location.LocationRequest
-import com.google.android.gms.location.LocationResult
-import com.google.android.gms.location.Priority
-import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
-import org.osmdroid.views.Projection
-import org.osmdroid.views.overlay.Overlay
+import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 
 @SuppressLint("MissingPermission")
 class GpsLocationOverlay(
-    private val mapView: MapView,
-    private val fusedClient: FusedLocationProviderClient
-) : Overlay() {
+    mapView: MapView,
+    fusedClient: FusedLocationProviderClient
+) {
+    val overlay: MyLocationNewOverlay
 
-    private var location: Location? = null
-    private val drawPixel = Point()
-
-    private val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.WHITE
-        style = Paint.Style.FILL
-    }
-    private val dotPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.parseColor("#4285F4")
-        style = Paint.Style.FILL
-    }
-
-    private val density = mapView.resources.displayMetrics.density
-    private val dotRadius = 6f * density
-    private val borderWidth = 2.5f * density
-
-    private val callback = object : LocationCallback() {
-        override fun onLocationResult(result: LocationResult) {
-            val loc = result.lastLocation ?: return
-            location = loc
-            mapView.postInvalidate()
+    init {
+        val provider = FusedLocationOverlayProvider(fusedClient)
+        overlay = MyLocationNewOverlay(provider, mapView).apply {
+            val dot = createBlueDotBitmap(mapView.resources.displayMetrics.density)
+            setPersonIcon(dot)
+            setPersonHotspot(dot.width / 2f, dot.height / 2f)
+            setDirectionIcon(dot)
+            setDirectionAnchor(0.5f, 0.5f)
+            isDrawAccuracyEnabled = false
         }
     }
 
     fun startUpdates() {
-        val req = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 3000L)
-            .setMinUpdateIntervalMillis(1500L)
-            .build()
-        fusedClient.requestLocationUpdates(req, callback, null)
-        fusedClient.lastLocation.addOnSuccessListener { loc ->
-            if (loc != null) {
-                location = loc
-                mapView.postInvalidate()
-            }
-        }
+        overlay.enableMyLocation()
     }
 
     fun stopUpdates() {
-        fusedClient.removeLocationUpdates(callback)
+        overlay.disableMyLocation()
     }
 
-    override fun draw(canvas: Canvas, projection: Projection) {
-        val loc = location ?: return
-        projection.toPixels(GeoPoint(loc.latitude, loc.longitude), drawPixel)
-        val x = drawPixel.x.toFloat()
-        val y = drawPixel.y.toFloat()
-        canvas.drawCircle(x, y, dotRadius + borderWidth, borderPaint)
-        canvas.drawCircle(x, y, dotRadius, dotPaint)
+    companion object {
+        private fun createBlueDotBitmap(density: Float): Bitmap {
+            val dotRadius = 6f * density
+            val borderWidth = 2.5f * density
+            val size = ((dotRadius + borderWidth) * 2).toInt() + 2
+            val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bitmap)
+            val cx = size / 2f
+            val cy = size / 2f
+            val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.WHITE
+                style = Paint.Style.FILL
+            }
+            val dotPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.parseColor("#4285F4")
+                style = Paint.Style.FILL
+            }
+            canvas.drawCircle(cx, cy, dotRadius + borderWidth, borderPaint)
+            canvas.drawCircle(cx, cy, dotRadius, dotPaint)
+            return bitmap
+        }
     }
 }
