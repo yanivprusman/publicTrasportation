@@ -67,6 +67,16 @@ class GpsLocationOverlay(
         val loc = location ?: return
         val geoPoint = GeoPoint(loc.latitude, loc.longitude)
         projection.toPixels(geoPoint, screenPoint)
+
+        // Check if the point is within reasonable screen bounds
+        // At low zoom levels, canvas clipping can remove off-center points
+        val screenRect = projection.screenRect ?: return
+        val margin = 100
+        if (screenPoint.x < screenRect.left - margin || screenPoint.x > screenRect.right + margin ||
+            screenPoint.y < screenRect.top - margin || screenPoint.y > screenRect.bottom + margin) {
+            return
+        }
+
         val x = screenPoint.x.toFloat()
         val y = screenPoint.y.toFloat()
         canvas.drawCircle(x, y, dotRadius + borderWidth, borderPaint)
