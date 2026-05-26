@@ -1,6 +1,7 @@
 package com.automatelinux.pt
 
 import android.os.Bundle
+import android.util.Log
 import android.view.KeyEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -42,19 +43,22 @@ import javax.inject.Inject
 class MainActivity : ComponentActivity() {
     @Inject lateinit var settingsStore: SettingsStore
 
-    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
-        when (keyCode) {
-            KeyEvent.KEYCODE_PLUS, KeyEvent.KEYCODE_EQUALS,
-            KeyEvent.KEYCODE_VOLUME_UP -> {
-                MapZoomHandler.zoomIn()
-                return true
-            }
-            KeyEvent.KEYCODE_MINUS, KeyEvent.KEYCODE_VOLUME_DOWN -> {
-                MapZoomHandler.zoomOut()
-                return true
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (event.action == KeyEvent.ACTION_DOWN) {
+            Log.d("MapZoom", "key down: ${event.keyCode}")
+            when (event.keyCode) {
+                KeyEvent.KEYCODE_PLUS, KeyEvent.KEYCODE_EQUALS,
+                KeyEvent.KEYCODE_VOLUME_UP -> {
+                    MapZoomHandler.zoomIn()
+                    return true
+                }
+                KeyEvent.KEYCODE_MINUS, KeyEvent.KEYCODE_VOLUME_DOWN -> {
+                    MapZoomHandler.zoomOut()
+                    return true
+                }
             }
         }
-        return super.onKeyDown(keyCode, event)
+        return super.dispatchKeyEvent(event)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
