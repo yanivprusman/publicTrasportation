@@ -126,7 +126,8 @@ import com.google.android.gms.location.LocationResult
 import kotlinx.coroutines.launch
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
-import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
+import org.osmdroid.views.overlay.mylocation.IMyLocationConsumer
+import org.osmdroid.views.overlay.mylocation.IMyLocationProvider
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 
 enum class ActiveTab { ROUTE, ARRIVALS, LINES }
@@ -327,12 +328,45 @@ fun MainScreen(
                 context, Manifest.permission.ACCESS_FINE_LOCATION
             ) == PackageManager.PERMISSION_GRANTED
             if (hasPermission) {
-                val overlay = locationOverlay ?: MyLocationNewOverlay(
-                    GpsMyLocationProvider(context), map
-                ).also {
-                    it.enableMyLocation()
-                    map.overlays.add(0, it)
-                    locationOverlay = it
+                val overlay = locationOverlay ?: run {
+                    val provider = object : IMyLocationProvider {
+                        private var consumer: IMyLocationConsumer? = null
+                        private var lastLoc: android.location.Location? = null
+                        private val fusedCallback = object : LocationCallback() {
+                            override fun onLocationResult(result: LocationResult) {
+                                val loc = result.lastLocation ?: return
+                                lastLoc = loc
+                                consumer?.onLocationChanged(loc, this@run)
+                            }
+                        }
+                        override fun startLocationProvider(c: IMyLocationConsumer?): Boolean {
+                            consumer = c
+                            val req = LocationRequest.Builder(
+                                Priority.PRIORITY_HIGH_ACCURACY, 3000L
+                            ).setMinUpdateIntervalMillis(1500L).build()
+                            try {
+                                fusedLocationClient.requestLocationUpdates(req, fusedCallback, null)
+                                fusedLocationClient.lastLocation.addOnSuccessListener { loc ->
+                                    if (loc != null) {
+                                        lastLoc = loc
+                                        consumer?.onLocationChanged(loc, this)
+                                    }
+                                }
+                            } catch (_: SecurityException) {}
+                            return true
+                        }
+                        override fun stopLocationProvider() {
+                            fusedLocationClient.removeLocationUpdates(fusedCallback)
+                            consumer = null
+                        }
+                        override fun getLastKnownLocation() = lastLoc
+                        override fun destroy() { stopLocationProvider() }
+                    }
+                    MyLocationNewOverlay(provider, map).also {
+                        it.enableMyLocation()
+                        map.overlays.add(0, it)
+                        locationOverlay = it
+                    }
                 }
                 overlay.enableFollowLocation()
                 val request = LocationRequest.Builder(
