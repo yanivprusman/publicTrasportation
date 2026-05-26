@@ -120,9 +120,6 @@ import com.automatelinux.pt.ui.viewmodel.ArrivalsViewModel
 import com.automatelinux.pt.ui.viewmodel.RoutingViewModel
 import com.automatelinux.pt.util.LocalAppStrings
 import com.automatelinux.pt.util.SettingsStore
-import com.google.android.gms.location.LocationCallback
-import com.google.android.gms.location.LocationRequest
-import com.google.android.gms.location.LocationResult
 import kotlinx.coroutines.launch
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
@@ -161,6 +158,7 @@ fun MainScreen(
 
     var followingLocation by remember { mutableStateOf(false) }
     var locationOverlay by remember { mutableStateOf<MyLocationNewOverlay?>(null) }
+    var locationIconVersion by remember { mutableIntStateOf(0) }
     var nearbyStops by remember { mutableStateOf<List<StopResult>>(emptyList()) }
     var currentMapZoom by remember { mutableStateOf(13.0) }
     var currentMapCenter by remember { mutableStateOf(GeoPoint(31.77, 35.21)) }
@@ -310,77 +308,59 @@ fun MainScreen(
         }
     }
 
-    val locationCallback = remember {
-        object : LocationCallback() {
-            override fun onLocationResult(result: LocationResult) {
-                val loc = result.lastLocation ?: return
-                val point = GeoPoint(loc.latitude, loc.longitude)
-                mapView?.animateToPoint(point)
+    // Create the location overlay once when map becomes available
+    DisposableEffect(mapView, locationIconVersion) {
+        val map = mapView ?: return@DisposableEffect onDispose {}
+        val hasPermission = ContextCompat.checkSelfPermission(
+            context, Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+        if (hasPermission && locationOverlay == null) {
+            val provider = FusedLocationOverlayProvider(fusedLocationClient)
+            val overlay = MyLocationNewOverlay(provider, map)
+            val density = map.resources.displayMetrics.density
+            if (settingsStore.locationIconStyle == "dot") {
+                val dotSize = (16 * density).toInt()
+                val dotBitmap = android.graphics.Bitmap.createBitmap(dotSize, dotSize, android.graphics.Bitmap.Config.ARGB_8888)
+                val canvas = android.graphics.Canvas(dotBitmap)
+                val cx = dotSize / 2f
+                val cy = dotSize / 2f
+                val radius = dotSize / 2f - 2 * density
+                val borderPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+                    color = android.graphics.Color.WHITE
+                    style = android.graphics.Paint.Style.FILL
+                }
+                canvas.drawCircle(cx, cy, radius + 2 * density, borderPaint)
+                val corePaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+                    color = android.graphics.Color.parseColor("#4285F4")
+                    style = android.graphics.Paint.Style.FILL
+                }
+                canvas.drawCircle(cx, cy, radius, corePaint)
+                overlay.setPersonIcon(dotBitmap)
+                overlay.setDirectionIcon(dotBitmap)
+                overlay.setPersonHotspot(cx, cy)
             }
+            overlay.setDrawAccuracyEnabled(false)
+            overlay.enableMyLocation()
+            map.overlays.add(overlay)
+            locationOverlay = overlay
+            map.invalidate()
         }
-    }
-
-    DisposableEffect(followingLocation, mapView) {
-        val map = mapView
-        if (followingLocation && map != null) {
-            val hasPermission = ContextCompat.checkSelfPermission(
-                context, Manifest.permission.ACCESS_FINE_LOCATION
-            ) == PackageManager.PERMISSION_GRANTED
-            if (hasPermission) {
-                if (locationOverlay == null) {
-                    val provider = FusedLocationOverlayProvider(fusedLocationClient)
-                    val newOverlay = MyLocationNewOverlay(provider, map)
-                    val density = map.resources.displayMetrics.density
-                    if (settingsStore.locationIconStyle == "dot") {
-                        val dotSize = (16 * density).toInt()
-                        val dotBitmap = android.graphics.Bitmap.createBitmap(dotSize, dotSize, android.graphics.Bitmap.Config.ARGB_8888)
-                        val canvas = android.graphics.Canvas(dotBitmap)
-                        val cx = dotSize / 2f
-                        val cy = dotSize / 2f
-                        val radius = dotSize / 2f - 2 * density
-                        val borderPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-                            color = android.graphics.Color.WHITE
-                            style = android.graphics.Paint.Style.FILL
-                        }
-                        canvas.drawCircle(cx, cy, radius + 2 * density, borderPaint)
-                        val corePaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-                            color = android.graphics.Color.parseColor("#4285F4")
-                            style = android.graphics.Paint.Style.FILL
-                        }
-                        canvas.drawCircle(cx, cy, radius, corePaint)
-                        newOverlay.setPersonIcon(dotBitmap)
-                        newOverlay.setDirectionIcon(dotBitmap)
-                        newOverlay.setPersonHotspot(cx, cy)
-                    }
-                    newOverlay.enableMyLocation()
-                    newOverlay.setDrawAccuracyEnabled(false)
-                    map.overlays.add(0, newOverlay)
-                    locationOverlay = newOverlay
-                }
-                val overlay = locationOverlay!!
-                overlay.enableFollowLocation()
-                val request = LocationRequest.Builder(
-                    Priority.PRIORITY_HIGH_ACCURACY, 5000L
-                ).setMinUpdateIntervalMillis(2000L).build()
-                try {
-                    fusedLocationClient.requestLocationUpdates(request, locationCallback, null)
-                } catch (_: SecurityException) {
-                    followingLocation = false
-                }
-            } else {
-                followingLocation = false
-            }
-        } else {
+        onDispose {
             locationOverlay?.let { overlay ->
-                overlay.disableFollowLocation()
                 overlay.disableMyLocation()
-                map?.overlays?.remove(overlay)
-                map?.invalidate()
+                map.overlays.remove(overlay)
             }
             locationOverlay = null
         }
-        onDispose {
-            fusedLocationClient.removeLocationUpdates(locationCallback)
+    }
+
+    // Toggle follow (auto-center) separately — never recreate the overlay
+    LaunchedEffect(followingLocation) {
+        val overlay = locationOverlay ?: return@LaunchedEffect
+        if (followingLocation) {
+            overlay.enableFollowLocation()
+        } else {
+            overlay.disableFollowLocation()
         }
     }
 
@@ -799,7 +779,7 @@ fun MainScreen(
 
                     OriginDestinationMarkers(
                         map = map,
-                        origin = if (followingLocation) null else routingState.origin?.let { GeoPoint(it.lat, it.lon) },
+                        origin = null,
                         destination = routingState.destination?.let { GeoPoint(it.lat, it.lon) }
                     )
 
@@ -964,11 +944,7 @@ fun MainScreen(
                     settingsStore.locationIconStyle = iconStyle
                     settingsStore.debugFrom = from
                     settingsStore.debugTo = to
-                    locationOverlay?.let { overlay ->
-                        mapView?.overlays?.remove(overlay)
-                        overlay.disableMyLocation()
-                    }
-                    locationOverlay = null
+                    locationIconVersion++
                     showDebugSettings = false
                 },
                 onDismiss = { showDebugSettings = false },
