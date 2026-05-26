@@ -792,7 +792,7 @@ fun MainScreen(
 
                     OriginDestinationMarkers(
                         map = map,
-                        origin = routingState.origin?.let { GeoPoint(it.lat, it.lon) },
+                        origin = if (followingLocation) null else routingState.origin?.let { GeoPoint(it.lat, it.lon) },
                         destination = routingState.destination?.let { GeoPoint(it.lat, it.lon) }
                     )
 
@@ -834,7 +834,9 @@ fun MainScreen(
                         ) == PackageManager.PERMISSION_GRANTED
                         if (hasPermission) {
                             followingLocation = !followingLocation
-                            if (followingLocation) centerMapOnCurrentLocation()
+                            if (followingLocation) {
+                                centerMapOnCurrentLocation()
+                            }
                         } else {
                             permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
                         }
