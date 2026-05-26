@@ -11,11 +11,17 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -142,6 +148,8 @@ fun StationArrivals(
     loading: Boolean,
     getDestinationName: (String?) -> String,
     onVehicleSelect: ((Double, Double) -> Unit)? = null,
+    favoriteLines: Set<String> = emptySet(),
+    onToggleFavoriteLine: ((String) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val strings = LocalAppStrings.current
@@ -246,11 +254,25 @@ fun StationArrivals(
                             call?.expectedArrivalTime?.let {
                                 Text(strings.fullArrival(it), style = MaterialTheme.typography.bodySmall)
                             }
-                            val loc = journey.vehicleLocation
-                            if (loc != null && onVehicleSelect != null) {
-                                Spacer(Modifier.height(4.dp))
-                                Button(onClick = { onVehicleSelect(loc.latitude, loc.longitude) }) {
-                                    Text(strings.showOnMap)
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                val loc = journey.vehicleLocation
+                                if (loc != null && onVehicleSelect != null) {
+                                    Button(onClick = { onVehicleSelect(loc.latitude, loc.longitude) }) {
+                                        Text(strings.showOnMap)
+                                    }
+                                    Spacer(Modifier.width(8.dp))
+                                }
+                                val lineName = journey.publishedLineName
+                                if (lineName != null && onToggleFavoriteLine != null) {
+                                    val isFav = favoriteLines.contains(lineName)
+                                    IconButton(onClick = { onToggleFavoriteLine(lineName) }) {
+                                        Icon(
+                                            if (isFav) Icons.Default.Star else Icons.Default.StarBorder,
+                                            contentDescription = null,
+                                            tint = if (isFav) Color(0xFFFFD700) else MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                    }
                                 }
                             }
                         }

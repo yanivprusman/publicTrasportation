@@ -16,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.NearMe
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -44,12 +45,26 @@ fun ArrivalsPanel(
     onVehicleSelect: ((Double, Double) -> Unit)? = null,
     getDestinationName: (String?) -> String,
     nearbyStops: List<StopResult> = emptyList(),
+    favoriteLines: Set<String> = emptySet(),
+    onToggleFavoriteLine: ((String) -> Unit)? = null,
+    favoriteStations: List<Pair<String, String>> = emptyList(),
+    isStationFavorite: Boolean = false,
+    onToggleFavoriteStation: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val strings = LocalAppStrings.current
 
     Column(modifier = modifier) {
         ServiceAlertBanner()
+
+        if (state.stationCode.isEmpty() && (favoriteStations.isNotEmpty() || favoriteLines.isNotEmpty())) {
+            FavoritesSection(
+                favoriteLines = favoriteLines,
+                favoriteStations = favoriteStations,
+                onStationSelect = onStationSelect,
+                onToggleFavoriteLine = onToggleFavoriteLine
+            )
+        }
 
         TransportControls(
             stationCode = state.stationCode,
@@ -60,7 +75,9 @@ fun ArrivalsPanel(
             onLineFilterChange = onLineFilterChange,
             showVehicleMarkers = state.showVehicleMarkers,
             onShowVehicleMarkersChange = onShowVehicleMarkersChange,
-            onSearchStops = onSearchStops
+            onSearchStops = onSearchStops,
+            isStationFavorite = isStationFavorite,
+            onToggleFavoriteStation = onToggleFavoriteStation
         )
 
         StationArrivals(
@@ -68,7 +85,9 @@ fun ArrivalsPanel(
             error = state.error,
             loading = state.loading,
             getDestinationName = getDestinationName,
-            onVehicleSelect = onVehicleSelect
+            onVehicleSelect = onVehicleSelect,
+            favoriteLines = favoriteLines,
+            onToggleFavoriteLine = onToggleFavoriteLine
         )
 
         if (nearbyStops.isNotEmpty()) {
@@ -79,6 +98,85 @@ fun ArrivalsPanel(
         }
 
         Spacer(Modifier.height(200.dp))
+    }
+}
+
+@Composable
+fun FavoritesSection(
+    favoriteLines: Set<String>,
+    favoriteStations: List<Pair<String, String>>,
+    onStationSelect: (String, String) -> Unit,
+    onToggleFavoriteLine: ((String) -> Unit)? = null
+) {
+    val strings = LocalAppStrings.current
+
+    Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(vertical = 4.dp)
+        ) {
+            Icon(
+                Icons.Default.Star,
+                contentDescription = null,
+                tint = Color(0xFFFFD700),
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(Modifier.width(6.dp))
+            Text(
+                text = strings.favorites,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold
+            )
+        }
+
+        if (favoriteStations.isNotEmpty()) {
+            Text(
+                text = strings.favoriteStations,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(vertical = 2.dp)
+            )
+            favoriteStations.forEach { (code, name) ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onStationSelect(code, name) }
+                        .padding(vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Default.Star,
+                        contentDescription = null,
+                        tint = Color(0xFFFFD700),
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Column {
+                        Text(name, style = MaterialTheme.typography.bodyMedium)
+                        Text(code, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+        }
+
+        if (favoriteLines.isNotEmpty()) {
+            Text(
+                text = strings.favoriteLines,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(vertical = 2.dp)
+            )
+            Row(
+                modifier = Modifier.padding(vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                favoriteLines.sorted().forEach { line ->
+                    LineBadge(line)
+                }
+            }
+        }
+
+        HorizontalDivider(modifier = Modifier.padding(top = 8.dp))
     }
 }
 

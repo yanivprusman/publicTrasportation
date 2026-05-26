@@ -121,4 +121,57 @@ class SettingsStore @Inject constructor(
                 .apply()
         }
     }
+
+    fun getFavoriteLines(): Set<String> {
+        return prefs.getStringSet("favorite_lines", emptySet()) ?: emptySet()
+    }
+
+    fun toggleFavoriteLine(lineName: String): Boolean {
+        val current = getFavoriteLines().toMutableSet()
+        val added = if (current.contains(lineName)) {
+            current.remove(lineName)
+            false
+        } else {
+            current.add(lineName)
+            true
+        }
+        prefs.edit().putStringSet("favorite_lines", current).apply()
+        return added
+    }
+
+    fun getFavoriteStations(): List<Pair<String, String>> {
+        val json = prefs.getString("favorite_stations", null) ?: return emptyList()
+        return try {
+            val arr = JSONArray(json)
+            (0 until arr.length()).map { i ->
+                val obj = arr.getJSONObject(i)
+                Pair(obj.getString("code"), obj.getString("name"))
+            }
+        } catch (_: Exception) { emptyList() }
+    }
+
+    fun toggleFavoriteStation(code: String, name: String): Boolean {
+        val current = getFavoriteStations().toMutableList()
+        val existing = current.indexOfFirst { it.first == code }
+        val added = if (existing >= 0) {
+            current.removeAt(existing)
+            false
+        } else {
+            current.add(Pair(code, name))
+            true
+        }
+        val arr = JSONArray()
+        current.forEach { (c, n) ->
+            arr.put(JSONObject().apply {
+                put("code", c)
+                put("name", n)
+            })
+        }
+        prefs.edit().putString("favorite_stations", arr.toString()).apply()
+        return added
+    }
+
+    fun isStationFavorite(code: String): Boolean {
+        return getFavoriteStations().any { it.first == code }
+    }
 }

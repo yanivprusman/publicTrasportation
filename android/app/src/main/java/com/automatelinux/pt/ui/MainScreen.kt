@@ -157,6 +157,8 @@ fun MainScreen(
     var nearbyStops by remember { mutableStateOf<List<StopResult>>(emptyList()) }
     var currentMapZoom by remember { mutableStateOf(13.0) }
     var currentMapCenter by remember { mutableStateOf(GeoPoint(31.77, 35.21)) }
+    var favoriteLines by remember { mutableStateOf(settingsStore.getFavoriteLines()) }
+    var favoriteStations by remember { mutableStateOf(settingsStore.getFavoriteStations()) }
 
     val preSuggestions = remember(recentSearchesVersion) {
         buildList {
@@ -505,7 +507,15 @@ fun MainScreen(
                                     sortMode = routingState.sortMode,
                                     onSortChange = { routingViewModel.setSortMode(it) },
                                     onEarlier = { routingViewModel.searchEarlier() },
-                                    onLater = { routingViewModel.searchLater() }
+                                    onLater = { routingViewModel.searchLater() },
+                                    homePlace = settingsStore.homePlace,
+                                    workPlace = settingsStore.workPlace,
+                                    onQuickRoute = { home, work ->
+                                        routingViewModel.setOrigin(home)
+                                        routingViewModel.setDestination(work)
+                                        routingViewModel.search()
+                                        scope.launch { bottomSheetState.expand() }
+                                    }
                                 )
                             }
 
@@ -523,7 +533,24 @@ fun MainScreen(
                                         scope.launch { bottomSheetState.partialExpand() }
                                     },
                                     getDestinationName = { arrivalsViewModel.getDestinationName(it) },
-                                    nearbyStops = nearbyStops
+                                    nearbyStops = nearbyStops,
+                                    favoriteLines = favoriteLines,
+                                    onToggleFavoriteLine = { line ->
+                                        settingsStore.toggleFavoriteLine(line)
+                                        favoriteLines = settingsStore.getFavoriteLines()
+                                    },
+                                    favoriteStations = favoriteStations,
+                                    isStationFavorite = arrivalsState.stationCode.isNotEmpty() &&
+                                        settingsStore.isStationFavorite(arrivalsState.stationCode),
+                                    onToggleFavoriteStation = {
+                                        if (arrivalsState.stationCode.isNotEmpty()) {
+                                            settingsStore.toggleFavoriteStation(
+                                                arrivalsState.stationCode,
+                                                arrivalsState.stationName
+                                            )
+                                            favoriteStations = settingsStore.getFavoriteStations()
+                                        }
+                                    }
                                 )
                             }
                         }

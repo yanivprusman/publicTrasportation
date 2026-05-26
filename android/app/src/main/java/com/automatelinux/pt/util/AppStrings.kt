@@ -85,6 +85,14 @@ data class AppStrings(
     val noAlerts: String,
     val peakHoursNotice: String,
     val normalServiceNotice: String,
+    val favorites: String,
+    val favoriteLines: String,
+    val favoriteStations: String,
+    val noFavorites: String,
+    val addedToFavorites: String,
+    val removedFromFavorites: String,
+    val frequentRoute: String,
+    val quickRoute: (String, String) -> String,
 )
 
 val EnStrings = AppStrings(
@@ -177,6 +185,14 @@ val EnStrings = AppStrings(
     noAlerts = "No active alerts",
     peakHoursNotice = "Peak hours — expect delays on busy lines",
     normalServiceNotice = "All lines operating normally",
+    favorites = "Favorites",
+    favoriteLines = "Favorite Lines",
+    favoriteStations = "Favorite Stations",
+    noFavorites = "No favorites yet",
+    addedToFavorites = "Added to favorites",
+    removedFromFavorites = "Removed from favorites",
+    frequentRoute = "Quick Route",
+    quickRoute = { from, to -> "$from → $to" },
 )
 
 val HeStrings = AppStrings(
@@ -269,6 +285,14 @@ val HeStrings = AppStrings(
     noAlerts = "אין התראות פעילות",
     peakHoursNotice = "שעות עומס — צפו לעיכובים בקווים עמוסים",
     normalServiceNotice = "כל הקווים פועלים כסדרם",
+    favorites = "מועדפים",
+    favoriteLines = "קווים מועדפים",
+    favoriteStations = "תחנות מועדפות",
+    noFavorites = "אין מועדפים עדיין",
+    addedToFavorites = "נוסף למועדפים",
+    removedFromFavorites = "הוסר מהמועדפים",
+    frequentRoute = "מסלול מהיר",
+    quickRoute = { from, to -> "$from → $to" },
 )
 
 val LocalAppStrings = compositionLocalOf { EnStrings }
