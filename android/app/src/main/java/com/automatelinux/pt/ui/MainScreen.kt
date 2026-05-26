@@ -393,7 +393,6 @@ fun MainScreen(
         }
     }
 
-
     // Start/stop polling when arrivals tab is active
     DisposableEffect(activeTab) {
         if (activeTab == ActiveTab.ARRIVALS) {
