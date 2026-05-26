@@ -779,7 +779,7 @@ fun MainScreen(
 
                     OriginDestinationMarkers(
                         map = map,
-                        origin = null,
+                        origin = routingState.origin?.let { GeoPoint(it.lat, it.lon) },
                         destination = routingState.destination?.let { GeoPoint(it.lat, it.lon) }
                     )
 
