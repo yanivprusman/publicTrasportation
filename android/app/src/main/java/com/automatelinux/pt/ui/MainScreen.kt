@@ -105,6 +105,7 @@ import com.automatelinux.pt.ui.map.OsmMapView
 import com.automatelinux.pt.ui.map.OriginDestinationMarkers
 import com.automatelinux.pt.ui.map.RouteOverlay
 import com.automatelinux.pt.ui.map.StopMarkersOverlay
+import com.automatelinux.pt.ui.map.TrackedBusOverlay
 import com.automatelinux.pt.ui.map.VehicleMarkerOverlay
 import com.automatelinux.pt.ui.map.animateToPoint
 import com.automatelinux.pt.ui.map.fitBounds
@@ -159,6 +160,8 @@ fun MainScreen(
     var currentMapCenter by remember { mutableStateOf(GeoPoint(31.77, 35.21)) }
     var favoriteLines by remember { mutableStateOf(settingsStore.getFavoriteLines()) }
     var favoriteStations by remember { mutableStateOf(settingsStore.getFavoriteStations()) }
+    var reminderLegIndex by remember { mutableStateOf<Int?>(null) }
+    var reminderJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
 
     val preSuggestions = remember(recentSearchesVersion) {
         buildList {
@@ -515,6 +518,54 @@ fun MainScreen(
                                         routingViewModel.setDestination(work)
                                         routingViewModel.search()
                                         scope.launch { bottomSheetState.expand() }
+                                    },
+                                    onTrackBus = { legIndex, leg ->
+                                        if (routingState.trackedBus?.legIndex == legIndex) {
+                                            routingViewModel.stopTracking()
+                                        } else {
+                                            val lineName = leg.routeShortName ?: return@RoutePlannerPanel
+                                            routingViewModel.trackBusOnLeg(
+                                                legIndex = legIndex,
+                                                lat = leg.from.lat,
+                                                lon = leg.from.lon,
+                                                lineName = lineName
+                                            )
+                                        }
+                                    },
+                                    trackedLegIndex = routingState.trackedBus?.legIndex,
+                                    onSetReminder = { leg ->
+                                        val legIdx = routingState.selectedItinerary?.legs?.indexOf(leg) ?: return@RoutePlannerPanel
+                                        reminderLegIndex = legIdx
+                                        reminderJob?.cancel()
+                                        reminderJob = scope.launch {
+                                            try {
+                                                val departTime = java.time.ZonedDateTime.parse(leg.startTime)
+                                                val reminderTime = departTime.minusMinutes(5)
+                                                val delayMs = java.time.Duration.between(java.time.ZonedDateTime.now(), reminderTime).toMillis()
+                                                if (delayMs > 0) {
+                                                    kotlinx.coroutines.delay(delayMs)
+                                                }
+                                                val lineName = leg.routeShortName ?: "Bus"
+                                                val timeStr = leg.startTime.let {
+                                                    try { java.time.ZonedDateTime.parse(it).toLocalTime().toString().take(5) }
+                                                    catch (_: Exception) { it }
+                                                }
+                                                android.widget.Toast.makeText(
+                                                    context,
+                                                    strings.reminderNotification(lineName, timeStr),
+                                                    android.widget.Toast.LENGTH_LONG
+                                                ).show()
+                                                reminderLegIndex = null
+                                            } catch (_: kotlinx.coroutines.CancellationException) {
+                                                reminderLegIndex = null
+                                            }
+                                        }
+                                    },
+                                    activeReminderLegIndex = reminderLegIndex,
+                                    onCancelReminder = {
+                                        reminderJob?.cancel()
+                                        reminderJob = null
+                                        reminderLegIndex = null
                                     }
                                 )
                             }
@@ -612,6 +663,11 @@ fun MainScreen(
                             visible = arrivalsState.showVehicleMarkers
                         )
                     }
+
+                    TrackedBusOverlay(
+                        map = map,
+                        marker = routingState.trackedBus?.marker
+                    )
 
                     StopMarkersOverlay(
                         map = map,

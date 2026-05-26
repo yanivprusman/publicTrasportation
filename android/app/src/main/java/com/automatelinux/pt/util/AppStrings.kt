@@ -93,6 +93,15 @@ data class AppStrings(
     val removedFromFavorites: String,
     val frequentRoute: String,
     val quickRoute: (String, String) -> String,
+    val trackBus: String,
+    val trackingBus: String,
+    val stopTracking: String,
+    val busLocationUpdated: String,
+    val departureReminder: String,
+    val reminderSet: (String) -> String,
+    val reminderCancelled: String,
+    val reminderNotification: (String, String) -> String,
+    val minutesBefore: (Int) -> String,
 )
 
 val EnStrings = AppStrings(
@@ -193,6 +202,15 @@ val EnStrings = AppStrings(
     removedFromFavorites = "Removed from favorites",
     frequentRoute = "Quick Route",
     quickRoute = { from, to -> "$from → $to" },
+    trackBus = "Track Bus",
+    trackingBus = "Tracking...",
+    stopTracking = "Stop Tracking",
+    busLocationUpdated = "Bus location updated",
+    departureReminder = "Departure Reminder",
+    reminderSet = { time -> "Reminder set for $time" },
+    reminderCancelled = "Reminder cancelled",
+    reminderNotification = { line, time -> "Bus $line departs at $time" },
+    minutesBefore = { m -> "${m}min before" },
 )
 
 val HeStrings = AppStrings(
@@ -293,6 +311,15 @@ val HeStrings = AppStrings(
     removedFromFavorites = "הוסר מהמועדפים",
     frequentRoute = "מסלול מהיר",
     quickRoute = { from, to -> "$from → $to" },
+    trackBus = "עקוב אחרי אוטובוס",
+    trackingBus = "עוקב...",
+    stopTracking = "הפסק מעקב",
+    busLocationUpdated = "מיקום האוטובוס עודכן",
+    departureReminder = "תזכורת יציאה",
+    reminderSet = { time -> "תזכורת נקבעה ל-$time" },
+    reminderCancelled = "תזכורת בוטלה",
+    reminderNotification = { line, time -> "אוטובוס $line יוצא ב-$time" },
+    minutesBefore = { m -> "$m דק׳ לפני" },
 )
 
 val LocalAppStrings = compositionLocalOf { EnStrings }

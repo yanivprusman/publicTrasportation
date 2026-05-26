@@ -7,7 +7,11 @@ import com.automatelinux.pt.data.model.GeocodeSuggestion
 import com.automatelinux.pt.data.model.Itinerary
 import com.automatelinux.pt.data.model.RouteResult
 import com.automatelinux.pt.data.model.RouteSortMode
+import com.automatelinux.pt.data.model.VehicleMarker
+import com.automatelinux.pt.data.model.extractVehicleMarkers
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -15,6 +19,12 @@ import kotlinx.coroutines.launch
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
+
+data class TrackedBus(
+    val legIndex: Int,
+    val lineName: String,
+    val marker: VehicleMarker?
+)
 
 data class RoutingState(
     val origin: GeocodeSuggestion? = null,
@@ -25,7 +35,8 @@ data class RoutingState(
     val selectedIndex: Int = 0,
     val loading: Boolean = false,
     val error: String? = null,
-    val sortMode: RouteSortMode = RouteSortMode.FASTEST
+    val sortMode: RouteSortMode = RouteSortMode.FASTEST,
+    val trackedBus: TrackedBus? = null
 ) {
     val sortedItineraries: List<Itinerary>
         get() {
@@ -48,6 +59,7 @@ class RoutingViewModel @Inject constructor(
 
     private val _state = MutableStateFlow(RoutingState())
     val state: StateFlow<RoutingState> = _state.asStateFlow()
+    private var trackingJob: Job? = null
 
     fun setOrigin(suggestion: GeocodeSuggestion?) {
         _state.value = _state.value.copy(origin = suggestion, results = null, error = null)
@@ -167,6 +179,36 @@ class RoutingViewModel @Inject constructor(
                 )
             }
         }
+    }
+
+    fun trackBusOnLeg(legIndex: Int, lat: Double, lon: Double, lineName: String) {
+        stopTracking()
+        _state.value = _state.value.copy(
+            trackedBus = TrackedBus(legIndex = legIndex, lineName = lineName, marker = null)
+        )
+        trackingJob = viewModelScope.launch {
+            val stops = try { api.nearbyStops(lat, lon, 300) } catch (_: Exception) { emptyList() }
+            val stationCode = stops.firstOrNull()?.stopCode ?: return@launch
+            while (true) {
+                try {
+                    val response = api.getTransport(station = stationCode, line = lineName)
+                    val markers = response.extractVehicleMarkers()
+                    val best = markers.filter {
+                        it.lineNumber.equals(lineName, ignoreCase = true)
+                    }.minByOrNull { it.distanceFromStop }
+                    _state.value = _state.value.copy(
+                        trackedBus = _state.value.trackedBus?.copy(marker = best)
+                    )
+                } catch (_: Exception) {}
+                delay(10_000)
+            }
+        }
+    }
+
+    fun stopTracking() {
+        trackingJob?.cancel()
+        trackingJob = null
+        _state.value = _state.value.copy(trackedBus = null)
     }
 
     fun debugFill(autoSearch: Boolean = true, origin: GeocodeSuggestion, destination: GeocodeSuggestion) {

@@ -327,6 +327,31 @@ fun StopMarkersOverlay(
     }
 }
 
+@Composable
+fun TrackedBusOverlay(
+    map: MapView,
+    marker: VehicleMarker?
+) {
+    LaunchedEffect(marker) {
+        map.overlays.removeAll { (it as? Marker)?.id == "tracked_bus" }
+
+        if (marker != null) {
+            val m = Marker(map).apply {
+                id = "tracked_bus"
+                position = GeoPoint(marker.lat, marker.lon)
+                setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+                title = "Line ${marker.lineNumber}"
+                snippet = "Tracking"
+                icon = createCircleDrawable(Color.parseColor("#FF6D00"), 14, Color.WHITE, 3f)
+                setInfoWindow(null)
+            }
+            map.overlays.add(m)
+        }
+
+        map.invalidate()
+    }
+}
+
 class AnimatedOriginOverlay(
     private val position: GeoPoint,
     mapView: MapView

@@ -3,6 +3,7 @@ package com.automatelinux.pt.ui.routing
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -10,9 +11,17 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.GpsFixed
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.NotificationsOff
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -20,6 +29,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
@@ -28,6 +38,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.automatelinux.pt.data.model.Itinerary
 import com.automatelinux.pt.data.model.Place
 import com.automatelinux.pt.data.model.RouteLeg
@@ -42,6 +53,11 @@ fun ItineraryDetail(
     itinerary: Itinerary,
     onLegClick: ((RouteLeg) -> Unit)? = null,
     onStopClick: ((Place) -> Unit)? = null,
+    onTrackBus: ((Int, RouteLeg) -> Unit)? = null,
+    trackedLegIndex: Int? = null,
+    onSetReminder: ((RouteLeg) -> Unit)? = null,
+    activeReminderLegIndex: Int? = null,
+    onCancelReminder: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val strings = LocalAppStrings.current
@@ -57,7 +73,17 @@ fun ItineraryDetail(
         Spacer(Modifier.height(8.dp))
 
         for ((index, leg) in itinerary.legs.withIndex()) {
-            LegDetail(leg = leg, onClick = onLegClick?.let { { it(leg) } }, onStopClick = onStopClick)
+            LegDetail(
+                leg = leg,
+                legIndex = index,
+                onClick = onLegClick?.let { { it(leg) } },
+                onStopClick = onStopClick,
+                onTrackBus = onTrackBus,
+                isTracking = trackedLegIndex == index,
+                onSetReminder = onSetReminder,
+                hasReminder = activeReminderLegIndex == index,
+                onCancelReminder = onCancelReminder
+            )
             if (index < itinerary.legs.lastIndex) {
                 HorizontalDivider(
                     modifier = Modifier.padding(vertical = 4.dp),
@@ -69,10 +95,21 @@ fun ItineraryDetail(
 }
 
 @Composable
-private fun LegDetail(leg: RouteLeg, onClick: (() -> Unit)? = null, onStopClick: ((Place) -> Unit)? = null) {
+private fun LegDetail(
+    leg: RouteLeg,
+    legIndex: Int,
+    onClick: (() -> Unit)? = null,
+    onStopClick: ((Place) -> Unit)? = null,
+    onTrackBus: ((Int, RouteLeg) -> Unit)? = null,
+    isTracking: Boolean = false,
+    onSetReminder: ((RouteLeg) -> Unit)? = null,
+    hasReminder: Boolean = false,
+    onCancelReminder: (() -> Unit)? = null
+) {
     val strings = LocalAppStrings.current
     var showStops by remember { mutableStateOf(false) }
     val color = Color(getModeColorWithRoute(leg.mode, leg.routeColor))
+    val isTransit = leg.mode != TransitMode.WALK
 
     Row(
         modifier = Modifier
@@ -85,7 +122,7 @@ private fun LegDetail(leg: RouteLeg, onClick: (() -> Unit)? = null, onStopClick:
         Box(
             modifier = Modifier
                 .width(4.dp)
-                .height(80.dp)
+                .height(if (isTransit) 110.dp else 80.dp)
                 .background(color, RoundedCornerShape(2.dp))
         )
 
@@ -117,6 +154,67 @@ private fun LegDetail(leg: RouteLeg, onClick: (() -> Unit)? = null, onStopClick:
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            }
+
+            if (isTransit) {
+                Spacer(Modifier.height(4.dp))
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (onTrackBus != null) {
+                        FilledTonalButton(
+                            onClick = { onTrackBus(legIndex, leg) },
+                            modifier = Modifier.height(30.dp),
+                            contentPadding = ButtonDefaults.ContentPadding.let {
+                                androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                            },
+                            colors = if (isTracking) ButtonDefaults.filledTonalButtonColors(
+                                containerColor = MaterialTheme.colorScheme.tertiary,
+                                contentColor = MaterialTheme.colorScheme.onTertiary
+                            ) else ButtonDefaults.filledTonalButtonColors()
+                        ) {
+                            Icon(
+                                Icons.Default.GpsFixed,
+                                contentDescription = null,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(Modifier.width(4.dp))
+                            Text(
+                                text = if (isTracking) strings.trackingBus else strings.trackBus,
+                                fontSize = 11.sp
+                            )
+                        }
+                    }
+
+                    if (onSetReminder != null) {
+                        FilledTonalButton(
+                            onClick = {
+                                if (hasReminder) onCancelReminder?.invoke()
+                                else onSetReminder(leg)
+                            },
+                            modifier = Modifier.height(30.dp),
+                            contentPadding = ButtonDefaults.ContentPadding.let {
+                                androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                            },
+                            colors = if (hasReminder) ButtonDefaults.filledTonalButtonColors(
+                                containerColor = MaterialTheme.colorScheme.error,
+                                contentColor = MaterialTheme.colorScheme.onError
+                            ) else ButtonDefaults.filledTonalButtonColors()
+                        ) {
+                            Icon(
+                                if (hasReminder) Icons.Default.NotificationsOff else Icons.Default.Notifications,
+                                contentDescription = null,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(Modifier.width(4.dp))
+                            Text(
+                                text = if (hasReminder) strings.reminderCancelled else strings.departureReminder,
+                                fontSize = 11.sp
+                            )
+                        }
+                    }
+                }
             }
 
             val stops = leg.intermediateStops

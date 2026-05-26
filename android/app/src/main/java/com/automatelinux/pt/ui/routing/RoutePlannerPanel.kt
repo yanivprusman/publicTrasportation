@@ -63,6 +63,11 @@ fun RoutePlannerPanel(
     homePlace: GeocodeSuggestion? = null,
     workPlace: GeocodeSuggestion? = null,
     onQuickRoute: ((GeocodeSuggestion, GeocodeSuggestion) -> Unit)? = null,
+    onTrackBus: ((Int, RouteLeg) -> Unit)? = null,
+    trackedLegIndex: Int? = null,
+    onSetReminder: ((RouteLeg) -> Unit)? = null,
+    activeReminderLegIndex: Int? = null,
+    onCancelReminder: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val strings = LocalAppStrings.current
@@ -153,7 +158,16 @@ fun RoutePlannerPanel(
 
         state.selectedItinerary?.let { itinerary ->
             Spacer(Modifier.height(8.dp))
-            ItineraryDetail(itinerary = itinerary, onLegClick = onLegClick, onStopClick = onStopClick)
+            ItineraryDetail(
+                itinerary = itinerary,
+                onLegClick = onLegClick,
+                onStopClick = onStopClick,
+                onTrackBus = onTrackBus,
+                trackedLegIndex = trackedLegIndex,
+                onSetReminder = onSetReminder,
+                activeReminderLegIndex = activeReminderLegIndex,
+                onCancelReminder = onCancelReminder
+            )
         }
     }
 }
