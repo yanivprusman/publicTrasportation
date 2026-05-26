@@ -18,7 +18,6 @@ import com.automatelinux.pt.data.model.VehicleMarker
 import com.automatelinux.pt.util.PolylineDecoder
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
-import org.osmdroid.views.Projection
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Overlay
 import org.osmdroid.views.overlay.Polyline
@@ -415,11 +414,14 @@ class AnimatedOriginOverlay(
         start()
     }
 
-    override fun draw(canvas: Canvas, projection: Projection) {
-        val screenPoint = Point()
-        projection.toPixels(position, screenPoint)
-        val cx = screenPoint.x.toFloat()
-        val cy = screenPoint.y.toFloat()
+    override fun draw(canvas: Canvas, mapView: MapView, shadow: Boolean) {
+        if (shadow) return
+
+        val point = Point()
+        mapView.projection.toPixels(position, point)
+        val cx = point.x.toFloat()
+        val cy = point.y.toFloat()
+
         val coreRadius = 7f * density
 
         // Glow
