@@ -1,82 +1,38 @@
 package com.automatelinux.pt.ui
 
 import android.Manifest
-import android.content.Intent
-import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.core.content.ContextCompat
 import com.automatelinux.pt.BuildConfig
 import com.google.android.gms.location.LocationServices
-import com.google.android.gms.location.Priority
-import com.google.android.gms.tasks.CancellationTokenSource
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.combinedClickable
-import androidx.compose.ui.draw.clip
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.absolutePadding
-import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.isImeVisible
-import androidx.compose.animation.core.Animatable
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.input.pointer.PointerEventPass
-import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.input.pointer.positionChange
-import kotlin.math.abs
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Chat
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.MyLocation
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Work
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.BottomSheetDefaults
-import androidx.compose.material3.BottomSheetScaffold
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButtonDefaults
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.SmallFloatingActionButton
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SheetValue
-import androidx.compose.material3.Text
-import androidx.compose.material3.rememberBottomSheetScaffoldState
-import androidx.compose.material3.rememberStandardBottomSheetState
+import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -87,48 +43,46 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.AbsoluteAlignment
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.zIndex
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.automatelinux.feedbacklib.ui.DismissibleSheet
 import com.automatelinux.feedbacklib.ui.rememberDismissibleSheetState
+import com.automatelinux.pt.data.model.StopResult
 import com.automatelinux.pt.ui.arrivals.ArrivalsPanel
 import com.automatelinux.pt.ui.components.PreSuggestion
-import com.automatelinux.pt.ui.map.OsmMapView
+import com.automatelinux.pt.ui.lines.LineShapeData
+import com.automatelinux.pt.ui.lines.LinesBrowserPanel
+import com.automatelinux.pt.ui.map.GpsLocationOverlay
+import com.automatelinux.pt.ui.map.LineShapeOverlay
 import com.automatelinux.pt.ui.map.OriginDestinationMarkers
+import com.automatelinux.pt.ui.map.OsmMapView
 import com.automatelinux.pt.ui.map.RouteOverlay
 import com.automatelinux.pt.ui.map.StopMarkersOverlay
-import com.automatelinux.pt.ui.lines.LinesBrowserPanel
-import com.automatelinux.pt.ui.lines.LineShapeData
-import com.automatelinux.pt.ui.map.LineShapeOverlay
 import com.automatelinux.pt.ui.map.TrackedBusOverlay
 import com.automatelinux.pt.ui.map.VehicleMarkerOverlay
 import com.automatelinux.pt.ui.map.animateToPoint
 import com.automatelinux.pt.ui.map.fitBounds
-import com.automatelinux.pt.data.model.StopResult
-import com.automatelinux.pt.util.PolylineDecoder
 import com.automatelinux.pt.ui.routing.DebugSettingsDialog
 import com.automatelinux.pt.ui.routing.RoutePlannerPanel
 import com.automatelinux.pt.ui.viewmodel.ArrivalsViewModel
 import com.automatelinux.pt.ui.viewmodel.RoutingViewModel
 import com.automatelinux.pt.util.LocalAppStrings
+import com.automatelinux.pt.util.PolylineDecoder
 import com.automatelinux.pt.util.SettingsStore
 import kotlinx.coroutines.launch
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
-import com.automatelinux.pt.ui.map.GpsLocationOverlay
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 
 enum class ActiveTab { ROUTE, ARRIVALS, LINES }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun MainScreen(
     settingsStore: SettingsStore,
@@ -147,7 +101,6 @@ fun MainScreen(
 
     val sheetScrollState = rememberScrollState()
     var sheetContentHeightPx by remember { mutableIntStateOf(0) }
-    var menuExpanded by remember { mutableStateOf(false) }
     var showOpacitySlider by remember { mutableStateOf(false) }
     var showDebugSettings by remember { mutableStateOf(false) }
     var sheetOpacity by remember { mutableFloatStateOf(settingsStore.sheetOpacity) }
@@ -187,95 +140,43 @@ fun MainScreen(
 
     var gpsLoading by remember { mutableStateOf(false) }
     var gpsLoadingDestination by remember { mutableStateOf(false) }
-    val applyGpsLocation = { location: android.location.Location ->
-        gpsLoading = false
-        routingViewModel.setOriginFromCoords(location.latitude, location.longitude)
-        mapView?.animateToPoint(GeoPoint(location.latitude, location.longitude), 15.0)
-    }
-    val applyGpsLocationDestination = { location: android.location.Location ->
-        gpsLoadingDestination = false
-        routingViewModel.setDestinationFromCoords(location.latitude, location.longitude)
-        mapView?.animateToPoint(GeoPoint(location.latitude, location.longitude), 15.0)
-    }
 
     val fetchCurrentLocation = {
-        val hasPermission = ContextCompat.checkSelfPermission(
-            context, Manifest.permission.ACCESS_FINE_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED
-        if (hasPermission) {
-            gpsLoading = true
-            fusedLocationClient.lastLocation
-                .addOnSuccessListener { cached ->
-                    if (cached != null) {
-                        applyGpsLocation(cached)
-                    } else {
-                        fusedLocationClient.getCurrentLocation(
-                            Priority.PRIORITY_HIGH_ACCURACY,
-                            CancellationTokenSource().token
-                        ).addOnSuccessListener { fresh ->
-                            if (fresh != null) {
-                                applyGpsLocation(fresh)
-                            } else {
-                                gpsLoading = false
-                            }
-                        }.addOnFailureListener { gpsLoading = false }
-                    }
-                }
-                .addOnFailureListener { gpsLoading = false }
+        if (LocationHelper.hasPermission(context)) {
+            LocationHelper.fetchLocation(
+                fusedLocationClient = fusedLocationClient,
+                onStart = { gpsLoading = true },
+                onLocation = { loc ->
+                    gpsLoading = false
+                    routingViewModel.setOriginFromCoords(loc.latitude, loc.longitude)
+                    mapView?.animateToPoint(GeoPoint(loc.latitude, loc.longitude), 15.0)
+                },
+                onFailure = { gpsLoading = false }
+            )
         }
-        Unit
     }
 
     val fetchCurrentLocationForDestination = {
-        val hasPermission = ContextCompat.checkSelfPermission(
-            context, Manifest.permission.ACCESS_FINE_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED
-        if (hasPermission) {
-            gpsLoadingDestination = true
-            fusedLocationClient.lastLocation
-                .addOnSuccessListener { cached ->
-                    if (cached != null) {
-                        applyGpsLocationDestination(cached)
-                    } else {
-                        fusedLocationClient.getCurrentLocation(
-                            Priority.PRIORITY_HIGH_ACCURACY,
-                            CancellationTokenSource().token
-                        ).addOnSuccessListener { fresh ->
-                            if (fresh != null) {
-                                applyGpsLocationDestination(fresh)
-                            } else {
-                                gpsLoadingDestination = false
-                            }
-                        }.addOnFailureListener { gpsLoadingDestination = false }
-                    }
-                }
-                .addOnFailureListener { gpsLoadingDestination = false }
+        if (LocationHelper.hasPermission(context)) {
+            LocationHelper.fetchLocation(
+                fusedLocationClient = fusedLocationClient,
+                onStart = { gpsLoadingDestination = true },
+                onLocation = { loc ->
+                    gpsLoadingDestination = false
+                    routingViewModel.setDestinationFromCoords(loc.latitude, loc.longitude)
+                    mapView?.animateToPoint(GeoPoint(loc.latitude, loc.longitude), 15.0)
+                },
+                onFailure = { gpsLoadingDestination = false }
+            )
         }
-        Unit
     }
 
     val centerMapOnCurrentLocation = {
-        val hasPermission = ContextCompat.checkSelfPermission(
-            context, Manifest.permission.ACCESS_FINE_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED
-        if (hasPermission) {
-            fusedLocationClient.lastLocation
-                .addOnSuccessListener { cached ->
-                    if (cached != null) {
-                        mapView?.animateToPoint(GeoPoint(cached.latitude, cached.longitude), 15.0)
-                    } else {
-                        fusedLocationClient.getCurrentLocation(
-                            Priority.PRIORITY_HIGH_ACCURACY,
-                            CancellationTokenSource().token
-                        ).addOnSuccessListener { fresh ->
-                            if (fresh != null) {
-                                mapView?.animateToPoint(GeoPoint(fresh.latitude, fresh.longitude), 15.0)
-                            }
-                        }
-                    }
-                }
+        if (LocationHelper.hasPermission(context)) {
+            LocationHelper.centerOnLocation(fusedLocationClient) { loc ->
+                mapView?.animateToPoint(GeoPoint(loc.latitude, loc.longitude), 15.0)
+            }
         }
-        Unit
     }
 
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -285,35 +186,20 @@ fun MainScreen(
     }
 
     val onGpsClick: () -> Unit = {
-        val hasPermission = ContextCompat.checkSelfPermission(
-            context, Manifest.permission.ACCESS_FINE_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED
-        if (hasPermission) {
-            fetchCurrentLocation()
-        } else {
-            permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
-        }
+        if (LocationHelper.hasPermission(context)) fetchCurrentLocation()
+        else permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
     }
 
     val onGpsClickDestination: () -> Unit = {
-        val hasPermission = ContextCompat.checkSelfPermission(
-            context, Manifest.permission.ACCESS_FINE_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED
-        if (hasPermission) {
-            fetchCurrentLocationForDestination()
-        } else {
-            permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
-        }
+        if (LocationHelper.hasPermission(context)) fetchCurrentLocationForDestination()
+        else permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
     }
 
     var locationIconStyle by remember { mutableStateOf(settingsStore.locationIconStyle) }
 
     DisposableEffect(mapView, locationIconStyle) {
         val map = mapView ?: return@DisposableEffect onDispose {}
-        val hasPermission = ContextCompat.checkSelfPermission(
-            context, Manifest.permission.ACCESS_FINE_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED
-        if (hasPermission) {
+        if (LocationHelper.hasPermission(context)) {
             map.overlays.filterIsInstance<MyLocationNewOverlay>().forEach { it.disableMyLocation() }
             map.overlays.removeAll { it is MyLocationNewOverlay }
             val overlay = MyLocationNewOverlay(map)
@@ -395,16 +281,12 @@ fun MainScreen(
 
     LaunchedEffect(Unit) {
         if (routingState.origin == null) {
-            val hasPermission = ContextCompat.checkSelfPermission(
-                context, Manifest.permission.ACCESS_FINE_LOCATION
-            ) == PackageManager.PERMISSION_GRANTED
-            if (hasPermission) {
+            if (LocationHelper.hasPermission(context)) {
                 fetchCurrentLocation()
             }
         }
     }
 
-    // Start/stop polling when arrivals tab is active
     DisposableEffect(activeTab) {
         if (activeTab == ActiveTab.ARRIVALS) {
             arrivalsViewModel.startPolling()
@@ -412,11 +294,6 @@ fun MainScreen(
             arrivalsViewModel.stopPolling()
         }
         onDispose { arrivalsViewModel.stopPolling() }
-    }
-
-    // Center map on selected itinerary
-    LaunchedEffect(routingState.selectedItinerary) {
-        // Map centering is handled by RouteOverlay's fitBounds
     }
 
     com.automatelinux.feedbacklib.ui.FeedbackOverlay(
@@ -434,114 +311,35 @@ fun MainScreen(
                         .onGloballyPositioned { sheetContentHeightPx = it.size.height },
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Box(modifier = Modifier.fillMaxWidth()) {
-                        BottomSheetDefaults.DragHandle(
-                            modifier = Modifier.align(Alignment.Center)
-                        )
-                        Icon(
-                            Icons.Default.BugReport,
-                            contentDescription = strings.debugFill,
-                            tint = if (routingState.loading) MaterialTheme.colorScheme.tertiary.copy(alpha = 0.38f)
-                                   else MaterialTheme.colorScheme.tertiary,
-                            modifier = Modifier
-                                .align(AbsoluteAlignment.CenterRight)
-                                .absolutePadding(right = 12.dp)
-                                .size(36.dp)
-                                .combinedClickable(
-                                    enabled = !routingState.loading,
-                                    onClick = {
-                                        routingViewModel.debugFill(
-                                            autoSearch = settingsStore.debugAutoSearch,
-                                            origin = settingsStore.debugFrom,
-                                            destination = settingsStore.debugTo
-                                        )
-                                        if (settingsStore.debugExpandSheet) {
-                                            scope.launch { bottomSheetState.expand() }
-                                        }
-                                    },
-                                    onLongClick = { showDebugSettings = true }
-                                )
-                                .padding(6.dp)
-                        )
-                    }
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        FilterChip(
-                            selected = activeTab == ActiveTab.ROUTE,
-                            onClick = { activeTab = ActiveTab.ROUTE },
-                            label = { Text(strings.routePlanner) },
-                            modifier = Modifier.padding(end = 8.dp)
-                        )
-                        FilterChip(
-                            selected = activeTab == ActiveTab.ARRIVALS,
-                            onClick = { activeTab = ActiveTab.ARRIVALS },
-                            label = { Text(strings.stationArrivals) }
-                        )
-                        FilterChip(
-                            selected = activeTab == ActiveTab.LINES,
-                            onClick = { activeTab = ActiveTab.LINES },
-                            label = { Text(strings.linesBrowser) },
-                            modifier = Modifier.padding(start = 8.dp)
-                        )
-                        Spacer(Modifier.weight(1f))
-                        Box {
-                            IconButton(onClick = { menuExpanded = true }) {
-                                Icon(
-                                    Icons.Default.Settings,
-                                    contentDescription = strings.settings,
-                                    modifier = Modifier.size(22.dp)
-                                )
+                    SheetDragHandleRow(
+                        strings = strings,
+                        loading = routingState.loading,
+                        onDebugFill = {
+                            routingViewModel.debugFill(
+                                autoSearch = settingsStore.debugAutoSearch,
+                                origin = settingsStore.debugFrom,
+                                destination = settingsStore.debugTo
+                            )
+                            if (settingsStore.debugExpandSheet) {
+                                scope.launch { bottomSheetState.expand() }
                             }
-                            DropdownMenu(
-                                expanded = menuExpanded,
-                                onDismissRequest = { menuExpanded = false }
-                            ) {
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(
-                                            if (showOpacitySlider) strings.hideOpacitySettings
-                                            else strings.opacitySettings
-                                        )
-                                    },
-                                    onClick = {
-                                        showOpacitySlider = !showOpacitySlider
-                                        menuExpanded = false
-                                    }
-                                )
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(
-                                            if (locationIconStyle == "dot") strings.locationIconPerson
-                                            else strings.locationIconDot
-                                        )
-                                    },
-                                    onClick = {
-                                        val newStyle = if (locationIconStyle == "dot") "person" else "dot"
-                                        settingsStore.locationIconStyle = newStyle
-                                        locationIconStyle = newStyle
-                                        menuExpanded = false
-                                    }
-                                )
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(
-                                            if (settingsStore.language == "he") "English"
-                                            else "עברית"
-                                        )
-                                    },
-                                    onClick = {
-                                        val newLang = if (settingsStore.language == "he") "en" else "he"
-                                        onLanguageChange(newLang)
-                                        menuExpanded = false
-                                    }
-                                )
-                            }
-                        }
-                    }
+                        },
+                        onDebugLongClick = { showDebugSettings = true }
+                    )
+                    SheetTabRow(
+                        activeTab = activeTab,
+                        onTabChange = { activeTab = it },
+                        strings = strings,
+                        showOpacitySlider = showOpacitySlider,
+                        onToggleOpacitySlider = { showOpacitySlider = !showOpacitySlider },
+                        locationIconStyle = locationIconStyle,
+                        onLocationIconStyleChange = { newStyle ->
+                            settingsStore.locationIconStyle = newStyle
+                            locationIconStyle = newStyle
+                        },
+                        language = settingsStore.language,
+                        onLanguageChange = onLanguageChange
+                    )
 
                     Column(
                         modifier = Modifier
@@ -571,9 +369,7 @@ fun MainScreen(
                                     onArriveByChange = { routingViewModel.setArriveBy(it) },
                                     onSearch = {
                                         routingViewModel.search()
-                                        scope.launch {
-                                            bottomSheetState.expand()
-                                        }
+                                        scope.launch { bottomSheetState.expand() }
                                     },
                                     onSelectItinerary = { routingViewModel.selectItinerary(it) },
                                     onLegClick = { leg ->
@@ -739,10 +535,7 @@ fun MainScreen(
                 }
             },
             content = { _ ->
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-            ) {
+            Box(modifier = Modifier.fillMaxSize()) {
                 OsmMapView(
                     center = GeoPoint(31.77, 35.21),
                     zoom = 13.0,
@@ -804,10 +597,7 @@ fun MainScreen(
 
                 SmallFloatingActionButton(
                     onClick = {
-                        val hasPermission = ContextCompat.checkSelfPermission(
-                            context, Manifest.permission.ACCESS_FINE_LOCATION
-                        ) == PackageManager.PERMISSION_GRANTED
-                        if (hasPermission) {
+                        if (LocationHelper.hasPermission(context)) {
                             followingLocation = !followingLocation
                             if (followingLocation) {
                                 centerMapOnCurrentLocation()
@@ -837,85 +627,37 @@ fun MainScreen(
                 }
 
                 if (showOpacitySlider) {
-                    Column(
+                    OpacityControls(
+                        strings = strings,
+                        sheetOpacity = sheetOpacity,
+                        onSheetOpacityChange = { sheetOpacity = it },
+                        onSheetOpacityFinished = { settingsStore.sheetOpacity = sheetOpacity },
+                        cardOpacity = cardOpacity,
+                        onCardOpacityChange = { cardOpacity = it },
+                        onCardOpacityFinished = { settingsStore.cardOpacity = cardOpacity },
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
                             .padding(bottom = 8.dp, start = 16.dp, end = 16.dp)
-                            .fillMaxWidth()
-                            .background(
-                                MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
-                                RoundedCornerShape(12.dp)
-                            )
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Text(
-                                strings.sheet,
-                                style = MaterialTheme.typography.labelMedium,
-                                modifier = Modifier.width(40.dp)
-                            )
-                            Slider(
-                                value = sheetOpacity,
-                                onValueChange = { sheetOpacity = it },
-                                onValueChangeFinished = { settingsStore.sheetOpacity = sheetOpacity },
-                                valueRange = 0.3f..1f,
-                                modifier = Modifier.weight(1f)
-                            )
-                            Text(
-                                "${(sheetOpacity * 100).toInt()}%",
-                                style = MaterialTheme.typography.labelMedium
-                            )
-                        }
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Text(
-                                strings.cards,
-                                style = MaterialTheme.typography.labelMedium,
-                                modifier = Modifier.width(40.dp)
-                            )
-                            Slider(
-                                value = cardOpacity,
-                                onValueChange = { cardOpacity = it },
-                                onValueChangeFinished = { settingsStore.cardOpacity = cardOpacity },
-                                valueRange = 0.2f..1f,
-                                modifier = Modifier.weight(1f)
-                            )
-                            Text(
-                                "${(cardOpacity * 100).toInt()}%",
-                                style = MaterialTheme.typography.labelMedium
-                            )
-                        }
-                    }
+                    )
                 }
             }
             }
         )
 
         savePlaceTarget?.let { target ->
-            AlertDialog(
-                onDismissRequest = { savePlaceTarget = null },
-                title = { Text("Save as") },
-                text = { Text(target.name) },
-                confirmButton = {
-                    TextButton(onClick = {
-                        settingsStore.homePlace = target
-                        recentSearchesVersion++
-                        savePlaceTarget = null
-                    }) { Text("Home") }
+            SavePlaceDialog(
+                target = target,
+                onSaveHome = {
+                    settingsStore.homePlace = target
+                    recentSearchesVersion++
+                    savePlaceTarget = null
                 },
-                dismissButton = {
-                    TextButton(onClick = {
-                        settingsStore.workPlace = target
-                        recentSearchesVersion++
-                        savePlaceTarget = null
-                    }) { Text("Work") }
-                }
+                onSaveWork = {
+                    settingsStore.workPlace = target
+                    recentSearchesVersion++
+                    savePlaceTarget = null
+                },
+                onDismiss = { savePlaceTarget = null }
             )
         }
 
@@ -939,6 +681,5 @@ fun MainScreen(
                 onGeocode = { routingViewModel.geocode(it) }
             )
         }
-
     }
 }
