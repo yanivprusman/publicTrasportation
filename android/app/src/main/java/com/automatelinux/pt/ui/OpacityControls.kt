@@ -51,7 +51,7 @@ fun OpacityControls(
                 value = sheetOpacity,
                 onValueChange = onSheetOpacityChange,
                 onValueChangeFinished = onSheetOpacityFinished,
-                valueRange = 0.3f..1f,
+                valueRange = 0.05f..1f,
                 modifier = Modifier.weight(1f)
             )
             Text(

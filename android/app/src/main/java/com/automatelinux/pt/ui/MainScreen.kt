@@ -314,6 +314,9 @@ fun MainScreen(
                     SheetDragHandleRow(
                         strings = strings,
                         loading = routingState.loading,
+                        sheetOpacity = sheetOpacity,
+                        onSheetOpacityChange = { sheetOpacity = it },
+                        onSheetOpacityFinished = { settingsStore.sheetOpacity = sheetOpacity },
                         onDebugFill = {
                             routingViewModel.debugFill(
                                 autoSearch = settingsStore.debugAutoSearch,

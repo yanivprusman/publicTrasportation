@@ -5,10 +5,11 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.absolutePadding
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Settings
@@ -20,13 +21,14 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.AbsoluteAlignment
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -37,21 +39,44 @@ import com.automatelinux.pt.util.AppStrings
 fun SheetDragHandleRow(
     strings: AppStrings,
     loading: Boolean,
+    sheetOpacity: Float,
+    onSheetOpacityChange: (Float) -> Unit,
+    onSheetOpacityFinished: () -> Unit,
     onDebugFill: () -> Unit,
     onDebugLongClick: () -> Unit
 ) {
-    Box(modifier = Modifier.fillMaxWidth()) {
-        BottomSheetDefaults.DragHandle(
-            modifier = Modifier.align(Alignment.Center)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Inline sheet-opacity slider, modeled after the ImmersiveRDP keyboard slider.
+        // Subtle, theme-aware colors so it stays unobtrusive over the translucent sheet.
+        Slider(
+            value = sheetOpacity,
+            onValueChange = onSheetOpacityChange,
+            onValueChangeFinished = onSheetOpacityFinished,
+            valueRange = 0.05f..1f,
+            modifier = Modifier
+                .width(120.dp)
+                .height(28.dp),
+            colors = SliderDefaults.colors(
+                thumbColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                activeTrackColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                inactiveTrackColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.15f),
+            )
         )
+        // Drag handle centered in the remaining space.
+        Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+            BottomSheetDefaults.DragHandle()
+        }
         Icon(
             Icons.Default.BugReport,
             contentDescription = strings.debugFill,
             tint = if (loading) MaterialTheme.colorScheme.tertiary.copy(alpha = 0.38f)
                    else MaterialTheme.colorScheme.tertiary,
             modifier = Modifier
-                .align(AbsoluteAlignment.CenterRight)
-                .absolutePadding(right = 12.dp)
                 .size(36.dp)
                 .combinedClickable(
                     enabled = !loading,
