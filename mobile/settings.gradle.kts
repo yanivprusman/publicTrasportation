@@ -22,5 +22,6 @@ dependencyResolutionManagement {
 includeBuild("build-logic")
 
 rootProject.name = "PT"
+include(":shared")
 include(":app")
 include(":feedback-lib")

@@ -58,6 +58,9 @@ android {
 }
 
 dependencies {
+    // Shared KMP module (commonMain code shared with iOS)
+    implementation(project(":shared"))
+
     // Compose BOM
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)

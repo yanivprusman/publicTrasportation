@@ -8,6 +8,7 @@
 .externalNativeBuild
 .cxx
 /app/build
+/shared/build
 .kotlin/
 
 # Shared feedback-lib (bind-mounted from addnewfeature source of truth)
