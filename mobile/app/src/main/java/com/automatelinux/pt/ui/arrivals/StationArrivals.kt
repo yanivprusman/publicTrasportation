@@ -43,8 +43,10 @@ import com.automatelinux.pt.data.model.MonitoredStopVisit
 import com.automatelinux.pt.util.AppStrings
 import com.automatelinux.pt.util.LocalAppStrings
 import kotlinx.coroutines.delay
-import java.time.Duration
-import java.time.ZonedDateTime
+import kotlinx.datetime.Clock
+import kotlinx.datetime.Instant
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 
 private val lineColors = listOf(
     Color(0xFF4CAF50),
@@ -290,11 +292,11 @@ data class ArrivalDisplay(val primary: String, val secondary: String? = null)
 fun formatArrivalTime(isoString: String?, tick: Long, strings: AppStrings): ArrivalDisplay {
     if (isoString == null) return ArrivalDisplay("—")
     return try {
-        val arrival = ZonedDateTime.parse(isoString)
-        val now = ZonedDateTime.now()
-        val diff = Duration.between(now, arrival)
-        val minutes = diff.toMinutes()
-        val timeStr = arrival.toLocalTime().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))
+        val arrival = Instant.parse(isoString)
+        val now = Clock.System.now()
+        val minutes = (arrival - now).inWholeMinutes
+        val local = arrival.toLocalDateTime(TimeZone.currentSystemDefault())
+        val timeStr = local.hour.toString().padStart(2, '0') + ":" + local.minute.toString().padStart(2, '0')
 
         when {
             minutes <= 0 -> ArrivalDisplay(strings.arrivalNow, timeStr)

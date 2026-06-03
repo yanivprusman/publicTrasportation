@@ -60,6 +60,7 @@ android {
 dependencies {
     // Shared KMP module (commonMain code shared with iOS)
     implementation(project(":shared"))
+    implementation(libs.kotlinx.datetime)
 
     // Compose BOM
     implementation(platform(libs.compose.bom))

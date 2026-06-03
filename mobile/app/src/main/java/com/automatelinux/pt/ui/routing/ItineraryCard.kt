@@ -1,5 +1,6 @@
 package com.automatelinux.pt.ui.routing
 
+import kotlinx.datetime.toLocalDateTime
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -126,18 +127,15 @@ fun ItineraryCard(
 }
 
 fun formatTime(isoString: String): String {
-    val localZone = java.time.ZoneId.systemDefault()
-    val fmt = java.time.format.DateTimeFormatter.ofPattern("HH:mm")
     return try {
-        val zdt = java.time.ZonedDateTime.parse(isoString)
-        zdt.withZoneSameInstant(localZone).format(fmt)
+        // Instant.parse accepts ISO-8601 with offset (both ZonedDateTime and OffsetDateTime forms).
+        val local = kotlinx.datetime.Instant.parse(isoString)
+            .toLocalDateTime(kotlinx.datetime.TimeZone.currentSystemDefault())
+        val h = local.hour.toString().padStart(2, '0')
+        val m = local.minute.toString().padStart(2, '0')
+        "$h:$m"
     } catch (_: Exception) {
-        try {
-            val odt = java.time.OffsetDateTime.parse(isoString)
-            odt.atZoneSameInstant(localZone).format(fmt)
-        } catch (_: Exception) {
-            isoString.substringAfter("T").take(5)
-        }
+        isoString.substringAfter("T").take(5)
     }
 }
 

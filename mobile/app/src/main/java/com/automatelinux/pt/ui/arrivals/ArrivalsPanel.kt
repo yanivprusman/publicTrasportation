@@ -33,7 +33,9 @@ import androidx.compose.ui.unit.dp
 import com.automatelinux.pt.data.model.StopResult
 import com.automatelinux.pt.ui.viewmodel.ArrivalsState
 import com.automatelinux.pt.util.LocalAppStrings
-import java.time.LocalTime
+import kotlinx.datetime.Clock
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 
 @Composable
 fun ArrivalsPanel(
@@ -183,7 +185,7 @@ fun FavoritesSection(
 @Composable
 fun ServiceAlertBanner() {
     val strings = LocalAppStrings.current
-    val hour = LocalTime.now().hour
+    val hour = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).hour
     val isPeak = hour in 7..9 || hour in 16..19
 
     Card(

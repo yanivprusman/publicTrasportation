@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.datetime.Clock
 import javax.inject.Inject
 
 data class ArrivalsState(
@@ -76,7 +77,7 @@ class ArrivalsViewModel @Inject constructor(
                 _state.value = _state.value.copy(
                     siriData = response,
                     vehicleMarkers = response.extractVehicleMarkers(),
-                    lastUpdated = System.currentTimeMillis(),
+                    lastUpdated = Clock.System.now().toEpochMilliseconds(),
                     loading = false
                 )
             } catch (e: Exception) {

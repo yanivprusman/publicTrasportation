@@ -12,7 +12,6 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker as M3TimePicker
-import androidx.compose.material3.TimePickerState
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
@@ -23,20 +22,41 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.automatelinux.pt.util.LocalAppStrings
-import java.time.Instant
-import java.time.LocalDate
-import java.time.LocalTime
-import java.time.ZoneId
-import java.time.ZonedDateTime
-import java.time.format.DateTimeFormatter
+import kotlinx.datetime.Clock
+import kotlinx.datetime.Instant
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.LocalTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.atStartOfDayIn
+import kotlinx.datetime.format.DayOfWeekNames
+import kotlinx.datetime.format.MonthNames
+import kotlinx.datetime.format.Padding
+import kotlinx.datetime.toInstant
+import kotlinx.datetime.toLocalDateTime
+import kotlinx.datetime.todayIn
 
 enum class TimeMode { NOW, DEPART, ARRIVE }
+
+private val sysTz get() = TimeZone.currentSystemDefault()
+
+// Equivalent of the old DateTimeFormatter pattern "EEE, MMM d  HH:mm" (e.g. "Wed, Jun 3  14:30").
+private val departureLabelFormat = LocalDateTime.Format {
+    dayOfWeek(DayOfWeekNames.ENGLISH_ABBREVIATED)
+    chars(", ")
+    monthName(MonthNames.ENGLISH_ABBREVIATED)
+    chars(" ")
+    dayOfMonth(Padding.NONE)
+    chars("  ")
+    hour()
+    chars(":")
+    minute()
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TimePickerSection(
-    departureTime: ZonedDateTime?,
-    onTimeChange: (ZonedDateTime?) -> Unit,
+    departureTime: Instant?,
+    onTimeChange: (Instant?) -> Unit,
     arriveBy: Boolean,
     onArriveByChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier
@@ -45,8 +65,8 @@ fun TimePickerSection(
     var mode by remember { mutableStateOf(TimeMode.NOW) }
     var showDatePicker by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
-    var selectedDate by remember { mutableStateOf(LocalDate.now()) }
-    var selectedTime by remember { mutableStateOf(LocalTime.now()) }
+    var selectedDate by remember { mutableStateOf(Clock.System.todayIn(sysTz)) }
+    var selectedTime by remember { mutableStateOf(Clock.System.now().toLocalDateTime(sysTz).time) }
 
     Column(modifier = modifier) {
         Row(
@@ -84,7 +104,7 @@ fun TimePickerSection(
 
         if (mode != TimeMode.NOW && departureTime != null) {
             Text(
-                text = departureTime.format(DateTimeFormatter.ofPattern("EEE, MMM d  HH:mm")),
+                text = departureLabelFormat.format(departureTime.toLocalDateTime(sysTz)),
                 modifier = Modifier.padding(top = 4.dp),
                 style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
                 color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant
@@ -94,14 +114,14 @@ fun TimePickerSection(
 
     if (showDatePicker) {
         val datePickerState = rememberDatePickerState(
-            initialSelectedDateMillis = selectedDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+            initialSelectedDateMillis = selectedDate.atStartOfDayIn(sysTz).toEpochMilliseconds()
         )
         DatePickerDialog(
             onDismissRequest = { showDatePicker = false },
             confirmButton = {
                 TextButton(onClick = {
                     datePickerState.selectedDateMillis?.let { millis ->
-                        selectedDate = Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).toLocalDate()
+                        selectedDate = Instant.fromEpochMilliseconds(millis).toLocalDateTime(sysTz).date
                     }
                     showDatePicker = false
                     showTimePicker = true
@@ -125,9 +145,9 @@ fun TimePickerSection(
             onDismissRequest = { showTimePicker = false },
             confirmButton = {
                 TextButton(onClick = {
-                    selectedTime = LocalTime.of(timePickerState.hour, timePickerState.minute)
-                    val zdt = ZonedDateTime.of(selectedDate, selectedTime, ZoneId.systemDefault())
-                    onTimeChange(zdt)
+                    selectedTime = LocalTime(timePickerState.hour, timePickerState.minute)
+                    val instant = LocalDateTime(selectedDate, selectedTime).toInstant(sysTz)
+                    onTimeChange(instant)
                     showTimePicker = false
                 }) { Text(strings.ok) }
             },

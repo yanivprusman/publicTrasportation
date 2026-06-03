@@ -36,7 +36,7 @@ import com.automatelinux.pt.data.model.RouteSortMode
 import com.automatelinux.pt.ui.components.PreSuggestion
 import com.automatelinux.pt.ui.viewmodel.RoutingState
 import com.automatelinux.pt.util.LocalAppStrings
-import java.time.ZonedDateTime
+import kotlinx.datetime.Instant
 
 @Composable
 fun RoutePlannerPanel(
@@ -44,7 +44,7 @@ fun RoutePlannerPanel(
     onOriginSelect: (GeocodeSuggestion?) -> Unit,
     onDestinationSelect: (GeocodeSuggestion?) -> Unit,
     onSwap: () -> Unit,
-    onTimeChange: (ZonedDateTime?) -> Unit,
+    onTimeChange: (Instant?) -> Unit,
     onArriveByChange: (Boolean) -> Unit,
     onSearch: () -> Unit,
     onSelectItinerary: (Int) -> Unit,

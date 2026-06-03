@@ -28,7 +28,8 @@ kotlin {
             implementation(compose.ui)
             implementation(compose.materialIconsExtended)
             implementation(libs.kotlinx.serialization.json)
-            // DI / datetime / settings / Ktor deps are introduced as code migrates.
+            implementation(libs.kotlinx.datetime)
+            // DI / settings / Ktor deps are introduced as code migrates.
         }
     }
 }

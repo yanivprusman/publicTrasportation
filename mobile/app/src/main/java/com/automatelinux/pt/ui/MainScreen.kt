@@ -45,6 +45,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import kotlinx.datetime.Clock
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.Instant
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.minus
+import kotlinx.datetime.toLocalDateTime
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -431,15 +437,15 @@ fun MainScreen(
                                         reminderJob?.cancel()
                                         reminderJob = scope.launch {
                                             try {
-                                                val departTime = java.time.ZonedDateTime.parse(leg.startTime)
-                                                val reminderTime = departTime.minusMinutes(5)
-                                                val delayMs = java.time.Duration.between(java.time.ZonedDateTime.now(), reminderTime).toMillis()
+                                                val departTime = Instant.parse(leg.startTime)
+                                                val reminderTime = departTime.minus(5, DateTimeUnit.MINUTE)
+                                                val delayMs = (reminderTime - Clock.System.now()).inWholeMilliseconds
                                                 if (delayMs > 0) {
                                                     kotlinx.coroutines.delay(delayMs)
                                                 }
                                                 val lineName = leg.routeShortName ?: "Bus"
                                                 val timeStr = leg.startTime.let {
-                                                    try { java.time.ZonedDateTime.parse(it).toLocalTime().toString().take(5) }
+                                                    try { Instant.parse(it).toLocalDateTime(TimeZone.currentSystemDefault()).time.toString().take(5) }
                                                     catch (_: Exception) { it }
                                                 }
                                                 android.widget.Toast.makeText(

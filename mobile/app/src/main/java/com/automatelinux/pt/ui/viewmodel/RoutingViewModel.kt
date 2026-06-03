@@ -16,8 +16,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import java.time.ZonedDateTime
-import java.time.format.DateTimeFormatter
+import kotlinx.datetime.Clock
+import kotlinx.datetime.Instant
+import kotlin.time.Duration.Companion.minutes
 import javax.inject.Inject
 
 data class TrackedBus(
@@ -29,7 +30,7 @@ data class TrackedBus(
 data class RoutingState(
     val origin: GeocodeSuggestion? = null,
     val destination: GeocodeSuggestion? = null,
-    val departureTime: ZonedDateTime? = null,
+    val departureTime: Instant? = null,
     val arriveBy: Boolean = false,
     val results: RouteResult? = null,
     val selectedIndex: Int = 0,
@@ -69,7 +70,7 @@ class RoutingViewModel @Inject constructor(
         _state.value = _state.value.copy(destination = suggestion, results = null, error = null)
     }
 
-    fun setDepartureTime(time: ZonedDateTime?) {
+    fun setDepartureTime(time: Instant?) {
         _state.value = _state.value.copy(departureTime = time)
     }
 
@@ -90,12 +91,12 @@ class RoutingViewModel @Inject constructor(
         val earliest = s.results?.itineraries?.minByOrNull { it.startTime }?.startTime
         if (earliest != null) {
             try {
-                val t = ZonedDateTime.parse(earliest).minusMinutes(30)
+                val t = Instant.parse(earliest).minus(30.minutes)
                 _state.value = _state.value.copy(departureTime = t, arriveBy = false)
                 search()
             } catch (_: Exception) { search() }
         } else {
-            val t = (s.departureTime ?: ZonedDateTime.now()).minusMinutes(30)
+            val t = (s.departureTime ?: Clock.System.now()).minus(30.minutes)
             _state.value = _state.value.copy(departureTime = t, arriveBy = false)
             search()
         }
@@ -106,12 +107,12 @@ class RoutingViewModel @Inject constructor(
         val latest = s.results?.itineraries?.maxByOrNull { it.startTime }?.startTime
         if (latest != null) {
             try {
-                val t = ZonedDateTime.parse(latest).plusMinutes(5)
+                val t = Instant.parse(latest).plus(5.minutes)
                 _state.value = _state.value.copy(departureTime = t, arriveBy = false)
                 search()
             } catch (_: Exception) { search() }
         } else {
-            val t = (s.departureTime ?: ZonedDateTime.now()).plusMinutes(30)
+            val t = (s.departureTime ?: Clock.System.now()).plus(30.minutes)
             _state.value = _state.value.copy(departureTime = t, arriveBy = false)
             search()
         }
@@ -163,7 +164,8 @@ class RoutingViewModel @Inject constructor(
             try {
                 val from = "${origin.lat},${origin.lon}"
                 val to = "${destination.lat},${destination.lon}"
-                val time = s.departureTime?.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
+                // Instant.toString() is ISO-8601 (UTC "Z" form); same instant the API expects.
+                val time = s.departureTime?.toString()
                 val arriveBy = if (s.arriveBy) true else null
 
                 val result = api.searchRoute(from = from, to = to, time = time, arriveBy = arriveBy)
