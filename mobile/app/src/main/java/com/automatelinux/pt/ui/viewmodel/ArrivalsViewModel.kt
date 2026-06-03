@@ -18,28 +18,7 @@ import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
 import javax.inject.Inject
 
-data class ArrivalsState(
-    val stationCode: String = "26472",
-    val stationName: String = "",
-    val siriData: SiriResponse? = null,
-    val vehicleMarkers: List<VehicleMarker> = emptyList(),
-    val showVehicleMarkers: Boolean = true,
-    val lineFilter: String = "",
-    val lastUpdated: Long? = null,
-    val error: String? = null,
-    val loading: Boolean = false
-) {
-    val visits: List<MonitoredStopVisit>
-        get() {
-            val allVisits = siriData?.siri?.serviceDelivery?.stopMonitoringDelivery
-                ?.flatMap { it.monitoredStopVisit ?: emptyList() } ?: emptyList()
-
-            return if (lineFilter.isBlank()) allVisits
-            else allVisits.filter {
-                it.monitoredVehicleJourney?.publishedLineName?.contains(lineFilter, ignoreCase = true) == true
-            }
-        }
-}
+// ArrivalsState now lives in commonMain (ui/viewmodel/ArrivalsState.kt).
 
 @HiltViewModel
 class ArrivalsViewModel @Inject constructor(

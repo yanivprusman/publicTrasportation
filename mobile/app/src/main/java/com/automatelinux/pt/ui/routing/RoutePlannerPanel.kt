@@ -155,9 +155,9 @@ fun RoutePlannerPanel(
             error = state.error,
             onRetry = onSearch,
             sortMode = sortMode,
-            onSortChange = if (state.results != null && state.results.itineraries.isNotEmpty()) onSortChange else null,
-            onEarlier = if (state.results != null && state.results.itineraries.isNotEmpty()) onEarlier else null,
-            onLater = if (state.results != null && state.results.itineraries.isNotEmpty()) onLater else null,
+            onSortChange = if (state.results?.itineraries?.isNotEmpty() == true) onSortChange else null,
+            onEarlier = if (state.results?.itineraries?.isNotEmpty() == true) onEarlier else null,
+            onLater = if (state.results?.itineraries?.isNotEmpty() == true) onLater else null,
             cardOpacity = cardOpacity
         )
 
