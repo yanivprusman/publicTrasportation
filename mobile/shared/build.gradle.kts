@@ -3,6 +3,8 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.android.library)
+    alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.compose.multiplatform)
 }
 
 // Shared Kotlin Multiplatform module for the PT app.
@@ -19,8 +21,12 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
-            // Shared deps (kotlinx-serialization, Ktor, Koin, kotlinx-datetime,
-            // multiplatform-settings, Compose MP) are introduced as code migrates.
+            implementation(compose.runtime)
+            implementation(compose.foundation)
+            implementation(compose.material3)
+            implementation(compose.ui)
+            implementation(compose.materialIconsExtended)
+            // Networking / DI / datetime / settings deps are introduced as code migrates.
         }
     }
 }
