@@ -1,11 +1,30 @@
 package com.automatelinux.pt.data.model
 
+import kotlinx.serialization.KSerializer
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.descriptors.PrimitiveKind
+import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
+
+@Serializable
 data class Place(
     val name: String,
     val lat: Double,
     val lon: Double
 )
 
+// Preserves the lenient mapping the old Gson TypeAdapter did (METRO->SUBWAY, *RAIL*->RAIL,
+// unknown->WALK), and serializes back to the enum name.
+object TransitModeSerializer : KSerializer<TransitMode> {
+    override val descriptor: SerialDescriptor =
+        PrimitiveSerialDescriptor("TransitMode", PrimitiveKind.STRING)
+    override fun serialize(encoder: Encoder, value: TransitMode) = encoder.encodeString(value.name)
+    override fun deserialize(decoder: Decoder): TransitMode = TransitMode.fromString(decoder.decodeString())
+}
+
+@Serializable(with = TransitModeSerializer::class)
 enum class TransitMode {
     WALK, BUS, RAIL, TRAM, SUBWAY, FERRY;
 
@@ -23,6 +42,7 @@ enum class TransitMode {
     }
 }
 
+@Serializable
 data class RouteLeg(
     val mode: TransitMode,
     val from: Place,
@@ -37,6 +57,7 @@ data class RouteLeg(
     val intermediateStops: List<Place>? = null
 )
 
+@Serializable
 data class Itinerary(
     val duration: Long,
     val startTime: String,
@@ -67,6 +88,7 @@ enum class RouteSortMode {
     FASTEST, FEWER_TRANSFERS, LESS_WALKING
 }
 
+@Serializable
 data class RouteResult(
     val itineraries: List<Itinerary>
 )

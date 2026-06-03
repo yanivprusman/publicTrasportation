@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.compose.multiplatform)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 // Shared Kotlin Multiplatform module for the PT app.
@@ -26,7 +27,8 @@ kotlin {
             implementation(compose.material3)
             implementation(compose.ui)
             implementation(compose.materialIconsExtended)
-            // Networking / DI / datetime / settings deps are introduced as code migrates.
+            implementation(libs.kotlinx.serialization.json)
+            // DI / datetime / settings / Ktor deps are introduced as code migrates.
         }
     }
 }

@@ -1,23 +1,19 @@
 package com.automatelinux.pt.di
 
 import com.automatelinux.pt.data.api.PtApi
-import com.automatelinux.pt.data.model.TransitMode
 import com.automatelinux.pt.util.ServerConfig
-import com.google.gson.Gson
-import com.google.gson.GsonBuilder
-import com.google.gson.TypeAdapter
-import com.google.gson.stream.JsonReader
-import com.google.gson.stream.JsonWriter
+import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import kotlinx.serialization.json.Json
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.Interceptor
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
 
@@ -77,26 +73,24 @@ object NetworkModule {
             .build()
     }
 
+    // Tolerant config mirrors Gson's old leniency (ignore unknown/extra fields, coerce
+    // nulls into defaults). TransitMode aliasing is handled by TransitModeSerializer.
     @Provides
     @Singleton
-    fun provideGson(): Gson = GsonBuilder()
-        .registerTypeAdapter(TransitMode::class.java, object : TypeAdapter<TransitMode>() {
-            override fun write(out: JsonWriter, value: TransitMode?) {
-                out.value(value?.name ?: "WALK")
-            }
-            override fun read(`in`: JsonReader): TransitMode {
-                return TransitMode.fromString(`in`.nextString())
-            }
-        })
-        .create()
+    fun provideJson(): Json = Json {
+        ignoreUnknownKeys = true
+        isLenient = true
+        coerceInputValues = true
+        explicitNulls = false
+    }
 
     @Provides
     @Singleton
-    fun provideRetrofit(client: OkHttpClient, gson: Gson): Retrofit =
+    fun provideRetrofit(client: OkHttpClient, json: Json): Retrofit =
         Retrofit.Builder()
             .baseUrl("http://localhost/")
             .client(client)
-            .addConverterFactory(GsonConverterFactory.create(gson))
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
             .build()
 
     @Provides

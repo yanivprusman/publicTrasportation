@@ -1,5 +1,8 @@
 package com.automatelinux.pt.data.model
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 data class GeocodeSuggestion(
     val name: String,
     val lat: Double,

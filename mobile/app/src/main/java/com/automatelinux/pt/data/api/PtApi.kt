@@ -47,17 +47,8 @@ interface PtApi {
         @Query("line") line: String? = null
     ): SiriResponse
 
-    @GET("/api/stoptimes")
-    suspend fun getStoptimes(
-        @Query("stopId") stopId: String,
-        @Query("n") n: Int = 20
-    ): Any
-
     @GET("/api/line-shape")
     suspend fun getLineShape(
         @Query("line") line: String
     ): Map<String, List<List<Double>>>
-
-    @GET("/api/health")
-    suspend fun health(): Any
 }
