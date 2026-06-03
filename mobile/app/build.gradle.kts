@@ -61,6 +61,7 @@ dependencies {
     // Shared KMP module (commonMain code shared with iOS)
     implementation(project(":shared"))
     implementation(libs.kotlinx.datetime)
+    implementation(libs.multiplatform.settings)
 
     // Compose BOM
     implementation(platform(libs.compose.bom))
