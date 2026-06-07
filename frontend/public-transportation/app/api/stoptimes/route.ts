@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { ensureMotis } from '@/lib/motis-manager';
 
 const MOTIS_PORT = process.env.MOTIS_PORT || '3504';
 const MOTIS_BASE = `http://localhost:${MOTIS_PORT}`;
@@ -14,6 +15,8 @@ export async function GET(request: NextRequest) {
       { status: 400 }
     );
   }
+
+  await ensureMotis();
 
   try {
     const response = await fetch(

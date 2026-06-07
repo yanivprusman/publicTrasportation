@@ -1,6 +1,7 @@
 import { execSync } from 'child_process';
 import { existsSync } from 'fs';
 import { NextResponse } from 'next/server';
+import { ensureMotis } from '@/lib/motis-manager';
 
 const MOTIS_PORT = process.env.MOTIS_PORT || '3504';
 const MOTIS_BASE = `http://localhost:${MOTIS_PORT}`;
@@ -46,6 +47,7 @@ export async function GET() {
   const apkCommit = getApkCommit();
   const gitVersion = getCommitCount('HEAD');
   const apkVersion = apkCommit ? getCommitCount(apkCommit) : null;
+  await ensureMotis();
   try {
     await fetch(`${MOTIS_BASE}/api/v1/geocode?text=test`, {
       signal: AbortSignal.timeout(3000),
