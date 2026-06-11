@@ -59,7 +59,12 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.automatelinux.feedbacklib.ui.DismissibleSheet
 import com.automatelinux.feedbacklib.ui.rememberDismissibleSheetState
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.core.content.ContextCompat
+import com.automatelinux.pt.data.model.RouteLeg
 import com.automatelinux.pt.data.model.StopResult
+import com.automatelinux.pt.reminder.ReminderScheduler
 import com.automatelinux.pt.ui.arrivals.ArrivalsPanel
 import com.automatelinux.pt.ui.components.PreSuggestion
 import com.automatelinux.pt.ui.lines.LineShapeData
@@ -215,6 +220,58 @@ fun MainScreen(
     val onGpsClickDestination: () -> Unit = {
         if (LocationHelper.hasPermission(context)) fetchCurrentLocationForDestination()
         else permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+    }
+
+    // Departure reminder: exact AlarmManager alarm + system notification, so it fires
+    // even if the app is killed. reminderLegIndex/reminderJob only drive the button UI.
+    val armReminder: (RouteLeg) -> Unit = { leg ->
+        val legIdx = routingState.selectedItinerary?.legs?.indexOf(leg) ?: -1
+        if (legIdx >= 0) {
+            try {
+                val departTime = Instant.parse(leg.startTime)
+                val triggerAt = departTime.minus(5, DateTimeUnit.MINUTE).toEpochMilliseconds()
+                val lineName = leg.routeShortName ?: strings.busMode
+                val timeStr = departTime.toLocalDateTime(TimeZone.currentSystemDefault())
+                    .time.toString().take(5)
+                ReminderScheduler.schedule(
+                    context,
+                    triggerAtMillis = triggerAt,
+                    title = strings.departureReminder,
+                    text = strings.reminderNotification(lineName, timeStr),
+                    channelName = strings.departureReminder
+                )
+                reminderLegIndex = legIdx
+                reminderJob?.cancel()
+                reminderJob = scope.launch {
+                    val delayMs = triggerAt - Clock.System.now().toEpochMilliseconds()
+                    if (delayMs > 0) kotlinx.coroutines.delay(delayMs)
+                    reminderLegIndex = null
+                }
+            } catch (_: Exception) {
+                // Unparseable departure time — leave the button unarmed.
+            }
+        }
+    }
+
+    var pendingReminderLeg by remember { mutableStateOf<RouteLeg?>(null) }
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        val leg = pendingReminderLeg
+        pendingReminderLeg = null
+        if (granted && leg != null) armReminder(leg)
+    }
+
+    val setDepartureReminder: (RouteLeg) -> Unit = { leg ->
+        if (Build.VERSION.SDK_INT >= 33 &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS)
+                != PackageManager.PERMISSION_GRANTED
+        ) {
+            pendingReminderLeg = leg
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            armReminder(leg)
+        }
     }
 
     var locationIconStyle by remember { mutableStateOf(settingsStore.locationIconStyle) }
@@ -449,36 +506,10 @@ fun MainScreen(
                                         }
                                     },
                                     trackedLegIndex = routingState.trackedBus?.legIndex,
-                                    onSetReminder = { leg ->
-                                        val legIdx = routingState.selectedItinerary?.legs?.indexOf(leg) ?: return@RoutePlannerPanel
-                                        reminderLegIndex = legIdx
-                                        reminderJob?.cancel()
-                                        reminderJob = scope.launch {
-                                            try {
-                                                val departTime = Instant.parse(leg.startTime)
-                                                val reminderTime = departTime.minus(5, DateTimeUnit.MINUTE)
-                                                val delayMs = (reminderTime - Clock.System.now()).inWholeMilliseconds
-                                                if (delayMs > 0) {
-                                                    kotlinx.coroutines.delay(delayMs)
-                                                }
-                                                val lineName = leg.routeShortName ?: "Bus"
-                                                val timeStr = leg.startTime.let {
-                                                    try { Instant.parse(it).toLocalDateTime(TimeZone.currentSystemDefault()).time.toString().take(5) }
-                                                    catch (_: Exception) { it }
-                                                }
-                                                android.widget.Toast.makeText(
-                                                    context,
-                                                    strings.reminderNotification(lineName, timeStr),
-                                                    android.widget.Toast.LENGTH_LONG
-                                                ).show()
-                                                reminderLegIndex = null
-                                            } catch (_: kotlinx.coroutines.CancellationException) {
-                                                reminderLegIndex = null
-                                            }
-                                        }
-                                    },
+                                    onSetReminder = setDepartureReminder,
                                     activeReminderLegIndex = reminderLegIndex,
                                     onCancelReminder = {
+                                        ReminderScheduler.cancel(context)
                                         reminderJob?.cancel()
                                         reminderJob = null
                                         reminderLegIndex = null
