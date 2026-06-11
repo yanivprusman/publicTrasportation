@@ -61,7 +61,7 @@ fun ItineraryDetail(
     modifier: Modifier = Modifier
 ) {
     val strings = LocalAppStrings.current
-    val transferText = if (itinerary.transfers != 1) strings.transferCount(itinerary.transfers) else strings.transferCount(1)
+    val transferText = if (itinerary.transfers == 0) strings.direct else strings.transferCount(itinerary.transfers)
 
     Column(modifier = modifier.padding(8.dp)) {
         Text(
@@ -209,7 +209,7 @@ private fun LegDetail(
                             )
                             Spacer(Modifier.width(4.dp))
                             Text(
-                                text = if (hasReminder) strings.reminderCancelled else strings.departureReminder,
+                                text = if (hasReminder) strings.cancelReminder else strings.departureReminder,
                                 fontSize = 11.sp
                             )
                         }

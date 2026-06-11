@@ -62,7 +62,13 @@ fun TimePickerSection(
     modifier: Modifier = Modifier
 ) {
     val strings = LocalAppStrings.current
-    var mode by remember { mutableStateOf(TimeMode.NOW) }
+    // Derived from actual search state so the chips can't lie: Earlier/Later set a
+    // departure time programmatically, and canceling the pickers leaves no time set.
+    val mode = when {
+        departureTime == null -> TimeMode.NOW
+        arriveBy -> TimeMode.ARRIVE
+        else -> TimeMode.DEPART
+    }
     var showDatePicker by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
     var selectedDate by remember { mutableStateOf(Clock.System.todayIn(sysTz)) }
@@ -76,7 +82,6 @@ fun TimePickerSection(
             FilterChip(
                 selected = mode == TimeMode.NOW,
                 onClick = {
-                    mode = TimeMode.NOW
                     onTimeChange(null)
                     onArriveByChange(false)
                 },
@@ -85,7 +90,6 @@ fun TimePickerSection(
             FilterChip(
                 selected = mode == TimeMode.DEPART,
                 onClick = {
-                    mode = TimeMode.DEPART
                     onArriveByChange(false)
                     showDatePicker = true
                 },
@@ -94,7 +98,6 @@ fun TimePickerSection(
             FilterChip(
                 selected = mode == TimeMode.ARRIVE,
                 onClick = {
-                    mode = TimeMode.ARRIVE
                     onArriveByChange(true)
                     showDatePicker = true
                 },
@@ -102,7 +105,7 @@ fun TimePickerSection(
             )
         }
 
-        if (mode != TimeMode.NOW && departureTime != null) {
+        if (departureTime != null) {
             Text(
                 text = departureLabelFormat.format(departureTime.toLocalDateTime(sysTz)),
                 modifier = Modifier.padding(top = 4.dp),

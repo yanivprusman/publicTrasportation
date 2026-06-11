@@ -98,14 +98,14 @@ class RoutingViewModel @Inject constructor(
         )
     }
 
-    fun setOriginFromCoords(lat: Double, lon: Double, name: String? = null) {
-        val displayName = name ?: MAP_LOCATION_LABEL
+    fun setOriginFromCoords(lat: Double, lon: Double, name: String? = null, placeholder: String = MAP_LOCATION_LABEL) {
+        val displayName = name ?: placeholder
         setOrigin(GeocodeSuggestion(name = displayName, lat = lat, lon = lon))
         if (name == null) resolveAddress(lat, lon) { setOrigin(it) }
     }
 
-    fun setDestinationFromCoords(lat: Double, lon: Double, name: String? = null) {
-        val displayName = name ?: MAP_LOCATION_LABEL
+    fun setDestinationFromCoords(lat: Double, lon: Double, name: String? = null, placeholder: String = MAP_LOCATION_LABEL) {
+        val displayName = name ?: placeholder
         setDestination(GeocodeSuggestion(name = displayName, lat = lat, lon = lon))
         if (name == null) resolveAddress(lat, lon) { setDestination(it) }
     }
@@ -160,7 +160,13 @@ class RoutingViewModel @Inject constructor(
         )
         trackingJob = viewModelScope.launch {
             val stops = try { api.nearbyStops(lat, lon, 300) } catch (_: Exception) { emptyList() }
-            val stationCode = stops.firstOrNull()?.stopCode ?: return@launch
+            val stationCode = stops.firstOrNull()?.stopCode
+            if (stationCode == null) {
+                // No SIRI-monitorable stop near the boarding point — clear the tracking
+                // state so the UI doesn't show "Tracking..." forever.
+                _state.value = _state.value.copy(trackedBus = null)
+                return@launch
+            }
             while (true) {
                 try {
                     val response = api.getTransport(station = stationCode, line = lineName)

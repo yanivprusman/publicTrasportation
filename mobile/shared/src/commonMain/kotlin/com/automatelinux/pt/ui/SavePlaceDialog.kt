@@ -5,6 +5,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import com.automatelinux.pt.data.model.GeocodeSuggestion
+import com.automatelinux.pt.util.LocalAppStrings
 
 @Composable
 fun SavePlaceDialog(
@@ -13,15 +14,16 @@ fun SavePlaceDialog(
     onSaveWork: () -> Unit,
     onDismiss: () -> Unit
 ) {
+    val strings = LocalAppStrings.current
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Save as") },
+        title = { Text(strings.saveAs) },
         text = { Text(target.name) },
         confirmButton = {
-            TextButton(onClick = onSaveHome) { Text("Home") }
+            TextButton(onClick = onSaveHome) { Text(strings.home) }
         },
         dismissButton = {
-            TextButton(onClick = onSaveWork) { Text("Work") }
+            TextButton(onClick = onSaveWork) { Text(strings.work) }
         }
     )
 }

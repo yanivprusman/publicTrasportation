@@ -124,13 +124,13 @@ fun MainScreen(
     var selectedLine by remember { mutableStateOf<String?>(null) }
     var lineShapeData by remember { mutableStateOf(LineShapeData()) }
 
-    val preSuggestions = remember(recentSearchesVersion) {
+    val preSuggestions = remember(recentSearchesVersion, strings) {
         buildList {
             settingsStore.homePlace?.let {
-                add(PreSuggestion(it, Icons.Default.Home, "Home"))
+                add(PreSuggestion(it, Icons.Default.Home, strings.home))
             }
             settingsStore.workPlace?.let {
-                add(PreSuggestion(it, Icons.Default.Work, "Work"))
+                add(PreSuggestion(it, Icons.Default.Work, strings.work))
             }
             settingsStore.getRecentSearches().forEach {
                 add(PreSuggestion(it, Icons.Default.History))
@@ -152,7 +152,10 @@ fun MainScreen(
                 onStart = { gpsLoading = true },
                 onLocation = { loc ->
                     gpsLoading = false
-                    routingViewModel.setOriginFromCoords(loc.latitude, loc.longitude)
+                    routingViewModel.setOriginFromCoords(
+                        loc.latitude, loc.longitude,
+                        placeholder = strings.selectedLocation
+                    )
                     mapView?.animateToPoint(GeoPoint(loc.latitude, loc.longitude), 15.0)
                 },
                 onFailure = { gpsLoading = false }
@@ -167,7 +170,10 @@ fun MainScreen(
                 onStart = { gpsLoadingDestination = true },
                 onLocation = { loc ->
                     gpsLoadingDestination = false
-                    routingViewModel.setDestinationFromCoords(loc.latitude, loc.longitude)
+                    routingViewModel.setDestinationFromCoords(
+                        loc.latitude, loc.longitude,
+                        placeholder = strings.selectedLocation
+                    )
                     mapView?.animateToPoint(GeoPoint(loc.latitude, loc.longitude), 15.0)
                 },
                 onFailure = { gpsLoadingDestination = false }
@@ -181,6 +187,18 @@ fun MainScreen(
                 mapView?.animateToPoint(GeoPoint(loc.latitude, loc.longitude), 15.0)
             }
         }
+    }
+
+    // Follow-my-location: subscribe to continuous location updates while enabled and
+    // keep the map centered. onUserPan (real touch only) flips followingLocation off.
+    DisposableEffect(followingLocation) {
+        if (!followingLocation || !LocationHelper.hasPermission(context)) {
+            return@DisposableEffect onDispose {}
+        }
+        val callback = LocationHelper.startFollowing(fusedLocationClient) { loc ->
+            mapView?.animateToPoint(GeoPoint(loc.latitude, loc.longitude))
+        }
+        onDispose { LocationHelper.stopFollowing(fusedLocationClient, callback) }
     }
 
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -549,9 +567,15 @@ fun MainScreen(
                     onMapReady = { map -> mapView = map },
                     onLongPress = { point ->
                         if (routingState.origin == null) {
-                            routingViewModel.setOriginFromCoords(point.latitude, point.longitude)
+                            routingViewModel.setOriginFromCoords(
+                                point.latitude, point.longitude,
+                                placeholder = strings.selectedLocation
+                            )
                         } else {
-                            routingViewModel.setDestinationFromCoords(point.latitude, point.longitude)
+                            routingViewModel.setDestinationFromCoords(
+                                point.latitude, point.longitude,
+                                placeholder = strings.selectedLocation
+                            )
                         }
                     },
                     onUserPan = { followingLocation = false },

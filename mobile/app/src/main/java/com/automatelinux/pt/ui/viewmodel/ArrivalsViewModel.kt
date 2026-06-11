@@ -49,6 +49,8 @@ class ArrivalsViewModel @Inject constructor(
     }
 
     fun fetchArrivals() {
+        // No station selected yet — nothing to fetch (the polling loop also lands here).
+        if (_state.value.stationCode.isBlank()) return
         viewModelScope.launch {
             _state.value = _state.value.copy(loading = true, error = null)
             try {

@@ -102,6 +102,7 @@ data class AppStrings(
     val departureReminder: String,
     val reminderSet: (String) -> String,
     val reminderCancelled: String,
+    val cancelReminder: String,
     val reminderNotification: (String, String) -> String,
     val minutesBefore: (Int) -> String,
     val linesBrowser: String,
@@ -112,6 +113,10 @@ data class AppStrings(
     val noShapeData: String,
     val timetable: String,
     val commonLines: String,
+    val saveAs: String,
+    val home: String,
+    val work: String,
+    val selectedLocation: String,
 )
 
 val EnStrings = AppStrings(
@@ -221,6 +226,7 @@ val EnStrings = AppStrings(
     departureReminder = "Departure Reminder",
     reminderSet = { time -> "Reminder set for $time" },
     reminderCancelled = "Reminder cancelled",
+    cancelReminder = "Cancel reminder",
     reminderNotification = { line, time -> "Bus $line departs at $time" },
     minutesBefore = { m -> "${m}min before" },
     linesBrowser = "Lines",
@@ -231,6 +237,10 @@ val EnStrings = AppStrings(
     noShapeData = "No route data available",
     timetable = "Timetable",
     commonLines = "Common Lines",
+    saveAs = "Save as",
+    home = "Home",
+    work = "Work",
+    selectedLocation = "Selected location",
 )
 
 val HeStrings = AppStrings(
@@ -340,6 +350,7 @@ val HeStrings = AppStrings(
     departureReminder = "תזכורת יציאה",
     reminderSet = { time -> "תזכורת נקבעה ל-$time" },
     reminderCancelled = "תזכורת בוטלה",
+    cancelReminder = "בטל תזכורת",
     reminderNotification = { line, time -> "אוטובוס $line יוצא ב-$time" },
     minutesBefore = { m -> "$m דק׳ לפני" },
     linesBrowser = "קווים",
@@ -350,6 +361,10 @@ val HeStrings = AppStrings(
     noShapeData = "אין נתוני מסלול",
     timetable = "לוח זמנים",
     commonLines = "קווים נפוצים",
+    saveAs = "שמור בתור",
+    home = "בית",
+    work = "עבודה",
+    selectedLocation = "מיקום נבחר",
 )
 
 val LocalAppStrings = compositionLocalOf { EnStrings }
