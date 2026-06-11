@@ -14,6 +14,11 @@ class ReminderReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val title = intent.getStringExtra(ReminderScheduler.EXTRA_TITLE) ?: return
         val text = intent.getStringExtra(ReminderScheduler.EXTRA_TEXT) ?: return
+        // Idempotent — channels persist, but recreate in case the post outlives app state.
+        ReminderScheduler.ensureChannel(
+            context,
+            intent.getStringExtra(ReminderScheduler.EXTRA_CHANNEL_NAME) ?: title
+        )
 
         val contentIntent = PendingIntent.getActivity(
             context, 0,

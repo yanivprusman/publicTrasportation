@@ -14,6 +14,7 @@ object ReminderScheduler {
     const val CHANNEL_ID = "departure_reminders"
     const val EXTRA_TITLE = "reminder_title"
     const val EXTRA_TEXT = "reminder_text"
+    const val EXTRA_CHANNEL_NAME = "reminder_channel_name"
     private const val REQUEST_CODE = 1001
 
     fun ensureChannel(context: Context, channelName: String) {
@@ -34,6 +35,7 @@ object ReminderScheduler {
         val intent = Intent(context, ReminderReceiver::class.java)
             .putExtra(EXTRA_TITLE, title)
             .putExtra(EXTRA_TEXT, text)
+            .putExtra(EXTRA_CHANNEL_NAME, channelName)
         val pendingIntent = PendingIntent.getBroadcast(
             context, REQUEST_CODE, intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
