@@ -91,6 +91,18 @@ function App() {
     }
   }
 
+  // Switching stations invalidates everything shown for the previous one:
+  // clear it immediately so the panel shows "Loading..." instead of the old
+  // station's arrivals (with a fresh-looking timestamp) until the fetch lands.
+  const handleStationChange = useCallback((code: string) => {
+    if (code === stationCode) return
+    setSiriData(null)
+    setVehicleMarkers([])
+    setLastUpdated(null)
+    setError(null)
+    setStationCode(code)
+  }, [stationCode, setStationCode])
+
   const handleRouteFrom = (lat: number, lon: number) => {
     routing.setOriginFromCoords(lat, lon)
     setActiveTab('route')
@@ -119,7 +131,7 @@ function App() {
     <>
       <TransportControls
         stationCode={stationCode}
-        setStationCode={setStationCode}
+        setStationCode={handleStationChange}
         lastUpdated={lastUpdated}
         lineFilter={lineFilter}
         setLineFilter={setLineFilter}
