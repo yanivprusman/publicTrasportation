@@ -29,22 +29,32 @@ export function useAutocomplete<T>({ searchFn, debounceMs = 300, maxResults }: U
   const [highlightIndex, setHighlightIndex] = useState(-1)
   const timerRef = useRef<ReturnType<typeof setTimeout>>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  // Guards against out-of-order responses: only the most recently issued
+  // search (or clear/select, which bump the sequence) may update suggestions.
+  const searchSeqRef = useRef(0)
+
+  const cancelPendingSearch = useCallback(() => {
+    searchSeqRef.current++
+    if (timerRef.current) clearTimeout(timerRef.current)
+  }, [])
 
   const doSearch = useCallback((query: string) => {
-    if (timerRef.current) clearTimeout(timerRef.current)
+    cancelPendingSearch()
     if (!query.trim()) {
       setSuggestions([])
       setShowDropdown(false)
       return
     }
+    const seq = searchSeqRef.current
     timerRef.current = setTimeout(async () => {
       const results = await searchFn(query)
+      if (seq !== searchSeqRef.current) return
       const limited = maxResults ? results.slice(0, maxResults) : results
       setSuggestions(limited)
       setShowDropdown(limited.length > 0)
       setHighlightIndex(-1)
     }, debounceMs)
-  }, [searchFn, debounceMs, maxResults])
+  }, [cancelPendingSearch, searchFn, debounceMs, maxResults])
 
   const handleInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value
@@ -53,16 +63,18 @@ export function useAutocomplete<T>({ searchFn, debounceMs = 300, maxResults }: U
   }, [doSearch])
 
   const handleSelect = useCallback((_item: T) => {
+    cancelPendingSearch()
     setSuggestions([])
     setShowDropdown(false)
-  }, [])
+  }, [cancelPendingSearch])
 
   const handleClear = useCallback(() => {
+    cancelPendingSearch()
     setText('')
     setSuggestions([])
     setShowDropdown(false)
     inputRef.current?.focus()
-  }, [])
+  }, [cancelPendingSearch])
 
   const handleFocus = useCallback(() => {
     if (suggestions.length > 0) setShowDropdown(true)
@@ -92,10 +104,10 @@ export function useAutocomplete<T>({ searchFn, debounceMs = 300, maxResults }: U
   }, [showDropdown, suggestions, highlightIndex])
 
   const forceSearch = useCallback(async (query: string): Promise<T[]> => {
-    if (timerRef.current) clearTimeout(timerRef.current)
+    cancelPendingSearch()
     const results = await searchFn(query)
     return maxResults ? results.slice(0, maxResults) : results
-  }, [searchFn, maxResults])
+  }, [cancelPendingSearch, searchFn, maxResults])
 
   return {
     text, setText, suggestions, showDropdown, highlightIndex, inputRef,
