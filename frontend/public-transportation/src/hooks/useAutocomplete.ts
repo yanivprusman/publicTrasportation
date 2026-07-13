@@ -108,7 +108,12 @@ export function useAutocomplete<T>({ searchFn, debounceMs = 300, maxResults }: U
 
   const forceSearch = useCallback(async (query: string): Promise<T[]> => {
     cancelPendingSearch()
+    const seq = searchSeqRef.current
     const results = await searchFn(query)
+    // Discard responses superseded while in flight (further typing, blur,
+    // clear, select, or another forceSearch): the caller acts on the result
+    // (e.g. selects it), which must not happen for a stale query.
+    if (seq !== searchSeqRef.current) return []
     return maxResults ? results.slice(0, maxResults) : results
   }, [cancelPendingSearch, searchFn, maxResults])
 
