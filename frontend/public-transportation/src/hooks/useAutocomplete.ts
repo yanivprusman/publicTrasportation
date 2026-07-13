@@ -81,8 +81,11 @@ export function useAutocomplete<T>({ searchFn, debounceMs = 300, maxResults }: U
   }, [suggestions])
 
   const handleBlur = useCallback(() => {
+    // Invalidate the pending debounce and any in-flight search: a response
+    // landing after blur would reopen the dropdown over an unfocused input.
+    cancelPendingSearch()
     setTimeout(() => setShowDropdown(false), 200)
-  }, [])
+  }, [cancelPendingSearch])
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>, onSelect: (item: T) => void) => {
     if (e.key === 'ArrowDown' && showDropdown && suggestions.length > 0) {
