@@ -10,7 +10,11 @@ interface StationArrivalsProps {
 }
 
 function StationArrivals({ siriData, error, stationCode, lineFilter, onVehicleSelect }: StationArrivalsProps) {
-  const [expandedIndex, setExpandedIndex] = useState<number | null>(null)
+  // Expansion is tracked by a stable per-visit key, not list index: the list
+  // refreshes every 15s and rows shift as buses arrive/depart (and the line
+  // filter changes which rows exist), so an index would silently point the
+  // expanded details at a different vehicle.
+  const [expandedKey, setExpandedKey] = useState<string | null>(null)
   const [, setTick] = useState(0)
 
   useEffect(() => {
@@ -61,7 +65,8 @@ function StationArrivals({ siriData, error, stationCode, lineFilter, onVehicleSe
             {monitoredStopVisits.map((visit, index) => {
               const journey = visit.MonitoredVehicleJourney
               const monitoredCall = journey.MonitoredCall
-              const isExpanded = expandedIndex === index
+              const rowKey = visit.ItemIdentifier || journey.VehicleRef || `row-${index}`
+              const isExpanded = expandedKey === rowKey
 
               let arrivalDisplay: { primary: string; secondary?: string } = { primary: 'N/A' }
               let fullArrivalTime = 'N/A'
@@ -88,10 +93,11 @@ function StationArrivals({ siriData, error, stationCode, lineFilter, onVehicleSe
               const vehicleLocation = journey.VehicleLocation
 
               return (
-                <Fragment key={visit.ItemIdentifier || index}>
+                <Fragment key={rowKey}>
                   <tr
                     className="expandable-row"
-                    onClick={() => setExpandedIndex(isExpanded ? null : index)}
+                    data-id="toggle-arrival-details"
+                    onClick={() => setExpandedKey(isExpanded ? null : rowKey)}
                   >
                     <td>{journey.PublishedLineName || 'N/A'}</td>
                     <td>{journey.DirectionRef || 'N/A'}</td>
