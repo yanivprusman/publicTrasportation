@@ -44,7 +44,13 @@ export default function BottomSheet({ state, onStateChange, children }: BottomSh
       ['expanded', Math.abs(h - expandedPx)],
     ]
     distances.sort((a, b) => a[1] - b[1])
-    onStateChange(distances[0][0])
+    const target = distances[0][0]
+    // Set the height directly: when the sheet snaps back to its current state,
+    // onStateChange(target) is a no-op (same value, no re-render), so the
+    // height effect keyed on `state` never runs and the sheet would stay
+    // frozen at the raw drag-release height.
+    setHeight(target === 'expanded' ? expandedPx : SNAP_HEIGHTS[target])
+    onStateChange(target)
   }, [onStateChange])
 
   const onDragStart = useCallback((clientY: number) => {
