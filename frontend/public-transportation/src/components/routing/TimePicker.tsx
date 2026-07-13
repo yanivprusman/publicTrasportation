@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import styles from './TimePicker.module.css'
 
 type TimeMode = 'now' | 'depart' | 'arrive'
@@ -11,10 +10,12 @@ interface TimePickerProps {
 }
 
 export default function TimePicker({ departureTime, setDepartureTime, arriveBy, setArriveBy }: TimePickerProps) {
-  const [mode, setMode] = useState<TimeMode>('now')
+  // Derived from routing state, not local state: TimePicker unmounts when the
+  // sheet collapses or the tab switches, and a local mode would reset to 'now'
+  // while departureTime/arriveBy keep steering the actual search.
+  const mode: TimeMode = departureTime === null ? 'now' : arriveBy ? 'arrive' : 'depart'
 
   const handleModeChange = (m: TimeMode) => {
-    setMode(m)
     if (m === 'now') {
       // null = resolve to the current time when the search actually runs
       setDepartureTime(null)
@@ -38,6 +39,7 @@ export default function TimePicker({ departureTime, setDepartureTime, arriveBy, 
           <button
             key={m}
             type="button"
+            data-id={`time-mode-${m}`}
             className={`${styles.modeBtn} ${mode === m ? styles.active : ''}`}
             onClick={() => handleModeChange(m)}
           >
@@ -48,6 +50,7 @@ export default function TimePicker({ departureTime, setDepartureTime, arriveBy, 
       {mode !== 'now' && (
         <input
           type="datetime-local"
+          data-id="departure-datetime"
           className={styles.datetime}
           value={toLocalDatetime(departureTime ?? new Date())}
           onChange={e => {
