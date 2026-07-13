@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect } from 'react'
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import axios from 'axios'
 import type { GeocodeSuggestion, RouteResult, Itinerary } from '../types'
 import { searchRoute } from '../services/routing-api'
@@ -57,6 +57,9 @@ export function useRouting(): UseRoutingReturn {
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Guards against overlapping searches resolving out of order: only the
+  // most recently started search may update results/error/loading.
+  const searchSeqRef = useRef(0)
 
   // Persist origin/destination to localStorage
   useEffect(() => {
@@ -92,6 +95,7 @@ export function useRouting(): UseRoutingReturn {
     time: Date,
     arrive: boolean
   ) => {
+    const seq = ++searchSeqRef.current
     setLoading(true)
     setError(null)
     setResults(null)
@@ -103,15 +107,17 @@ export function useRouting(): UseRoutingReturn {
         time.toISOString(),
         arrive
       )
+      if (seq !== searchSeqRef.current) return
       if (!data.itineraries || data.itineraries.length === 0) {
         setError('No routes found')
       } else {
         setResults(data)
       }
     } catch (err) {
+      if (seq !== searchSeqRef.current) return
       setError(err instanceof Error ? err.message : 'Route search failed')
     } finally {
-      setLoading(false)
+      if (seq === searchSeqRef.current) setLoading(false)
     }
   }, [])
 
