@@ -4,8 +4,8 @@ import styles from './TimePicker.module.css'
 type TimeMode = 'now' | 'depart' | 'arrive'
 
 interface TimePickerProps {
-  departureTime: Date
-  setDepartureTime: (d: Date) => void
+  departureTime: Date | null
+  setDepartureTime: (d: Date | null) => void
   arriveBy: boolean
   setArriveBy: (b: boolean) => void
 }
@@ -16,13 +16,13 @@ export default function TimePicker({ departureTime, setDepartureTime, arriveBy, 
   const handleModeChange = (m: TimeMode) => {
     setMode(m)
     if (m === 'now') {
-      setDepartureTime(new Date())
+      // null = resolve to the current time when the search actually runs
+      setDepartureTime(null)
       setArriveBy(false)
-    } else if (m === 'depart') {
-      setArriveBy(false)
-    } else {
-      setArriveBy(true)
+      return
     }
+    if (departureTime === null) setDepartureTime(new Date())
+    setArriveBy(m === 'arrive')
   }
 
   const toLocalDatetime = (d: Date) => {
@@ -49,8 +49,11 @@ export default function TimePicker({ departureTime, setDepartureTime, arriveBy, 
         <input
           type="datetime-local"
           className={styles.datetime}
-          value={toLocalDatetime(departureTime)}
-          onChange={e => setDepartureTime(new Date(e.target.value))}
+          value={toLocalDatetime(departureTime ?? new Date())}
+          onChange={e => {
+            const d = new Date(e.target.value)
+            if (!isNaN(d.getTime())) setDepartureTime(d)
+          }}
         />
       )}
     </div>

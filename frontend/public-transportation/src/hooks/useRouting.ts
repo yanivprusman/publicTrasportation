@@ -32,8 +32,9 @@ export interface UseRoutingReturn {
   setDestination: (place: GeocodeSuggestion | null) => void
   setOriginFromCoords: (lat: number, lon: number, name?: string) => void
   setDestinationFromCoords: (lat: number, lon: number, name?: string) => void
-  departureTime: Date
-  setDepartureTime: (d: Date) => void
+  /** null = "leave now": the actual time is resolved when the search runs */
+  departureTime: Date | null
+  setDepartureTime: (d: Date | null) => void
   arriveBy: boolean
   setArriveBy: (b: boolean) => void
   results: RouteResult | null
@@ -51,7 +52,9 @@ export function useRouting(): UseRoutingReturn {
   const saved = loadSavedRoute()
   const [origin, setOrigin] = useState<GeocodeSuggestion | null>(saved.origin)
   const [destination, setDestination] = useState<GeocodeSuggestion | null>(saved.destination)
-  const [departureTime, setDepartureTime] = useState<Date>(new Date())
+  // null = "leave now". Resolving to a concrete Date only at search time keeps
+  // "Now" searches current — a Date captured at mount goes stale while the tab sits open.
+  const [departureTime, setDepartureTime] = useState<Date | null>(null)
   const [arriveBy, setArriveBy] = useState(false)
   const [results, setResults] = useState<RouteResult | null>(null)
   const [selectedIndex, setSelectedIndex] = useState(0)
@@ -92,7 +95,7 @@ export function useRouting(): UseRoutingReturn {
   const doSearch = useCallback(async (
     from: GeocodeSuggestion,
     to: GeocodeSuggestion,
-    time: Date,
+    time: Date | null,
     arrive: boolean
   ) => {
     const seq = ++searchSeqRef.current
@@ -104,7 +107,7 @@ export function useRouting(): UseRoutingReturn {
       const data = await searchRoute(
         { lat: from.lat, lon: from.lon },
         { lat: to.lat, lon: to.lon },
-        time.toISOString(),
+        (time ?? new Date()).toISOString(),
         arrive
       )
       if (seq !== searchSeqRef.current) return
@@ -132,7 +135,7 @@ export function useRouting(): UseRoutingReturn {
   const initRoute = useCallback((from: GeocodeSuggestion, to: GeocodeSuggestion) => {
     setOrigin(from)
     setDestination(to)
-    doSearch(from, to, new Date(), false)
+    doSearch(from, to, null, false)
   }, [doSearch])
 
   const selectedItinerary = useMemo(() => {
