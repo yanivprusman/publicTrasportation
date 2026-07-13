@@ -78,11 +78,12 @@ export async function GET(request: NextRequest) {
         const dlon = (stop.lon - lon) * 111320 * Math.cos(lat * Math.PI / 180);
         const dist = Math.round(Math.sqrt(dlat * dlat + dlon * dlon));
         nearby.push({ ...stop, distanceMeters: dist });
-        if (nearby.length >= 100) break;
       }
     }
+    // Sort before capping: truncating in file order can drop the nearest stops
+    // in dense areas (>100 stops in the box), which breaks nearest-stop consumers.
     nearby.sort((a, b) => a.distanceMeters - b.distanceMeters);
-    return NextResponse.json(nearby);
+    return NextResponse.json(nearby.slice(0, 100));
   }
 
   if (!q) return NextResponse.json([]);
