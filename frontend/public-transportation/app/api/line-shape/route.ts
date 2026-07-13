@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
-import { execSync } from 'child_process';
+import { execSync, execFileSync } from 'child_process';
 
 const GTFS_DATA_DIR = path.join(process.cwd(), '../../backend/israel-public-transportation');
 const GTFS_URL = 'https://storage.googleapis.com/storage/v1/b/mdb-latest/o/il-ministry-of-transport-and-road-safety-gtfs-2519.zip?alt=media';
@@ -128,7 +128,7 @@ export async function GET(request: NextRequest) {
     for (const [direction, dirShapeIds] of Object.entries(shapeIds)) {
       const shapeId = dirShapeIds[0];
       try {
-        const grepOutput = execSync(`grep -F "${shapeId}," "${shapesFile}"`, {
+        const grepOutput = execFileSync('grep', ['-F', `${shapeId},`, shapesFile], {
           encoding: 'utf8',
           maxBuffer: 50 * 1024 * 1024,
         });
@@ -136,6 +136,11 @@ export async function GET(request: NextRequest) {
         const shapePoints: { sequence: number; lat: number; lon: number }[] = [];
         for (const line of grepOutput.split('\n')) {
           if (!line.trim()) continue;
+          // grep -F matches the ID anywhere in the line — inside longer shape
+          // IDs ("145874," contains "45874,") and inside coordinates
+          // ("32.045874,") — which merges points from unrelated shapes into
+          // this polyline. Keep only rows whose shape_id column matches exactly.
+          if (!line.startsWith(`${shapeId},`)) continue;
           const cols = line.split(',');
           if (cols.length >= 4) {
             shapePoints.push({
