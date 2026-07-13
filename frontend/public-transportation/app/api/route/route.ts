@@ -139,7 +139,15 @@ export async function GET(request: NextRequest) {
 
   const routeTime = time || new Date().toISOString();
   const isArriveBy = arriveBy === 'true';
-  const cacheKey = `${from}|${to}|${routeTime}|${isArriveBy}`;
+  // Bucket the key's time to the minute: clients send "leave now" searches with
+  // millisecond precision, which makes every key unique and the cache useless
+  // for the most common search. Minute-level reuse is within the staleness the
+  // 5-minute TTL already accepts. MOTIS still gets the exact requested time.
+  const routeTimeMs = Date.parse(routeTime);
+  const timeBucket = isNaN(routeTimeMs)
+    ? routeTime
+    : new Date(routeTimeMs - (routeTimeMs % 60000)).toISOString();
+  const cacheKey = `${from}|${to}|${timeBucket}|${isArriveBy}`;
 
   const cached = getCachedRoute(cacheKey);
   if (cached) {
