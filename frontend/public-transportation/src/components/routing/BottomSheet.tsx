@@ -17,7 +17,7 @@ const SNAP_HEIGHTS: Record<SheetState, number> = {
 
 export default function BottomSheet({ state, onStateChange, children }: BottomSheetProps) {
   const sheetRef = useRef<HTMLDivElement>(null)
-  const dragRef = useRef({ startY: 0, startHeight: 0, dragging: false })
+  const dragRef = useRef({ startY: 0, startHeight: 0, lastHeight: 0, dragging: false })
   const [height, setHeight] = useState(SNAP_HEIGHTS[state])
   const [isDesktop, setIsDesktop] = useState(window.innerWidth > 768)
 
@@ -54,21 +54,26 @@ export default function BottomSheet({ state, onStateChange, children }: BottomSh
   }, [onStateChange])
 
   const onDragStart = useCallback((clientY: number) => {
-    dragRef.current = { startY: clientY, startHeight: height, dragging: true }
+    dragRef.current = { startY: clientY, startHeight: height, lastHeight: height, dragging: true }
   }, [height])
 
   const onDragMove = useCallback((clientY: number) => {
     if (!dragRef.current.dragging) return
     const diff = dragRef.current.startY - clientY
     const newH = Math.max(SNAP_HEIGHTS.collapsed, Math.min(window.innerHeight * 0.9, dragRef.current.startHeight + diff))
+    dragRef.current.lastHeight = newH
     setHeight(newH)
   }, [])
 
   const onDragEnd = useCallback(() => {
     if (!dragRef.current.dragging) return
     dragRef.current.dragging = false
-    snapToNearest(height)
-  }, [height, snapToNearest])
+    // Read the release height from the ref, not `height` state: the document
+    // mousemove/mouseup listeners are registered once at mousedown and capture
+    // that render's onDragEnd, whose `height` is the drag-START value — so a
+    // mouse drag would always snap based on where it began, not where it ended.
+    snapToNearest(dragRef.current.lastHeight)
+  }, [snapToNearest])
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     onDragStart(e.touches[0].clientY)
