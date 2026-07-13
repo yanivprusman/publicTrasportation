@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react'
+import { useEffect, useCallback, useRef } from 'react'
 import type { GeocodeSuggestion } from '../../types'
 import { geocodeSearch } from '../../services/routing-api'
 import { useAutocomplete } from '../../hooks/useAutocomplete'
@@ -17,12 +17,22 @@ const searchFn = (query: string) => geocodeSearch(query)
 
 export default function LocationInput({ label, value, onChange, placeholder, onGpsClick, gpsLoading }: LocationInputProps) {
   const ac = useAutocomplete<GeocodeSuggestion>({ searchFn, maxResults: 5 })
+  // Editing a selected place invalidates it (onChange(null) below), which makes
+  // the value→text sync effect fire with null and wipe the text the user just
+  // typed. Set only on a non-null→null transition caused by typing, so the
+  // effect is guaranteed to run once and consume the flag.
+  const skipNextSyncRef = useRef(false)
 
   useEffect(() => {
+    if (skipNextSyncRef.current) {
+      skipNextSyncRef.current = false
+      return
+    }
     ac.setText(value?.name || '')
   }, [value])
 
   const onInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (value) skipNextSyncRef.current = true
     onChange(null)
     ac.handleInput(e)
   }
