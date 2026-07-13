@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import MapView from './components/map/MapView'
 import StationArrivals from './components/data-display/StationArrivals'
 import TransportControls from './components/controls/TransportControls'
@@ -69,15 +69,23 @@ function App() {
     resolve()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Guards against overlapping arrivals fetches resolving out of order (poll
+  // ticks + station switches): only the most recently started fetch may
+  // update siriData/markers/error.
+  const arrivalsSeqRef = useRef(0)
+
   const fetchStationData = async () => {
+    const seq = ++arrivalsSeqRef.current
     setError(null)
     try {
       const data = await fetchStationArrivals(stationCode)
+      if (seq !== arrivalsSeqRef.current) return
       setSiriData(data)
       const markers = extractVehicleMarkers(data)
       setVehicleMarkers(markers)
       setLastUpdated(new Date())
     } catch (err) {
+      if (seq !== arrivalsSeqRef.current) return
       const message = err instanceof Error ? err.message : String(err)
       setError(`Connection error: ${message}. Make sure the API server is running.`)
     }
