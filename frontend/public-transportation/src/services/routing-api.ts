@@ -15,6 +15,14 @@ export async function searchRoute(
 
   const res = await fetch(`/api/route?${params}`)
   if (!res.ok) {
+    // The route API reports failures as JSON ({ error, message }); surface
+    // those fields instead of the raw body, which renders as a JSON blob in
+    // the error UI.
+    if (res.headers.get('content-type')?.includes('application/json')) {
+      const body: { error?: string; message?: string } = await res.json()
+      const detail = [body.error, body.message].filter(Boolean).join(': ')
+      throw new Error(detail || `Route search failed (${res.status})`)
+    }
     const body = await res.text()
     throw new Error(body || `Route search failed (${res.status})`)
   }
