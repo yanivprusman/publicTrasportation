@@ -1,7 +1,19 @@
 import { Marker, Popup } from 'react-leaflet'
 import L from 'leaflet'
 import { originIcon, destinationIcon, centerIcon, createBusIcon, stopIcon } from './MapMarkers'
+import { formatTime } from '../../utils/time-format'
 import type { Coordinates, VehicleMarker, StopInfo } from '../../types'
+
+// SIRI gives ExpectedArrivalTime as a raw ISO string; render a readable HH:MM
+// instead of dumping the machine timestamp into the popup. Empty/unparseable
+// values (the '' default from extractVehicleMarkers) show as 'N/A'.
+const formatArrival = (iso: string): string => {
+  if (!iso || isNaN(new Date(iso).getTime())) return 'N/A'
+  return formatTime(iso)
+}
+
+const formatDistance = (meters: number): string =>
+  meters >= 1000 ? `${(meters / 1000).toFixed(1)} km` : `${meters} m`
 
 interface MarkersLayerProps {
   position: Coordinates
@@ -79,8 +91,8 @@ const MarkersLayer = ({
             <div>
               <strong>Line:</strong> {vehicle.lineNumber}<br/>
               <strong>Vehicle:</strong> {vehicle.vehicleRef}<br/>
-              <strong>Expected arrival:</strong> {vehicle.expectedArrival}<br/>
-              <strong>Distance from stop:</strong> {vehicle.distanceFromStop} m
+              <strong>Expected arrival:</strong> {formatArrival(vehicle.expectedArrival)}<br/>
+              <strong>Distance from stop:</strong> {formatDistance(vehicle.distanceFromStop)}
             </div>
           </Popup>
         </Marker>
