@@ -96,6 +96,14 @@ function MapView({
     }
   }, [mapCenter, setMapCenter])
 
+  // Sync external center changes (e.g. "Show on map" on an arrival row) into
+  // the local center that actually drives the map: useState only captures the
+  // prop at mount. Centers round-tripped from our own moveend handler come
+  // back with the same array identity, so those setState calls bail out.
+  useEffect(() => {
+    setMapCenterLocal(center)
+  }, [center])
+
   useEffect(() => {
     if (defaultDestination && (!destination || !destination[0])) {
       onDestinationSet(defaultDestination)
