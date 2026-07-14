@@ -13,9 +13,14 @@ function httpGet(url: string, headers: Record<string, string>, timeoutMs: number
       headers,
       timeout: timeoutMs,
     }, (res) => {
-      let data = '';
-      res.on('data', (chunk: Buffer) => { data += chunk; });
-      res.on('end', () => resolve(data));
+      // Collect raw bytes and decode once at the end. Concatenating Buffers as
+      // strings (data += chunk) decodes each chunk independently, so a
+      // multi-byte UTF-8 sequence split across a chunk boundary — every Hebrew
+      // character is 2 bytes — corrupts into replacement characters. SIRI stop,
+      // destination, and line names are Hebrew, so this must reassemble first.
+      const chunks: Buffer[] = [];
+      res.on('data', (chunk: Buffer) => { chunks.push(chunk); });
+      res.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
     });
     req.on('error', reject);
     req.on('timeout', () => { req.destroy(); reject(new Error('Request timed out')); });
