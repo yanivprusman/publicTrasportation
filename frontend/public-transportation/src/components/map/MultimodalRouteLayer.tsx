@@ -28,11 +28,15 @@ export default function MultimodalRouteLayer({ itinerary }: MultimodalRouteLayer
 
   if (!itinerary) return null
 
-  const transferPoints: [number, number][] = []
-  for (let i = 0; i < itinerary.legs.length - 1; i++) {
-    const leg = itinerary.legs[i]
-    transferPoints.push([leg.to.lat, leg.to.lon])
-  }
+  // A transfer marker belongs only where the rider changes vehicles, i.e. the
+  // alighting stop of each transit leg except the last one. Marking every leg
+  // boundary (the old behavior) drew dark "transfer" dots at the boarding and
+  // alighting stops of ordinary walk<->transit trips, showing 2 transfers for a
+  // walk/bus/walk itinerary whose itinerary.transfers is 0.
+  const transitLegs = itinerary.legs.filter(leg => leg.mode !== 'WALK')
+  const transferPoints: [number, number][] = transitLegs
+    .slice(0, -1)
+    .map(leg => [leg.to.lat, leg.to.lon])
 
   return (
     <>
