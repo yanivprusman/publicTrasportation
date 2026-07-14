@@ -95,7 +95,10 @@ export function useAutocomplete<T>({ searchFn, debounceMs = 300, maxResults }: U
     }
     if (e.key === 'ArrowUp' && showDropdown && suggestions.length > 0) {
       e.preventDefault()
-      setHighlightIndex(i => (i - 1 + suggestions.length) % suggestions.length)
+      // From the unselected state (-1), Up should jump to the last item. The
+      // modulo form (i - 1 + n) % n maps -1 to n-2, skipping the last item, so
+      // treat both -1 and 0 as "wrap to the end".
+      setHighlightIndex(i => (i <= 0 ? suggestions.length - 1 : i - 1))
       return
     }
     if (e.key === 'Enter') {
