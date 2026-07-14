@@ -41,7 +41,10 @@ export const extractVehicleMarkers = (siriData: SiriData): VehicleMarker[] => {
       return {
         position: [vehicleLocation.Latitude, vehicleLocation.Longitude] as [number, number],
         vehicleRef: journey.VehicleRef,
-        lineNumber: journey.PublishedLineName,
+        // SIRI can omit PublishedLineName; default to '' so the string contract
+        // holds and consumers like the map's line filter (m.lineNumber.toLowerCase())
+        // don't crash on undefined.
+        lineNumber: journey.PublishedLineName ?? '',
         expectedArrival: journey.MonitoredCall?.ExpectedArrivalTime ?? '',
         distanceFromStop: journey.MonitoredCall?.DistanceFromStop ?? 0
       }
