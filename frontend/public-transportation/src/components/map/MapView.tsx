@@ -216,6 +216,7 @@ function MapView({
         onClick={handleShowMiddlePoint}
         className={styles.middlePointButton}
         title="Show middle point of Line 60 route"
+        data-id="show-line-60-middle-point"
       >
         Show Line 60 Middle Point
       </button>

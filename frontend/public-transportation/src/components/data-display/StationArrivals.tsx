@@ -127,6 +127,7 @@ function StationArrivals({ siriData, error, stationCode, lineFilter, onVehicleSe
                             <div className="detail-item">
                               <button
                                 type="button"
+                                data-id="show-vehicle-on-map"
                                 onClick={(e) => {
                                   e.stopPropagation()
                                   onVehicleSelect(vehicleLocation.Latitude, vehicleLocation.Longitude)

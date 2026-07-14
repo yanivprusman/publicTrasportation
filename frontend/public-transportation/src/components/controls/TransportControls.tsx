@@ -65,6 +65,7 @@ function TransportControls({
             <input
               ref={ac.inputRef}
               className={styles.stationInput}
+              data-id="station-search-input"
               value={ac.text}
               onChange={ac.handleInput}
               onKeyDown={(e) => ac.handleKeyDown(e, selectStop)}
@@ -73,7 +74,7 @@ function TransportControls({
               placeholder={stationName ? `${stationName} (${stationCode})` : 'Search station...'}
             />
             {ac.text && (
-              <button className={styles.clearBtn} onClick={ac.handleClear} type="button">&times;</button>
+              <button className={styles.clearBtn} onClick={ac.handleClear} type="button" data-id="clear-station-search">&times;</button>
             )}
           </div>
           {ac.showDropdown && ac.suggestions.length > 0 && (
@@ -82,6 +83,7 @@ function TransportControls({
                 <li
                   key={s.stopCode}
                   className={`${styles.stationSuggestion} ${i === ac.highlightIndex ? styles.highlighted : ''}`}
+                  data-id="select-station-suggestion"
                   onMouseDown={() => selectStop(s)}
                 >
                   <span className={styles.stopName}>{s.stopName}</span>
@@ -101,12 +103,14 @@ function TransportControls({
           onChange={(e) => setLineFilter(e.target.value)}
           placeholder="Line #"
           className={styles.input}
+          data-id="line-filter-input"
         />
         <label className={styles.checkbox}>
           <input
             type="checkbox"
             checked={showVehicleMarkers}
             onChange={(e) => setShowVehicleMarkers(e.target.checked)}
+            data-id="toggle-vehicle-markers"
           />
           Vehicles
         </label>

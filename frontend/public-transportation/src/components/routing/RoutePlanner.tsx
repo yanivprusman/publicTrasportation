@@ -58,6 +58,8 @@ export default function RoutePlanner({
           className={`${styles.tab} ${activeTab === 'route' ? styles.activeTab : ''}`}
           onClick={() => onTabChange('route')}
           type="button"
+          data-id="tab-route-planner"
+          data-active-tab={activeTab === 'route' ? 'Route Planner' : undefined}
         >
           Route Planner
         </button>
@@ -65,6 +67,8 @@ export default function RoutePlanner({
           className={`${styles.tab} ${activeTab === 'arrivals' ? styles.activeTab : ''}`}
           onClick={() => onTabChange('arrivals')}
           type="button"
+          data-id="tab-station-arrivals"
+          data-active-tab={activeTab === 'arrivals' ? 'Station Arrivals' : undefined}
         >
           Station Arrivals
         </button>
@@ -75,7 +79,7 @@ export default function RoutePlanner({
       ) : (
         <>
           {sheetState === 'collapsed' ? (
-            <div className={styles.searchBar} onClick={handleCollapsedClick}>
+            <div className={styles.searchBar} onClick={handleCollapsedClick} data-id="open-route-planner">
               {routing.origin && routing.destination
                 ? `${routing.origin.name} → ${routing.destination.name}`
                 : 'Where to?'}
@@ -106,6 +110,7 @@ export default function RoutePlanner({
                     disabled={!routing.origin && !routing.destination}
                     type="button"
                     title="Swap origin and destination"
+                    data-id="swap-origin-destination"
                   >
                     &#8693;
                   </button>
@@ -121,6 +126,7 @@ export default function RoutePlanner({
                   onClick={handleSearch}
                   disabled={!routing.origin || !routing.destination || routing.loading}
                   type="button"
+                  data-id="search-routes"
                 >
                   {routing.loading ? 'Searching...' : 'Search Routes'}
                 </button>

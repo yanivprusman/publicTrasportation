@@ -13,6 +13,7 @@ export default function ItineraryCard({ itinerary, selected, onClick }: Itinerar
   return (
     <div
       className={`${styles.card} ${selected ? styles.selected : ''}`}
+      data-id="select-itinerary"
       onClick={onClick}
     >
       <div className={styles.header}>

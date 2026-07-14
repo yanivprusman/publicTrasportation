@@ -111,6 +111,7 @@ export default function BottomSheet({ state, onStateChange, children }: BottomSh
     >
       <div
         className={styles.handle}
+        data-id="drag-bottom-sheet"
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={onDragEnd}

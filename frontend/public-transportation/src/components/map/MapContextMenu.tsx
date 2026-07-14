@@ -54,13 +54,13 @@ export default function MapContextMenu({ onRouteFrom, onRouteTo }: MapContextMen
 
   return (
     <div className={styles.menu} style={{ top: contextMenu.y, left: contextMenu.x }}>
-      <div onMouseDown={handleRouteFrom} className={styles.item}>
+      <div onMouseDown={handleRouteFrom} className={styles.item} data-id="route-from-here">
         Route from here
       </div>
-      <div onMouseDown={handleRouteTo} className={styles.item}>
+      <div onMouseDown={handleRouteTo} className={styles.item} data-id="route-to-here">
         Route to here
       </div>
-      <div onMouseDown={() => setContextMenu(null)} className={styles.cancel}>
+      <div onMouseDown={() => setContextMenu(null)} className={styles.cancel} data-id="close-context-menu">
         Cancel
       </div>
     </div>

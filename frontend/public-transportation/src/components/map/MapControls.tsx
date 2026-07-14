@@ -32,12 +32,13 @@ const MapControls = ({
           onChange={(e) => setSearchQuery(e.target.value)}
           onKeyPress={handleKeyPress}
           className={styles.searchInput}
+          data-id="map-location-search"
         />
         <div className={styles.buttonRow}>
-          <button onClick={handleSetStartPoint} className={styles.startButton}>
+          <button onClick={handleSetStartPoint} className={styles.startButton} data-id="set-starting-point">
             Set Starting Point
           </button>
-          <button onClick={handleSetDestinationPoint} className={styles.destButton}>
+          <button onClick={handleSetDestinationPoint} className={styles.destButton} data-id="set-destination-point">
             Set Destination
           </button>
         </div>

@@ -22,7 +22,7 @@ export default function RouteResults({ results, selectedIndex, onSelect, loading
       <div className={isNoResults ? styles.noResults : styles.error}>
         <span>{isNoResults ? 'No routes found between these locations' : error}</span>
         {onRetry && (
-          <button className={styles.retryBtn} onClick={onRetry} type="button">
+          <button className={styles.retryBtn} onClick={onRetry} type="button" data-id="retry-route-search">
             Try Again
           </button>
         )}

@@ -20,7 +20,7 @@ const MapControlPanel = ({
       {(showRoutePanel || optimizedRouteShape) && (
         <div className={styles.panel}>
           <h3>Route Shape View</h3>
-          <button onClick={() => setShowRoutePanel(false)}>Close</button>
+          <button onClick={() => setShowRoutePanel(false)} data-id="close-route-panel">Close</button>
           <div className={styles.panelMap}>
             <RouteMapView routeShape={optimizedRouteShape} />
           </div>
@@ -28,7 +28,7 @@ const MapControlPanel = ({
       )}
 
       {!showRoutePanel && optimizedRouteShape && (
-        <button onClick={handleShowRoutePanel} className={styles.showButton}>
+        <button onClick={handleShowRoutePanel} className={styles.showButton} data-id="show-route-panel">
           Show Route Panel
         </button>
       )}

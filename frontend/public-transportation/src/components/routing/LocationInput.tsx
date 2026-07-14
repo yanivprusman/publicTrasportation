@@ -67,6 +67,7 @@ export default function LocationInput({ label, value, onChange, placeholder, onG
         <input
           ref={ac.inputRef}
           className={styles.input}
+          data-id={`location-input-${label.toLowerCase()}`}
           value={ac.text}
           onChange={onInput}
           onKeyDown={onKeyDown}
@@ -100,7 +101,7 @@ export default function LocationInput({ label, value, onChange, placeholder, onG
           </button>
         )}
         {ac.text && (
-          <button className={styles.clear} onClick={onClear} type="button">&times;</button>
+          <button className={styles.clear} onClick={onClear} type="button" data-id={`clear-location-${label.toLowerCase()}`}>&times;</button>
         )}
       </div>
       {ac.showDropdown && ac.suggestions.length > 0 && (
@@ -109,6 +110,7 @@ export default function LocationInput({ label, value, onChange, placeholder, onG
             <li
               key={i}
               className={`${styles.suggestion} ${i === ac.highlightIndex ? styles.highlighted : ''}`}
+              data-id="select-geocode-suggestion"
               onPointerDown={(e) => { e.preventDefault(); selectItem(s) }}
             >
               {s.name}

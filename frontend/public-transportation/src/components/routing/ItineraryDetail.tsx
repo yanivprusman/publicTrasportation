@@ -49,6 +49,7 @@ function LegCard({ leg }: { leg: Itinerary['legs'][number] }) {
               className={styles.stopsToggle}
               onClick={() => setStopsOpen(!stopsOpen)}
               type="button"
+              data-id="toggle-leg-stops"
             >
               {stopsOpen ? 'Hide' : 'Show'} {leg.intermediateStops!.length} stops
             </button>
