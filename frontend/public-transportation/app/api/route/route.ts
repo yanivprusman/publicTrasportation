@@ -56,6 +56,35 @@ interface MotisItinerary {
   legs?: MotisLeg[];
 }
 
+// The app's TransitMode union is WALK | BUS | RAIL | TRAM | SUBWAY, and
+// utils/mode-colors styles only those five. MOTIS v2 reports finer-grained
+// modes (e.g. REGIONAL_RAIL, HIGHSPEED_RAIL, LONG_DISTANCE, NIGHT_RAIL, METRO,
+// COACH). Passing those through unchanged made getModeStyle fall back to the
+// WALK style, so a real train/metro leg rendered as a grey dashed "walking"
+// polyline and showed the raw enum (e.g. "REGIONAL_RAIL") as its pill label.
+// Fold each MOTIS mode into the app's contract so styling and labels are right.
+const MODE_MAP: Record<string, 'WALK' | 'BUS' | 'RAIL' | 'TRAM' | 'SUBWAY'> = {
+  WALK: 'WALK',
+  BUS: 'BUS',
+  COACH: 'BUS',
+  TRAM: 'TRAM',
+  SUBWAY: 'SUBWAY',
+  METRO: 'SUBWAY',
+  RAIL: 'RAIL',
+  REGIONAL_RAIL: 'RAIL',
+  REGIONAL_FAST_RAIL: 'RAIL',
+  HIGHSPEED_RAIL: 'RAIL',
+  LONG_DISTANCE: 'RAIL',
+  NIGHT_RAIL: 'RAIL',
+};
+
+function normalizeMode(mode: string | undefined): 'WALK' | 'BUS' | 'RAIL' | 'TRAM' | 'SUBWAY' {
+  if (!mode) return 'WALK';
+  // Any unrecognized transit mode is still a vehicle leg, not a walk — render
+  // it as BUS (solid colored line) rather than the grey dashed walk style.
+  return MODE_MAP[mode] ?? 'BUS';
+}
+
 function itineraryFingerprint(itin: MotisItinerary): string {
   return (itin.legs || [])
     .filter(leg => leg.mode && leg.mode !== 'WALK')
@@ -81,7 +110,7 @@ function transformMotisResponse(motisData: { itineraries?: MotisItinerary[]; dir
     transfers: itin.transfers || 0,
     legs: (itin.legs || []).map(leg => {
       const transformed: Record<string, unknown> = {
-        mode: leg.mode || 'WALK',
+        mode: normalizeMode(leg.mode),
         from: {
           name: leg.from?.name || '',
           lat: leg.from?.lat || 0,
