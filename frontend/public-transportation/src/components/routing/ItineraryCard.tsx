@@ -14,7 +14,19 @@ export default function ItineraryCard({ itinerary, selected, onClick }: Itinerar
     <div
       className={`${styles.card} ${selected ? styles.selected : ''}`}
       data-id="select-itinerary"
+      role="button"
+      tabIndex={0}
+      aria-pressed={selected}
       onClick={onClick}
+      onKeyDown={(e) => {
+        // A bare clickable div is unreachable by keyboard/AT. Activate on
+        // Enter/Space like a real button; preventDefault stops Space from
+        // scrolling the results list instead of selecting the itinerary.
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onClick()
+        }
+      }}
     >
       <div className={styles.header}>
         <span className={styles.duration}>{formatDuration(itinerary.duration)}</span>

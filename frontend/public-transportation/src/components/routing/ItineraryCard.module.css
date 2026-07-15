@@ -14,6 +14,12 @@
   background: #eef2f7;
 }
 
+.card:focus-visible {
+  outline: 2px solid #2196F3;
+  outline-offset: 2px;
+  opacity: 0.85;
+}
+
 .card.selected {
   border-color: #2196F3;
   background: #e3f0ff;
