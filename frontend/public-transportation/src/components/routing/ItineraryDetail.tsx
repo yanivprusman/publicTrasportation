@@ -28,11 +28,15 @@ export default function ItineraryDetail({ itinerary }: ItineraryDetailProps) {
 function LegCard({ leg }: { leg: Itinerary['legs'][number] }) {
   const style = getModeStyle(leg.mode, leg.routeColor)
   const [stopsOpen, setStopsOpen] = useState(false)
-  const hasStops = leg.intermediateStops && leg.intermediateStops.length > 0
+  const stopCount = leg.intermediateStops?.length ?? 0
+  const hasStops = stopCount > 0
+  // A single intermediate stop must read "1 stop", not "1 stops" — the file
+  // already pluralizes "transfer(s)" this way; keep stop counts consistent.
+  const stopsLabel = `${stopCount} ${stopCount === 1 ? 'stop' : 'stops'}`
 
   const description = leg.mode === 'WALK'
     ? `Walk ${formatDuration(leg.duration)} to ${leg.to.name}`
-    : `${getModeLabel(leg.mode)}${leg.routeShortName ? ` ${leg.routeShortName}` : ''} toward ${leg.to.name} - ${formatDuration(leg.duration)}${hasStops ? ` (${leg.intermediateStops!.length} stops)` : ''}`
+    : `${getModeLabel(leg.mode)}${leg.routeShortName ? ` ${leg.routeShortName}` : ''} toward ${leg.to.name} - ${formatDuration(leg.duration)}${hasStops ? ` (${stopsLabel})` : ''}`
 
   return (
     <div className={styles.leg}>
@@ -51,7 +55,7 @@ function LegCard({ leg }: { leg: Itinerary['legs'][number] }) {
               type="button"
               data-id="toggle-leg-stops"
             >
-              {stopsOpen ? 'Hide' : 'Show'} {leg.intermediateStops!.length} stops
+              {stopsOpen ? 'Hide' : 'Show'} {stopsLabel}
             </button>
             {stopsOpen && (
               <ul className={styles.stopsList}>
