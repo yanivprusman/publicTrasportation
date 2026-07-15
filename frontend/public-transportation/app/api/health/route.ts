@@ -1,4 +1,4 @@
-import { execSync } from 'child_process';
+import { execSync, execFileSync } from 'child_process';
 import { existsSync } from 'fs';
 import { NextResponse } from 'next/server';
 import { ensureMotis } from '@/lib/motis-manager';
@@ -16,7 +16,10 @@ function getGitCommit(): string | null {
 
 function getCommitCount(ref: string): number | null {
   try {
-    return parseInt(execSync(`git rev-list --count ${ref}`, { encoding: 'utf-8' }).trim(), 10);
+    // ref can be apkCommit, a string parsed out of the APK's versionName — pass
+    // it as a discrete argv entry (not interpolated into a shell command) so a
+    // space or shell metacharacter can't break or inject into the git call.
+    return parseInt(execFileSync('git', ['rev-list', '--count', ref], { encoding: 'utf-8' }).trim(), 10);
   } catch {
     return null;
   }
