@@ -1,5 +1,5 @@
 import { Fragment, useState, useEffect } from 'react'
-import type { SiriData } from '../../types'
+import type { SiriData, MonitoredStopVisit } from '../../types'
 
 interface StationArrivalsProps {
   siriData: SiriData | null
@@ -33,11 +33,22 @@ function StationArrivals({ siriData, error, stationCode, lineFilter, onVehicleSe
   }
 
   const trimmedFilter = lineFilter?.trim().toLowerCase() || ''
-  const monitoredStopVisits = trimmedFilter
+  const filteredVisits = trimmedFilter
     ? allVisits.filter(visit =>
         (visit.MonitoredVehicleJourney.PublishedLineName || '').toString().toLowerCase().trim() === trimmedFilter
       )
     : allVisits
+
+  // Order by soonest expected arrival. SIRI returns visits in no guaranteed
+  // order, but an arrivals board must show the next vehicle first. Copy before
+  // sorting so the array held in siriData state is never mutated. Visits with a
+  // missing or unparseable ExpectedArrivalTime sort to the end.
+  const arrivalMs = (visit: MonitoredStopVisit): number => {
+    const t = visit.MonitoredVehicleJourney.MonitoredCall?.ExpectedArrivalTime
+    const ms = t ? Date.parse(t) : NaN
+    return isNaN(ms) ? Infinity : ms
+  }
+  const monitoredStopVisits = [...filteredVisits].sort((a, b) => arrivalMs(a) - arrivalMs(b))
 
   if (trimmedFilter && monitoredStopVisits.length === 0) {
     return <h2>No vehicles match line {lineFilter?.trim()}</h2>
