@@ -31,6 +31,7 @@ export default function RoutePlanner({
 
   const detailRef = useRef<HTMLDivElement>(null)
   const [gpsLoading, setGpsLoading] = useState(false)
+  const [gpsError, setGpsError] = useState<string | null>(null)
 
   useEffect(() => {
     if (routing.selectedItinerary && detailRef.current) {
@@ -38,15 +39,35 @@ export default function RoutePlanner({
     }
   }, [routing.selectedIndex, routing.selectedItinerary])
 
+  // Once an origin is set (by GPS or typed), the previous GPS failure no longer
+  // applies — drop the stale message so it can't contradict a valid origin.
+  useEffect(() => {
+    if (routing.origin) setGpsError(null)
+  }, [routing.origin])
+
   const handleGpsClick = useCallback(() => {
-    if (!navigator.geolocation) return
+    // Geolocation is the primary way to set the origin on mobile; a denied
+    // permission or timeout used to just stop the spinner with no feedback,
+    // leaving the user unsure whether it was working. Surface a clear message.
+    if (!navigator.geolocation) {
+      setGpsError('Location is not available on this device — type an origin instead.')
+      return
+    }
     setGpsLoading(true)
+    setGpsError(null)
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         routing.setOriginFromCoords(pos.coords.latitude, pos.coords.longitude)
         setGpsLoading(false)
       },
-      () => setGpsLoading(false),
+      (err) => {
+        setGpsLoading(false)
+        setGpsError(
+          err.code === err.PERMISSION_DENIED
+            ? 'Location permission denied — enable it or type an origin.'
+            : 'Could not get your location — try again or type an origin.'
+        )
+      },
       { enableHighAccuracy: true, timeout: 10000 }
     )
   }, [routing])
@@ -115,6 +136,11 @@ export default function RoutePlanner({
                     &#8693;
                   </button>
                 </div>
+                {gpsError && (
+                  <div className={styles.gpsError} role="alert" data-id="gps-error">
+                    {gpsError}
+                  </div>
+                )}
                 <TimePicker
                   departureTime={routing.departureTime}
                   setDepartureTime={routing.setDepartureTime}
