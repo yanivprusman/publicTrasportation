@@ -117,11 +117,19 @@ export async function GET(request: NextRequest) {
 
   const merged = [...motisResults, ...uniqueNominatim];
 
-  const queryWords = text.split(/\s+/).filter(w => w.length >= 2);
+  // Match case-insensitively: a query and a result name often differ in case,
+  // especially for English/transliterated Israeli place names (a user typing
+  // "haifa" against a "Haifa" result). A case-sensitive includes() scored those
+  // as zero hits, so this relevance sort silently did nothing for any query
+  // whose casing differed from the result. Lowercase both sides. Array.sort is
+  // stable, so equal-hit results keep their order (MOTIS-first is preserved).
+  const queryWords = text.toLowerCase().split(/\s+/).filter(w => w.length >= 2);
   if (queryWords.length > 0) {
     merged.sort((a, b) => {
-      const aHits = queryWords.filter(w => a.name.includes(w)).length;
-      const bHits = queryWords.filter(w => b.name.includes(w)).length;
+      const aName = a.name.toLowerCase();
+      const bName = b.name.toLowerCase();
+      const aHits = queryWords.filter(w => aName.includes(w)).length;
+      const bHits = queryWords.filter(w => bName.includes(w)).length;
       return bHits - aHits;
     });
   }
