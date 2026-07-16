@@ -11,6 +11,12 @@ interface Stop {
 
 let stopsCache: Stop[] | null = null;
 
+// Hard cap on stops returned for a map viewport. A phone-sized viewport at the
+// layer's minimum zoom stays well under this; only huge desktop viewports over
+// dense metro areas can hit it, and those get the stops nearest the view
+// center so truncation trims the edges rather than dropping stops arbitrarily.
+const MAX_BBOX_STOPS = 900;
+
 function loadStops(): Stop[] {
   if (stopsCache) return stopsCache;
 
@@ -57,6 +63,48 @@ export async function GET(request: NextRequest) {
   const radiusParam = request.nextUrl.searchParams.get('radius');
 
   const stops = loadStops();
+
+  const bboxParam = request.nextUrl.searchParams.get('bbox');
+  if (bboxParam) {
+    const parts = bboxParam.split(',').map(p => parseFloat(p.trim()));
+    if (parts.length !== 4 || parts.some(n => isNaN(n))) {
+      return NextResponse.json(
+        { error: 'bbox must be "minLat,minLon,maxLat,maxLon"' },
+        { status: 400 },
+      );
+    }
+    const [minLat, minLon, maxLat, maxLon] = parts;
+
+    // Dedupe by stop code: the map keys markers by code, and a rare duplicate
+    // row in stops.txt must not produce two markers for one physical stop.
+    const seen = new Set<string>();
+    const inView: Stop[] = [];
+    for (const stop of stops) {
+      if (
+        stop.lat >= minLat && stop.lat <= maxLat &&
+        stop.lon >= minLon && stop.lon <= maxLon &&
+        !seen.has(stop.stopCode)
+      ) {
+        seen.add(stop.stopCode);
+        inView.push(stop);
+      }
+    }
+
+    if (inView.length > MAX_BBOX_STOPS) {
+      const cLat = (minLat + maxLat) / 2;
+      const cLon = (minLon + maxLon) / 2;
+      const lonScale = Math.cos(cLat * Math.PI / 180);
+      const dist2 = (s: Stop) => {
+        const dLat = s.lat - cLat;
+        const dLon = (s.lon - cLon) * lonScale;
+        return dLat * dLat + dLon * dLon;
+      };
+      inView.sort((a, b) => dist2(a) - dist2(b));
+      inView.length = MAX_BBOX_STOPS;
+    }
+
+    return NextResponse.json(inView);
+  }
 
   if (latParam && lonParam) {
     const lat = parseFloat(latParam);

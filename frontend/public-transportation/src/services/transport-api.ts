@@ -25,6 +25,18 @@ export const fetchNearbyStops = async (lat: number, lon: number, radiusMeters: n
   return response.data
 }
 
+export const fetchStopsInBounds = async (
+  minLat: number,
+  minLon: number,
+  maxLat: number,
+  maxLon: number,
+): Promise<StopResult[]> => {
+  const response = await axios.get<StopResult[]>('/api/stops', {
+    params: { bbox: `${minLat},${minLon},${maxLat},${maxLon}` },
+  })
+  return response.data
+}
+
 export const fetchStationArrivals = async (stationCode: string, detailLevel = 'calls'): Promise<SiriData> => {
   try {
     const response = await axios.get<SiriData>(`/api/transport?station=${stationCode}&detail=${detailLevel}`)

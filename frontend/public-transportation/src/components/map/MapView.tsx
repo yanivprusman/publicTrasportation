@@ -13,8 +13,9 @@ import MapControlPanel from './MapControlPanel'
 import MultimodalRouteLayer from './MultimodalRouteLayer'
 import LineShapeLayer from './LineShapeLayer'
 import NearbyStopsLayer from './NearbyStopsLayer'
+import StopsLayer from './StopsLayer'
 import type { LineFocusRequest } from '../../hooks/useLineExplorer'
-import type { NearbyStop } from '../../services/transport-api'
+import type { NearbyStop, StopResult } from '../../services/transport-api'
 import type { Coordinates, VehicleMarker, StopInfo, Itinerary, LineShapeData } from '../../types'
 import styles from './MapView.module.css'
 
@@ -71,6 +72,8 @@ interface MapViewProps {
   nearbyUserLocation?: Coordinates | null
   nearbyFocusSeq?: number
   onNearbyStopSelect?: (stop: NearbyStop) => void
+  activeStopCode?: string | null
+  onMapStopSelect?: (stop: StopResult) => void
 }
 
 function MapView({
@@ -101,7 +104,9 @@ function MapView({
   nearbyStops = [],
   nearbyUserLocation = null,
   nearbyFocusSeq = 0,
-  onNearbyStopSelect = () => {}
+  onNearbyStopSelect = () => {},
+  activeStopCode = null,
+  onMapStopSelect = () => {}
 }: MapViewProps) {
   const [position, setPosition] = useState<Coordinates>(startingPoint || defaultStartingPoint || [latitude, longitude])
   const [route, setRoute] = useState<Coordinates[] | null>(null)
@@ -252,6 +257,11 @@ function MapView({
           data={lineShape}
           hiddenDirections={hiddenLineDirections}
           focus={lineFocus}
+        />
+
+        <StopsLayer
+          activeStopCode={activeStopCode}
+          onStopSelect={onMapStopSelect}
         />
 
         <NearbyStopsLayer

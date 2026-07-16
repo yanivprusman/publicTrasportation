@@ -9,7 +9,7 @@ import { useRouting } from './hooks/useRouting'
 import { useLineExplorer } from './hooks/useLineExplorer'
 import { useNearbyStops } from './hooks/useNearbyStops'
 import { useSessionState } from './hooks/useSessionState'
-import { fetchStationArrivals, extractVehicleMarkers, type NearbyStop } from './services/transport-api'
+import { fetchStationArrivals, extractVehicleMarkers, type NearbyStop, type StopResult } from './services/transport-api'
 import { geocodeSearch } from './services/routing-api'
 import { parseTripLink } from './utils/trip-link'
 import type { SheetState } from './components/routing/BottomSheet'
@@ -162,6 +162,15 @@ function App() {
     setMapCenter([stop.lat, stop.lon])
   }, [handleStationChange, setActiveTab])
 
+  // Tapping a stop dot on the map opens its live departure board. Unlike the
+  // nearby flow the sheet may be collapsed here, so raise it to half.
+  const handleMapStopSelect = useCallback((stop: StopResult) => {
+    handleStationChange(stop.stopCode)
+    setActiveTab('arrivals')
+    setSheetState('half')
+    setMapCenter([stop.lat, stop.lon])
+  }, [handleStationChange, setActiveTab])
+
   const arrivalsContent = (
     <>
       <TransportControls
@@ -213,6 +222,8 @@ function App() {
         nearbyUserLocation={activeTab === 'nearby' ? nearby.userLocation : null}
         nearbyFocusSeq={nearby.focusSeq}
         onNearbyStopSelect={handleNearbyStopSelect}
+        activeStopCode={activeTab === 'arrivals' ? stationCode : null}
+        onMapStopSelect={handleMapStopSelect}
       />
 
       <RoutePlanner
