@@ -7,7 +7,12 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
 OSM_URL="https://download.geofabrik.de/asia/israel-and-palestine-latest.osm.pbf"
-GTFS_URL="https://storage.googleapis.com/storage/v1/b/mdb-latest/o/il-ministry-of-transport-and-road-safety-gtfs-2519.zip?alt=media"
+# Official Israel MOT GTFS — republished daily, always covers the current date
+# forward (~1 month). The previous source (the MobilityData mdb-latest mirror,
+# feed 2519) froze at 2026-06-04, so its service calendar expired 2026-07-04 and
+# every route search silently returned zero itineraries. Use the authoritative
+# feed and validate its coverage below so a stale feed can't recur unnoticed.
+GTFS_URL="https://gtfs.mot.gov.il/gtfsfiles/israel-public-transportation.zip"
 
 STAGING_DIR="$SCRIPT_DIR/data-input-staging"
 DATA_INPUT_DIR="$SCRIPT_DIR/data-input"
@@ -46,6 +51,23 @@ if [[ "$OSM_SIZE" -lt "$MIN_OSM_SIZE" ]]; then
 fi
 
 echo "File sizes OK: GTFS=${GTFS_SIZE} bytes, OSM=${OSM_SIZE} bytes"
+
+# --- Validate the GTFS actually covers today ---
+# A feed whose service calendar has already ended imports "successfully" but
+# yields zero itineraries for EVERY search — the exact silent failure the
+# mdb-latest mirror caused (froze 2026-06-04, expired 2026-07-04). Fail loudly
+# rather than importing dead data. Israel MOT uses calendar.txt date ranges.
+TODAY=$(date +%Y%m%d)
+MAX_END=$(unzip -p "$STAGING_DIR/israel-gtfs.zip" calendar.txt 2>/dev/null | awk -F',' '
+    NR==1 { for (i=1;i<=NF;i++){ g=$i; gsub(/\r/,"",g); if (g=="end_date") E=i } next }
+    E     { e=$E; gsub(/\r/,"",e); if (e>max) max=e }
+    END   { print max }')
+if [[ -z "$MAX_END" || "$MAX_END" -lt "$TODAY" ]]; then
+    echo "ERROR: GTFS service calendar ends '${MAX_END:-<none>}', before today ${TODAY}. Feed is stale — aborting (not importing dead data)."
+    rm -rf "$STAGING_DIR"
+    exit 1
+fi
+echo "GTFS coverage OK: service runs through ${MAX_END} (today ${TODAY})"
 
 # --- Atomic move to data-input ---
 mv -f "$STAGING_DIR/israel-gtfs.zip" "$DATA_INPUT_DIR/israel-gtfs.zip"

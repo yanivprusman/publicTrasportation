@@ -33,6 +33,7 @@ fun RouteResults(
     onSelect: (Int) -> Unit,
     loading: Boolean,
     error: String?,
+    searched: Boolean = false,
     onRetry: (() -> Unit)? = null,
     sortMode: RouteSortMode = RouteSortMode.FASTEST,
     onSortChange: ((RouteSortMode) -> Unit)? = null,
@@ -147,6 +148,29 @@ fun RouteResults(
                                 .padding(horizontal = 8.dp)
                         ) {
                             Text(strings.later)
+                        }
+                    }
+                }
+            }
+            // Search completed but returned nothing. Without this branch the
+            // sheet renders blank, which is indistinguishable from "the button
+            // did nothing" — always tell the user no route was found.
+            searched -> {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = strings.noRoutesFound,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    if (onRetry != null) {
+                        Spacer(Modifier.height(8.dp))
+                        OutlinedButton(onClick = onRetry) {
+                            Text(strings.retry)
                         }
                     }
                 }

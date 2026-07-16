@@ -153,6 +153,7 @@ fun RoutePlannerPanel(
             onSelect = onSelectItinerary,
             loading = state.loading,
             error = state.error,
+            searched = state.results != null,
             onRetry = onSearch,
             sortMode = sortMode,
             onSortChange = if (state.results?.itineraries?.isNotEmpty() == true) onSortChange else null,
