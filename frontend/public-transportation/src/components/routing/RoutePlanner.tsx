@@ -265,6 +265,11 @@ export default function RoutePlanner({
                 loading={routing.loading}
                 error={routing.error}
                 onRetry={handleSearch}
+                onLoadEarlier={routing.loadEarlier}
+                onLoadLater={routing.loadLater}
+                loadingEarlier={routing.loadingEarlier}
+                loadingLater={routing.loadingLater}
+                pagingNotice={routing.pagingNotice}
               />
 
               {routing.selectedItinerary && (

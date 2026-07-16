@@ -65,3 +65,59 @@
 .retryBtn:hover {
   opacity: 0.8;
 }
+
+.pageBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 12px;
+  margin: 6px 0;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.pageBtn:hover:not(:disabled) {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
+.pageBtn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.pageBtn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.pageArrow {
+  font-size: 15px;
+  line-height: 1;
+}
+
+.pageSpinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.pagingNotice {
+  padding: 8px 12px;
+  margin-top: 4px;
+  color: var(--text-secondary);
+  background: var(--accent-soft);
+  border-radius: 8px;
+  font-size: 12px;
+  text-align: center;
+}

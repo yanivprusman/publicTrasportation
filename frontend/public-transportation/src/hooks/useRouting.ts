@@ -14,6 +14,17 @@ function loadSavedRoute(): { origin: GeocodeSuggestion | null; destination: Geoc
   return { origin: null, destination: null }
 }
 
+// Identifies an itinerary across pages: MOTIS pages can overlap at the edges,
+// so merged lists are deduplicated by departure/arrival times plus the transit
+// legs' line-and-stop signature.
+function itineraryKey(itin: Itinerary): string {
+  const legs = itin.legs
+    .filter(leg => leg.mode !== 'WALK')
+    .map(leg => `${leg.mode}:${leg.routeShortName || ''}:${leg.from.name}:${leg.to.name}`)
+    .join('|')
+  return `${itin.startTime}|${itin.endTime}|${legs}`
+}
+
 async function reverseGeocode(lat: number, lon: number): Promise<string> {
   try {
     const resp = await axios.get(
@@ -46,6 +57,14 @@ export interface UseRoutingReturn {
   search: () => Promise<void>
   initRoute: (from: GeocodeSuggestion, to: GeocodeSuggestion, opts?: { departureTime?: Date | null; arriveBy?: boolean }) => void
   selectedItinerary: Itinerary | null
+  /** Load the page of trips departing before the earliest shown one. */
+  loadEarlier: () => Promise<void>
+  /** Load the page of trips departing after the latest shown one. */
+  loadLater: () => Promise<void>
+  loadingEarlier: boolean
+  loadingLater: boolean
+  /** Paging failure or exhaustion message — shown next to the paging buttons without discarding results. */
+  pagingNotice: string | null
 }
 
 export function useRouting(): UseRoutingReturn {
@@ -63,6 +82,17 @@ export function useRouting(): UseRoutingReturn {
   // Guards against overlapping searches resolving out of order: only the
   // most recently started search may update results/error/loading.
   const searchSeqRef = useRef(0)
+  const [pagingDirection, setPagingDirection] = useState<'earlier' | 'later' | null>(null)
+  const [pagingNotice, setPagingNotice] = useState<string | null>(null)
+  // The exact query the current results came from. Paging must replay it
+  // verbatim (same resolved time — not a re-resolved "now") plus the cursor,
+  // or MOTIS rejects the cursor as belonging to a different query.
+  const lastQueryRef = useRef<{
+    from: { lat: number; lon: number }
+    to: { lat: number; lon: number }
+    time: string
+    arriveBy: boolean
+  } | null>(null)
 
   // Persist origin/destination to localStorage
   useEffect(() => {
@@ -103,11 +133,20 @@ export function useRouting(): UseRoutingReturn {
     setError(null)
     setResults(null)
     setSelectedIndex(0)
+    setPagingDirection(null)
+    setPagingNotice(null)
+    const resolvedTime = (time ?? new Date()).toISOString()
+    lastQueryRef.current = {
+      from: { lat: from.lat, lon: from.lon },
+      to: { lat: to.lat, lon: to.lon },
+      time: resolvedTime,
+      arriveBy: arrive,
+    }
     try {
       const data = await searchRoute(
         { lat: from.lat, lon: from.lon },
         { lat: to.lat, lon: to.lon },
-        (time ?? new Date()).toISOString(),
+        resolvedTime,
         arrive
       )
       if (seq !== searchSeqRef.current) return
@@ -131,6 +170,50 @@ export function useRouting(): UseRoutingReturn {
     }
     doSearch(origin, destination, departureTime, arriveBy)
   }, [origin, destination, departureTime, arriveBy, doSearch])
+
+  const loadPage = useCallback(async (direction: 'earlier' | 'later') => {
+    const query = lastQueryRef.current
+    if (!query || !results || pagingDirection) return
+    const cursor = direction === 'earlier' ? results.previousPageCursor : results.nextPageCursor
+    if (!cursor) return
+    // Joins the same sequence as full searches: a new search started while a
+    // page is in flight discards the page result, and vice versa.
+    const seq = ++searchSeqRef.current
+    setPagingDirection(direction)
+    setPagingNotice(null)
+    try {
+      const data = await searchRoute(query.from, query.to, query.time, query.arriveBy, cursor)
+      if (seq !== searchSeqRef.current) return
+      const known = new Set(results.itineraries.map(itineraryKey))
+      const fresh = data.itineraries.filter(itin => !known.has(itineraryKey(itin)))
+      if (direction === 'earlier') {
+        setResults({
+          itineraries: [...fresh, ...results.itineraries],
+          previousPageCursor: data.previousPageCursor,
+          nextPageCursor: results.nextPageCursor,
+        })
+        // Keep the same itinerary selected after new ones are prepended.
+        if (fresh.length > 0) setSelectedIndex(selectedIndex + fresh.length)
+      } else {
+        setResults({
+          itineraries: [...results.itineraries, ...fresh],
+          previousPageCursor: results.previousPageCursor,
+          nextPageCursor: data.nextPageCursor,
+        })
+      }
+      if (fresh.length === 0) {
+        setPagingNotice(direction === 'earlier' ? 'No earlier trips found' : 'No later trips found')
+      }
+    } catch (err) {
+      if (seq !== searchSeqRef.current) return
+      setPagingNotice(err instanceof Error ? err.message : 'Failed to load more trips')
+    } finally {
+      if (seq === searchSeqRef.current) setPagingDirection(null)
+    }
+  }, [results, pagingDirection, selectedIndex])
+
+  const loadEarlier = useCallback(() => loadPage('earlier'), [loadPage])
+  const loadLater = useCallback(() => loadPage('later'), [loadPage])
 
   const initRoute = useCallback((
     from: GeocodeSuggestion,
@@ -160,5 +243,9 @@ export function useRouting(): UseRoutingReturn {
     departureTime, setDepartureTime, arriveBy, setArriveBy,
     results, selectedIndex, setSelectedIndex,
     loading, error, search, initRoute, selectedItinerary,
+    loadEarlier, loadLater,
+    loadingEarlier: pagingDirection === 'earlier',
+    loadingLater: pagingDirection === 'later',
+    pagingNotice,
   }
 }

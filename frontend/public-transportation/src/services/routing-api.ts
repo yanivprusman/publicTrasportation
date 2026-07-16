@@ -4,7 +4,8 @@ export async function searchRoute(
   from: { lat: number; lon: number },
   to: { lat: number; lon: number },
   time?: string,
-  arriveBy?: boolean
+  arriveBy?: boolean,
+  pageCursor?: string
 ): Promise<RouteResult> {
   const params = new URLSearchParams({
     from: `${from.lat},${from.lon}`,
@@ -12,6 +13,7 @@ export async function searchRoute(
   })
   if (time) params.set('time', time)
   if (arriveBy) params.set('arriveBy', 'true')
+  if (pageCursor) params.set('pageCursor', pageCursor)
 
   const res = await fetch(`/api/route?${params}`)
   if (!res.ok) {

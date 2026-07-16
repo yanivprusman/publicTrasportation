@@ -56,6 +56,13 @@ interface MotisItinerary {
   legs?: MotisLeg[];
 }
 
+interface MotisPlanResponse {
+  itineraries?: MotisItinerary[];
+  direct?: MotisItinerary[];
+  previousPageCursor?: string;
+  nextPageCursor?: string;
+}
+
 // The app's TransitMode union is WALK | BUS | RAIL | TRAM | SUBWAY, and
 // utils/mode-colors styles only those five. MOTIS v2 reports finer-grained
 // modes (e.g. REGIONAL_RAIL, HIGHSPEED_RAIL, LONG_DISTANCE, NIGHT_RAIL, METRO,
@@ -92,9 +99,14 @@ function itineraryFingerprint(itin: MotisItinerary): string {
     .join('|');
 }
 
-function transformMotisResponse(motisData: { itineraries?: MotisItinerary[]; direct?: MotisItinerary[] }) {
+function transformMotisResponse(motisData: MotisPlanResponse, includeDirect: boolean) {
   const seen = new Set<string>();
-  const allItineraries = [...(motisData.itineraries || []), ...(motisData.direct || [])];
+  // Direct (walk-only) itineraries are not part of the time-paged sequence —
+  // MOTIS repeats them on every page, so merge them only into the first page.
+  const allItineraries = [
+    ...(motisData.itineraries || []),
+    ...(includeDirect ? motisData.direct || [] : []),
+  ];
   const itineraries = allItineraries
     .filter(itin => {
       const fp = itineraryFingerprint(itin);
@@ -139,7 +151,11 @@ function transformMotisResponse(motisData: { itineraries?: MotisItinerary[]; dir
       return transformed;
     }),
   }));
-  return { itineraries };
+  return {
+    itineraries,
+    previousPageCursor: motisData.previousPageCursor,
+    nextPageCursor: motisData.nextPageCursor,
+  };
 }
 
 export async function GET(request: NextRequest) {
@@ -148,6 +164,7 @@ export async function GET(request: NextRequest) {
   const to = searchParams.get('to');
   const time = searchParams.get('time');
   const arriveBy = searchParams.get('arriveBy');
+  const pageCursor = searchParams.get('pageCursor');
 
   if (!from || !to) {
     return NextResponse.json(
@@ -176,7 +193,7 @@ export async function GET(request: NextRequest) {
   const timeBucket = isNaN(routeTimeMs)
     ? routeTime
     : new Date(routeTimeMs - (routeTimeMs % 60000)).toISOString();
-  const cacheKey = `${from}|${to}|${timeBucket}|${isArriveBy}`;
+  const cacheKey = `${from}|${to}|${timeBucket}|${isArriveBy}|${pageCursor || ''}`;
 
   const cached = getCachedRoute(cacheKey);
   if (cached) {
@@ -193,6 +210,7 @@ export async function GET(request: NextRequest) {
       arriveBy: String(isArriveBy),
       numItineraries: '5',
     });
+    if (pageCursor) params.set('pageCursor', pageCursor);
 
     const response = await fetch(`${MOTIS_BASE}/api/v1/plan?${params}`, {
       signal: AbortSignal.timeout(15000),
@@ -206,7 +224,7 @@ export async function GET(request: NextRequest) {
     }
 
     const motisData = await response.json();
-    const result = transformMotisResponse(motisData);
+    const result = transformMotisResponse(motisData, !pageCursor);
     setCachedRoute(cacheKey, result);
     return NextResponse.json(result);
   } catch (error) {

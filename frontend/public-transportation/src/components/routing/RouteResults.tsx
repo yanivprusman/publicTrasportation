@@ -9,9 +9,17 @@ interface RouteResultsProps {
   loading: boolean
   error: string | null
   onRetry?: () => void
+  onLoadEarlier?: () => void
+  onLoadLater?: () => void
+  loadingEarlier?: boolean
+  loadingLater?: boolean
+  pagingNotice?: string | null
 }
 
-export default function RouteResults({ results, selectedIndex, onSelect, loading, error, onRetry }: RouteResultsProps) {
+export default function RouteResults({
+  results, selectedIndex, onSelect, loading, error, onRetry,
+  onLoadEarlier, onLoadLater, loadingEarlier, loadingLater, pagingNotice,
+}: RouteResultsProps) {
   if (loading) {
     return <div className={styles.status}><div className={styles.spinner} />Searching routes...</div>
   }
@@ -36,6 +44,18 @@ export default function RouteResults({ results, selectedIndex, onSelect, loading
 
   return (
     <div className={styles.list}>
+      {results.previousPageCursor && onLoadEarlier && (
+        <button
+          className={styles.pageBtn}
+          onClick={onLoadEarlier}
+          disabled={loadingEarlier || loadingLater}
+          type="button"
+          data-id="load-earlier-trips"
+        >
+          {loadingEarlier ? <span className={styles.pageSpinner} /> : <span className={styles.pageArrow}>↑</span>}
+          Earlier departures
+        </button>
+      )}
       {results.itineraries.map((itin, i) => (
         <ItineraryCard
           key={i}
@@ -44,6 +64,23 @@ export default function RouteResults({ results, selectedIndex, onSelect, loading
           onClick={() => onSelect(i)}
         />
       ))}
+      {results.nextPageCursor && onLoadLater && (
+        <button
+          className={styles.pageBtn}
+          onClick={onLoadLater}
+          disabled={loadingEarlier || loadingLater}
+          type="button"
+          data-id="load-later-trips"
+        >
+          {loadingLater ? <span className={styles.pageSpinner} /> : <span className={styles.pageArrow}>↓</span>}
+          Later departures
+        </button>
+      )}
+      {pagingNotice && (
+        <div className={styles.pagingNotice} role="alert" data-id="paging-notice">
+          {pagingNotice}
+        </div>
+      )}
     </div>
   )
 }

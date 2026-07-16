@@ -86,6 +86,10 @@ export interface Itinerary {
 
 export interface RouteResult {
   itineraries: Itinerary[]
+  // Opaque MOTIS paging cursors: present when trips before/after the shown
+  // window exist. Passed back via searchRoute's pageCursor to load that page.
+  previousPageCursor?: string
+  nextPageCursor?: string
 }
 
 export interface GeocodeSuggestion {
