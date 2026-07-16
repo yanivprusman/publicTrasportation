@@ -4,6 +4,7 @@ import { formatDuration, formatTime } from '../../utils/time-format'
 import { getModeStyle, getModeLabel } from '../../utils/mode-colors'
 import { buildTripLink, type SharedTrip } from '../../utils/trip-link'
 import DepartureCountdown from './DepartureCountdown'
+import JourneyNavigator from './JourneyNavigator'
 import styles from './ItineraryDetail.module.css'
 
 interface ItineraryDetailProps {
@@ -29,6 +30,7 @@ function waitSecondsBetween(prev: RouteLeg, next: RouteLeg): number {
 
 export default function ItineraryDetail({ itinerary, trip }: ItineraryDetailProps) {
   const legs = itinerary.legs
+  const [navigating, setNavigating] = useState(false)
   return (
     <div className={styles.wrapper}>
       <DepartureCountdown itinerary={itinerary} />
@@ -42,6 +44,20 @@ export default function ItineraryDetail({ itinerary, trip }: ItineraryDetailProp
         </div>
         {trip && <ShareTripButton trip={trip} />}
       </div>
+      {legs.length > 0 && (
+        <button
+          className={styles.startJourneyBtn}
+          onClick={() => setNavigating(true)}
+          type="button"
+          data-id="start-journey"
+        >
+          <span className={styles.startJourneyIcon} aria-hidden="true">{'\u{1F9ED}'}</span>
+          Start journey
+        </button>
+      )}
+      {navigating && (
+        <JourneyNavigator itinerary={itinerary} onClose={() => setNavigating(false)} />
+      )}
       {legs.length > 0 && (
         <div className={styles.timeline}>
           <TimelineNode kind="origin" time={legs[0].startTime} name={legs[0].from.name} />
