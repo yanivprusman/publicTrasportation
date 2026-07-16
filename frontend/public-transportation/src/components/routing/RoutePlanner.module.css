@@ -89,8 +89,15 @@
   margin-top: 2px;
 }
 
+.searchRow {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+  margin-top: 4px;
+}
+
 .searchBtn {
-  width: 100%;
+  flex: 1;
   padding: 12px;
   background: #2196F3;
   color: white;
@@ -99,8 +106,40 @@
   font-size: 15px;
   font-weight: 600;
   cursor: pointer;
-  margin-top: 4px;
   transition: background 0.15s;
+}
+
+.favBtn {
+  width: 48px;
+  flex-shrink: 0;
+  border: 1px solid #ffd54f;
+  border-radius: 8px;
+  background: #fffdf5;
+  color: #f9a825;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, transform 0.1s;
+}
+
+.favBtn:not(:disabled):hover {
+  background: #fff2c4;
+}
+
+.favBtn:not(:disabled):active {
+  transform: scale(0.94);
+}
+
+.favBtnActive {
+  background: #ffe082;
+  color: #f57f17;
+}
+
+.favBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  border-color: #ddd;
+  color: #bbb;
 }
 
 .searchBtn:disabled {

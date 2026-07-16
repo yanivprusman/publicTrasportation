@@ -1,0 +1,109 @@
+.bar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sectionLabel {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #9aa0a6;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: stretch;
+  flex-shrink: 0;
+  max-width: 220px;
+  background: #f1f3f4;
+  border: 1px solid #e0e0e0;
+  border-radius: 999px;
+  overflow: hidden;
+  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+}
+
+.chip:hover {
+  background: #e6eef7;
+  border-color: #c3d7ef;
+}
+
+.favoriteChip {
+  background: #fff8e1;
+  border-color: #ffe082;
+}
+
+.favoriteChip:hover {
+  background: #fff2c4;
+  border-color: #ffd54f;
+}
+
+.chipMain {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: none;
+  background: none;
+  padding: 7px 4px 7px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #3c4043;
+  cursor: pointer;
+  min-width: 0;
+  transition: color 0.15s;
+}
+
+.chipMain:hover {
+  color: #1976d2;
+}
+
+.chipMain:active {
+  transform: scale(0.97);
+}
+
+.star {
+  color: #f9a825;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.chipLabel {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.chipRemove {
+  border: none;
+  background: none;
+  padding: 0 10px 0 4px;
+  font-size: 16px;
+  line-height: 1;
+  color: #9aa0a6;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: color 0.15s;
+}
+
+.chipRemove:hover {
+  color: #d32f2f;
+}

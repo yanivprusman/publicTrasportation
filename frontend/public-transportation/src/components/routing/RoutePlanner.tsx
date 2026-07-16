@@ -5,6 +5,8 @@ import LocationInput from './LocationInput'
 import TimePicker from './TimePicker'
 import RouteResults from './RouteResults'
 import ItineraryDetail from './ItineraryDetail'
+import SavedRoutesBar from './SavedRoutesBar'
+import { useSavedRoutes, type SavedRoute } from '../../hooks/useSavedRoutes'
 import styles from './RoutePlanner.module.css'
 
 interface RoutePlannerProps {
@@ -20,10 +22,30 @@ export default function RoutePlanner({
   routing, sheetState, onSheetStateChange,
   activeTab, onTabChange, arrivalsContent,
 }: RoutePlannerProps) {
+  const saved = useSavedRoutes()
+
   const handleSearch = useCallback(() => {
+    if (routing.origin && routing.destination) {
+      saved.recordSearch(routing.origin, routing.destination)
+    }
     routing.search()
     onSheetStateChange('expanded')
-  }, [routing, onSheetStateChange])
+  }, [routing, onSheetStateChange, saved])
+
+  const handleSelectSaved = useCallback((route: SavedRoute) => {
+    saved.recordSearch(route.origin, route.destination)
+    routing.initRoute(route.origin, route.destination)
+    onSheetStateChange('expanded')
+  }, [routing, onSheetStateChange, saved])
+
+  const canFavorite = !!(routing.origin && routing.destination)
+  const isFavorited = canFavorite && saved.isFavorite(routing.origin!, routing.destination!)
+
+  const handleToggleFavorite = useCallback(() => {
+    if (routing.origin && routing.destination) {
+      saved.toggleFavorite(routing.origin, routing.destination)
+    }
+  }, [routing.origin, routing.destination, saved])
 
   const handleCollapsedClick = useCallback(() => {
     onSheetStateChange('half')
@@ -107,6 +129,13 @@ export default function RoutePlanner({
             </div>
           ) : (
             <>
+              <SavedRoutesBar
+                favorites={saved.favorites}
+                recents={saved.recents}
+                onSelect={handleSelectSaved}
+                onRemoveFavorite={saved.removeFavorite}
+                onRemoveRecent={saved.removeRecent}
+              />
               <div className={styles.inputs}>
                 <div className={styles.inputsRow}>
                   <div className={styles.inputsFields}>
@@ -147,15 +176,28 @@ export default function RoutePlanner({
                   arriveBy={routing.arriveBy}
                   setArriveBy={routing.setArriveBy}
                 />
-                <button
-                  className={styles.searchBtn}
-                  onClick={handleSearch}
-                  disabled={!routing.origin || !routing.destination || routing.loading}
-                  type="button"
-                  data-id="search-routes"
-                >
-                  {routing.loading ? 'Searching...' : 'Search Routes'}
-                </button>
+                <div className={styles.searchRow}>
+                  <button
+                    className={styles.searchBtn}
+                    onClick={handleSearch}
+                    disabled={!routing.origin || !routing.destination || routing.loading}
+                    type="button"
+                    data-id="search-routes"
+                  >
+                    {routing.loading ? 'Searching...' : 'Search Routes'}
+                  </button>
+                  <button
+                    className={`${styles.favBtn} ${isFavorited ? styles.favBtnActive : ''}`}
+                    onClick={handleToggleFavorite}
+                    disabled={!canFavorite}
+                    type="button"
+                    title={isFavorited ? 'Remove from saved routes' : 'Save this route'}
+                    aria-pressed={isFavorited}
+                    data-id="toggle-favorite-route"
+                  >
+                    {isFavorited ? '★' : '☆'}
+                  </button>
+                </div>
               </div>
 
               <RouteResults
