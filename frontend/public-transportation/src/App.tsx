@@ -7,6 +7,7 @@ import { useRouting } from './hooks/useRouting'
 import { useSessionState } from './hooks/useSessionState'
 import { fetchStationArrivals, extractVehicleMarkers } from './services/transport-api'
 import { geocodeSearch } from './services/routing-api'
+import { parseTripLink } from './utils/trip-link'
 import type { SheetState } from './components/routing/BottomSheet'
 import type { SiriData, VehicleMarker, Coordinates } from './types'
 
@@ -27,8 +28,13 @@ function App() {
 
   const routing = useRouting()
 
-  // Initialize routing with defaults when no saved route exists
+  // Initialize routing with defaults when no saved route exists. A URL that
+  // carries a trip (shared link or debug params) supplies its own points —
+  // seeding defaults then would fire reverse geocodes that can overwrite the
+  // link's place names after the trip is restored.
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (parseTripLink(params) || (params.get('origin') && params.get('destination'))) return
     if (!routing.origin) {
       routing.setOriginFromCoords(defaultStartingPoint[0], defaultStartingPoint[1])
     }
@@ -48,9 +54,25 @@ function App() {
   const [sheetState, setSheetState] = useState<SheetState>(routing.origin && routing.destination ? 'half' : 'collapsed')
   const [activeTab, setActiveTab] = useSessionState<'route' | 'arrivals'>('activeTab', 'route')
 
-  // Handle debug route from URL params (?origin=...&destination=...)
+  // Restore a shared trip link (?from=lat,lon&to=lat,lon&fromName=...&time=...)
+  // or a debug route (?origin=text&destination=text)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
+
+    const sharedTrip = parseTripLink(params)
+    if (sharedTrip) {
+      routing.initRoute(sharedTrip.origin, sharedTrip.destination, {
+        departureTime: sharedTrip.departureTime,
+        arriveBy: sharedTrip.arriveBy,
+      })
+      setActiveTab('route')
+      setSheetState('expanded')
+      // Clear the params so a later reload reflects the user's current trip,
+      // not the link they arrived with.
+      window.history.replaceState({}, '', window.location.pathname)
+      return
+    }
+
     const originText = params.get('origin')
     const destText = params.get('destination')
     if (!originText || !destText) return

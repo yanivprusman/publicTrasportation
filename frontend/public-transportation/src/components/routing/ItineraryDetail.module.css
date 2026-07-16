@@ -2,13 +2,52 @@
   padding: 8px 0;
 }
 
+.summaryRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
 .summary {
   font-size: 14px;
   font-weight: 600;
   color: var(--text-primary);
-  margin-bottom: 12px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--border-subtle);
+}
+
+.shareBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  border: none;
+  border-radius: 14px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 11px;
+  cursor: pointer;
+  flex-shrink: 0;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s, transform 0.05s;
+}
+
+.shareBtn:hover {
+  background: var(--accent);
+  color: #fff;
+}
+
+.shareBtn:active {
+  transform: scale(0.96);
+}
+
+.shareBtnCopied,
+.shareBtnCopied:hover {
+  background: var(--color-success);
+  color: #fff;
 }
 
 .leg {

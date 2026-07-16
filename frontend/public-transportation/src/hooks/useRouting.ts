@@ -44,7 +44,7 @@ export interface UseRoutingReturn {
   error: string | null
   swapOriginDestination: () => void
   search: () => Promise<void>
-  initRoute: (from: GeocodeSuggestion, to: GeocodeSuggestion) => void
+  initRoute: (from: GeocodeSuggestion, to: GeocodeSuggestion, opts?: { departureTime?: Date | null; arriveBy?: boolean }) => void
   selectedItinerary: Itinerary | null
 }
 
@@ -132,10 +132,20 @@ export function useRouting(): UseRoutingReturn {
     doSearch(origin, destination, departureTime, arriveBy)
   }, [origin, destination, departureTime, arriveBy, doSearch])
 
-  const initRoute = useCallback((from: GeocodeSuggestion, to: GeocodeSuggestion) => {
+  const initRoute = useCallback((
+    from: GeocodeSuggestion,
+    to: GeocodeSuggestion,
+    opts?: { departureTime?: Date | null; arriveBy?: boolean }
+  ) => {
+    const time = opts?.departureTime ?? null
+    const arrive = opts?.arriveBy ?? false
     setOrigin(from)
     setDestination(to)
-    doSearch(from, to, null, false)
+    // Sync the time picker to what this search actually uses, so a trip opened
+    // from a shared link (or a saved route) shows the real settings, not stale ones.
+    setDepartureTime(time)
+    setArriveBy(arrive)
+    doSearch(from, to, time, arrive)
   }, [doSearch])
 
   const selectedItinerary = useMemo(() => {

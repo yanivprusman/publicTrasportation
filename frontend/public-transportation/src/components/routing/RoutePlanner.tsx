@@ -223,7 +223,15 @@ export default function RoutePlanner({
 
               {routing.selectedItinerary && (
                 <div ref={detailRef}>
-                  <ItineraryDetail itinerary={routing.selectedItinerary} />
+                  <ItineraryDetail
+                    itinerary={routing.selectedItinerary}
+                    trip={routing.origin && routing.destination ? {
+                      origin: routing.origin,
+                      destination: routing.destination,
+                      departureTime: routing.departureTime,
+                      arriveBy: routing.arriveBy,
+                    } : null}
+                  />
                 </div>
               )}
             </>
