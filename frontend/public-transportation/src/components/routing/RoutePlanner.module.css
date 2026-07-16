@@ -155,55 +155,6 @@
   padding: 4px 0;
 }
 
-.lineShapeSection {
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px solid var(--border-subtle);
-}
-
-.lineShapeLabel {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-muted);
-  margin-bottom: 6px;
-}
-
-.lineShapeRow {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.lineShapeInput {
-  width: 60px;
-  padding: 6px 8px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  font-size: 14px;
-}
-
-.lineShapeSelect {
-  padding: 6px 8px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  font-size: 14px;
-}
-
-.lineShapeBtn {
-  padding: 6px 12px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--surface);
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.lineShapeBtn:hover {
-  background: var(--surface-alt);
-}
-
 .themeBtn {
   flex: 0 0 auto;
   width: 34px;

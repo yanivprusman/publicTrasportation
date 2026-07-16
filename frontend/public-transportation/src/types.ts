@@ -48,8 +48,10 @@ export interface MonitoredVehicleJourney {
   }
 }
 
-export interface RouteShapeData {
-  [direction: string]: Coordinates[]
+export interface LineShapeData {
+  directions: Record<string, Coordinates[]>
+  // GTFS route_long_name per direction, e.g. "Origin<->Destination-1#"
+  headsigns: Record<string, string>
 }
 
 export type TransitMode = 'WALK' | 'BUS' | 'RAIL' | 'TRAM' | 'SUBWAY'

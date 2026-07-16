@@ -1,0 +1,156 @@
+import { useState } from 'react'
+import type { UseLineExplorerReturn } from '../../hooks/useLineExplorer'
+import { getDirectionColor } from '../../utils/mode-colors'
+import { formatHeadsign } from '../../utils/line-name'
+import type { Coordinates } from '../../types'
+import styles from './LineExplorer.module.css'
+
+// Haversine length of a polyline, in km.
+const shapeLengthKm = (points: Coordinates[]): number => {
+  const R = 6371
+  let total = 0
+  for (let i = 1; i < points.length; i++) {
+    const [lat1, lon1] = points[i - 1]
+    const [lat2, lon2] = points[i]
+    const dLat = (lat2 - lat1) * Math.PI / 180
+    const dLon = (lon2 - lon1) * Math.PI / 180
+    const a = Math.sin(dLat / 2) ** 2 +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2
+    total += 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+  }
+  return total
+}
+
+interface LineExplorerProps {
+  explorer: UseLineExplorerReturn
+}
+
+export default function LineExplorer({ explorer }: LineExplorerProps) {
+  const [query, setQuery] = useState('')
+
+  const submit = () => {
+    if (query.trim()) explorer.explore(query)
+  }
+
+  const directions = explorer.data
+    ? Object.entries(explorer.data.directions)
+        .filter(([, points]) => Array.isArray(points) && points.length > 1)
+        .sort(([a], [b]) => a.localeCompare(b))
+    : []
+
+  return (
+    <div className={styles.wrap}>
+      <div className={styles.searchRow}>
+        <input
+          className={styles.input}
+          type="text"
+          inputMode="numeric"
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') submit() }}
+          placeholder="Line number, e.g. 480"
+          data-id="line-explorer-input"
+        />
+        <button
+          className={styles.showBtn}
+          onClick={submit}
+          disabled={!query.trim() || explorer.loading}
+          type="button"
+          data-id="explore-line"
+        >
+          {explorer.loading ? 'Loading...' : 'Show Line'}
+        </button>
+      </div>
+
+      {explorer.recentLines.length > 0 && (
+        <div className={styles.recentRow}>
+          {explorer.recentLines.map(l => (
+            <button
+              key={l}
+              className={`${styles.recentChip} ${l === explorer.line ? styles.recentChipActive : ''}`}
+              onClick={() => { setQuery(l); explorer.explore(l) }}
+              type="button"
+              data-id="select-recent-line"
+            >
+              {l}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {explorer.error && (
+        <div className={styles.error} role="alert" data-id="line-explorer-error">
+          {explorer.error}
+        </div>
+      )}
+
+      {explorer.data && !explorer.error && (
+        <>
+          <div className={styles.lineHeader}>
+            <span className={styles.lineBadge} data-id="explored-line-badge">Line {explorer.line}</span>
+            <span className={styles.lineSub}>
+              {directions.length === 1 ? '1 direction' : `${directions.length} directions`} on map
+            </span>
+            <button
+              className={styles.clearBtn}
+              onClick={explorer.clear}
+              type="button"
+              title="Remove line from map"
+              data-id="clear-explored-line"
+            >
+              Clear
+            </button>
+          </div>
+
+          <div className={styles.directions}>
+            {directions.map(([direction, points]) => {
+              const hidden = !!explorer.hiddenDirections[direction]
+              const color = getDirectionColor(direction)
+              return (
+                <div
+                  key={direction}
+                  className={`${styles.directionCard} ${hidden ? styles.directionHidden : ''}`}
+                  data-id="line-direction-card"
+                >
+                  <span className={styles.colorDot} style={{ background: color }} />
+                  <div className={styles.directionInfo}>
+                    <div className={styles.headsign} dir="auto">
+                      {formatHeadsign(explorer.data!.headsigns[direction], direction)}
+                    </div>
+                    <div className={styles.meta}>{shapeLengthKm(points).toFixed(1)} km</div>
+                  </div>
+                  <button
+                    className={styles.dirBtn}
+                    onClick={() => explorer.toggleDirection(direction)}
+                    type="button"
+                    aria-pressed={!hidden}
+                    title={hidden ? 'Show this direction on the map' : 'Hide this direction from the map'}
+                    data-id="toggle-line-direction"
+                  >
+                    {hidden ? 'Show' : 'Hide'}
+                  </button>
+                  <button
+                    className={styles.dirBtn}
+                    onClick={() => explorer.focusDirection(direction)}
+                    disabled={hidden}
+                    type="button"
+                    title="Zoom the map to this direction"
+                    data-id="focus-line-direction"
+                  >
+                    Zoom
+                  </button>
+                </div>
+              )
+            })}
+          </div>
+        </>
+      )}
+
+      {!explorer.data && !explorer.error && !explorer.loading && (
+        <div className={styles.empty}>
+          Type a bus or train line number to draw its full route on the map.
+        </div>
+      )}
+    </div>
+  )
+}

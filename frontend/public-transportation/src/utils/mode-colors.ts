@@ -22,6 +22,17 @@ export function getModeStyle(mode: TransitMode, routeColor?: string): ModeStyle 
   return base
 }
 
+// Line Explorer direction colors — deliberately distinct from the itinerary
+// leg palette above (walk grey, bus green, rail blue, tram orange).
+const DIRECTION_COLORS: Record<string, string> = {
+  '0': '#8e24aa',
+  '1': '#e91e63',
+}
+
+export function getDirectionColor(direction: string): string {
+  return DIRECTION_COLORS[direction] ?? '#00897b'
+}
+
 export function getModeLabel(mode: TransitMode): string {
   switch (mode) {
     case 'WALK': return 'Walk'

@@ -11,7 +11,9 @@ import RouteLayer from './RouteLayer'
 import MarkersLayer from './MarkersLayer'
 import MapControlPanel from './MapControlPanel'
 import MultimodalRouteLayer from './MultimodalRouteLayer'
-import type { Coordinates, VehicleMarker, StopInfo, Itinerary } from '../../types'
+import LineShapeLayer from './LineShapeLayer'
+import type { LineFocusRequest } from '../../hooks/useLineExplorer'
+import type { Coordinates, VehicleMarker, StopInfo, Itinerary, LineShapeData } from '../../types'
 import styles from './MapView.module.css'
 
 configureDefaultLeafletIcons()
@@ -59,6 +61,10 @@ interface MapViewProps {
   selectedItinerary?: Itinerary | null
   onRouteFrom: (lat: number, lon: number) => void
   onRouteTo: (lat: number, lon: number) => void
+  exploredLine?: string
+  lineShape?: LineShapeData | null
+  hiddenLineDirections?: Record<string, boolean>
+  lineFocus?: LineFocusRequest
 }
 
 function MapView({
@@ -81,14 +87,17 @@ function MapView({
   onStartingPointSet,
   selectedItinerary = null,
   onRouteFrom,
-  onRouteTo
+  onRouteTo,
+  exploredLine = '',
+  lineShape = null,
+  hiddenLineDirections = {},
+  lineFocus = { direction: null, seq: 0 }
 }: MapViewProps) {
   const [position, setPosition] = useState<Coordinates>(startingPoint || defaultStartingPoint || [latitude, longitude])
   const [route, setRoute] = useState<Coordinates[] | null>(null)
   const [mapReady, setMapReady] = useState(false)
   const [mapCenter, setMapCenterLocal] = useState<Coordinates>(center || initialMapCenter || [latitude, longitude])
   const [showRoutePanel, setShowRoutePanel] = useState(false)
-  const [middlePoint, setMiddlePoint] = useState<Coordinates | null>(null)
 
   useEffect(() => {
     if (setMapCenter) {
@@ -173,32 +182,6 @@ function MapView({
     }
   }
 
-  const handleShowMiddlePoint = async () => {
-    try {
-      setSearchError('Fetching Line 60 route data...')
-
-      if (routeShape && routeShape.length > 0) {
-        const middleIndex = Math.floor(routeShape.length / 2)
-        const calculatedMiddlePoint = routeShape[middleIndex]
-        setMiddlePoint(calculatedMiddlePoint)
-        setMapCenterLocal(calculatedMiddlePoint)
-        setSearchError(null)
-        return
-      }
-
-      // Fallback: hardcoded middle point for Line 60
-      const hardcodedMiddlePoint: Coordinates = [32.0729, 34.8046]
-      setMiddlePoint(hardcodedMiddlePoint)
-      setMapCenterLocal(hardcodedMiddlePoint)
-      setSearchError(null)
-    } catch {
-      const fallbackPoint: Coordinates = [32.0729, 34.8046]
-      setMiddlePoint(fallbackPoint)
-      setMapCenterLocal(fallbackPoint)
-      setSearchError(null)
-    }
-  }
-
   const optimizedRouteShape = useMemo(() => {
     return routeShape
   }, [routeShape])
@@ -219,15 +202,6 @@ function MapView({
         positionAddress={positionAddress}
         destinationAddress={destinationAddress}
       />
-
-      <button
-        onClick={handleShowMiddlePoint}
-        className={styles.middlePointButton}
-        title="Show middle point of Line 60 route"
-        data-id="show-line-60-middle-point"
-      >
-        Show Line 60 Middle Point
-      </button>
 
       <MapControlPanel
         showRoutePanel={showRoutePanel}
@@ -263,6 +237,13 @@ function MapView({
 
         <MultimodalRouteLayer itinerary={selectedItinerary} />
 
+        <LineShapeLayer
+          line={exploredLine}
+          data={lineShape}
+          hiddenDirections={hiddenLineDirections}
+          focus={lineFocus}
+        />
+
         <MarkersLayer
           position={position}
           positionAddress={positionAddress}
@@ -273,7 +254,6 @@ function MapView({
           stops={stops}
           selectedStop={selectedStop}
           handleSetStartPoint={handleSetStartPoint}
-          middlePoint={middlePoint}
         />
       </MapContainer>
     </div>

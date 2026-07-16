@@ -45,16 +45,31 @@ async function ensureGtfsData() {
   return gtfsDownloading;
 }
 
-const shapeCache = new Map<string, { data: Record<string, number[][]>; time: number }>();
+interface LineShapeEntry {
+  shapes: Record<string, number[][]>;
+  headsigns: Record<string, string>;
+}
+
+const shapeCache = new Map<string, { data: LineShapeEntry; time: number }>();
 const SHAPE_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
+
+// The Android client deserializes the default response as a flat
+// Map<direction, points>, so new fields can only ship behind ?meta=full.
+function toResponse(entry: LineShapeEntry, withMeta: boolean) {
+  if (withMeta) {
+    return NextResponse.json({ directions: entry.shapes, headsigns: entry.headsigns });
+  }
+  return NextResponse.json(entry.shapes);
+}
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const lineNumber = (searchParams.get('line') || '60').trim();
+  const withMeta = searchParams.get('meta') === 'full';
 
   const cached = shapeCache.get(lineNumber);
   if (cached && (Date.now() - cached.time < SHAPE_CACHE_TTL)) {
-    return NextResponse.json(cached.data);
+    return toResponse(cached.data, withMeta);
   }
 
   try {
@@ -70,17 +85,23 @@ export async function GET(request: NextRequest) {
     const routesHeader = routesLines[0].replace(/\uFEFF/g, '').split(',').map(c => c.trim().toLowerCase());
     const routeIdIdx = routesHeader.indexOf('route_id');
     const routeShortNameIdx = routesHeader.indexOf('route_short_name');
+    const routeLongNameIdx = routesHeader.indexOf('route_long_name');
 
     if (routeIdIdx === -1 || routeShortNameIdx === -1) {
       throw new Error('Required columns not found in routes.txt');
     }
 
     const routeIds: string[] = [];
+    const routeLongNames: Record<string, string> = {};
     for (let i = 1; i < routesLines.length; i++) {
       if (!routesLines[i].trim()) continue;
       const cols = routesLines[i].split(',');
       if (cols[routeShortNameIdx]?.trim() === lineNumber) {
-        routeIds.push(cols[routeIdIdx].trim());
+        const routeId = cols[routeIdIdx].trim();
+        routeIds.push(routeId);
+        if (routeLongNameIdx !== -1 && cols[routeLongNameIdx]) {
+          routeLongNames[routeId] = cols[routeLongNameIdx].trim();
+        }
       }
     }
 
@@ -102,17 +123,22 @@ export async function GET(request: NextRequest) {
 
     const routeIdSet = new Set(routeIds);
     const shapeIds: Record<string, string[]> = {};
+    const headsigns: Record<string, string> = {};
 
     for (let i = 1; i < tripsLines.length; i++) {
       if (!tripsLines[i].trim()) continue;
       const cols = tripsLines[i].split(',');
-      if (routeIdSet.has(cols[tripRouteIdIdx]?.trim())) {
+      const tripRouteId = cols[tripRouteIdIdx]?.trim();
+      if (tripRouteId && routeIdSet.has(tripRouteId)) {
         const shapeId = cols[shapeIdIdx]?.trim();
         if (shapeId) {
           const direction = (directionIdIdx !== -1 && cols[directionIdIdx]) ? cols[directionIdIdx].trim() : '0';
           if (!shapeIds[direction]) shapeIds[direction] = [];
           if (!shapeIds[direction].includes(shapeId)) {
             shapeIds[direction].push(shapeId);
+          }
+          if (!headsigns[direction] && routeLongNames[tripRouteId]) {
+            headsigns[direction] = routeLongNames[tripRouteId];
           }
         }
       }
@@ -167,8 +193,9 @@ export async function GET(request: NextRequest) {
       throw new Error(`No shape points found for line ${lineNumber}`);
     }
 
-    shapeCache.set(lineNumber, { data: result, time: Date.now() });
-    return NextResponse.json(result);
+    const entry: LineShapeEntry = { shapes: result, headsigns };
+    shapeCache.set(lineNumber, { data: entry, time: Date.now() });
+    return toResponse(entry, withMeta);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error('Error fetching line shape:', message);

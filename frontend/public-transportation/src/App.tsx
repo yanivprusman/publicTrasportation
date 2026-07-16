@@ -3,7 +3,9 @@ import MapView from './components/map/MapView'
 import StationArrivals from './components/data-display/StationArrivals'
 import TransportControls from './components/controls/TransportControls'
 import RoutePlanner from './components/routing/RoutePlanner'
+import LineExplorer from './components/lines/LineExplorer'
 import { useRouting } from './hooks/useRouting'
+import { useLineExplorer } from './hooks/useLineExplorer'
 import { useSessionState } from './hooks/useSessionState'
 import { fetchStationArrivals, extractVehicleMarkers } from './services/transport-api'
 import { geocodeSearch } from './services/routing-api'
@@ -27,6 +29,7 @@ function App() {
   const [calculateRoute, setCalculateRoute] = useState(false)
 
   const routing = useRouting()
+  const lineExplorer = useLineExplorer()
 
   // Initialize routing with defaults when no saved route exists. A URL that
   // carries a trip (shared link or debug params) supplies its own points —
@@ -52,7 +55,7 @@ function App() {
     : defaultDestination
   const [lineFilter, setLineFilter] = useSessionState('lineFilter', '')
   const [sheetState, setSheetState] = useState<SheetState>(routing.origin && routing.destination ? 'half' : 'collapsed')
-  const [activeTab, setActiveTab] = useSessionState<'route' | 'arrivals'>('activeTab', 'route')
+  const [activeTab, setActiveTab] = useSessionState<'route' | 'arrivals' | 'lines'>('activeTab', 'route')
 
   // Restore a shared trip link (?from=lat,lon&to=lat,lon&fromName=...&time=...)
   // or a debug route (?origin=text&destination=text)
@@ -192,6 +195,10 @@ function App() {
         selectedItinerary={routing.selectedItinerary}
         onRouteFrom={handleRouteFrom}
         onRouteTo={handleRouteTo}
+        exploredLine={lineExplorer.line}
+        lineShape={lineExplorer.data}
+        hiddenLineDirections={lineExplorer.hiddenDirections}
+        lineFocus={lineExplorer.focus}
       />
 
       <RoutePlanner
@@ -201,6 +208,7 @@ function App() {
         activeTab={activeTab}
         onTabChange={setActiveTab}
         arrivalsContent={arrivalsContent}
+        linesContent={<LineExplorer explorer={lineExplorer} />}
       />
     </div>
   )

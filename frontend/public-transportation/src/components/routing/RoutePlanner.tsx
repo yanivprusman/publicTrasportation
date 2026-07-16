@@ -14,14 +14,15 @@ interface RoutePlannerProps {
   routing: UseRoutingReturn
   sheetState: SheetState
   onSheetStateChange: (s: SheetState) => void
-  activeTab: 'route' | 'arrivals'
-  onTabChange: (tab: 'route' | 'arrivals') => void
+  activeTab: 'route' | 'arrivals' | 'lines'
+  onTabChange: (tab: 'route' | 'arrivals' | 'lines') => void
   arrivalsContent: React.ReactNode
+  linesContent: React.ReactNode
 }
 
 export default function RoutePlanner({
   routing, sheetState, onSheetStateChange,
-  activeTab, onTabChange, arrivalsContent,
+  activeTab, onTabChange, arrivalsContent, linesContent,
 }: RoutePlannerProps) {
   const saved = useSavedRoutes()
   const { theme, toggleTheme } = useTheme()
@@ -118,6 +119,15 @@ export default function RoutePlanner({
           Station Arrivals
         </button>
         <button
+          className={`${styles.tab} ${activeTab === 'lines' ? styles.activeTab : ''}`}
+          onClick={() => onTabChange('lines')}
+          type="button"
+          data-id="tab-lines"
+          data-active-tab={activeTab === 'lines' ? 'Lines' : undefined}
+        >
+          Lines
+        </button>
+        <button
           className={styles.themeBtn}
           onClick={toggleTheme}
           type="button"
@@ -131,6 +141,8 @@ export default function RoutePlanner({
 
       {activeTab === 'arrivals' ? (
         <div className={styles.arrivalsWrap}>{arrivalsContent}</div>
+      ) : activeTab === 'lines' ? (
+        <div className={styles.arrivalsWrap}>{linesContent}</div>
       ) : (
         <>
           {sheetState === 'collapsed' ? (

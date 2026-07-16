@@ -1,5 +1,4 @@
 import { Marker, Popup } from 'react-leaflet'
-import L from 'leaflet'
 import { originIcon, destinationIcon, centerIcon, createBusIcon, stopIcon } from './MapMarkers'
 import { formatTime } from '../../utils/time-format'
 import type { Coordinates, VehicleMarker, StopInfo } from '../../types'
@@ -25,7 +24,6 @@ interface MarkersLayerProps {
   stops: StopInfo[]
   selectedStop?: string | null
   handleSetStartPoint: (coords: Coordinates) => void
-  middlePoint: Coordinates | null
 }
 
 const MarkersLayer = ({
@@ -37,17 +35,8 @@ const MarkersLayer = ({
   vehicleMarkers,
   stops,
   selectedStop,
-  handleSetStartPoint,
-  middlePoint
+  handleSetStartPoint
 }: MarkersLayerProps) => {
-  const middlePointIcon = L.icon({
-    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-violet.png',
-    iconRetinaUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-violet.png',
-    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-    iconSize: [25, 41],
-    iconAnchor: [12, 41],
-  })
-
   return (
     <>
       <Marker position={position} icon={originIcon}>
@@ -56,17 +45,6 @@ const MarkersLayer = ({
           Coordinates: {position[0].toFixed(6)}, {position[1].toFixed(6)}
         </Popup>
       </Marker>
-
-      {middlePoint && (
-        <Marker position={middlePoint} icon={middlePointIcon}>
-          <Popup>
-            <div>
-              <strong>Middle Point</strong><br/>
-              Coordinates: {middlePoint[0].toFixed(6)}, {middlePoint[1].toFixed(6)}
-            </div>
-          </Popup>
-        </Marker>
-      )}
 
       {destination && (
         <Marker position={destination} icon={destinationIcon}>

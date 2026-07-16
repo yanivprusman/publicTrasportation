@@ -1,5 +1,5 @@
 import axios from 'axios'
-import type { SiriData, VehicleMarker, RouteShapeData } from '../types'
+import type { SiriData, VehicleMarker, LineShapeData, Coordinates } from '../types'
 
 export interface StopResult {
   stopCode: string
@@ -53,8 +53,8 @@ export const extractVehicleMarkers = (siriData: SiriData): VehicleMarker[] => {
   }).filter((m): m is VehicleMarker => m !== null)
 }
 
-export const fetchLineShape = async (lineNumber: string): Promise<RouteShapeData> => {
-  const response = await fetch(`/api/line-shape?line=${lineNumber}`, {
+export const fetchLineShape = async (lineNumber: string): Promise<LineShapeData> => {
+  const response = await fetch(`/api/line-shape?line=${encodeURIComponent(lineNumber)}&meta=full`, {
     method: 'GET',
     headers: {
       'Accept': 'application/json',
@@ -62,19 +62,21 @@ export const fetchLineShape = async (lineNumber: string): Promise<RouteShapeData
     }
   })
 
-  const responseText = await response.text()
-  const data: RouteShapeData = JSON.parse(responseText)
+  const data = await response.json() as {
+    error?: string
+    directions?: Record<string, Coordinates[]>
+    headsigns?: Record<string, string>
+  }
 
   if (data.error) {
-    throw new Error((data as unknown as { error: string }).error)
+    throw new Error(data.error)
   }
 
-  const hasDirection0 = Array.isArray(data['0']) && data['0'].length > 0
-  const hasDirection1 = Array.isArray(data['1']) && data['1'].length > 0
-
-  if (!hasDirection0 && !hasDirection1) {
-    throw new Error('No valid shape data found')
+  const directions = data.directions ?? {}
+  const hasPoints = Object.values(directions).some(pts => Array.isArray(pts) && pts.length > 0)
+  if (!hasPoints) {
+    throw new Error(`No route shape found for line ${lineNumber}`)
   }
 
-  return data
+  return { directions, headsigns: data.headsigns ?? {} }
 }
