@@ -3,6 +3,7 @@ import type { Itinerary } from '../../types'
 import { formatDuration, formatTime } from '../../utils/time-format'
 import { getModeStyle, getModeLabel } from '../../utils/mode-colors'
 import { buildTripLink, type SharedTrip } from '../../utils/trip-link'
+import DepartureCountdown from './DepartureCountdown'
 import styles from './ItineraryDetail.module.css'
 
 interface ItineraryDetailProps {
@@ -14,6 +15,7 @@ interface ItineraryDetailProps {
 export default function ItineraryDetail({ itinerary, trip }: ItineraryDetailProps) {
   return (
     <div className={styles.wrapper}>
+      <DepartureCountdown itinerary={itinerary} />
       <div className={styles.summaryRow}>
         <div className={styles.summary}>
           {formatTime(itinerary.startTime)} - {formatTime(itinerary.endTime)}
