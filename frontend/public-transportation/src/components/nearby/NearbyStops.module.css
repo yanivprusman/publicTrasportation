@@ -1,0 +1,185 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.locateBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.locateBtn:not(:disabled):hover {
+  background: var(--accent-hover);
+}
+
+.locateBtn:not(:disabled):active {
+  transform: scale(0.98);
+}
+
+.locateBtn:disabled {
+  background: var(--disabled-bg);
+  cursor: not-allowed;
+}
+
+.locateIcon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.radiusRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.radiusLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-right: 2px;
+}
+
+.radiusChip {
+  padding: 5px 12px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-alt);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.radiusChip:hover {
+  background: var(--control-hover);
+}
+
+.radiusChip:active {
+  transform: scale(0.96);
+}
+
+.radiusChipActive {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+
+.error {
+  font-size: 13px;
+  color: var(--danger-text);
+  background: var(--danger-soft);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.empty {
+  font-size: 13px;
+  color: var(--text-muted);
+  padding: 14px 4px;
+  text-align: center;
+  line-height: 1.5;
+}
+
+.countLine {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  padding: 2px 2px 0;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.stopRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  background: var(--surface-raised);
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s, border-color 0.15s, transform 0.1s;
+}
+
+.stopRow:hover {
+  background: var(--surface-hover);
+  border-color: var(--accent);
+}
+
+.stopRow:active {
+  transform: scale(0.99);
+}
+
+.stopIndex {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: white;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stopInfo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.stopName {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stopMeta {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.stopDistance {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+}
+
+.distanceValue {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent-text);
+}
+
+.walkTime {
+  font-size: 11px;
+  color: var(--text-muted);
+}

@@ -77,7 +77,9 @@ export async function GET(request: NextRequest) {
         const dlat = (stop.lat - lat) * 111320;
         const dlon = (stop.lon - lon) * 111320 * Math.cos(lat * Math.PI / 180);
         const dist = Math.round(Math.sqrt(dlat * dlat + dlon * dlon));
-        nearby.push({ ...stop, distanceMeters: dist });
+        // The box test above is a cheap pre-filter; enforce the true radius so
+        // "within N meters" means the circle, not the bounding square's corners.
+        if (dist <= radius) nearby.push({ ...stop, distanceMeters: dist });
       }
     }
     // Sort before capping: truncating in file order can drop the nearest stops

@@ -4,10 +4,12 @@ import StationArrivals from './components/data-display/StationArrivals'
 import TransportControls from './components/controls/TransportControls'
 import RoutePlanner from './components/routing/RoutePlanner'
 import LineExplorer from './components/lines/LineExplorer'
+import NearbyStops from './components/nearby/NearbyStops'
 import { useRouting } from './hooks/useRouting'
 import { useLineExplorer } from './hooks/useLineExplorer'
+import { useNearbyStops } from './hooks/useNearbyStops'
 import { useSessionState } from './hooks/useSessionState'
-import { fetchStationArrivals, extractVehicleMarkers } from './services/transport-api'
+import { fetchStationArrivals, extractVehicleMarkers, type NearbyStop } from './services/transport-api'
 import { geocodeSearch } from './services/routing-api'
 import { parseTripLink } from './utils/trip-link'
 import type { SheetState } from './components/routing/BottomSheet'
@@ -30,6 +32,7 @@ function App() {
 
   const routing = useRouting()
   const lineExplorer = useLineExplorer()
+  const nearby = useNearbyStops()
 
   // Initialize routing with defaults when no saved route exists. A URL that
   // carries a trip (shared link or debug params) supplies its own points —
@@ -55,7 +58,7 @@ function App() {
     : defaultDestination
   const [lineFilter, setLineFilter] = useSessionState('lineFilter', '')
   const [sheetState, setSheetState] = useState<SheetState>(routing.origin && routing.destination ? 'half' : 'collapsed')
-  const [activeTab, setActiveTab] = useSessionState<'route' | 'arrivals' | 'lines'>('activeTab', 'route')
+  const [activeTab, setActiveTab] = useSessionState<'route' | 'nearby' | 'arrivals' | 'lines'>('activeTab', 'route')
 
   // Restore a shared trip link (?from=lat,lon&to=lat,lon&fromName=...&time=...)
   // or a debug route (?origin=text&destination=text)
@@ -152,6 +155,13 @@ function App() {
     setShowVehicleMarkers(true)
   }, [setShowVehicleMarkers])
 
+  // Tapping a nearby stop jumps straight to its live departure board.
+  const handleNearbyStopSelect = useCallback((stop: NearbyStop) => {
+    handleStationChange(stop.stopCode)
+    setActiveTab('arrivals')
+    setMapCenter([stop.lat, stop.lon])
+  }, [handleStationChange, setActiveTab])
+
   const arrivalsContent = (
     <>
       <TransportControls
@@ -199,6 +209,10 @@ function App() {
         lineShape={lineExplorer.data}
         hiddenLineDirections={lineExplorer.hiddenDirections}
         lineFocus={lineExplorer.focus}
+        nearbyStops={activeTab === 'nearby' ? nearby.stops : []}
+        nearbyUserLocation={activeTab === 'nearby' ? nearby.userLocation : null}
+        nearbyFocusSeq={nearby.focusSeq}
+        onNearbyStopSelect={handleNearbyStopSelect}
       />
 
       <RoutePlanner
@@ -209,6 +223,7 @@ function App() {
         onTabChange={setActiveTab}
         arrivalsContent={arrivalsContent}
         linesContent={<LineExplorer explorer={lineExplorer} />}
+        nearbyContent={<NearbyStops nearby={nearby} onSelect={handleNearbyStopSelect} />}
       />
     </div>
   )

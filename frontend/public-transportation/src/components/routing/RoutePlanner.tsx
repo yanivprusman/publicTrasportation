@@ -14,15 +14,16 @@ interface RoutePlannerProps {
   routing: UseRoutingReturn
   sheetState: SheetState
   onSheetStateChange: (s: SheetState) => void
-  activeTab: 'route' | 'arrivals' | 'lines'
-  onTabChange: (tab: 'route' | 'arrivals' | 'lines') => void
+  activeTab: 'route' | 'nearby' | 'arrivals' | 'lines'
+  onTabChange: (tab: 'route' | 'nearby' | 'arrivals' | 'lines') => void
   arrivalsContent: React.ReactNode
   linesContent: React.ReactNode
+  nearbyContent: React.ReactNode
 }
 
 export default function RoutePlanner({
   routing, sheetState, onSheetStateChange,
-  activeTab, onTabChange, arrivalsContent, linesContent,
+  activeTab, onTabChange, arrivalsContent, linesContent, nearbyContent,
 }: RoutePlannerProps) {
   const saved = useSavedRoutes()
   const { theme, toggleTheme } = useTheme()
@@ -105,18 +106,27 @@ export default function RoutePlanner({
           onClick={() => onTabChange('route')}
           type="button"
           data-id="tab-route-planner"
-          data-active-tab={activeTab === 'route' ? 'Route Planner' : undefined}
+          data-active-tab={activeTab === 'route' ? 'Routes' : undefined}
         >
-          Route Planner
+          Routes
+        </button>
+        <button
+          className={`${styles.tab} ${activeTab === 'nearby' ? styles.activeTab : ''}`}
+          onClick={() => onTabChange('nearby')}
+          type="button"
+          data-id="tab-nearby"
+          data-active-tab={activeTab === 'nearby' ? 'Nearby' : undefined}
+        >
+          Nearby
         </button>
         <button
           className={`${styles.tab} ${activeTab === 'arrivals' ? styles.activeTab : ''}`}
           onClick={() => onTabChange('arrivals')}
           type="button"
           data-id="tab-station-arrivals"
-          data-active-tab={activeTab === 'arrivals' ? 'Station Arrivals' : undefined}
+          data-active-tab={activeTab === 'arrivals' ? 'Arrivals' : undefined}
         >
-          Station Arrivals
+          Arrivals
         </button>
         <button
           className={`${styles.tab} ${activeTab === 'lines' ? styles.activeTab : ''}`}
@@ -143,6 +153,8 @@ export default function RoutePlanner({
         <div className={styles.arrivalsWrap}>{arrivalsContent}</div>
       ) : activeTab === 'lines' ? (
         <div className={styles.arrivalsWrap}>{linesContent}</div>
+      ) : activeTab === 'nearby' ? (
+        <div className={styles.arrivalsWrap}>{nearbyContent}</div>
       ) : (
         <>
           {sheetState === 'collapsed' ? (

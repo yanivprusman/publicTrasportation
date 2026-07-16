@@ -14,6 +14,17 @@ export const searchStops = async (query: string): Promise<StopResult[]> => {
   return response.data
 }
 
+export interface NearbyStop extends StopResult {
+  distanceMeters: number
+}
+
+export const fetchNearbyStops = async (lat: number, lon: number, radiusMeters: number): Promise<NearbyStop[]> => {
+  const response = await axios.get<NearbyStop[]>('/api/stops', {
+    params: { lat, lon, radius: radiusMeters },
+  })
+  return response.data
+}
+
 export const fetchStationArrivals = async (stationCode: string, detailLevel = 'calls'): Promise<SiriData> => {
   try {
     const response = await axios.get<SiriData>(`/api/transport?station=${stationCode}&detail=${detailLevel}`)
