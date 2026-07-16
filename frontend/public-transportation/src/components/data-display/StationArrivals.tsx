@@ -143,16 +143,7 @@ function StationArrivals({ siriData, error, stationCode, lineFilter, onVehicleSe
                                   e.stopPropagation()
                                   onVehicleSelect(vehicleLocation.Latitude, vehicleLocation.Longitude)
                                 }}
-                                style={{
-                                  padding: '4px 12px',
-                                  border: '1px solid #2196F3',
-                                  borderRadius: 6,
-                                  background: '#e3f2fd',
-                                  color: '#1565c0',
-                                  fontSize: 13,
-                                  fontWeight: 600,
-                                  cursor: 'pointer',
-                                }}
+                                className="show-on-map-btn"
                               >
                                 Show on map
                               </button>

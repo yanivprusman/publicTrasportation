@@ -2,7 +2,7 @@
   display: flex;
   gap: 0;
   margin-bottom: 10px;
-  border-bottom: 2px solid #eee;
+  border-bottom: 2px solid var(--border-subtle);
 }
 
 .tab {
@@ -12,7 +12,7 @@
   background: none;
   font-size: 13px;
   font-weight: 600;
-  color: #888;
+  color: var(--text-muted);
   cursor: pointer;
   border-bottom: 2px solid transparent;
   margin-bottom: -2px;
@@ -20,15 +20,15 @@
 }
 
 .tab.activeTab {
-  color: #2196F3;
-  border-bottom-color: #2196F3;
+  color: var(--accent);
+  border-bottom-color: var(--accent);
 }
 
 .searchBar {
   padding: 12px 16px;
-  background: #f5f5f5;
+  background: var(--surface-alt);
   border-radius: 10px;
-  color: #888;
+  color: var(--text-muted);
   font-size: 16px;
   cursor: pointer;
 }
@@ -57,8 +57,8 @@
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  border: 1px solid #ddd;
-  background: #f5f5f5;
+  border: 1px solid var(--border);
+  background: var(--surface-alt);
   font-size: 18px;
   line-height: 1;
   cursor: pointer;
@@ -66,13 +66,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #555;
+  color: var(--text-secondary);
   transition: background 0.15s, color 0.15s;
 }
 
 .swapBtn:not(:disabled):hover {
-  background: #e0e0e0;
-  color: #333;
+  background: var(--control-hover);
+  color: var(--text-primary);
 }
 
 .swapBtn:disabled {
@@ -82,8 +82,8 @@
 
 .gpsError {
   font-size: 12px;
-  color: #c62828;
-  background: #fdecea;
+  color: var(--danger-text);
+  background: var(--danger-soft);
   border-radius: 6px;
   padding: 6px 8px;
   margin-top: 2px;
@@ -99,7 +99,7 @@
 .searchBtn {
   flex: 1;
   padding: 12px;
-  background: #2196F3;
+  background: var(--accent);
   color: white;
   border: none;
   border-radius: 8px;
@@ -112,10 +112,10 @@
 .favBtn {
   width: 48px;
   flex-shrink: 0;
-  border: 1px solid #ffd54f;
+  border: 1px solid var(--fav-border);
   border-radius: 8px;
-  background: #fffdf5;
-  color: #f9a825;
+  background: var(--fav-bg);
+  color: var(--fav-text);
   font-size: 22px;
   line-height: 1;
   cursor: pointer;
@@ -123,7 +123,7 @@
 }
 
 .favBtn:not(:disabled):hover {
-  background: #fff2c4;
+  background: var(--fav-bg-hover);
 }
 
 .favBtn:not(:disabled):active {
@@ -131,24 +131,24 @@
 }
 
 .favBtnActive {
-  background: #ffe082;
-  color: #f57f17;
+  background: var(--fav-bg-active);
+  color: var(--fav-text-strong);
 }
 
 .favBtn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
-  border-color: #ddd;
-  color: #bbb;
+  border-color: var(--border);
+  color: var(--text-muted);
 }
 
 .searchBtn:disabled {
-  background: #b0bec5;
+  background: var(--disabled-bg);
   cursor: not-allowed;
 }
 
 .searchBtn:not(:disabled):hover {
-  background: #1976D2;
+  background: var(--accent-hover);
 }
 
 .arrivalsWrap {
@@ -158,13 +158,13 @@
 .lineShapeSection {
   margin-top: 8px;
   padding-top: 8px;
-  border-top: 1px solid #eee;
+  border-top: 1px solid var(--border-subtle);
 }
 
 .lineShapeLabel {
   font-size: 12px;
   font-weight: 600;
-  color: #888;
+  color: var(--text-muted);
   margin-bottom: 6px;
 }
 
@@ -177,23 +177,23 @@
 .lineShapeInput {
   width: 60px;
   padding: 6px 8px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border);
   border-radius: 6px;
   font-size: 14px;
 }
 
 .lineShapeSelect {
   padding: 6px 8px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border);
   border-radius: 6px;
   font-size: 14px;
 }
 
 .lineShapeBtn {
   padding: 6px 12px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border);
   border-radius: 6px;
-  background: white;
+  background: var(--surface);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -201,5 +201,31 @@
 }
 
 .lineShapeBtn:hover {
-  background: #f5f5f5;
+  background: var(--surface-alt);
+}
+
+.themeBtn {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  align-self: center;
+  margin-bottom: 2px;
+  border: none;
+  background: none;
+  border-radius: 50%;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.themeBtn:hover {
+  background: var(--surface-hover);
+}
+
+.themeBtn:active {
+  transform: scale(0.9);
 }

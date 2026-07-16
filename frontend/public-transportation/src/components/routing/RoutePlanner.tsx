@@ -7,6 +7,7 @@ import RouteResults from './RouteResults'
 import ItineraryDetail from './ItineraryDetail'
 import SavedRoutesBar from './SavedRoutesBar'
 import { useSavedRoutes, type SavedRoute } from '../../hooks/useSavedRoutes'
+import { useTheme } from '../../hooks/useTheme'
 import styles from './RoutePlanner.module.css'
 
 interface RoutePlannerProps {
@@ -23,6 +24,7 @@ export default function RoutePlanner({
   activeTab, onTabChange, arrivalsContent,
 }: RoutePlannerProps) {
   const saved = useSavedRoutes()
+  const { theme, toggleTheme } = useTheme()
 
   const handleSearch = useCallback(() => {
     if (routing.origin && routing.destination) {
@@ -114,6 +116,16 @@ export default function RoutePlanner({
           data-active-tab={activeTab === 'arrivals' ? 'Station Arrivals' : undefined}
         >
           Station Arrivals
+        </button>
+        <button
+          className={styles.themeBtn}
+          onClick={toggleTheme}
+          type="button"
+          title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          data-id="toggle-theme"
+        >
+          {theme === 'dark' ? '☀️' : '🌙'}
         </button>
       </div>
 

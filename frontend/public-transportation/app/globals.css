@@ -16,6 +16,71 @@
   --spacing-sm: 10px;
   --spacing-md: 15px;
   --spacing-lg: 20px;
+
+  /* Theme tokens — dark values live under html[data-theme="dark"] */
+  color-scheme: light;
+  --surface: #ffffff;
+  --surface-alt: #f5f5f5;
+  --surface-raised: #f8f9fa;
+  --surface-hover: #eef2f7;
+  --surface-translucent: rgba(255, 255, 255, 0.85);
+  --control-hover: #e0e0e0;
+  --text-primary: #222;
+  --text-secondary: #555;
+  --text-muted: #909399;
+  --border: #ddd;
+  --border-subtle: #eee;
+  --handle: #ccc;
+  --accent: #2196F3;
+  --accent-hover: #1976D2;
+  --accent-soft: #e3f2fd;
+  --accent-faint: #f0f8ff;
+  --accent-text: #1565c0;
+  --danger: #d32f2f;
+  --danger-text: #c62828;
+  --danger-soft: #fdecea;
+  --disabled-bg: #b0bec5;
+  --fav-bg: #fff8e1;
+  --fav-bg-hover: #fff2c4;
+  --fav-bg-active: #ffe082;
+  --fav-border: #ffd54f;
+  --fav-text: #f9a825;
+  --fav-text-strong: #f57f17;
+  --shadow-color: rgba(0, 0, 0, 0.15);
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --color-surface: #252d38;
+  --color-border: #3b4552;
+  --surface: #1b2129;
+  --surface-alt: #252d38;
+  --surface-raised: #222933;
+  --surface-hover: #2e3844;
+  --surface-translucent: rgba(27, 33, 41, 0.85);
+  --control-hover: #38424f;
+  --text-primary: #e8eaed;
+  --text-secondary: #b6bfc9;
+  --text-muted: #8a94a0;
+  --border: #3b4552;
+  --border-subtle: #2c343f;
+  --handle: #4a5568;
+  --accent: #2196F3;
+  --accent-hover: #42a5f5;
+  --accent-soft: #1c3350;
+  --accent-faint: #22303f;
+  --accent-text: #8ec9ff;
+  --danger: #ef5350;
+  --danger-text: #ff8a80;
+  --danger-soft: #3a2527;
+  --disabled-bg: #3f4a56;
+  --fav-bg: #2e2a1a;
+  --fav-bg-hover: #3a3420;
+  --fav-bg-active: #4a4126;
+  --fav-border: #6b5a26;
+  --fav-text: #ffca55;
+  --fav-text-strong: #ffd54f;
+  --shadow-color: rgba(0, 0, 0, 0.55);
 }
 
 body {
@@ -25,6 +90,8 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background: var(--surface);
+  color: var(--text-primary);
 }
 
 code {
@@ -55,7 +122,7 @@ code {
 }
 
 .vehicle-table th {
-  background-color: #f2f2f2;
+  background-color: var(--surface-alt);
 }
 
 .expandable-row {
@@ -63,12 +130,12 @@ code {
 }
 
 .expandable-row:hover {
-  background-color: #eef2f7;
+  background-color: var(--surface-hover);
 }
 
 .expanded-detail-row td {
   padding: 0 8px 8px;
-  background-color: #f8f9fa;
+  background-color: var(--surface-raised);
   border-bottom: 1px solid var(--color-border);
 }
 
@@ -77,12 +144,28 @@ code {
   flex-direction: column;
   gap: 4px;
   font-size: 0.8rem;
-  color: #555;
+  color: var(--text-secondary);
 }
 
 .detail-label {
   font-weight: 600;
-  color: #333;
+  color: var(--text-primary);
+}
+
+.show-on-map-btn {
+  padding: 4px 12px;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+}
+
+.show-on-map-btn:hover {
+  opacity: 0.8;
 }
 
 .bus-marker-wrapper {
@@ -108,6 +191,38 @@ code {
   line-height: 1;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
   pointer-events: none;
+}
+
+/* Leaflet theming: popups follow the app theme; in dark mode the OSM raster
+   tiles are inverted (the standard dark-basemap trick for raster tiles) while
+   marker/overlay panes stay untouched. */
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+  background: var(--surface);
+  color: var(--text-primary);
+}
+
+html[data-theme="dark"] .leaflet-tile-pane {
+  filter: invert(1) hue-rotate(180deg) brightness(0.91) contrast(0.9) saturate(0.7);
+}
+
+html[data-theme="dark"] .leaflet-container {
+  background: #10141b;
+}
+
+html[data-theme="dark"] .leaflet-control-attribution {
+  background: rgba(27, 33, 41, 0.8);
+  color: var(--text-muted);
+}
+
+html[data-theme="dark"] .leaflet-control-attribution a {
+  color: var(--accent-text);
+}
+
+html[data-theme="dark"] .leaflet-bar a {
+  background: var(--surface-alt);
+  color: var(--text-primary);
+  border-color: var(--border);
 }
 
 @media (min-width: 769px) {

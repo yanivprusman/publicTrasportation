@@ -27,13 +27,13 @@
 .stationInputRow {
   display: flex;
   align-items: center;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border);
   border-radius: 6px;
-  background: #f5f5f5;
+  background: var(--surface-alt);
 }
 
 .stationInputRow:focus-within {
-  border-color: #2196F3;
+  border-color: var(--accent);
 }
 
 .stationInput {
@@ -50,7 +50,7 @@
   background: none;
   border: none;
   font-size: 16px;
-  color: #999;
+  color: var(--text-muted);
   padding: 0 8px;
   cursor: pointer;
   line-height: 1;
@@ -61,14 +61,14 @@
   top: 100%;
   left: 0;
   right: 0;
-  background: white;
-  border: 1px solid #ddd;
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 0 0 6px 6px;
   list-style: none;
   margin: 0;
   padding: 0;
   z-index: 1100;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+  box-shadow: 0 4px 12px var(--shadow-color);
   max-height: 200px;
   overflow-y: auto;
 }
@@ -77,7 +77,7 @@
   padding: 8px 10px;
   cursor: pointer;
   font-size: 13px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--border-subtle);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -89,7 +89,7 @@
 }
 
 .stationSuggestion:hover {
-  background: #f0f8ff;
+  background: var(--accent-faint);
 }
 
 .stopName {
@@ -101,7 +101,7 @@
 }
 
 .stopCode {
-  color: #888;
+  color: var(--text-muted);
   font-size: 11px;
   flex-shrink: 0;
 }
@@ -122,7 +122,7 @@
 }
 
 .updatedAgo {
-  color: #888;
+  color: var(--text-muted);
   font-size: 0.8rem;
   white-space: nowrap;
 }

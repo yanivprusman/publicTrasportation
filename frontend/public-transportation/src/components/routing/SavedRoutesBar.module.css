@@ -16,7 +16,7 @@
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: #9aa0a6;
+  color: var(--text-muted);
 }
 
 .chips {
@@ -34,26 +34,26 @@
   align-items: stretch;
   flex-shrink: 0;
   max-width: 220px;
-  background: #f1f3f4;
-  border: 1px solid #e0e0e0;
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
   border-radius: 999px;
   overflow: hidden;
   transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
 }
 
 .chip:hover {
-  background: #e6eef7;
-  border-color: #c3d7ef;
+  background: var(--surface-hover);
+  border-color: var(--border);
 }
 
 .favoriteChip {
-  background: #fff8e1;
-  border-color: #ffe082;
+  background: var(--fav-bg);
+  border-color: var(--fav-border);
 }
 
 .favoriteChip:hover {
-  background: #fff2c4;
-  border-color: #ffd54f;
+  background: var(--fav-bg-hover);
+  border-color: var(--fav-border);
 }
 
 .chipMain {
@@ -65,14 +65,14 @@
   padding: 7px 4px 7px 12px;
   font-size: 13px;
   font-weight: 600;
-  color: #3c4043;
+  color: var(--text-primary);
   cursor: pointer;
   min-width: 0;
   transition: color 0.15s;
 }
 
 .chipMain:hover {
-  color: #1976d2;
+  color: var(--accent-hover);
 }
 
 .chipMain:active {
@@ -80,7 +80,7 @@
 }
 
 .star {
-  color: #f9a825;
+  color: var(--fav-text);
   font-size: 12px;
   flex-shrink: 0;
 }
@@ -98,12 +98,12 @@
   padding: 0 10px 0 4px;
   font-size: 16px;
   line-height: 1;
-  color: #9aa0a6;
+  color: var(--text-muted);
   cursor: pointer;
   flex-shrink: 0;
   transition: color 0.15s;
 }
 
 .chipRemove:hover {
-  color: #d32f2f;
+  color: var(--danger);
 }

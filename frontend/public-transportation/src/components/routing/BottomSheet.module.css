@@ -3,9 +3,9 @@
   bottom: 0;
   left: 0;
   right: 0;
-  background: white;
+  background: var(--surface);
   border-radius: 16px 16px 0 0;
-  box-shadow: 0 -2px 16px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 -2px 16px var(--shadow-color);
   z-index: 1000;
   transition: height 0.25s ease-out;
   display: flex;
@@ -25,7 +25,7 @@
 .handleBar {
   width: 40px;
   height: 4px;
-  background: #ccc;
+  background: var(--handle);
   border-radius: 2px;
 }
 
@@ -42,8 +42,8 @@
   left: 0;
   width: 400px;
   height: 100vh;
-  background: white;
-  box-shadow: 2px 0 16px rgba(0, 0, 0, 0.12);
+  background: var(--surface);
+  box-shadow: 2px 0 16px var(--shadow-color);
   z-index: 1000;
   overflow-y: auto;
   overflow-x: hidden;

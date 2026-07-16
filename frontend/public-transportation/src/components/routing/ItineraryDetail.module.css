@@ -5,10 +5,10 @@
 .summary {
   font-size: 14px;
   font-weight: 600;
-  color: #333;
+  color: var(--text-primary);
   margin-bottom: 12px;
   padding-bottom: 8px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .leg {
@@ -30,26 +30,26 @@
 
 .legTimes {
   font-size: 12px;
-  color: #888;
+  color: var(--text-muted);
   margin-bottom: 2px;
 }
 
 .legDesc {
   font-size: 14px;
-  color: #222;
+  color: var(--text-primary);
   line-height: 1.3;
 }
 
 .agency {
   font-size: 11px;
-  color: #999;
+  color: var(--text-muted);
   margin-top: 2px;
 }
 
 .stopsToggle {
   background: none;
   border: none;
-  color: #2196F3;
+  color: var(--accent);
   font-size: 12px;
   cursor: pointer;
   padding: 4px 0;
@@ -64,7 +64,7 @@
 
 .stop {
   font-size: 12px;
-  color: #666;
+  color: var(--text-secondary);
   padding: 2px 0 2px 12px;
-  border-left: 2px solid #ddd;
+  border-left: 2px solid var(--border);
 }

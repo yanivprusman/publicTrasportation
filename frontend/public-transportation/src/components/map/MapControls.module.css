@@ -3,7 +3,7 @@
   top: 10px;
   left: 10px;
   z-index: 1000;
-  background-color: rgba(255, 255, 255, 0.8);
+  background-color: var(--surface-translucent);
   padding: var(--spacing-sm);
   border-radius: var(--radius-md);
 }
@@ -13,7 +13,7 @@
   width: 200px;
   margin-right: var(--spacing-xs);
   border-radius: var(--radius-md);
-  border: 1px solid #ccc;
+  border: 1px solid var(--border);
   margin-bottom: var(--spacing-xs);
 }
 
@@ -43,7 +43,7 @@
 }
 
 .error {
-  color: red;
+  color: var(--danger-text);
   margin-top: var(--spacing-xs);
   font-size: 14px;
 }
@@ -51,7 +51,7 @@
 .infoBox {
   margin-top: var(--spacing-sm);
   font-size: 14px;
-  border: 1px solid #ccc;
+  border: 1px solid var(--border);
   padding: var(--spacing-xs);
   border-radius: var(--radius-md);
 }
@@ -59,7 +59,7 @@
 .infoBoxDest {
   margin-top: var(--spacing-xs);
   font-size: 14px;
-  border: 1px solid #ccc;
+  border: 1px solid var(--border);
   padding: var(--spacing-xs);
   border-radius: var(--radius-md);
 }
