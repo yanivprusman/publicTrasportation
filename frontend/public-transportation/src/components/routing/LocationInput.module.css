@@ -45,6 +45,29 @@
   line-height: 1;
 }
 
+.saveBtn {
+  background: none;
+  border: none;
+  font-size: 18px;
+  line-height: 1;
+  color: var(--text-muted);
+  padding: 0 8px;
+  cursor: pointer;
+  transition: color 0.15s, transform 0.1s;
+}
+
+.saveBtn:hover {
+  color: var(--fav-text, var(--accent));
+}
+
+.saveBtn:active {
+  transform: scale(0.9);
+}
+
+.saveBtnActive {
+  color: var(--fav-text, var(--accent));
+}
+
 .gpsBtn {
   background: none;
   border: none;

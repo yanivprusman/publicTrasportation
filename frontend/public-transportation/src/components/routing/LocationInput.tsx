@@ -11,11 +11,13 @@ interface LocationInputProps {
   placeholder?: string
   onGpsClick?: () => void
   gpsLoading?: boolean
+  isSaved?: boolean
+  onToggleSave?: () => void
 }
 
 const searchFn = (query: string) => geocodeSearch(query)
 
-export default function LocationInput({ label, value, onChange, placeholder, onGpsClick, gpsLoading }: LocationInputProps) {
+export default function LocationInput({ label, value, onChange, placeholder, onGpsClick, gpsLoading, isSaved, onToggleSave }: LocationInputProps) {
   const ac = useAutocomplete<GeocodeSuggestion>({ searchFn, maxResults: 5 })
   // Editing a selected place invalidates it (onChange(null) below), which makes
   // the value→text sync effect fire with null and wipe the text the user just
@@ -98,6 +100,19 @@ export default function LocationInput({ label, value, onChange, placeholder, onG
                 <line x1="20" y1="12" x2="23" y2="12" />
               </svg>
             )}
+          </button>
+        )}
+        {onToggleSave && value && (
+          <button
+            className={`${styles.saveBtn} ${isSaved ? styles.saveBtnActive : ''}`}
+            onClick={onToggleSave}
+            type="button"
+            title={isSaved ? 'Remove from saved places' : 'Save this place'}
+            aria-label={isSaved ? `Remove ${label} from saved places` : `Save ${label} as a place`}
+            aria-pressed={isSaved}
+            data-id={`save-place-${label.toLowerCase()}`}
+          >
+            {isSaved ? '★' : '☆'}
           </button>
         )}
         {ac.text && (

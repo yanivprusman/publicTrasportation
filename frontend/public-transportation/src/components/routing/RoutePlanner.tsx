@@ -6,8 +6,11 @@ import TimePicker from './TimePicker'
 import RouteResults from './RouteResults'
 import ItineraryDetail from './ItineraryDetail'
 import SavedRoutesBar from './SavedRoutesBar'
+import SavedPlacesBar from './SavedPlacesBar'
 import { useSavedRoutes, type SavedRoute } from '../../hooks/useSavedRoutes'
+import { useSavedPlaces } from '../../hooks/useSavedPlaces'
 import { useTheme } from '../../hooks/useTheme'
+import type { GeocodeSuggestion } from '../../types'
 import styles from './RoutePlanner.module.css'
 
 interface RoutePlannerProps {
@@ -26,7 +29,16 @@ export default function RoutePlanner({
   activeTab, onTabChange, arrivalsContent, linesContent, nearbyContent,
 }: RoutePlannerProps) {
   const saved = useSavedRoutes()
+  const places = useSavedPlaces()
   const { theme, toggleTheme } = useTheme()
+
+  const handleUseAsOrigin = useCallback((place: GeocodeSuggestion) => {
+    routing.setOrigin(place)
+  }, [routing])
+
+  const handleUseAsDestination = useCallback((place: GeocodeSuggestion) => {
+    routing.setDestination(place)
+  }, [routing])
 
   const handleSearch = useCallback(() => {
     if (routing.origin && routing.destination) {
@@ -165,6 +177,12 @@ export default function RoutePlanner({
             </div>
           ) : (
             <>
+              <SavedPlacesBar
+                places={places.places}
+                onUseAsOrigin={handleUseAsOrigin}
+                onUseAsDestination={handleUseAsDestination}
+                onRemove={places.remove}
+              />
               <SavedRoutesBar
                 favorites={saved.favorites}
                 recents={saved.recents}
@@ -182,12 +200,16 @@ export default function RoutePlanner({
                       placeholder="Origin"
                       onGpsClick={handleGpsClick}
                       gpsLoading={gpsLoading}
+                      isSaved={!!routing.origin && places.isSaved(routing.origin)}
+                      onToggleSave={routing.origin ? () => places.toggleSave(routing.origin!) : undefined}
                     />
                     <LocationInput
                       label="To"
                       value={routing.destination}
                       onChange={routing.setDestination}
                       placeholder="Destination"
+                      isSaved={!!routing.destination && places.isSaved(routing.destination)}
+                      onToggleSave={routing.destination ? () => places.toggleSave(routing.destination!) : undefined}
                     />
                   </div>
                   <button
