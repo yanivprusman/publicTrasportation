@@ -56,34 +56,56 @@
   font-weight: 500;
 }
 
-.legs {
+.durationBar {
   display: flex;
-  gap: 4px;
-  flex-wrap: wrap;
+  gap: 2px;
+  height: 22px;
+  border-radius: 6px;
+  overflow: hidden;
 }
 
-.pill {
+.barSeg {
+  flex-basis: 0;
+  min-width: 0;
   display: flex;
   align-items: center;
-  gap: 3px;
-  padding: 3px 8px;
-  border-radius: 12px;
-  color: white;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.barSeg:first-child {
+  border-radius: 6px 0 0 6px;
+}
+
+.barSeg:last-child {
+  border-radius: 0 6px 6px 0;
+}
+
+.barSeg:only-child {
+  border-radius: 6px;
+}
+
+.barSegWalk {
+  background: repeating-linear-gradient(
+    45deg,
+    var(--control-hover) 0px,
+    var(--control-hover) 4px,
+    var(--surface-alt) 4px,
+    var(--surface-alt) 8px
+  );
+}
+
+.barLabel {
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
+  padding: 0 3px;
 }
 
-.pillMode {
-  opacity: 0.9;
-}
-
-.pillRoute {
-  background: rgba(255,255,255,0.25);
-  padding: 0 4px;
-  border-radius: 3px;
-}
-
-.pillTime {
-  opacity: 0.85;
-  font-weight: 400;
+.barSegWalk .barLabel {
+  text-shadow: none;
 }

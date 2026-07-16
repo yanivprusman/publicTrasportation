@@ -10,6 +10,16 @@ interface ItineraryCardProps {
 }
 
 export default function ItineraryCard({ itinerary, selected, onClick }: ItineraryCardProps) {
+  const totalLegSeconds = itinerary.legs.reduce((sum, leg) => sum + (leg.duration || 0), 0)
+  const barDescription = itinerary.legs
+    .map(leg => {
+      const what = leg.mode === 'WALK'
+        ? 'Walk'
+        : `${getModeLabel(leg.mode)}${leg.routeShortName ? ` ${leg.routeShortName}` : ''}`
+      return `${what} ${formatDuration(leg.duration)}`
+    })
+    .join(', ')
+
   return (
     <div
       className={`${styles.card} ${selected ? styles.selected : ''}`}
@@ -37,14 +47,31 @@ export default function ItineraryCard({ itinerary, selected, onClick }: Itinerar
           {formatTime(itinerary.startTime)} - {formatTime(itinerary.endTime)}
         </span>
       </div>
-      <div className={styles.legs}>
+      {/* Leg widths are proportional to each leg's share of travel time, so the
+          walk/ride balance of a route is readable at a glance */}
+      <div className={styles.durationBar} role="img" aria-label={barDescription}>
         {itinerary.legs.map((leg, i) => {
           const style = getModeStyle(leg.mode, leg.routeColor)
+          const isWalk = leg.mode === 'WALK'
+          const share = totalLegSeconds > 0
+            ? (leg.duration || 0) / totalLegSeconds
+            : 1 / itinerary.legs.length
+          const label = isWalk ? '\u{1F6B6}' : (leg.routeShortName || getModeLabel(leg.mode))
+          const what = isWalk
+            ? 'Walk'
+            : `${getModeLabel(leg.mode)}${leg.routeShortName ? ` ${leg.routeShortName}` : ''}`
           return (
-            <div key={i} className={styles.pill} style={{ background: style.color }}>
-              <span className={styles.pillMode}>{getModeLabel(leg.mode)}</span>
-              {leg.routeShortName && <span className={styles.pillRoute}>{leg.routeShortName}</span>}
-              <span className={styles.pillTime}>{formatDuration(leg.duration)}</span>
+            <div
+              key={i}
+              className={`${styles.barSeg} ${isWalk ? styles.barSegWalk : ''}`}
+              style={{
+                // Floor tiny legs so every segment stays visible and labelable
+                flexGrow: Math.max(share, 0.06),
+                ...(isWalk ? {} : { background: style.color }),
+              }}
+              title={`${what} · ${formatDuration(leg.duration)}`}
+            >
+              <span className={styles.barLabel}>{label}</span>
             </div>
           )
         })}
