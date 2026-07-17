@@ -82,6 +82,21 @@ const en = {
   'errors.noLater': 'No later trips found',
   'errors.loadMoreFailed': 'Failed to load more trips',
 
+  // Day overview
+  'day.toggle': 'Whole-day view',
+  'day.toggleTitle': 'See every departure today on one chart',
+  'day.loading': 'Scanning the whole day…',
+  'day.failed': 'Could not load the day overview',
+  'day.none': 'No transit departures today for this trip',
+  'day.first': 'First',
+  'day.last': 'Last',
+  'day.fastest': 'Fastest',
+  'day.departures': 'Departures',
+  'day.chartLabel': 'Departure times and trip durations across the day',
+  'day.chartCaption': 'Trip duration in minutes, by departure time — tap a bar',
+  'day.truncatedNote': 'Busy route — showing the first {n} departures of the day',
+  'day.show': 'Show this trip',
+
   // Itinerary card
   'card.direct': 'Direct',
   'card.transfersOne': '1 transfer',
@@ -353,6 +368,20 @@ const he: Record<keyof typeof en, string> = {
   'errors.noEarlier': 'לא נמצאו נסיעות מוקדמות יותר',
   'errors.noLater': 'לא נמצאו נסיעות מאוחרות יותר',
   'errors.loadMoreFailed': 'טעינת נסיעות נוספות נכשלה',
+
+  'day.toggle': 'תצוגת יום שלם',
+  'day.toggleTitle': 'הצג את כל היציאות היום בגרף אחד',
+  'day.loading': 'סורק את כל היום…',
+  'day.failed': 'טעינת תמונת היום נכשלה',
+  'day.none': 'אין יציאות בתחבורה ציבורית היום למסלול זה',
+  'day.first': 'ראשונה',
+  'day.last': 'אחרונה',
+  'day.fastest': 'המהירה',
+  'day.departures': 'יציאות',
+  'day.chartLabel': 'זמני יציאה ומשכי נסיעה לאורך היום',
+  'day.chartCaption': 'משך הנסיעה בדקות, לפי שעת היציאה — הקש על עמודה',
+  'day.truncatedNote': 'קו עמוס — מוצגות {n} היציאות הראשונות של היום',
+  'day.show': 'הצג נסיעה זו',
 
   'card.direct': 'ישיר',
   'card.transfersOne': 'החלפה אחת',

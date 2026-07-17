@@ -104,6 +104,24 @@ export interface RouteResult {
   nextPageCursor?: string
 }
 
+// One scheduled way to make the trip, as returned by the day-overview sweep:
+// when it leaves, how long it takes, and which lines it rides.
+export interface DayDeparture {
+  startTime: string
+  endTime: string
+  /** Total trip time in seconds. */
+  duration: number
+  transfers: number
+  lines: { mode: TransitMode; name: string }[]
+}
+
+export interface DayOverviewResult {
+  /** Every scheduled departure in the requested window, sorted by start time. */
+  departures: DayDeparture[]
+  /** True when the sweep hit its request cap before reaching the window's end. */
+  truncated: boolean
+}
+
 export interface GeocodeSuggestion {
   name: string
   lat: number

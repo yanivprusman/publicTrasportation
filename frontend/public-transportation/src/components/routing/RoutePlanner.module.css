@@ -180,3 +180,34 @@
 .themeBtn:active {
   transform: scale(0.9);
 }
+
+.dayToggleBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 9px 12px;
+  margin: 8px 0 2px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--accent-text);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.dayToggleBtn:hover {
+  background: var(--surface-hover);
+}
+
+.dayToggleBtn:active {
+  transform: scale(0.98);
+}
+
+.dayToggleBtnActive {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}

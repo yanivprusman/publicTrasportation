@@ -8,9 +8,11 @@ import RouteResults from './RouteResults'
 import TravelModeStrip from './TravelModeStrip'
 import DirectRouteCard from './DirectRouteCard'
 import ItineraryDetail from './ItineraryDetail'
+import DayOverview from './DayOverview'
 import SavedRoutesBar from './SavedRoutesBar'
 import SavedPlacesBar from './SavedPlacesBar'
 import { useSavedRoutes, type SavedRoute } from '../../hooks/useSavedRoutes'
+import { toRouteQueryOptions } from '../../hooks/useRouteOptions'
 import { useSavedPlaces } from '../../hooks/useSavedPlaces'
 import { useTheme } from '../../hooks/useTheme'
 import { useI18n } from '../../i18n'
@@ -79,6 +81,18 @@ export default function RoutePlanner({
   const detailRef = useRef<HTMLDivElement>(null)
   const [gpsLoading, setGpsLoading] = useState(false)
   const [gpsError, setGpsError] = useState<string | null>(null)
+  const [dayOverviewOpen, setDayOverviewOpen] = useState(false)
+
+  // Tapping a departure on the day chart loads that exact trip into the main
+  // results, with the time picker synced to the chosen departure.
+  const handlePickDeparture = useCallback((startTimeIso: string) => {
+    if (!routing.origin || !routing.destination) return
+    routing.initRoute(routing.origin, routing.destination, {
+      departureTime: new Date(startTimeIso),
+      arriveBy: false,
+    })
+    setDayOverviewOpen(false)
+  }, [routing])
 
   useEffect(() => {
     if (routing.selectedItinerary && detailRef.current) {
@@ -286,6 +300,30 @@ export default function RoutePlanner({
                   travelMode={routing.travelMode}
                   onSelect={routing.setTravelMode}
                 />
+              )}
+
+              {routing.travelMode === 'TRANSIT' && routing.results && routing.results.itineraries.length > 0 &&
+                routing.origin && routing.destination && (
+                <>
+                  <button
+                    className={`${styles.dayToggleBtn} ${dayOverviewOpen ? styles.dayToggleBtnActive : ''}`}
+                    onClick={() => setDayOverviewOpen(open => !open)}
+                    type="button"
+                    aria-pressed={dayOverviewOpen}
+                    title={t('day.toggleTitle')}
+                    data-id="toggle-day-overview"
+                  >
+                    📊 {t('day.toggle')}
+                  </button>
+                  {dayOverviewOpen && (
+                    <DayOverview
+                      origin={routing.origin}
+                      destination={routing.destination}
+                      queryOptions={toRouteQueryOptions(routing.routeOptions.options)}
+                      onPickDeparture={handlePickDeparture}
+                    />
+                  )}
+                </>
               )}
 
               {routing.travelMode === 'TRANSIT' ? (

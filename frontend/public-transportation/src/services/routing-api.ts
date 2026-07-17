@@ -1,4 +1,4 @@
-import type { RouteResult, GeocodeSuggestion } from '../types'
+import type { RouteResult, GeocodeSuggestion, DayOverviewResult } from '../types'
 
 export interface RouteQueryOptions {
   /** Comma-separated app-level mode keys (bus,train,tram). Omit for all modes. */
@@ -37,6 +37,35 @@ export async function searchRoute(
     }
     const body = await res.text()
     throw new Error(body || `Route search failed (${res.status})`)
+  }
+  return res.json()
+}
+
+export async function fetchDayOverview(
+  from: { lat: number; lon: number },
+  to: { lat: number; lon: number },
+  start: string,
+  end: string,
+  options?: RouteQueryOptions
+): Promise<DayOverviewResult> {
+  const params = new URLSearchParams({
+    from: `${from.lat},${from.lon}`,
+    to: `${to.lat},${to.lon}`,
+    start,
+    end,
+  })
+  if (options?.modes) params.set('modes', options.modes)
+  if (options?.maxWalk) params.set('maxWalk', String(options.maxWalk))
+
+  const res = await fetch(`/api/day-overview?${params}`)
+  if (!res.ok) {
+    if (res.headers.get('content-type')?.includes('application/json')) {
+      const body: { error?: string; message?: string } = await res.json()
+      const detail = [body.error, body.message].filter(Boolean).join(': ')
+      throw new Error(detail || `Day overview failed (${res.status})`)
+    }
+    const body = await res.text()
+    throw new Error(body || `Day overview failed (${res.status})`)
   }
   return res.json()
 }
