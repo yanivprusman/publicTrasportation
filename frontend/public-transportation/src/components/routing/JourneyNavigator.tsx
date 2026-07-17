@@ -14,6 +14,8 @@ interface JourneyNavigatorProps {
 
 const MODE_ICONS: Record<TransitMode, string> = {
   WALK: '\u{1F6B6}',
+  BIKE: '\u{1F6B4}',
+  CAR: '\u{1F697}',
   BUS: '\u{1F68C}',
   RAIL: '\u{1F686}',
   TRAM: '\u{1F68B}',

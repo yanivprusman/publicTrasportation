@@ -5,6 +5,8 @@ import LocationInput from './LocationInput'
 import TimePicker from './TimePicker'
 import RouteOptions from './RouteOptions'
 import RouteResults from './RouteResults'
+import TravelModeStrip from './TravelModeStrip'
+import DirectRouteCard from './DirectRouteCard'
 import ItineraryDetail from './ItineraryDetail'
 import SavedRoutesBar from './SavedRoutesBar'
 import SavedPlacesBar from './SavedPlacesBar'
@@ -275,21 +277,38 @@ export default function RoutePlanner({
                 </div>
               </div>
 
-              <RouteResults
-                results={routing.results}
-                selectedIndex={routing.selectedIndex}
-                onSelect={routing.setSelectedIndex}
-                loading={routing.loading}
-                error={routing.error}
-                onRetry={handleSearch}
-                onLoadEarlier={routing.loadEarlier}
-                onLoadLater={routing.loadLater}
-                loadingEarlier={routing.loadingEarlier}
-                loadingLater={routing.loadingLater}
-                pagingNotice={routing.pagingNotice}
-              />
+              {routing.alternatives.length > 0 && (
+                <TravelModeStrip
+                  transitDuration={routing.results?.itineraries.length
+                    ? Math.min(...routing.results.itineraries.map(itin => itin.duration))
+                    : null}
+                  alternatives={routing.alternatives}
+                  travelMode={routing.travelMode}
+                  onSelect={routing.setTravelMode}
+                />
+              )}
 
-              {routing.selectedItinerary && (
+              {routing.travelMode === 'TRANSIT' ? (
+                <RouteResults
+                  results={routing.results}
+                  selectedIndex={routing.selectedIndex}
+                  onSelect={routing.setSelectedIndex}
+                  loading={routing.loading}
+                  error={routing.error}
+                  onRetry={handleSearch}
+                  onLoadEarlier={routing.loadEarlier}
+                  onLoadLater={routing.loadLater}
+                  loadingEarlier={routing.loadingEarlier}
+                  loadingLater={routing.loadingLater}
+                  pagingNotice={routing.pagingNotice}
+                />
+              ) : (
+                routing.alternatives
+                  .filter(alt => alt.mode === routing.travelMode)
+                  .map(alt => <DirectRouteCard key={alt.mode} alternative={alt} />)
+              )}
+
+              {routing.travelMode === 'TRANSIT' && routing.selectedItinerary && (
                 <div ref={detailRef}>
                   <ItineraryDetail
                     itinerary={routing.selectedItinerary}

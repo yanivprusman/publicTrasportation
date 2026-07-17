@@ -54,7 +54,7 @@ export interface LineShapeData {
   headsigns: Record<string, string>
 }
 
-export type TransitMode = 'WALK' | 'BUS' | 'RAIL' | 'TRAM' | 'SUBWAY'
+export type TransitMode = 'WALK' | 'BIKE' | 'CAR' | 'BUS' | 'RAIL' | 'TRAM' | 'SUBWAY'
 
 export interface Place {
   name: string
@@ -84,8 +84,20 @@ export interface Itinerary {
   legs: RouteLeg[]
 }
 
+// A direct street route (no transit) offered next to the transit results so
+// the rider can compare ways to make the same trip.
+export interface DirectAlternative {
+  mode: 'BIKE' | 'CAR'
+  /** Total street distance in meters (0 when the router didn't report it). */
+  distance: number
+  itinerary: Itinerary
+}
+
 export interface RouteResult {
   itineraries: Itinerary[]
+  // Fastest bike and car routes for the same trip; only sent with the first
+  // page (direct routes are time-independent, so paging never changes them).
+  alternatives?: DirectAlternative[]
   // Opaque MOTIS paging cursors: present when trips before/after the shown
   // window exist. Passed back via searchRoute's pageCursor to load that page.
   previousPageCursor?: string

@@ -10,6 +10,8 @@ interface ModeStyle {
 
 const MODE_STYLES: Record<TransitMode, ModeStyle> = {
   WALK: { color: '#888888', dashArray: '6 8', icon: 'walk' },
+  BIKE: { color: '#00ACC1', icon: 'bike' },
+  CAR: { color: '#546E7A', icon: 'car' },
   BUS: { color: '#4CAF50', icon: 'bus' },
   RAIL: { color: '#2196F3', icon: 'train' },
   TRAM: { color: '#FF5722', icon: 'tram' },

@@ -40,6 +40,8 @@ interface MotisLeg {
   startTime?: string;
   endTime?: string;
   duration?: number;
+  // Meters traveled; MOTIS sets it on non-transit (street) legs only.
+  distance?: number;
   routeShortName?: string;
   routeColor?: string;
   agencyName?: string;
@@ -70,8 +72,10 @@ interface MotisPlanResponse {
 // WALK style, so a real train/metro leg rendered as a grey dashed "walking"
 // polyline and showed the raw enum (e.g. "REGIONAL_RAIL") as its pill label.
 // Fold each MOTIS mode into the app's contract so styling and labels are right.
-const MODE_MAP: Record<string, 'WALK' | 'BUS' | 'RAIL' | 'TRAM' | 'SUBWAY'> = {
+const MODE_MAP: Record<string, 'WALK' | 'BIKE' | 'CAR' | 'BUS' | 'RAIL' | 'TRAM' | 'SUBWAY'> = {
   WALK: 'WALK',
+  BIKE: 'BIKE',
+  CAR: 'CAR',
   BUS: 'BUS',
   COACH: 'BUS',
   TRAM: 'TRAM',
@@ -94,7 +98,7 @@ const MODE_GROUPS: Record<string, string[]> = {
   tram: ['TRAM', 'SUBWAY', 'METRO'],
 };
 
-function normalizeMode(mode: string | undefined): 'WALK' | 'BUS' | 'RAIL' | 'TRAM' | 'SUBWAY' {
+function normalizeMode(mode: string | undefined): 'WALK' | 'BIKE' | 'CAR' | 'BUS' | 'RAIL' | 'TRAM' | 'SUBWAY' {
   if (!mode) return 'WALK';
   // Any unrecognized transit mode is still a vehicle leg, not a walk — render
   // it as BUS (solid colored line) rather than the grey dashed walk style.
@@ -108,23 +112,8 @@ function itineraryFingerprint(itin: MotisItinerary): string {
     .join('|');
 }
 
-function transformMotisResponse(motisData: MotisPlanResponse, includeDirect: boolean) {
-  const seen = new Set<string>();
-  // Direct (walk-only) itineraries are not part of the time-paged sequence —
-  // MOTIS repeats them on every page, so merge them only into the first page.
-  const allItineraries = [
-    ...(motisData.itineraries || []),
-    ...(includeDirect ? motisData.direct || [] : []),
-  ];
-  const itineraries = allItineraries
-    .filter(itin => {
-      const fp = itineraryFingerprint(itin);
-      if (!fp) return true; // walk-only routes are always unique
-      if (seen.has(fp)) return false;
-      seen.add(fp);
-      return true;
-    })
-    .map(itin => ({
+function transformItinerary(itin: MotisItinerary) {
+  return {
     duration: itin.duration || 0,
     startTime: itin.startTime || '',
     endTime: itin.endTime || '',
@@ -159,12 +148,56 @@ function transformMotisResponse(motisData: MotisPlanResponse, includeDirect: boo
       }
       return transformed;
     }),
-  }));
+  };
+}
+
+function transformMotisResponse(motisData: MotisPlanResponse, includeDirect: boolean) {
+  const seen = new Set<string>();
+  // Direct (walk-only) itineraries are not part of the time-paged sequence —
+  // MOTIS repeats them on every page, so merge them only into the first page.
+  const allItineraries = [
+    ...(motisData.itineraries || []),
+    ...(includeDirect ? motisData.direct || [] : []),
+  ];
+  const itineraries = allItineraries
+    .filter(itin => {
+      const fp = itineraryFingerprint(itin);
+      if (!fp) return true; // walk-only routes are always unique
+      if (seen.has(fp)) return false;
+      seen.add(fp);
+      return true;
+    })
+    .map(transformItinerary);
   return {
     itineraries,
     previousPageCursor: motisData.previousPageCursor,
     nextPageCursor: motisData.nextPageCursor,
   };
+}
+
+// Direct street itineraries (one per requested mode) come back unordered and
+// occasionally with more than one option per mode; keep only the fastest
+// bike and car route, tagged with the mode and total street distance.
+function extractAlternatives(direct: MotisItinerary[]) {
+  const best = new Map<'BIKE' | 'CAR', MotisItinerary>();
+  for (const itin of direct) {
+    const legModes = (itin.legs || []).map(leg => leg.mode);
+    const mode = legModes.includes('CAR') ? 'CAR' : legModes.includes('BIKE') ? 'BIKE' : null;
+    if (!mode) continue;
+    const current = best.get(mode);
+    if (!current || (itin.duration || 0) < (current.duration || 0)) {
+      best.set(mode, itin);
+    }
+  }
+  return [...best.entries()]
+    .map(([mode, itin]) => ({
+      mode,
+      distance: Math.round(
+        (itin.legs || []).reduce((sum, leg) => sum + (leg.distance || 0), 0)
+      ),
+      itinerary: transformItinerary(itin),
+    }))
+    .sort((a, b) => a.itinerary.duration - b.itinerary.duration);
 }
 
 export async function GET(request: NextRequest) {
@@ -253,9 +286,41 @@ export async function GET(request: NextRequest) {
       params.set('maxPostTransitTime', String(maxWalkSeconds));
     }
 
-    const response = await fetch(`${MOTIS_BASE}/api/v1/plan?${params}`, {
-      signal: AbortSignal.timeout(15000),
-    });
+    // Bike/car comparison routes are fetched with a second, direct-only plan
+    // call rather than by adding directModes to the transit call: MOTIS uses
+    // the fastest direct connection as a cut-off during transit routing, so a
+    // fast car route in the same query would silently drop slower (i.e. most)
+    // transit itineraries. A minimal searchWindow keeps the second call's
+    // transit search — whose results are discarded — as cheap as possible.
+    // Direct routes are time-independent, so paging calls skip this.
+    const fetchAlternatives = async () => {
+      if (pageCursor) return undefined;
+      const directParams = new URLSearchParams({
+        fromPlace: `${fromLat},${fromLon}`,
+        toPlace: `${toLat},${toLon}`,
+        time: routeTime,
+        arriveBy: String(isArriveBy),
+        numItineraries: '1',
+        searchWindow: '60',
+        directModes: 'BIKE,CAR',
+        maxDirectTime: '7200',
+      });
+      const directResponse = await fetch(`${MOTIS_BASE}/api/v1/plan?${directParams}`, {
+        signal: AbortSignal.timeout(15000),
+      });
+      if (!directResponse.ok) {
+        throw new Error(`MOTIS direct-route request returned ${directResponse.status}`);
+      }
+      const directData: MotisPlanResponse = await directResponse.json();
+      return extractAlternatives(directData.direct || []);
+    };
+
+    const [response, alternatives] = await Promise.all([
+      fetch(`${MOTIS_BASE}/api/v1/plan?${params}`, {
+        signal: AbortSignal.timeout(15000),
+      }),
+      fetchAlternatives(),
+    ]);
 
     if (!response.ok) {
       return NextResponse.json(
@@ -265,7 +330,10 @@ export async function GET(request: NextRequest) {
     }
 
     const motisData = await response.json();
-    const result = transformMotisResponse(motisData, !pageCursor);
+    const result = {
+      ...transformMotisResponse(motisData, !pageCursor),
+      ...(alternatives !== undefined ? { alternatives } : {}),
+    };
     setCachedRoute(cacheKey, result);
     return NextResponse.json(result);
   } catch (error) {

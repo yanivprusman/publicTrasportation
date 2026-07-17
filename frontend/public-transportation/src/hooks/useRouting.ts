@@ -1,11 +1,14 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import axios from 'axios'
-import type { GeocodeSuggestion, RouteResult, Itinerary } from '../types'
+import type { GeocodeSuggestion, RouteResult, Itinerary, DirectAlternative } from '../types'
 import { searchRoute, type RouteQueryOptions } from '../services/routing-api'
 import { useRouteOptions, toRouteQueryOptions, isDefaultOptions, type UseRouteOptionsReturn } from './useRouteOptions'
 import { buildAddressLabel } from '../components/map/MapUtilities'
 
 const ROUTE_STORAGE_KEY = 'pt-saved-route'
+
+/** 'TRANSIT' shows the itinerary list; 'BIKE'/'CAR' show that direct street route. */
+export type TravelMode = 'TRANSIT' | 'BIKE' | 'CAR'
 
 function loadSavedRoute(): { origin: GeocodeSuggestion | null; destination: GeocodeSuggestion | null } {
   try {
@@ -52,6 +55,11 @@ export interface UseRoutingReturn {
   results: RouteResult | null
   selectedIndex: number
   setSelectedIndex: (i: number) => void
+  /** Which way of making the trip is displayed: the transit results or a direct street route. */
+  travelMode: TravelMode
+  setTravelMode: (mode: TravelMode) => void
+  /** Fastest bike/car routes for the current trip (empty until a search returns them). */
+  alternatives: DirectAlternative[]
   loading: boolean
   error: string | null
   swapOriginDestination: () => void
@@ -80,6 +88,7 @@ export function useRouting(): UseRoutingReturn {
   const [arriveBy, setArriveBy] = useState(false)
   const [results, setResults] = useState<RouteResult | null>(null)
   const [selectedIndex, setSelectedIndex] = useState(0)
+  const [travelMode, setTravelMode] = useState<TravelMode>('TRANSIT')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   // Guards against overlapping searches resolving out of order: only the
@@ -142,6 +151,7 @@ export function useRouting(): UseRoutingReturn {
     setError(null)
     setResults(null)
     setSelectedIndex(0)
+    setTravelMode('TRANSIT')
     setPagingDirection(null)
     setPagingNotice(null)
     const resolvedTime = (time ?? new Date()).toISOString()
@@ -164,13 +174,20 @@ export function useRouting(): UseRoutingReturn {
       )
       if (seq !== searchSeqRef.current) return
       if (!data.itineraries || data.itineraries.length === 0) {
-        // Known conditions are stored as translation keys and localized at
-        // render, so they follow a language switch.
-        setError(
-          isDefaultOptions(optionsRef.current)
-            ? 'errors.noRoutes'
-            : 'errors.noRoutesFiltered'
-        )
+        if (data.alternatives && data.alternatives.length > 0) {
+          // No transit, but the trip is still makeable: show the fastest
+          // direct street route instead of a "no routes" dead end.
+          setResults(data)
+          setTravelMode(data.alternatives[0].mode)
+        } else {
+          // Known conditions are stored as translation keys and localized at
+          // render, so they follow a language switch.
+          setError(
+            isDefaultOptions(optionsRef.current)
+              ? 'errors.noRoutes'
+              : 'errors.noRoutesFiltered'
+          )
+        }
       } else {
         setResults(data)
       }
@@ -205,9 +222,12 @@ export function useRouting(): UseRoutingReturn {
       if (seq !== searchSeqRef.current) return
       const known = new Set(results.itineraries.map(itineraryKey))
       const fresh = data.itineraries.filter(itin => !known.has(itineraryKey(itin)))
+      // Direct bike/car routes only arrive with the first page — carry the
+      // existing ones through, or the comparison strip would vanish on paging.
       if (direction === 'earlier') {
         setResults({
           itineraries: [...fresh, ...results.itineraries],
+          alternatives: results.alternatives,
           previousPageCursor: data.previousPageCursor,
           nextPageCursor: results.nextPageCursor,
         })
@@ -216,6 +236,7 @@ export function useRouting(): UseRoutingReturn {
       } else {
         setResults({
           itineraries: [...results.itineraries, ...fresh],
+          alternatives: results.alternatives,
           previousPageCursor: results.previousPageCursor,
           nextPageCursor: data.nextPageCursor,
         })
@@ -263,10 +284,15 @@ export function useRouting(): UseRoutingReturn {
     doSearch(from, to, time, arrive)
   }, [doSearch])
 
+  const alternatives = useMemo(() => results?.alternatives ?? [], [results])
+
   const selectedItinerary = useMemo(() => {
+    if (travelMode !== 'TRANSIT') {
+      return alternatives.find(alt => alt.mode === travelMode)?.itinerary ?? null
+    }
     if (!results?.itineraries?.length) return null
     return results.itineraries[selectedIndex] || null
-  }, [results, selectedIndex])
+  }, [results, selectedIndex, travelMode, alternatives])
 
   return {
     origin, destination, setOrigin, setDestination,
@@ -274,6 +300,7 @@ export function useRouting(): UseRoutingReturn {
     swapOriginDestination,
     departureTime, setDepartureTime, arriveBy, setArriveBy,
     results, selectedIndex, setSelectedIndex,
+    travelMode, setTravelMode, alternatives,
     loading, error, search, initRoute, selectedItinerary,
     loadEarlier, loadLater,
     loadingEarlier: pagingDirection === 'earlier',

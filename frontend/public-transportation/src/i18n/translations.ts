@@ -46,10 +46,27 @@ const en = {
 
   // Transit modes
   'modes.WALK': 'Walk',
+  'modes.BIKE': 'Bike',
+  'modes.CAR': 'Car',
   'modes.BUS': 'Bus',
   'modes.RAIL': 'Train',
   'modes.TRAM': 'Tram',
   'modes.SUBWAY': 'Subway',
+
+  // Travel mode comparison strip
+  'compare.title': 'Compare ways to get there',
+  'compare.transit': 'Transit',
+  'compare.selectTransit': 'Show transit routes',
+  'compare.selectBike': 'Show the bike route',
+  'compare.selectCar': 'Show the car route',
+
+  // Direct (bike/car) route summary
+  'direct.bikeTitle': 'Bike route',
+  'direct.carTitle': 'Car route',
+  'direct.km': '{km} km',
+  'direct.arrive': 'Arrive at {time}',
+  'direct.carNote': 'Estimate — traffic not included',
+  'direct.bikeNote': 'Via streets and roads open to bikes',
 
   // Route results
   'results.searching': 'Searching routes...',
@@ -304,10 +321,25 @@ const he: Record<keyof typeof en, string> = {
   'options.tramLabel': 'רכבת קלה',
 
   'modes.WALK': 'הליכה',
+  'modes.BIKE': 'אופניים',
+  'modes.CAR': 'רכב',
   'modes.BUS': 'אוטובוס',
   'modes.RAIL': 'רכבת',
   'modes.TRAM': 'רכבת קלה',
   'modes.SUBWAY': 'רכבת תחתית',
+
+  'compare.title': 'השוואת דרכי הגעה',
+  'compare.transit': 'תחב"צ',
+  'compare.selectTransit': 'הצג מסלולי תחבורה ציבורית',
+  'compare.selectBike': 'הצג את מסלול האופניים',
+  'compare.selectCar': 'הצג את מסלול הרכב',
+
+  'direct.bikeTitle': 'מסלול אופניים',
+  'direct.carTitle': 'מסלול ברכב',
+  'direct.km': '{km} ק"מ',
+  'direct.arrive': 'הגעה ב-{time}',
+  'direct.carNote': 'הערכה — ללא עומסי תנועה',
+  'direct.bikeNote': 'דרך רחובות ודרכים הפתוחים לאופניים',
 
   'results.searching': 'מחפש מסלולים...',
   'results.noRoutes': 'לא נמצאו מסלולים בין המיקומים האלה',
