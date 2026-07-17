@@ -151,6 +151,15 @@ data class AppStrings(
     val dayShowTrip: String,
     val dayCaption: String,
     val dayTruncated: (Int) -> String,
+    val departureBoard: String,
+    val boardLive: String,
+    val boardNow: String,
+    val boardMinUnit: String,
+    val boardLoading: String,
+    val boardNone: String,
+    val boardClose: String,
+    val boardFilterNote: (String) -> String,
+    val boardStop: (String) -> String,
 )
 
 val EnStrings = AppStrings(
@@ -309,6 +318,15 @@ val EnStrings = AppStrings(
     dayShowTrip = "Show trip",
     dayCaption = "Every departure today · bar height = trip duration (min) · tap a bar",
     dayTruncated = { n -> "Showing the first $n departures of the day" },
+    departureBoard = "Departure Board",
+    boardLive = "LIVE",
+    boardNow = "NOW",
+    boardMinUnit = "min",
+    boardLoading = "Loading departures...",
+    boardNone = "No departures right now",
+    boardClose = "Close board",
+    boardFilterNote = { line -> "Line $line only" },
+    boardStop = { code -> "Stop $code" },
 )
 
 val HeStrings = AppStrings(
@@ -467,6 +485,15 @@ val HeStrings = AppStrings(
     dayShowTrip = "הצג מסלול",
     dayCaption = "כל היציאות היום · גובה עמודה = משך הנסיעה (דק') · הקש על עמודה",
     dayTruncated = { n -> "מוצגות $n היציאות הראשונות של היום" },
+    departureBoard = "לוח יציאות",
+    boardLive = "חי",
+    boardNow = "עכשיו",
+    boardMinUnit = "דק׳",
+    boardLoading = "טוען יציאות...",
+    boardNone = "אין יציאות כרגע",
+    boardClose = "סגור לוח",
+    boardFilterNote = { line -> "קו $line בלבד" },
+    boardStop = { code -> "תחנה $code" },
 )
 
 val LocalAppStrings = compositionLocalOf { EnStrings }

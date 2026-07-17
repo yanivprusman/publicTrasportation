@@ -130,6 +130,7 @@ fun MainScreen(
     var selectedLine by remember { mutableStateOf<String?>(null) }
     var lineShapeData by remember { mutableStateOf(LineShapeData()) }
     var journeyMode by remember { mutableStateOf(false) }
+    var boardMode by remember { mutableStateOf(false) }
 
     val preSuggestions = remember(recentSearchesVersion, strings) {
         buildList {
@@ -582,6 +583,10 @@ fun MainScreen(
                                             )
                                             favoriteStations = settingsStore.getFavoriteStations()
                                         }
+                                    },
+                                    onOpenBoard = {
+                                        keyboardController?.hide()
+                                        boardMode = true
                                     }
                                 )
                             }
@@ -728,6 +733,14 @@ fun MainScreen(
             JourneyNavigator(
                 itinerary = journeyItinerary,
                 onClose = { journeyMode = false }
+            )
+        }
+
+        if (boardMode) {
+            com.automatelinux.pt.ui.arrivals.DepartureBoardScreen(
+                state = arrivalsState,
+                getDestinationName = { arrivalsViewModel.getDestinationName(it) },
+                onClose = { boardMode = false }
             )
         }
 

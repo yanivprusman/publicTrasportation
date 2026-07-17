@@ -14,10 +14,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
+import androidx.compose.material.icons.filled.DepartureBoard
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.NearMe
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -52,6 +55,7 @@ fun ArrivalsPanel(
     favoriteStations: List<Pair<String, String>> = emptyList(),
     isStationFavorite: Boolean = false,
     onToggleFavoriteStation: (() -> Unit)? = null,
+    onOpenBoard: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val strings = LocalAppStrings.current
@@ -81,6 +85,28 @@ fun ArrivalsPanel(
             isStationFavorite = isStationFavorite,
             onToggleFavoriteStation = onToggleFavoriteStation
         )
+
+        if (onOpenBoard != null && state.stationCode.isNotEmpty()) {
+            Button(
+                onClick = onOpenBoard,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 4.dp),
+                shape = RoundedCornerShape(10.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF14110A),
+                    contentColor = Color(0xFFFFB300)
+                )
+            ) {
+                Icon(
+                    Icons.Default.DepartureBoard,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(strings.departureBoard, fontWeight = FontWeight.Bold)
+            }
+        }
 
         StationArrivals(
             visits = state.visits,
