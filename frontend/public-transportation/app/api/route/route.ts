@@ -136,6 +136,150 @@ function transformMotisResponse(motisData: MotisPlanResponse, includeDirect: boo
   };
 }
 
+// --- Trips with an intermediate stop ---------------------------------------
+// MOTIS plans point-to-point only; a trip through a via place is built by
+// planning the two halves and pairing them: each first-half arrival is matched
+// with the earliest second-half connection it can catch (mirrored for
+// arrive-by searches).
+
+function isWalkOnly(itin: MotisItinerary): boolean {
+  return (itin.legs || []).every(leg => !leg.mode || leg.mode === 'WALK');
+}
+
+// Walk-only itineraries are schedule-independent — MOTIS just anchors them to
+// the query time — so they can be re-anchored to line up with the other half.
+function shiftItinerary(itin: MotisItinerary, deltaMs: number): MotisItinerary {
+  const shift = (iso?: string) => {
+    if (!iso) return iso;
+    const ms = Date.parse(iso);
+    return isNaN(ms) ? iso : new Date(ms + deltaMs).toISOString();
+  };
+  return {
+    ...itin,
+    startTime: shift(itin.startTime),
+    endTime: shift(itin.endTime),
+    legs: (itin.legs || []).map(leg => ({
+      ...leg,
+      startTime: shift(leg.startTime),
+      endTime: shift(leg.endTime),
+    })),
+  };
+}
+
+function combineItineraries(first: MotisItinerary, second: MotisItinerary): MotisItinerary {
+  const legs = [...(first.legs || []), ...(second.legs || [])];
+  const transitLegCount = legs.filter(leg => leg.mode && leg.mode !== 'WALK').length;
+  return {
+    startTime: first.startTime,
+    endTime: second.endTime,
+    duration: Math.round(
+      (Date.parse(second.endTime || '') - Date.parse(first.startTime || '')) / 1000
+    ),
+    transfers: Math.max(0, transitLegCount - 1),
+    legs,
+  };
+}
+
+// One half of a via trip. Direct walk itineraries are merged into the
+// candidates: walking a short half is a legitimate connection.
+async function planHalf(
+  fromPlace: string,
+  toPlace: string,
+  time: string,
+  arriveBy: boolean,
+  transitModes: string[] | null,
+  maxWalkSeconds: number | null
+): Promise<MotisItinerary[]> {
+  const params = new URLSearchParams({
+    fromPlace,
+    toPlace,
+    time,
+    arriveBy: String(arriveBy),
+    numItineraries: '5',
+  });
+  if (transitModes) params.set('transitModes', transitModes.join(','));
+  if (maxWalkSeconds !== null) {
+    params.set('maxPreTransitTime', String(maxWalkSeconds));
+    params.set('maxPostTransitTime', String(maxWalkSeconds));
+  }
+  const response = await fetch(`${MOTIS_BASE}/api/v1/plan?${params}`, {
+    signal: AbortSignal.timeout(15000),
+  });
+  if (!response.ok) {
+    throw new Error(`MOTIS returned ${response.status}`);
+  }
+  const data: MotisPlanResponse = await response.json();
+  return [...(data.itineraries || []), ...(data.direct || [])];
+}
+
+async function planViaTrip(
+  fromPlace: string,
+  viaPlace: string,
+  toPlace: string,
+  time: string,
+  arriveBy: boolean,
+  transitModes: string[] | null,
+  maxWalkSeconds: number | null
+): Promise<MotisItinerary[]> {
+  const combined: MotisItinerary[] = [];
+  if (!arriveBy) {
+    const firstHalves = await planHalf(fromPlace, viaPlace, time, false, transitModes, maxWalkSeconds);
+    const arrivals = firstHalves.map(itin => Date.parse(itin.endTime || '')).filter(ms => !isNaN(ms));
+    if (arrivals.length === 0) return [];
+    // Query the second half once, from the earliest possible arrival at the
+    // via point; later first halves pick a later departure out of the same set.
+    const earliestArrival = new Date(Math.min(...arrivals)).toISOString();
+    const secondHalves = await planHalf(viaPlace, toPlace, earliestArrival, false, transitModes, maxWalkSeconds);
+    for (const first of firstHalves) {
+      const arriveVia = Date.parse(first.endTime || '');
+      if (isNaN(arriveVia)) continue;
+      let best: MotisItinerary | null = null;
+      let bestEnd = Infinity;
+      for (const second of secondHalves) {
+        const candidate = isWalkOnly(second)
+          ? shiftItinerary(second, arriveVia - Date.parse(second.startTime || ''))
+          : second;
+        const depart = Date.parse(candidate.startTime || '');
+        const end = Date.parse(candidate.endTime || '');
+        if (isNaN(depart) || isNaN(end) || depart < arriveVia) continue;
+        if (end < bestEnd) {
+          best = candidate;
+          bestEnd = end;
+        }
+      }
+      if (best) combined.push(combineItineraries(first, best));
+    }
+    return combined;
+  }
+  // Arrive-by: plan the second half backwards from the target time, then the
+  // first half backwards from the latest usable via departure.
+  const secondHalves = await planHalf(viaPlace, toPlace, time, true, transitModes, maxWalkSeconds);
+  const departures = secondHalves.map(itin => Date.parse(itin.startTime || '')).filter(ms => !isNaN(ms));
+  if (departures.length === 0) return [];
+  const latestDeparture = new Date(Math.max(...departures)).toISOString();
+  const firstHalves = await planHalf(fromPlace, viaPlace, latestDeparture, true, transitModes, maxWalkSeconds);
+  for (const second of secondHalves) {
+    const departVia = Date.parse(second.startTime || '');
+    if (isNaN(departVia)) continue;
+    let best: MotisItinerary | null = null;
+    let bestStart = -Infinity;
+    for (const first of firstHalves) {
+      const candidate = isWalkOnly(first)
+        ? shiftItinerary(first, departVia - Date.parse(first.endTime || ''))
+        : first;
+      const start = Date.parse(candidate.startTime || '');
+      const end = Date.parse(candidate.endTime || '');
+      if (isNaN(start) || isNaN(end) || end > departVia) continue;
+      if (start > bestStart) {
+        best = candidate;
+        bestStart = start;
+      }
+    }
+    if (best) combined.push(combineItineraries(best, second));
+  }
+  return combined;
+}
+
 // Direct street itineraries (one per requested mode) come back unordered and
 // occasionally with more than one option per mode; keep only the fastest
 // bike and car route, tagged with the mode and total street distance.
@@ -165,6 +309,7 @@ export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const from = searchParams.get('from');
   const to = searchParams.get('to');
+  const via = searchParams.get('via');
   const time = searchParams.get('time');
   const arriveBy = searchParams.get('arriveBy');
   const pageCursor = searchParams.get('pageCursor');
@@ -223,6 +368,66 @@ export async function GET(request: NextRequest) {
   const timeBucket = isNaN(routeTimeMs)
     ? routeTime
     : new Date(routeTimeMs - (routeTimeMs % 60000)).toISOString();
+
+  // Trips through an intermediate stop are stitched from two MOTIS queries and
+  // have no paging cursors or street alternatives — handled as their own branch.
+  if (via) {
+    if (pageCursor) {
+      return NextResponse.json(
+        { error: 'Paging is not supported for trips with an intermediate stop' },
+        { status: 400 }
+      );
+    }
+    const [viaLat, viaLon] = via.split(',').map(Number);
+    if (isNaN(viaLat) || isNaN(viaLon)) {
+      return NextResponse.json(
+        { error: 'Invalid coordinate format. Use: lat,lon' },
+        { status: 400 }
+      );
+    }
+    const viaCacheKey = `via|${from}|${via}|${to}|${timeBucket}|${isArriveBy}|${transitModes?.join(',') || ''}|${maxWalkSeconds || ''}`;
+    const viaCached = getCachedRoute(viaCacheKey);
+    if (viaCached) {
+      return NextResponse.json(viaCached);
+    }
+    await ensureMotis();
+    try {
+      const combined = await planViaTrip(
+        `${fromLat},${fromLon}`,
+        `${viaLat},${viaLon}`,
+        `${toLat},${toLon}`,
+        routeTime,
+        isArriveBy,
+        transitModes,
+        maxWalkSeconds
+      );
+      const seen = new Set<string>();
+      const itineraries = combined
+        .sort((a, b) =>
+          (Date.parse(a.endTime || '') - Date.parse(b.endTime || '')) ||
+          ((a.duration || 0) - (b.duration || 0))
+        )
+        .filter(itin => {
+          const key = `${itineraryFingerprint(itin)}|${itin.startTime}|${itin.endTime}`;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        })
+        .slice(0, 6)
+        .map(transformItinerary);
+      const result = { itineraries };
+      setCachedRoute(viaCacheKey, result);
+      return NextResponse.json(result);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error('Error fetching via route from MOTIS:', message);
+      return NextResponse.json(
+        { error: 'Failed to fetch route', message },
+        { status: 502 }
+      );
+    }
+  }
+
   const cacheKey = `${from}|${to}|${timeBucket}|${isArriveBy}|${pageCursor || ''}|${transitModes?.join(',') || ''}|${maxWalkSeconds || ''}`;
 
   const cached = getCachedRoute(cacheKey);

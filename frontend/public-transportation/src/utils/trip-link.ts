@@ -3,6 +3,8 @@ import type { GeocodeSuggestion } from '../types'
 export interface SharedTrip {
   origin: GeocodeSuggestion
   destination: GeocodeSuggestion
+  /** Intermediate stop the trip passes through, when one was set. */
+  via?: GeocodeSuggestion | null
   /** null = "leave now" — resolved when the recipient's search runs */
   departureTime: Date | null
   arriveBy: boolean
@@ -30,6 +32,10 @@ export function buildTripLink(trip: SharedTrip): string {
   params.set('fromName', trip.origin.name)
   params.set('to', `${trip.destination.lat.toFixed(5)},${trip.destination.lon.toFixed(5)}`)
   params.set('toName', trip.destination.name)
+  if (trip.via) {
+    params.set('via', `${trip.via.lat.toFixed(5)},${trip.via.lon.toFixed(5)}`)
+    params.set('viaName', trip.via.name)
+  }
   if (trip.departureTime) params.set('time', trip.departureTime.toISOString())
   if (trip.arriveBy) params.set('arriveBy', '1')
   return `${window.location.origin}${window.location.pathname}?${params.toString()}`
@@ -43,6 +49,15 @@ export function parseTripLink(params: URLSearchParams): SharedTrip | null {
   const originName = params.get('fromName')?.trim() || `${from.lat.toFixed(4)}, ${from.lon.toFixed(4)}`
   const destinationName = params.get('toName')?.trim() || `${to.lat.toFixed(4)}, ${to.lon.toFixed(4)}`
 
+  const viaCoords = parseLatLon(params.get('via'))
+  const via: GeocodeSuggestion | null = viaCoords
+    ? {
+        name: params.get('viaName')?.trim() || `${viaCoords.lat.toFixed(4)}, ${viaCoords.lon.toFixed(4)}`,
+        lat: viaCoords.lat,
+        lon: viaCoords.lon,
+      }
+    : null
+
   // An unparseable time means the sender's "depart at" can't be honored;
   // "leave now" is the only meaningful reading of the link at that point.
   let departureTime: Date | null = null
@@ -55,6 +70,7 @@ export function parseTripLink(params: URLSearchParams): SharedTrip | null {
   return {
     origin: { name: originName, lat: from.lat, lon: from.lon },
     destination: { name: destinationName, lat: to.lat, lon: to.lon },
+    via,
     departureTime,
     arriveBy: params.get('arriveBy') === '1',
   }

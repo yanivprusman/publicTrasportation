@@ -62,6 +62,8 @@ interface MapViewProps {
   calculateRoute: boolean
   onRouteCalculated: () => void
   onStartingPointSet: (pos: Coordinates) => void
+  viaPoint?: Coordinates | null
+  viaName?: string
   selectedItinerary?: Itinerary | null
   onRouteFrom: (lat: number, lon: number) => void
   onRouteTo: (lat: number, lon: number) => void
@@ -96,6 +98,8 @@ function MapView({
   calculateRoute,
   onRouteCalculated,
   onStartingPointSet,
+  viaPoint = null,
+  viaName = '',
   selectedItinerary = null,
   onRouteFrom,
   onRouteTo,
@@ -281,6 +285,8 @@ function MapView({
           positionAddress={positionAddress}
           destination={destination}
           destinationAddress={destinationAddress}
+          viaPoint={viaPoint}
+          viaName={viaName}
           mapCenter={mapCenter}
           vehicleMarkers={vehicleMarkers}
           stops={stops}

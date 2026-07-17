@@ -8,7 +8,7 @@ import styles from './LocationInput.module.css'
 interface LocationInputProps {
   label: string
   /** Stable English identifier for data-id attributes; label is localized. */
-  field: 'from' | 'to'
+  field: 'from' | 'to' | 'via'
   value: GeocodeSuggestion | null
   onChange: (place: GeocodeSuggestion | null) => void
   placeholder?: string

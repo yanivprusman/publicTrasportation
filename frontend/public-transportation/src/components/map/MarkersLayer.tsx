@@ -1,5 +1,5 @@
 import { Marker, Popup } from 'react-leaflet'
-import { originIcon, destinationIcon, centerIcon, createBusIcon, stopIcon } from './MapMarkers'
+import { originIcon, destinationIcon, viaIcon, centerIcon, createBusIcon, stopIcon } from './MapMarkers'
 import { formatTime } from '../../utils/time-format'
 import { formatStopDistance } from '../../utils/distance'
 import { useI18n } from '../../i18n'
@@ -18,6 +18,8 @@ interface MarkersLayerProps {
   positionAddress: string
   destination: Coordinates | null
   destinationAddress: string
+  viaPoint?: Coordinates | null
+  viaName?: string
   mapCenter: Coordinates
   vehicleMarkers: VehicleMarker[]
   stops: StopInfo[]
@@ -30,6 +32,8 @@ const MarkersLayer = ({
   positionAddress,
   destination,
   destinationAddress,
+  viaPoint = null,
+  viaName = '',
   mapCenter,
   vehicleMarkers,
   stops,
@@ -45,6 +49,17 @@ const MarkersLayer = ({
           {t('popup.coordinates')} {position[0].toFixed(6)}, {position[1].toFixed(6)}
         </Popup>
       </Marker>
+
+      {viaPoint && (
+        <Marker position={viaPoint} icon={viaIcon}>
+          <Popup>
+            <div>
+              <strong>{t('popup.via')}</strong> {viaName}<br/>
+              <strong>{t('popup.coordinates')}</strong> {viaPoint[0].toFixed(6)}, {viaPoint[1].toFixed(6)}
+            </div>
+          </Popup>
+        </Marker>
+      )}
 
       {destination && (
         <Marker position={destination} icon={destinationIcon}>

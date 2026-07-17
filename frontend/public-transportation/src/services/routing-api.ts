@@ -13,12 +13,14 @@ export async function searchRoute(
   time?: string,
   arriveBy?: boolean,
   pageCursor?: string,
-  options?: RouteQueryOptions
+  options?: RouteQueryOptions,
+  via?: { lat: number; lon: number } | null
 ): Promise<RouteResult> {
   const params = new URLSearchParams({
     from: `${from.lat},${from.lon}`,
     to: `${to.lat},${to.lon}`,
   })
+  if (via) params.set('via', `${via.lat},${via.lon}`)
   if (time) params.set('time', time)
   if (arriveBy) params.set('arriveBy', 'true')
   if (pageCursor) params.set('pageCursor', pageCursor)

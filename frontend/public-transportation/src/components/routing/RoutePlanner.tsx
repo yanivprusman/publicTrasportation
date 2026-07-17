@@ -82,6 +82,19 @@ export default function RoutePlanner({
   const [gpsLoading, setGpsLoading] = useState(false)
   const [gpsError, setGpsError] = useState<string | null>(null)
   const [dayOverviewOpen, setDayOverviewOpen] = useState(false)
+  const [viaOpen, setViaOpen] = useState(!!routing.via)
+
+  // A via arriving from outside the planner (shared link restore, persisted
+  // route) must surface its input row, or the trip silently passes through an
+  // invisible stop.
+  useEffect(() => {
+    if (routing.via) setViaOpen(true)
+  }, [routing.via])
+
+  const handleRemoveVia = useCallback(() => {
+    routing.setVia(null)
+    setViaOpen(false)
+  }, [routing])
 
   // Tapping a departure on the day chart loads that exact trip into the main
   // results, with the time picker synced to the chosen departure.
@@ -234,6 +247,29 @@ export default function RoutePlanner({
                       isSaved={!!routing.origin && places.isSaved(routing.origin)}
                       onToggleSave={routing.origin ? () => places.toggleSave(routing.origin!) : undefined}
                     />
+                    {viaOpen && (
+                      <div className={styles.viaRow}>
+                        <div className={styles.viaField}>
+                          <LocationInput
+                            label={t('planner.via')}
+                            field="via"
+                            value={routing.via}
+                            onChange={routing.setVia}
+                            placeholder={t('planner.viaPlaceholder')}
+                          />
+                        </div>
+                        <button
+                          className={styles.removeViaBtn}
+                          onClick={handleRemoveVia}
+                          type="button"
+                          title={t('planner.removeStop')}
+                          aria-label={t('planner.removeStop')}
+                          data-id="remove-via-stop"
+                        >
+                          &times;
+                        </button>
+                      </div>
+                    )}
                     <LocationInput
                       label={t('planner.to')}
                       field="to"
@@ -255,6 +291,16 @@ export default function RoutePlanner({
                     &#8693;
                   </button>
                 </div>
+                {!viaOpen && (
+                  <button
+                    className={styles.addViaBtn}
+                    onClick={() => setViaOpen(true)}
+                    type="button"
+                    data-id="add-via-stop"
+                  >
+                    + {t('planner.addStop')}
+                  </button>
+                )}
                 {gpsError && (
                   <div className={styles.gpsError} role="alert" data-id="gps-error">
                     {tm(gpsError)}
@@ -302,8 +348,10 @@ export default function RoutePlanner({
                 />
               )}
 
+              {/* The day-overview sweep plans plain A→B trips; hide it for via
+                  trips rather than chart departures that skip the stop. */}
               {routing.travelMode === 'TRANSIT' && routing.results && routing.results.itineraries.length > 0 &&
-                routing.origin && routing.destination && (
+                routing.origin && routing.destination && !routing.via && (
                 <>
                   <button
                     className={`${styles.dayToggleBtn} ${dayOverviewOpen ? styles.dayToggleBtnActive : ''}`}
@@ -353,6 +401,7 @@ export default function RoutePlanner({
                     trip={routing.origin && routing.destination ? {
                       origin: routing.origin,
                       destination: routing.destination,
+                      via: routing.via,
                       departureTime: routing.departureTime,
                       arriveBy: routing.arriveBy,
                     } : null}

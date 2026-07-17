@@ -60,6 +60,9 @@ function AppInner() {
   const destination: Coordinates = routing.destination
     ? [routing.destination.lat, routing.destination.lon]
     : defaultDestination
+  const viaPoint: Coordinates | null = routing.via
+    ? [routing.via.lat, routing.via.lon]
+    : null
   const [lineFilter, setLineFilter] = useSessionState('lineFilter', '')
   // Kiosk board mode survives a reload (sessionStorage) so a phone or tablet
   // propped up as a station display comes back as a board, not the planner.
@@ -88,6 +91,7 @@ function AppInner() {
       routing.initRoute(sharedTrip.origin, sharedTrip.destination, {
         departureTime: sharedTrip.departureTime,
         arriveBy: sharedTrip.arriveBy,
+        via: sharedTrip.via,
       })
       setActiveTab('route')
       setSheetState('expanded')
@@ -235,6 +239,8 @@ function AppInner() {
         onDestinationSet={(coords: Coordinates) => routing.setDestinationFromCoords(coords[0], coords[1])}
         startingPoint={startingPoint}
         onStartingPointSet={(coords: Coordinates) => routing.setOriginFromCoords(coords[0], coords[1])}
+        viaPoint={viaPoint}
+        viaName={routing.via?.name || ''}
         center={mapCenter}
         defaultStartingPoint={defaultStartingPoint}
         defaultDestination={defaultDestination}

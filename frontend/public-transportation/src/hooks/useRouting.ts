@@ -10,12 +10,12 @@ const ROUTE_STORAGE_KEY = 'pt-saved-route'
 /** 'TRANSIT' shows the itinerary list; 'BIKE'/'CAR' show that direct street route. */
 export type TravelMode = 'TRANSIT' | 'BIKE' | 'CAR'
 
-function loadSavedRoute(): { origin: GeocodeSuggestion | null; destination: GeocodeSuggestion | null } {
+function loadSavedRoute(): { origin: GeocodeSuggestion | null; destination: GeocodeSuggestion | null; via?: GeocodeSuggestion | null } {
   try {
     const saved = localStorage.getItem(ROUTE_STORAGE_KEY)
     if (saved) return JSON.parse(saved)
   } catch {}
-  return { origin: null, destination: null }
+  return { origin: null, destination: null, via: null }
 }
 
 // Identifies an itinerary across pages: MOTIS pages can overlap at the edges,
@@ -43,8 +43,11 @@ async function reverseGeocode(lat: number, lon: number): Promise<string> {
 export interface UseRoutingReturn {
   origin: GeocodeSuggestion | null
   destination: GeocodeSuggestion | null
+  /** Optional intermediate stop the trip must pass through. */
+  via: GeocodeSuggestion | null
   setOrigin: (place: GeocodeSuggestion | null) => void
   setDestination: (place: GeocodeSuggestion | null) => void
+  setVia: (place: GeocodeSuggestion | null) => void
   setOriginFromCoords: (lat: number, lon: number, name?: string) => void
   setDestinationFromCoords: (lat: number, lon: number, name?: string) => void
   /** null = "leave now": the actual time is resolved when the search runs */
@@ -64,7 +67,7 @@ export interface UseRoutingReturn {
   error: string | null
   swapOriginDestination: () => void
   search: () => Promise<void>
-  initRoute: (from: GeocodeSuggestion, to: GeocodeSuggestion, opts?: { departureTime?: Date | null; arriveBy?: boolean }) => void
+  initRoute: (from: GeocodeSuggestion, to: GeocodeSuggestion, opts?: { departureTime?: Date | null; arriveBy?: boolean; via?: GeocodeSuggestion | null }) => void
   selectedItinerary: Itinerary | null
   /** Load the page of trips departing before the earliest shown one. */
   loadEarlier: () => Promise<void>
@@ -82,6 +85,7 @@ export function useRouting(): UseRoutingReturn {
   const saved = loadSavedRoute()
   const [origin, setOrigin] = useState<GeocodeSuggestion | null>(saved.origin)
   const [destination, setDestination] = useState<GeocodeSuggestion | null>(saved.destination)
+  const [via, setVia] = useState<GeocodeSuggestion | null>(saved.via ?? null)
   // null = "leave now". Resolving to a concrete Date only at search time keeps
   // "Now" searches current — a Date captured at mount goes stale while the tab sits open.
   const [departureTime, setDepartureTime] = useState<Date | null>(null)
@@ -102,6 +106,7 @@ export function useRouting(): UseRoutingReturn {
   const lastQueryRef = useRef<{
     from: { lat: number; lon: number }
     to: { lat: number; lon: number }
+    via: { lat: number; lon: number } | null
     time: string
     arriveBy: boolean
     options: RouteQueryOptions
@@ -112,12 +117,12 @@ export function useRouting(): UseRoutingReturn {
   const optionsRef = useRef(routeOptions.options)
   optionsRef.current = routeOptions.options
 
-  // Persist origin/destination to localStorage
+  // Persist origin/destination/via to localStorage
   useEffect(() => {
     try {
-      localStorage.setItem(ROUTE_STORAGE_KEY, JSON.stringify({ origin, destination }))
+      localStorage.setItem(ROUTE_STORAGE_KEY, JSON.stringify({ origin, destination, via }))
     } catch {}
-  }, [origin, destination])
+  }, [origin, destination, via])
 
   const setOriginFromCoords = useCallback((lat: number, lon: number, name?: string) => {
     setOrigin({ name: name || `${lat.toFixed(4)}, ${lon.toFixed(4)}`, lat, lon })
@@ -143,6 +148,7 @@ export function useRouting(): UseRoutingReturn {
   const doSearch = useCallback(async (
     from: GeocodeSuggestion,
     to: GeocodeSuggestion,
+    stopAt: GeocodeSuggestion | null,
     time: Date | null,
     arrive: boolean
   ) => {
@@ -159,6 +165,7 @@ export function useRouting(): UseRoutingReturn {
     lastQueryRef.current = {
       from: { lat: from.lat, lon: from.lon },
       to: { lat: to.lat, lon: to.lon },
+      via: stopAt ? { lat: stopAt.lat, lon: stopAt.lon } : null,
       time: resolvedTime,
       arriveBy: arrive,
       options: queryOptions,
@@ -170,7 +177,8 @@ export function useRouting(): UseRoutingReturn {
         resolvedTime,
         arrive,
         undefined,
-        queryOptions
+        queryOptions,
+        stopAt ? { lat: stopAt.lat, lon: stopAt.lon } : null
       )
       if (seq !== searchSeqRef.current) return
       if (!data.itineraries || data.itineraries.length === 0) {
@@ -204,8 +212,8 @@ export function useRouting(): UseRoutingReturn {
       setError('errors.setBoth')
       return
     }
-    doSearch(origin, destination, departureTime, arriveBy)
-  }, [origin, destination, departureTime, arriveBy, doSearch])
+    doSearch(origin, destination, via, departureTime, arriveBy)
+  }, [origin, destination, via, departureTime, arriveBy, doSearch])
 
   const loadPage = useCallback(async (direction: 'earlier' | 'later') => {
     const query = lastQueryRef.current
@@ -218,7 +226,7 @@ export function useRouting(): UseRoutingReturn {
     setPagingDirection(direction)
     setPagingNotice(null)
     try {
-      const data = await searchRoute(query.from, query.to, query.time, query.arriveBy, cursor, query.options)
+      const data = await searchRoute(query.from, query.to, query.time, query.arriveBy, cursor, query.options, query.via)
       if (seq !== searchSeqRef.current) return
       const known = new Set(results.itineraries.map(itineraryKey))
       const fresh = data.itineraries.filter(itin => !known.has(itineraryKey(itin)))
@@ -264,24 +272,28 @@ export function useRouting(): UseRoutingReturn {
     if (routeOptions.options === optionsAtLastSearchRef.current) return
     optionsAtLastSearchRef.current = routeOptions.options
     if (!lastQueryRef.current || !origin || !destination) return
-    doSearch(origin, destination, departureTime, arriveBy)
+    doSearch(origin, destination, via, departureTime, arriveBy)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [routeOptions.options])
 
   const initRoute = useCallback((
     from: GeocodeSuggestion,
     to: GeocodeSuggestion,
-    opts?: { departureTime?: Date | null; arriveBy?: boolean }
+    opts?: { departureTime?: Date | null; arriveBy?: boolean; via?: GeocodeSuggestion | null }
   ) => {
     const time = opts?.departureTime ?? null
     const arrive = opts?.arriveBy ?? false
+    // Callers that don't carry a via (saved routes, day-overview picks) mean a
+    // plain A→B trip — clear any leftover stop so it can't alter their search.
+    const stopAt = opts?.via ?? null
     setOrigin(from)
     setDestination(to)
+    setVia(stopAt)
     // Sync the time picker to what this search actually uses, so a trip opened
     // from a shared link (or a saved route) shows the real settings, not stale ones.
     setDepartureTime(time)
     setArriveBy(arrive)
-    doSearch(from, to, time, arrive)
+    doSearch(from, to, stopAt, time, arrive)
   }, [doSearch])
 
   const alternatives = useMemo(() => results?.alternatives ?? [], [results])
@@ -295,7 +307,7 @@ export function useRouting(): UseRoutingReturn {
   }, [results, selectedIndex, travelMode, alternatives])
 
   return {
-    origin, destination, setOrigin, setDestination,
+    origin, destination, via, setOrigin, setDestination, setVia,
     setOriginFromCoords, setDestinationFromCoords,
     swapOriginDestination,
     departureTime, setDepartureTime, arriveBy, setArriveBy,

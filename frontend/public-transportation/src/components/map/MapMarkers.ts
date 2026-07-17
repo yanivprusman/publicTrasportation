@@ -112,6 +112,61 @@ export const destinationIcon = L.divIcon({
     </div>`,
 })
 
+// Intermediate-stop marker: a violet ring pin, visually between the origin's
+// cyan pulse and the destination's orange gem.
+export const viaIcon = L.divIcon({
+  className: 'via-marker',
+  iconSize: [28, 36],
+  iconAnchor: [14, 36],
+  popupAnchor: [0, -38],
+  html: `
+    <style>
+      .via-pin-container {
+        position: relative;
+        width: 28px;
+        height: 36px;
+        filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.35));
+      }
+      .via-pin-head {
+        position: absolute;
+        top: 0;
+        left: 50%;
+        width: 20px;
+        height: 20px;
+        margin-left: -10px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #b388ff 0%, #6a1b9a 60%, #9575cd 100%);
+        border: 2.5px solid #fff;
+        box-shadow: 0 0 8px 2px rgba(126, 87, 194, 0.4);
+      }
+      .via-pin-dot {
+        position: absolute;
+        top: 8px;
+        left: 50%;
+        width: 6px;
+        height: 6px;
+        margin-left: -3px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.9);
+      }
+      .via-pin-stem {
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        width: 3px;
+        height: 15px;
+        margin-left: -1.5px;
+        background: linear-gradient(to bottom, #6a1b9a, #4a148c);
+        border-radius: 0 0 1.5px 1.5px;
+      }
+    </style>
+    <div class="via-pin-container">
+      <div class="via-pin-stem"></div>
+      <div class="via-pin-head"></div>
+      <div class="via-pin-dot"></div>
+    </div>`,
+})
+
 export const centerIcon = new L.Icon({
   iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png',
   iconRetinaUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',

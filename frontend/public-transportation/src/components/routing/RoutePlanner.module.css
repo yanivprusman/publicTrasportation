@@ -80,6 +80,66 @@
   cursor: not-allowed;
 }
 
+.viaRow {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.viaField {
+  flex: 1;
+  min-width: 0;
+}
+
+.removeViaBtn {
+  width: 28px;
+  height: 28px;
+  margin-bottom: 5px;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--surface-alt);
+  color: var(--text-secondary);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s, transform 0.1s;
+}
+
+.removeViaBtn:hover {
+  background: var(--control-hover);
+  color: var(--text-primary);
+}
+
+.removeViaBtn:active {
+  transform: scale(0.9);
+}
+
+.addViaBtn {
+  align-self: flex-start;
+  padding: 4px 8px;
+  margin-top: 2px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--accent-text);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.addViaBtn:hover {
+  background: var(--surface-hover);
+}
+
+.addViaBtn:active {
+  transform: scale(0.96);
+}
+
 .gpsError {
   font-size: 12px;
   color: var(--danger-text);
