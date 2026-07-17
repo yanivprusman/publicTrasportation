@@ -12,6 +12,7 @@ interface TransportControlsProps {
   setLineFilter: (filter: string) => void
   showVehicleMarkers: boolean
   setShowVehicleMarkers: (show: boolean) => void
+  onOpenBoard: () => void
 }
 
 const searchFn = (query: string) => searchStops(query)
@@ -24,6 +25,7 @@ function TransportControls({
   setLineFilter,
   showVehicleMarkers,
   setShowVehicleMarkers,
+  onOpenBoard,
 }: TransportControlsProps) {
   const { t } = useI18n()
   const [agoText, setAgoText] = useState('')
@@ -117,6 +119,15 @@ function TransportControls({
           {t('arrivals.vehicles')}
         </label>
       </div>
+      <button
+        type="button"
+        className={styles.boardBtn}
+        onClick={onOpenBoard}
+        data-id="open-board-mode"
+      >
+        <span className={styles.boardBtnIcon}>▦</span>
+        {t('board.open')}
+      </button>
     </div>
   )
 }

@@ -134,3 +134,36 @@
   white-space: nowrap;
   margin-inline-start: auto;
 }
+
+/* Amber-on-black entry point that previews the kiosk board's look */
+.boardBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid #b57e00;
+  border-radius: 8px;
+  background: #0d0c08;
+  color: #ffb300;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: filter 0.15s ease, transform 0.05s ease;
+}
+
+.boardBtn:hover {
+  filter: brightness(1.35);
+}
+
+.boardBtn:active {
+  transform: scale(0.98);
+}
+
+.boardBtnIcon {
+  font-size: 15px;
+  line-height: 1;
+}

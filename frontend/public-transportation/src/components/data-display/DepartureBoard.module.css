@@ -1,0 +1,275 @@
+/* Kiosk departure board — deliberately always amber-on-black, in both app
+   themes, to read like the LED boards at real stations. */
+
+.board {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  background: #070707;
+  color: #ffb300;
+  animation: boardFadeIn 0.18s ease-out;
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes boardFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 18px;
+  border-bottom: 2px solid #2a2005;
+  background: #0d0c08;
+}
+
+.stationInfo {
+  min-width: 0;
+}
+
+.stationName {
+  font-size: clamp(20px, 4.5vw, 34px);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 0 0 12px rgba(255, 179, 0, 0.35);
+}
+
+.stationMeta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 2px;
+  font-size: 13px;
+  color: #8a6a10;
+}
+
+.filterChip {
+  border: 1px solid #8a6a10;
+  border-radius: 999px;
+  padding: 1px 10px;
+  color: #ffb300;
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-shrink: 0;
+}
+
+.liveBadge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: #ff5252;
+}
+
+.liveDot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #ff5252;
+  box-shadow: 0 0 8px rgba(255, 82, 82, 0.8);
+  animation: livePulse 1.4s ease-in-out infinite;
+}
+
+@keyframes livePulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+
+.clock {
+  font-family: 'Courier New', ui-monospace, monospace;
+  font-size: clamp(20px, 4vw, 30px);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-shadow: 0 0 10px rgba(255, 179, 0, 0.4);
+  direction: ltr;
+}
+
+.closeBtn {
+  width: 40px;
+  height: 40px;
+  border: 1px solid #8a6a10;
+  border-radius: 50%;
+  background: transparent;
+  color: #ffb300;
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.05s ease;
+}
+
+.closeBtn:hover {
+  background: rgba(255, 179, 0, 0.15);
+}
+
+.closeBtn:active {
+  transform: scale(0.94);
+}
+
+.columns {
+  display: grid;
+  grid-template-columns: 96px 1fr 150px;
+  gap: 12px;
+  padding: 10px 18px 6px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #8a6a10;
+  border-bottom: 1px solid #1c1604;
+}
+
+.colEta {
+  text-align: end;
+}
+
+.rows {
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 96px 1fr 150px;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 18px;
+  border-bottom: 1px solid #1c1604;
+}
+
+.lineCell {
+  display: flex;
+}
+
+.linePill {
+  min-width: 72px;
+  padding: 6px 10px;
+  border: 2px solid #ffb300;
+  border-radius: 8px;
+  font-family: 'Courier New', ui-monospace, monospace;
+  font-size: clamp(20px, 4vw, 30px);
+  font-weight: 800;
+  text-align: center;
+  text-shadow: 0 0 10px rgba(255, 179, 0, 0.4);
+}
+
+.destCell {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.destName {
+  font-size: clamp(17px, 3.5vw, 26px);
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.destMeta {
+  font-size: 12px;
+  color: #8a6a10;
+}
+
+.etaCell {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.etaNum {
+  font-family: 'Courier New', ui-monospace, monospace;
+  font-size: clamp(26px, 5.5vw, 40px);
+  font-weight: 800;
+  text-shadow: 0 0 12px rgba(255, 179, 0, 0.45);
+}
+
+.etaUnit {
+  font-size: 13px;
+  font-weight: 700;
+  color: #c98f08;
+}
+
+.etaNow {
+  font-size: clamp(20px, 4.5vw, 30px);
+  font-weight: 800;
+  color: #7CFC00;
+  text-shadow: 0 0 12px rgba(124, 252, 0, 0.5);
+}
+
+.flash {
+  animation: nowFlash 1s step-end infinite;
+}
+
+@keyframes nowFlash {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.2; }
+}
+
+.etaAbs {
+  font-family: 'Courier New', ui-monospace, monospace;
+  font-size: clamp(18px, 4vw, 28px);
+  font-weight: 700;
+  direction: ltr;
+}
+
+.etaAbsSmall {
+  font-size: 12px;
+  color: #8a6a10;
+  direction: ltr;
+}
+
+.message {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  text-align: center;
+  font-size: clamp(18px, 4vw, 26px);
+  font-weight: 700;
+}
+
+.footer {
+  padding: 8px 18px;
+  border-top: 1px solid #1c1604;
+  font-size: 12px;
+  color: #8a6a10;
+  min-height: 30px;
+}
+
+@media (max-width: 600px) {
+  .columns,
+  .row {
+    grid-template-columns: 68px 1fr 104px;
+    gap: 8px;
+    padding-inline: 12px;
+  }
+
+  .linePill {
+    min-width: 56px;
+    padding: 4px 6px;
+  }
+
+  .liveBadge {
+    display: none;
+  }
+}

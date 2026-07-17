@@ -205,6 +205,19 @@ const en = {
   'arrivals.showOnMap': 'Show on map',
   'app.connectionError': 'Connection error: {message}. Make sure the API server is running.',
 
+  // Kiosk departure board
+  'board.open': 'Board mode',
+  'board.close': 'Exit board mode',
+  'board.live': 'LIVE',
+  'board.thLine': 'Line',
+  'board.thDest': 'Destination',
+  'board.thArrival': 'Arrival',
+  'board.now': 'NOW',
+  'board.minUnit': 'min',
+  'board.loading': 'Loading departures...',
+  'board.none': 'No departures currently monitored',
+  'board.filterNote': 'Line {line} only',
+
   // Map
   'map.routeFromHere': 'Route from here',
   'map.routeToHere': 'Route to here',
@@ -439,6 +452,18 @@ const he: Record<keyof typeof en, string> = {
   'arrivals.fullArrival': 'זמן הגעה מלא:',
   'arrivals.showOnMap': 'הצג על המפה',
   'app.connectionError': 'שגיאת תקשורת: {message}. ודא ששרת ה־API פועל.',
+
+  'board.open': 'מצב לוח',
+  'board.close': 'יציאה ממצב לוח',
+  'board.live': 'שידור חי',
+  'board.thLine': 'קו',
+  'board.thDest': 'יעד',
+  'board.thArrival': 'הגעה',
+  'board.now': 'עכשיו',
+  'board.minUnit': "דק'",
+  'board.loading': 'טוען הגעות...',
+  'board.none': 'אין כרגע הגעות במעקב',
+  'board.filterNote': 'קו {line} בלבד',
 
   'map.routeFromHere': 'מסלול מכאן',
   'map.routeToHere': 'מסלול לכאן',

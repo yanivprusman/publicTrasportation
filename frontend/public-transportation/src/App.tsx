@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import MapView from './components/map/MapView'
 import StationArrivals from './components/data-display/StationArrivals'
+import DepartureBoard from './components/data-display/DepartureBoard'
 import TransportControls from './components/controls/TransportControls'
 import RoutePlanner from './components/routing/RoutePlanner'
 import LineExplorer from './components/lines/LineExplorer'
@@ -60,6 +61,9 @@ function AppInner() {
     ? [routing.destination.lat, routing.destination.lon]
     : defaultDestination
   const [lineFilter, setLineFilter] = useSessionState('lineFilter', '')
+  // Kiosk board mode survives a reload (sessionStorage) so a phone or tablet
+  // propped up as a station display comes back as a board, not the planner.
+  const [boardMode, setBoardMode] = useSessionState('boardMode', false)
   const [sheetState, setSheetState] = useState<SheetState>(routing.origin && routing.destination ? 'half' : 'collapsed')
   const [activeTab, setActiveTab] = useSessionState<'route' | 'nearby' | 'arrivals' | 'lines'>('activeTab', 'route')
 
@@ -195,6 +199,7 @@ function AppInner() {
         setLineFilter={setLineFilter}
         showVehicleMarkers={showVehicleMarkers}
         setShowVehicleMarkers={setShowVehicleMarkers}
+        onOpenBoard={() => setBoardMode(true)}
       />
       <StationArrivals
         siriData={siriData}
@@ -203,6 +208,16 @@ function AppInner() {
         lineFilter={lineFilter}
         onVehicleSelect={handleVehicleSelect}
       />
+      {boardMode && (
+        <DepartureBoard
+          siriData={siriData}
+          error={error}
+          stationCode={stationCode}
+          lineFilter={lineFilter}
+          lastUpdated={lastUpdated}
+          onClose={() => setBoardMode(false)}
+        />
+      )}
     </>
   )
 
