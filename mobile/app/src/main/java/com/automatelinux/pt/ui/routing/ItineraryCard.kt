@@ -5,15 +5,20 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -23,14 +28,13 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.automatelinux.pt.data.model.Itinerary
 import com.automatelinux.pt.data.model.TransitMode
-import com.automatelinux.pt.ui.map.getModeColor
 import com.automatelinux.pt.ui.map.getModeColorWithRoute
 import com.automatelinux.pt.util.AppStrings
 import com.automatelinux.pt.util.LocalAppStrings
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ItineraryCard(
     itinerary: Itinerary,
@@ -100,26 +104,48 @@ fun ItineraryCard(
                 )
             }
 
-            FlowRow(
-                modifier = Modifier.padding(top = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+            // Leg widths are proportional to each leg's share of travel time, so the
+            // walk/ride balance of a route is readable at a glance
+            val totalLegSeconds = itinerary.legs.sumOf { it.duration }
+            Row(
+                modifier = Modifier
+                    .padding(top = 8.dp)
+                    .fillMaxWidth()
+                    .height(22.dp),
+                horizontalArrangement = Arrangement.spacedBy(2.dp)
             ) {
                 for (leg in itinerary.legs) {
-                    val color = Color(getModeColorWithRoute(leg.mode, leg.routeColor))
-                    val label = when (leg.mode) {
-                        TransitMode.WALK -> "${strings.walkMode} ${strings.formatDuration(leg.duration)}"
-                        else -> "${getModeLabel(leg.mode, strings)} ${leg.routeShortName ?: ""}"
-                    }
-                    Text(
-                        text = label,
+                    val isWalk = leg.mode == TransitMode.WALK
+                    val color = if (isWalk) Color(0xFF616161)
+                        else Color(getModeColorWithRoute(leg.mode, leg.routeColor))
+                    val share = if (totalLegSeconds > 0) leg.duration.toFloat() / totalLegSeconds
+                        else 1f / itinerary.legs.size
+                    Box(
                         modifier = Modifier
-                            .background(color.copy(alpha = 0.2f), RoundedCornerShape(4.dp))
-                            .padding(horizontal = 8.dp, vertical = 2.dp),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = color,
-                        fontWeight = FontWeight.Medium
-                    )
+                            // Floor tiny legs so every segment stays visible
+                            .weight(maxOf(share, 0.08f))
+                            .fillMaxHeight()
+                            .background(color, RoundedCornerShape(5.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (isWalk) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.DirectionsWalk,
+                                contentDescription = strings.walkMode,
+                                tint = Color.White.copy(alpha = 0.9f),
+                                modifier = Modifier.size(14.dp)
+                            )
+                        } else {
+                            Text(
+                                text = leg.routeShortName ?: getModeLabel(leg.mode, strings),
+                                color = Color.White,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                softWrap = false
+                            )
+                        }
+                    }
                 }
             }
         }
