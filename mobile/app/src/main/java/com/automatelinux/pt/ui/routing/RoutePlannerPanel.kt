@@ -70,6 +70,7 @@ fun RoutePlannerPanel(
     onSetReminder: ((RouteLeg) -> Unit)? = null,
     activeReminderLegIndex: Int? = null,
     onCancelReminder: (() -> Unit)? = null,
+    onStartJourney: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val strings = LocalAppStrings.current
@@ -172,7 +173,8 @@ fun RoutePlannerPanel(
                 trackedLegIndex = trackedLegIndex,
                 onSetReminder = onSetReminder,
                 activeReminderLegIndex = activeReminderLegIndex,
-                onCancelReminder = onCancelReminder
+                onCancelReminder = onCancelReminder,
+                onStartJourney = onStartJourney
             )
         }
     }

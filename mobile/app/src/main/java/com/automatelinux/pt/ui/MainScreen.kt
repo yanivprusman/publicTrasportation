@@ -80,6 +80,7 @@ import com.automatelinux.pt.ui.map.VehicleMarkerOverlay
 import com.automatelinux.pt.ui.map.animateToPoint
 import com.automatelinux.pt.ui.map.fitBounds
 import com.automatelinux.pt.ui.routing.DebugSettingsDialog
+import com.automatelinux.pt.ui.routing.JourneyNavigator
 import com.automatelinux.pt.ui.routing.RoutePlannerPanel
 import com.automatelinux.pt.ui.viewmodel.ArrivalsViewModel
 import com.automatelinux.pt.ui.viewmodel.RoutingViewModel
@@ -128,6 +129,7 @@ fun MainScreen(
     var reminderJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
     var selectedLine by remember { mutableStateOf<String?>(null) }
     var lineShapeData by remember { mutableStateOf(LineShapeData()) }
+    var journeyMode by remember { mutableStateOf(false) }
 
     val preSuggestions = remember(recentSearchesVersion, strings) {
         buildList {
@@ -513,6 +515,10 @@ fun MainScreen(
                                         reminderJob?.cancel()
                                         reminderJob = null
                                         reminderLegIndex = null
+                                    },
+                                    onStartJourney = {
+                                        keyboardController?.hide()
+                                        journeyMode = true
                                     }
                                 )
                             }
@@ -705,6 +711,17 @@ fun MainScreen(
             }
             }
         )
+
+        val journeyItinerary = routingState.selectedItinerary
+        LaunchedEffect(journeyItinerary) {
+            if (journeyItinerary == null) journeyMode = false
+        }
+        if (journeyMode && journeyItinerary != null) {
+            JourneyNavigator(
+                itinerary = journeyItinerary,
+                onClose = { journeyMode = false }
+            )
+        }
 
         savePlaceTarget?.let { target ->
             SavePlaceDialog(

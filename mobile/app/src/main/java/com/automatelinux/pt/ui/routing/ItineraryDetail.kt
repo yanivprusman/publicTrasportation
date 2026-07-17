@@ -16,8 +16,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.GpsFixed
+import androidx.compose.material.icons.filled.Navigation
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsOff
+import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
@@ -58,6 +60,7 @@ fun ItineraryDetail(
     onSetReminder: ((RouteLeg) -> Unit)? = null,
     activeReminderLegIndex: Int? = null,
     onCancelReminder: (() -> Unit)? = null,
+    onStartJourney: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val strings = LocalAppStrings.current
@@ -69,6 +72,23 @@ fun ItineraryDetail(
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.Bold
         )
+
+        if (onStartJourney != null) {
+            Spacer(Modifier.height(8.dp))
+            Button(
+                onClick = onStartJourney,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Icon(
+                    Icons.Default.Navigation,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(Modifier.width(6.dp))
+                Text(strings.startJourney, fontWeight = FontWeight.Bold)
+            }
+        }
 
         Spacer(Modifier.height(8.dp))
 
