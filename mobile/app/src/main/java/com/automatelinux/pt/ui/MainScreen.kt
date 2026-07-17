@@ -519,7 +519,15 @@ fun MainScreen(
                                     onStartJourney = {
                                         keyboardController?.hide()
                                         journeyMode = true
-                                    }
+                                    },
+                                    onToggleDayOverview = {
+                                        keyboardController?.hide()
+                                        routingViewModel.toggleDayOverview()
+                                        scope.launch { bottomSheetState.expand() }
+                                    },
+                                    onSelectDayDeparture = { routingViewModel.selectDayDeparture(it) },
+                                    onPickDayDeparture = { routingViewModel.pickDayDeparture(it) },
+                                    onRetryDayOverview = { routingViewModel.loadDayOverview() }
                                 )
                             }
 

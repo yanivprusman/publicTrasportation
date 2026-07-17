@@ -140,6 +140,17 @@ data class AppStrings(
     val journeyLeave: String,
     val journeyDeparts: String,
     val journeyScheduled: (String) -> String,
+    val dayOverview: String,
+    val dayLoading: String,
+    val dayFailed: String,
+    val dayNone: String,
+    val dayFirst: String,
+    val dayLast: String,
+    val dayFastest: String,
+    val dayDepartures: String,
+    val dayShowTrip: String,
+    val dayCaption: String,
+    val dayTruncated: (Int) -> String,
 )
 
 val EnStrings = AppStrings(
@@ -287,6 +298,17 @@ val EnStrings = AppStrings(
     journeyLeave = "Leave",
     journeyDeparts = "Departs",
     journeyScheduled = { time -> "Scheduled $time" },
+    dayOverview = "Day overview",
+    dayLoading = "Scanning the whole day...",
+    dayFailed = "Day overview failed",
+    dayNone = "No departures found for this day",
+    dayFirst = "First",
+    dayLast = "Last",
+    dayFastest = "Fastest",
+    dayDepartures = "Departures",
+    dayShowTrip = "Show trip",
+    dayCaption = "Every departure today · bar height = trip duration (min) · tap a bar",
+    dayTruncated = { n -> "Showing the first $n departures of the day" },
 )
 
 val HeStrings = AppStrings(
@@ -434,6 +456,17 @@ val HeStrings = AppStrings(
     journeyLeave = "צא",
     journeyDeparts = "יציאה",
     journeyScheduled = { time -> "מתוכנן ל-$time" },
+    dayOverview = "סקירת יום",
+    dayLoading = "סורק את כל היום...",
+    dayFailed = "סקירת היום נכשלה",
+    dayNone = "לא נמצאו יציאות ביום זה",
+    dayFirst = "ראשונה",
+    dayLast = "אחרונה",
+    dayFastest = "מהירה",
+    dayDepartures = "יציאות",
+    dayShowTrip = "הצג מסלול",
+    dayCaption = "כל היציאות היום · גובה עמודה = משך הנסיעה (דק') · הקש על עמודה",
+    dayTruncated = { n -> "מוצגות $n היציאות הראשונות של היום" },
 )
 
 val LocalAppStrings = compositionLocalOf { EnStrings }

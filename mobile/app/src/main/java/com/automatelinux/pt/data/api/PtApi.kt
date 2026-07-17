@@ -1,5 +1,6 @@
 package com.automatelinux.pt.data.api
 
+import com.automatelinux.pt.data.model.DayOverviewResult
 import com.automatelinux.pt.data.model.GeocodeSuggestion
 import com.automatelinux.pt.data.model.RouteResult
 import com.automatelinux.pt.data.model.SiriResponse
@@ -16,6 +17,14 @@ interface PtApi {
         @Query("time") time: String? = null,
         @Query("arriveBy") arriveBy: Boolean? = null
     ): RouteResult
+
+    @GET("/api/day-overview")
+    suspend fun dayOverview(
+        @Query("from") from: String,
+        @Query("to") to: String,
+        @Query("start") start: String,
+        @Query("end") end: String
+    ): DayOverviewResult
 
     @GET("/api/geocode")
     suspend fun geocode(

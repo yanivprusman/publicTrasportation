@@ -1,5 +1,6 @@
 package com.automatelinux.pt.ui.viewmodel
 
+import com.automatelinux.pt.data.model.DayOverviewResult
 import com.automatelinux.pt.data.model.GeocodeSuggestion
 import com.automatelinux.pt.data.model.Itinerary
 import com.automatelinux.pt.data.model.RouteResult
@@ -23,7 +24,12 @@ data class RoutingState(
     val loading: Boolean = false,
     val error: String? = null,
     val sortMode: RouteSortMode = RouteSortMode.FASTEST,
-    val trackedBus: TrackedBus? = null
+    val trackedBus: TrackedBus? = null,
+    val showDayOverview: Boolean = false,
+    val dayOverview: DayOverviewResult? = null,
+    val dayLoading: Boolean = false,
+    val dayError: String? = null,
+    val selectedDayIndex: Int? = null
 ) {
     val sortedItineraries: List<Itinerary>
         get() {

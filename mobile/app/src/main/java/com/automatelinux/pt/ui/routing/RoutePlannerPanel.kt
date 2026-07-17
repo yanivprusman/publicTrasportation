@@ -13,11 +13,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material.icons.filled.Work
 import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -71,6 +73,10 @@ fun RoutePlannerPanel(
     activeReminderLegIndex: Int? = null,
     onCancelReminder: (() -> Unit)? = null,
     onStartJourney: (() -> Unit)? = null,
+    onToggleDayOverview: (() -> Unit)? = null,
+    onSelectDayDeparture: ((Int?) -> Unit)? = null,
+    onPickDayDeparture: ((String) -> Unit)? = null,
+    onRetryDayOverview: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val strings = LocalAppStrings.current
@@ -144,6 +150,29 @@ fun RoutePlannerPanel(
         ) {
             Icon(Icons.Default.Search, contentDescription = null)
             Text("  ${strings.searchRoutes}", modifier = Modifier.padding(start = 4.dp))
+        }
+
+        if (onToggleDayOverview != null && state.origin != null && state.destination != null) {
+            Spacer(Modifier.height(4.dp))
+            OutlinedButton(
+                onClick = onToggleDayOverview,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Default.BarChart, contentDescription = null, modifier = Modifier.size(18.dp))
+                Text("  ${strings.dayOverview}", modifier = Modifier.padding(start = 4.dp))
+            }
+            if (state.showDayOverview) {
+                Spacer(Modifier.height(8.dp))
+                DayOverviewSection(
+                    data = state.dayOverview,
+                    loading = state.dayLoading,
+                    error = state.dayError,
+                    selectedIndex = state.selectedDayIndex,
+                    onSelect = { onSelectDayDeparture?.invoke(it) },
+                    onShowTrip = { onPickDayDeparture?.invoke(it) },
+                    onRetry = { onRetryDayOverview?.invoke() }
+                )
+            }
         }
 
         Spacer(Modifier.height(8.dp))

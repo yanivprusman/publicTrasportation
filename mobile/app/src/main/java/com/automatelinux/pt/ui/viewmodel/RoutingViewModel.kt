@@ -17,7 +17,13 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
+import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.Instant
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.atTime
+import kotlinx.datetime.plus
+import kotlinx.datetime.toInstant
+import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Duration.Companion.minutes
 import javax.inject.Inject
 
@@ -34,10 +40,12 @@ class RoutingViewModel @Inject constructor(
 
     fun setOrigin(suggestion: GeocodeSuggestion?) {
         _state.value = _state.value.copy(origin = suggestion, results = null, error = null)
+        clearDayOverview()
     }
 
     fun setDestination(suggestion: GeocodeSuggestion?) {
         _state.value = _state.value.copy(destination = suggestion, results = null, error = null)
+        clearDayOverview()
     }
 
     fun setDepartureTime(time: Instant?) {
@@ -96,6 +104,73 @@ class RoutingViewModel @Inject constructor(
             results = null,
             error = null
         )
+        clearDayOverview()
+    }
+
+    private fun clearDayOverview() {
+        _state.value = _state.value.copy(
+            showDayOverview = false,
+            dayOverview = null,
+            dayError = null,
+            selectedDayIndex = null
+        )
+    }
+
+    fun toggleDayOverview() {
+        val s = _state.value
+        if (s.showDayOverview) {
+            _state.value = s.copy(showDayOverview = false)
+            return
+        }
+        _state.value = s.copy(showDayOverview = true)
+        if (s.dayOverview == null && !s.dayLoading) loadDayOverview()
+    }
+
+    fun loadDayOverview() {
+        val s = _state.value
+        val origin = s.origin ?: return
+        val destination = s.destination ?: return
+        viewModelScope.launch {
+            _state.value = _state.value.copy(
+                dayLoading = true, dayError = null, dayOverview = null, selectedDayIndex = null
+            )
+            try {
+                // The service day: today 04:00 to 02:00 tomorrow, local time. Buses
+                // leaving after midnight belong to today's chart, not tomorrow's.
+                val tz = TimeZone.currentSystemDefault()
+                val today = Clock.System.now().toLocalDateTime(tz).date
+                val start = today.atTime(4, 0).toInstant(tz)
+                val end = today.plus(1, DateTimeUnit.DAY).atTime(2, 0).toInstant(tz)
+                val result = api.dayOverview(
+                    from = "${origin.lat},${origin.lon}",
+                    to = "${destination.lat},${destination.lon}",
+                    start = start.toString(),
+                    end = end.toString()
+                )
+                _state.value = _state.value.copy(dayOverview = result, dayLoading = false)
+            } catch (e: Exception) {
+                _state.value = _state.value.copy(
+                    dayLoading = false,
+                    dayError = e.message ?: "Day overview failed"
+                )
+            }
+        }
+    }
+
+    fun selectDayDeparture(index: Int?) {
+        _state.value = _state.value.copy(selectedDayIndex = index)
+    }
+
+    fun pickDayDeparture(startTimeIso: String) {
+        // Search one minute before the chosen departure so MOTIS includes it
+        // in the results rather than starting from the departure after it.
+        val t = try { Instant.parse(startTimeIso).minus(1.minutes) } catch (_: Exception) { return }
+        _state.value = _state.value.copy(
+            departureTime = t,
+            arriveBy = false,
+            showDayOverview = false
+        )
+        search()
     }
 
     fun setOriginFromCoords(lat: Double, lon: Double, name: String? = null, placeholder: String = MAP_LOCATION_LABEL) {
