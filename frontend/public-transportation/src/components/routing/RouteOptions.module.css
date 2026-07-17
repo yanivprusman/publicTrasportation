@@ -1,0 +1,121 @@
+.wrapper {
+  margin-bottom: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.modesRow {
+  display: flex;
+  gap: 4px;
+}
+
+.modeChip {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  background: var(--surface-alt);
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  color: var(--text-muted);
+  transition: all 0.15s;
+}
+
+.modeChip:hover {
+  background: var(--control-hover);
+  color: var(--text-primary);
+}
+
+.modeChip:active {
+  transform: scale(0.97);
+}
+
+/* An excluded mode reads as struck out, not merely un-highlighted, so it's
+   obvious those routes won't appear. */
+.modeChip:not(.modeChipActive) {
+  text-decoration: line-through;
+  opacity: 0.6;
+}
+
+.modeChip:not(.modeChipActive) .modeIcon {
+  filter: grayscale(1);
+}
+
+.modeChipActive {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+
+.modeChipActive:hover {
+  background: var(--accent);
+  color: white;
+  filter: brightness(1.08);
+}
+
+.modeIcon {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.walkRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.walkLabel {
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.walkChoices {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+}
+
+.walkBtn {
+  flex: 1;
+  padding: 4px 0;
+  border: 1px solid var(--border);
+  background: var(--surface-alt);
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: all 0.15s;
+}
+
+.walkBtn:hover {
+  background: var(--control-hover);
+  color: var(--text-primary);
+}
+
+.walkBtn:active {
+  transform: scale(0.95);
+}
+
+.walkBtnActive {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+
+.walkBtnActive:hover {
+  background: var(--accent);
+  color: white;
+  filter: brightness(1.08);
+}
+
+.walkUnit {
+  font-size: 12px;
+  color: var(--text-muted);
+}

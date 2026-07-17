@@ -1,7 +1,8 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import axios from 'axios'
 import type { GeocodeSuggestion, RouteResult, Itinerary } from '../types'
-import { searchRoute } from '../services/routing-api'
+import { searchRoute, type RouteQueryOptions } from '../services/routing-api'
+import { useRouteOptions, toRouteQueryOptions, isDefaultOptions, type UseRouteOptionsReturn } from './useRouteOptions'
 import { buildAddressLabel } from '../components/map/MapUtilities'
 
 const ROUTE_STORAGE_KEY = 'pt-saved-route'
@@ -65,6 +66,8 @@ export interface UseRoutingReturn {
   loadingLater: boolean
   /** Paging failure or exhaustion message — shown next to the paging buttons without discarding results. */
   pagingNotice: string | null
+  /** Transit-mode filter and max-walk preference; changes re-run the active search. */
+  routeOptions: UseRouteOptionsReturn
 }
 
 export function useRouting(): UseRoutingReturn {
@@ -92,7 +95,13 @@ export function useRouting(): UseRoutingReturn {
     to: { lat: number; lon: number }
     time: string
     arriveBy: boolean
+    options: RouteQueryOptions
   } | null>(null)
+  const routeOptions = useRouteOptions()
+  // doSearch is a stable callback; the ref lets it read the options that are
+  // current when the search actually runs, not the ones captured at creation.
+  const optionsRef = useRef(routeOptions.options)
+  optionsRef.current = routeOptions.options
 
   // Persist origin/destination to localStorage
   useEffect(() => {
@@ -136,22 +145,30 @@ export function useRouting(): UseRoutingReturn {
     setPagingDirection(null)
     setPagingNotice(null)
     const resolvedTime = (time ?? new Date()).toISOString()
+    const queryOptions = toRouteQueryOptions(optionsRef.current)
     lastQueryRef.current = {
       from: { lat: from.lat, lon: from.lon },
       to: { lat: to.lat, lon: to.lon },
       time: resolvedTime,
       arriveBy: arrive,
+      options: queryOptions,
     }
     try {
       const data = await searchRoute(
         { lat: from.lat, lon: from.lon },
         { lat: to.lat, lon: to.lon },
         resolvedTime,
-        arrive
+        arrive,
+        undefined,
+        queryOptions
       )
       if (seq !== searchSeqRef.current) return
       if (!data.itineraries || data.itineraries.length === 0) {
-        setError('No routes found')
+        setError(
+          isDefaultOptions(optionsRef.current)
+            ? 'No routes found'
+            : 'No routes found with these filters — allow more modes or a longer walk'
+        )
       } else {
         setResults(data)
       }
@@ -182,7 +199,7 @@ export function useRouting(): UseRoutingReturn {
     setPagingDirection(direction)
     setPagingNotice(null)
     try {
-      const data = await searchRoute(query.from, query.to, query.time, query.arriveBy, cursor)
+      const data = await searchRoute(query.from, query.to, query.time, query.arriveBy, cursor, query.options)
       if (seq !== searchSeqRef.current) return
       const known = new Set(results.itineraries.map(itineraryKey))
       const fresh = data.itineraries.filter(itin => !known.has(itineraryKey(itin)))
@@ -214,6 +231,19 @@ export function useRouting(): UseRoutingReturn {
 
   const loadEarlier = useCallback(() => loadPage('earlier'), [loadPage])
   const loadLater = useCallback(() => loadPage('later'), [loadPage])
+
+  // Changing an option while results (or a no-routes message) are showing
+  // re-runs the search immediately, so a mode chip acts as a live filter.
+  // Deliberately keyed on options alone: origin/destination/time edits must
+  // still wait for an explicit Search tap.
+  const optionsAtLastSearchRef = useRef(routeOptions.options)
+  useEffect(() => {
+    if (routeOptions.options === optionsAtLastSearchRef.current) return
+    optionsAtLastSearchRef.current = routeOptions.options
+    if (!lastQueryRef.current || !origin || !destination) return
+    doSearch(origin, destination, departureTime, arriveBy)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [routeOptions.options])
 
   const initRoute = useCallback((
     from: GeocodeSuggestion,
@@ -247,5 +277,6 @@ export function useRouting(): UseRoutingReturn {
     loadingEarlier: pagingDirection === 'earlier',
     loadingLater: pagingDirection === 'later',
     pagingNotice,
+    routeOptions,
   }
 }

@@ -1,11 +1,19 @@
 import type { RouteResult, GeocodeSuggestion } from '../types'
 
+export interface RouteQueryOptions {
+  /** Comma-separated app-level mode keys (bus,train,tram). Omit for all modes. */
+  modes?: string
+  /** Longest acceptable first/last walk in minutes. Omit for the server default. */
+  maxWalk?: number
+}
+
 export async function searchRoute(
   from: { lat: number; lon: number },
   to: { lat: number; lon: number },
   time?: string,
   arriveBy?: boolean,
-  pageCursor?: string
+  pageCursor?: string,
+  options?: RouteQueryOptions
 ): Promise<RouteResult> {
   const params = new URLSearchParams({
     from: `${from.lat},${from.lon}`,
@@ -14,6 +22,8 @@ export async function searchRoute(
   if (time) params.set('time', time)
   if (arriveBy) params.set('arriveBy', 'true')
   if (pageCursor) params.set('pageCursor', pageCursor)
+  if (options?.modes) params.set('modes', options.modes)
+  if (options?.maxWalk) params.set('maxWalk', String(options.maxWalk))
 
   const res = await fetch(`/api/route?${params}`)
   if (!res.ok) {

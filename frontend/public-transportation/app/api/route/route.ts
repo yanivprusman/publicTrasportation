@@ -85,6 +85,15 @@ const MODE_MAP: Record<string, 'WALK' | 'BUS' | 'RAIL' | 'TRAM' | 'SUBWAY'> = {
   NIGHT_RAIL: 'RAIL',
 };
 
+// App-level mode filter keys (sent by the client as ?modes=bus,train) mapped
+// to the MOTIS transitModes enums each one covers. The groups mirror MODE_MAP
+// above so filtering and rendering agree on what counts as bus/train/tram.
+const MODE_GROUPS: Record<string, string[]> = {
+  bus: ['BUS', 'COACH'],
+  train: ['RAIL', 'REGIONAL_RAIL', 'REGIONAL_FAST_RAIL', 'HIGHSPEED_RAIL', 'LONG_DISTANCE', 'NIGHT_RAIL'],
+  tram: ['TRAM', 'SUBWAY', 'METRO'],
+};
+
 function normalizeMode(mode: string | undefined): 'WALK' | 'BUS' | 'RAIL' | 'TRAM' | 'SUBWAY' {
   if (!mode) return 'WALK';
   // Any unrecognized transit mode is still a vehicle leg, not a walk — render
@@ -165,6 +174,33 @@ export async function GET(request: NextRequest) {
   const time = searchParams.get('time');
   const arriveBy = searchParams.get('arriveBy');
   const pageCursor = searchParams.get('pageCursor');
+  const modesParam = searchParams.get('modes');
+  const maxWalkParam = searchParams.get('maxWalk');
+
+  let transitModes: string[] | null = null;
+  if (modesParam !== null) {
+    const keys = modesParam.split(',').map(k => k.trim()).filter(Boolean);
+    const unknown = keys.filter(k => !MODE_GROUPS[k]);
+    if (keys.length === 0 || unknown.length > 0) {
+      return NextResponse.json(
+        { error: `Invalid modes parameter. Allowed values: ${Object.keys(MODE_GROUPS).join(', ')}` },
+        { status: 400 }
+      );
+    }
+    transitModes = [...new Set(keys.flatMap(k => MODE_GROUPS[k]))];
+  }
+
+  let maxWalkSeconds: number | null = null;
+  if (maxWalkParam !== null) {
+    const minutes = Number(maxWalkParam);
+    if (!Number.isInteger(minutes) || minutes < 1 || minutes > 60) {
+      return NextResponse.json(
+        { error: 'Invalid maxWalk parameter. Expected whole minutes between 1 and 60.' },
+        { status: 400 }
+      );
+    }
+    maxWalkSeconds = minutes * 60;
+  }
 
   if (!from || !to) {
     return NextResponse.json(
@@ -193,7 +229,7 @@ export async function GET(request: NextRequest) {
   const timeBucket = isNaN(routeTimeMs)
     ? routeTime
     : new Date(routeTimeMs - (routeTimeMs % 60000)).toISOString();
-  const cacheKey = `${from}|${to}|${timeBucket}|${isArriveBy}|${pageCursor || ''}`;
+  const cacheKey = `${from}|${to}|${timeBucket}|${isArriveBy}|${pageCursor || ''}|${transitModes?.join(',') || ''}|${maxWalkSeconds || ''}`;
 
   const cached = getCachedRoute(cacheKey);
   if (cached) {
@@ -211,6 +247,11 @@ export async function GET(request: NextRequest) {
       numItineraries: '5',
     });
     if (pageCursor) params.set('pageCursor', pageCursor);
+    if (transitModes) params.set('transitModes', transitModes.join(','));
+    if (maxWalkSeconds !== null) {
+      params.set('maxPreTransitTime', String(maxWalkSeconds));
+      params.set('maxPostTransitTime', String(maxWalkSeconds));
+    }
 
     const response = await fetch(`${MOTIS_BASE}/api/v1/plan?${params}`, {
       signal: AbortSignal.timeout(15000),

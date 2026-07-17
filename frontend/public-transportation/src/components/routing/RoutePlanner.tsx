@@ -3,6 +3,7 @@ import type { UseRoutingReturn } from '../../hooks/useRouting'
 import BottomSheet, { type SheetState } from './BottomSheet'
 import LocationInput from './LocationInput'
 import TimePicker from './TimePicker'
+import RouteOptions from './RouteOptions'
 import RouteResults from './RouteResults'
 import ItineraryDetail from './ItineraryDetail'
 import SavedRoutesBar from './SavedRoutesBar'
@@ -234,6 +235,7 @@ export default function RoutePlanner({
                   arriveBy={routing.arriveBy}
                   setArriveBy={routing.setArriveBy}
                 />
+                <RouteOptions routeOptions={routing.routeOptions} />
                 <div className={styles.searchRow}>
                   <button
                     className={styles.searchBtn}
