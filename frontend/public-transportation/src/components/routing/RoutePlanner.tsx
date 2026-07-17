@@ -11,7 +11,8 @@ import SavedPlacesBar from './SavedPlacesBar'
 import { useSavedRoutes, type SavedRoute } from '../../hooks/useSavedRoutes'
 import { useSavedPlaces } from '../../hooks/useSavedPlaces'
 import { useTheme } from '../../hooks/useTheme'
-import type { GeocodeSuggestion } from '../../types'
+import type { LiveBusState } from '../../hooks/useLiveBus'
+import type { Coordinates, GeocodeSuggestion } from '../../types'
 import styles from './RoutePlanner.module.css'
 
 interface RoutePlannerProps {
@@ -23,11 +24,14 @@ interface RoutePlannerProps {
   arrivalsContent: React.ReactNode
   linesContent: React.ReactNode
   nearbyContent: React.ReactNode
+  liveBus: LiveBusState
+  onShowLiveBusOnMap: (position: Coordinates) => void
 }
 
 export default function RoutePlanner({
   routing, sheetState, onSheetStateChange,
   activeTab, onTabChange, arrivalsContent, linesContent, nearbyContent,
+  liveBus, onShowLiveBusOnMap,
 }: RoutePlannerProps) {
   const saved = useSavedRoutes()
   const places = useSavedPlaces()
@@ -284,6 +288,8 @@ export default function RoutePlanner({
                       departureTime: routing.departureTime,
                       arriveBy: routing.arriveBy,
                     } : null}
+                    liveBus={liveBus}
+                    onShowLiveBusOnMap={onShowLiveBusOnMap}
                   />
                 </div>
               )}

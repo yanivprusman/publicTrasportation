@@ -230,3 +230,24 @@ html[data-theme="dark"] .leaflet-bar a {
     padding-left: 400px;
   }
 }
+
+/* Live-tracked bus marker (LiveBusLayer divIcon renders outside CSS modules) */
+.pt-live-bus-pulse {
+  position: absolute;
+  inset: -9px;
+  border-radius: 50%;
+  background: rgba(46, 125, 50, 0.45);
+  animation: pt-live-bus-pulse 1.6s ease-out infinite;
+}
+
+@keyframes pt-live-bus-pulse {
+  0% { transform: scale(0.55); opacity: 0.9; }
+  100% { transform: scale(1.35); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pt-live-bus-pulse {
+    animation: none;
+    opacity: 0.35;
+  }
+}

@@ -6,6 +6,7 @@ import RoutePlanner from './components/routing/RoutePlanner'
 import LineExplorer from './components/lines/LineExplorer'
 import NearbyStops from './components/nearby/NearbyStops'
 import { useRouting } from './hooks/useRouting'
+import { useLiveBus } from './hooks/useLiveBus'
 import { useLineExplorer } from './hooks/useLineExplorer'
 import { useNearbyStops } from './hooks/useNearbyStops'
 import { useSessionState } from './hooks/useSessionState'
@@ -59,6 +60,17 @@ function App() {
   const [lineFilter, setLineFilter] = useSessionState('lineFilter', '')
   const [sheetState, setSheetState] = useState<SheetState>(routing.origin && routing.destination ? 'half' : 'collapsed')
   const [activeTab, setActiveTab] = useSessionState<'route' | 'nearby' | 'arrivals' | 'lines'>('activeTab', 'route')
+
+  // Track the actual vehicle serving the selected route's next bus leg; only
+  // while the Routes tab is showing, so other tabs don't keep SIRI polling.
+  const liveBus = useLiveBus(routing.selectedItinerary, activeTab === 'route')
+
+  // "Show on map" on the live-bus banner: center on the bus and drop the sheet
+  // to half so the map is actually visible on mobile.
+  const handleShowLiveBusOnMap = useCallback((position: Coordinates) => {
+    setMapCenter(position)
+    setSheetState('half')
+  }, [])
 
   // Restore a shared trip link (?from=lat,lon&to=lat,lon&fromName=...&time=...)
   // or a debug route (?origin=text&destination=text)
@@ -224,6 +236,12 @@ function App() {
         onNearbyStopSelect={handleNearbyStopSelect}
         activeStopCode={activeTab === 'arrivals' ? stationCode : null}
         onMapStopSelect={handleMapStopSelect}
+        liveBus={liveBus.vehicle ? {
+          vehicle: liveBus.vehicle,
+          lineNumber: liveBus.lineNumber,
+          stopName: liveBus.stopName,
+          expectedArrival: liveBus.expectedArrival,
+        } : null}
       />
 
       <RoutePlanner
@@ -235,6 +253,8 @@ function App() {
         arrivalsContent={arrivalsContent}
         linesContent={<LineExplorer explorer={lineExplorer} />}
         nearbyContent={<NearbyStops nearby={nearby} onSelect={handleNearbyStopSelect} />}
+        liveBus={liveBus}
+        onShowLiveBusOnMap={handleShowLiveBusOnMap}
       />
     </div>
   )

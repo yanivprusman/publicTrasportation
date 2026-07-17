@@ -14,6 +14,7 @@ import MultimodalRouteLayer from './MultimodalRouteLayer'
 import LineShapeLayer from './LineShapeLayer'
 import NearbyStopsLayer from './NearbyStopsLayer'
 import StopsLayer from './StopsLayer'
+import LiveBusLayer, { type LiveBusMarkerData } from './LiveBusLayer'
 import type { LineFocusRequest } from '../../hooks/useLineExplorer'
 import type { NearbyStop, StopResult } from '../../services/transport-api'
 import type { Coordinates, VehicleMarker, StopInfo, Itinerary, LineShapeData } from '../../types'
@@ -74,6 +75,7 @@ interface MapViewProps {
   onNearbyStopSelect?: (stop: NearbyStop) => void
   activeStopCode?: string | null
   onMapStopSelect?: (stop: StopResult) => void
+  liveBus?: LiveBusMarkerData | null
 }
 
 function MapView({
@@ -106,7 +108,8 @@ function MapView({
   nearbyFocusSeq = 0,
   onNearbyStopSelect = () => {},
   activeStopCode = null,
-  onMapStopSelect = () => {}
+  onMapStopSelect = () => {},
+  liveBus = null
 }: MapViewProps) {
   const [position, setPosition] = useState<Coordinates>(startingPoint || defaultStartingPoint || [latitude, longitude])
   const [route, setRoute] = useState<Coordinates[] | null>(null)
@@ -251,6 +254,8 @@ function MapView({
         />
 
         <MultimodalRouteLayer itinerary={selectedItinerary} />
+
+        <LiveBusLayer bus={liveBus} />
 
         <LineShapeLayer
           line={exploredLine}

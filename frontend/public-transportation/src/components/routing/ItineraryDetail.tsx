@@ -1,9 +1,11 @@
 import { Fragment, useEffect, useRef, useState } from 'react'
-import type { Itinerary, RouteLeg, TransitMode } from '../../types'
+import type { Coordinates, Itinerary, RouteLeg, TransitMode } from '../../types'
+import type { LiveBusState } from '../../hooks/useLiveBus'
 import { formatDuration, formatTime } from '../../utils/time-format'
 import { getModeStyle, getModeLabel } from '../../utils/mode-colors'
 import { buildTripLink, type SharedTrip } from '../../utils/trip-link'
 import DepartureCountdown from './DepartureCountdown'
+import LiveBusStatus from './LiveBusStatus'
 import JourneyNavigator from './JourneyNavigator'
 import styles from './ItineraryDetail.module.css'
 
@@ -11,6 +13,9 @@ interface ItineraryDetailProps {
   itinerary: Itinerary
   /** Trip to encode in the share link; null hides the share button (e.g. an input was cleared) */
   trip: SharedTrip | null
+  /** Live position/ETA of the itinerary's next bus, tracked by useLiveBus in App */
+  liveBus: LiveBusState
+  onShowLiveBusOnMap: (position: Coordinates) => void
 }
 
 const MODE_ICONS: Record<TransitMode, string> = {
@@ -28,12 +33,13 @@ function waitSecondsBetween(prev: RouteLeg, next: RouteLeg): number {
   return gap
 }
 
-export default function ItineraryDetail({ itinerary, trip }: ItineraryDetailProps) {
+export default function ItineraryDetail({ itinerary, trip, liveBus, onShowLiveBusOnMap }: ItineraryDetailProps) {
   const legs = itinerary.legs
   const [navigating, setNavigating] = useState(false)
   return (
     <div className={styles.wrapper}>
       <DepartureCountdown itinerary={itinerary} />
+      <LiveBusStatus state={liveBus} onShowOnMap={onShowLiveBusOnMap} />
       <div className={styles.summaryRow}>
         <div className={styles.summary}>
           {formatTime(itinerary.startTime)} - {formatTime(itinerary.endTime)}
