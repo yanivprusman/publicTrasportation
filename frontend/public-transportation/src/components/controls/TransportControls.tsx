@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { searchStops, type StopResult } from '../../services/transport-api'
 import { useAutocomplete } from '../../hooks/useAutocomplete'
+import { useI18n } from '../../i18n'
 import styles from './TransportControls.module.css'
 
 interface TransportControlsProps {
@@ -24,6 +25,7 @@ function TransportControls({
   showVehicleMarkers,
   setShowVehicleMarkers,
 }: TransportControlsProps) {
+  const { t } = useI18n()
   const [agoText, setAgoText] = useState('')
   const [stationName, setStationName] = useState('')
   const ac = useAutocomplete<StopResult>({ searchFn })
@@ -42,7 +44,7 @@ function TransportControls({
     if (!lastUpdated) return
     const tick = () => {
       const secs = Math.round((Date.now() - lastUpdated.getTime()) / 1000)
-      setAgoText(secs < 5 ? 'just now' : `${secs}s ago`)
+      setAgoText(secs < 5 ? t('arrivals.justNow') : t('arrivals.secondsAgo', { n: secs }))
     }
     tick()
     const id = setInterval(tick, 1000)
@@ -59,7 +61,7 @@ function TransportControls({
   return (
     <div className={styles.panel}>
       <div className={styles.row}>
-        <span className={styles.label}>Station</span>
+        <span className={styles.label}>{t('arrivals.station')}</span>
         <div className={styles.stationSearch}>
           <div className={styles.stationInputRow}>
             <input
@@ -71,7 +73,7 @@ function TransportControls({
               onKeyDown={(e) => ac.handleKeyDown(e, selectStop)}
               onFocus={ac.handleFocus}
               onBlur={ac.handleBlur}
-              placeholder={stationName ? `${stationName} (${stationCode})` : 'Search station...'}
+              placeholder={stationName ? `${stationName} (${stationCode})` : t('arrivals.searchStation')}
             />
             {ac.text && (
               <button className={styles.clearBtn} onClick={ac.handleClear} type="button" data-id="clear-station-search">&times;</button>
@@ -93,15 +95,15 @@ function TransportControls({
             </ul>
           )}
         </div>
-        {lastUpdated && <span className={styles.updatedAgo}>Updated {agoText}</span>}
+        {lastUpdated && <span className={styles.updatedAgo}>{t('arrivals.updated', { ago: agoText })}</span>}
       </div>
       <div className={styles.row}>
-        <span className={styles.label}>Filter</span>
+        <span className={styles.label}>{t('arrivals.filter')}</span>
         <input
           type="text"
           value={lineFilter}
           onChange={(e) => setLineFilter(e.target.value)}
-          placeholder="Line #"
+          placeholder={t('arrivals.linePlaceholder')}
           className={styles.input}
           data-id="line-filter-input"
         />
@@ -112,7 +114,7 @@ function TransportControls({
             onChange={(e) => setShowVehicleMarkers(e.target.checked)}
             data-id="toggle-vehicle-markers"
           />
-          Vehicles
+          {t('arrivals.vehicles')}
         </label>
       </div>
     </div>

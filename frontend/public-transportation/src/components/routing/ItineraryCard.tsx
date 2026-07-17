@@ -1,6 +1,7 @@
 import type { Itinerary } from '../../types'
 import { formatDuration, formatTime } from '../../utils/time-format'
 import { getModeStyle, getModeLabel } from '../../utils/mode-colors'
+import { useI18n } from '../../i18n'
 import styles from './ItineraryCard.module.css'
 
 interface ItineraryCardProps {
@@ -10,12 +11,11 @@ interface ItineraryCardProps {
 }
 
 export default function ItineraryCard({ itinerary, selected, onClick }: ItineraryCardProps) {
+  const { t } = useI18n()
   const totalLegSeconds = itinerary.legs.reduce((sum, leg) => sum + (leg.duration || 0), 0)
   const barDescription = itinerary.legs
     .map(leg => {
-      const what = leg.mode === 'WALK'
-        ? 'Walk'
-        : `${getModeLabel(leg.mode)}${leg.routeShortName ? ` ${leg.routeShortName}` : ''}`
+      const what = `${getModeLabel(leg.mode)}${leg.routeShortName ? ` ${leg.routeShortName}` : ''}`
       return `${what} ${formatDuration(leg.duration)}`
     })
     .join(', ')
@@ -41,7 +41,11 @@ export default function ItineraryCard({ itinerary, selected, onClick }: Itinerar
       <div className={styles.header}>
         <span className={styles.duration}>{formatDuration(itinerary.duration)}</span>
         <span className={styles.transfers}>
-          {itinerary.transfers === 0 ? 'Direct' : `${itinerary.transfers} transfer${itinerary.transfers > 1 ? 's' : ''}`}
+          {itinerary.transfers === 0
+            ? t('card.direct')
+            : itinerary.transfers === 1
+              ? t('card.transfersOne')
+              : t('card.transfersMany', { n: itinerary.transfers })}
         </span>
         <span className={styles.times}>
           {formatTime(itinerary.startTime)} - {formatTime(itinerary.endTime)}
@@ -57,9 +61,7 @@ export default function ItineraryCard({ itinerary, selected, onClick }: Itinerar
             ? (leg.duration || 0) / totalLegSeconds
             : 1 / itinerary.legs.length
           const label = isWalk ? '\u{1F6B6}' : (leg.routeShortName || getModeLabel(leg.mode))
-          const what = isWalk
-            ? 'Walk'
-            : `${getModeLabel(leg.mode)}${leg.routeShortName ? ` ${leg.routeShortName}` : ''}`
+          const what = `${getModeLabel(leg.mode)}${leg.routeShortName ? ` ${leg.routeShortName}` : ''}`
           return (
             <div
               key={i}

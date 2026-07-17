@@ -15,8 +15,10 @@ import { geocodeSearch } from './services/routing-api'
 import { parseTripLink } from './utils/trip-link'
 import type { SheetState } from './components/routing/BottomSheet'
 import type { SiriData, VehicleMarker, Coordinates } from './types'
+import { LanguageProvider, useI18n } from './i18n'
 
-function App() {
+function AppInner() {
+  const { t } = useI18n()
   const defaultStartingPoint: Coordinates = [32.0783, 34.8120]
   const defaultDestination: Coordinates = [32.0673, 34.7835]
 
@@ -127,7 +129,7 @@ function App() {
     } catch (err) {
       if (seq !== arrivalsSeqRef.current) return
       const message = err instanceof Error ? err.message : String(err)
-      setError(`Connection error: ${message}. Make sure the API server is running.`)
+      setError(t('app.connectionError', { message }))
     }
   }
 
@@ -260,4 +262,10 @@ function App() {
   )
 }
 
-export default App
+export default function App() {
+  return (
+    <LanguageProvider>
+      <AppInner />
+    </LanguageProvider>
+  )
+}

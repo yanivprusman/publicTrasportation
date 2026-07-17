@@ -1,3 +1,4 @@
+import { useI18n } from '../../i18n'
 import styles from './TimePicker.module.css'
 
 type TimeMode = 'now' | 'depart' | 'arrive'
@@ -10,6 +11,7 @@ interface TimePickerProps {
 }
 
 export default function TimePicker({ departureTime, setDepartureTime, arriveBy, setArriveBy }: TimePickerProps) {
+  const { t } = useI18n()
   // Derived from routing state, not local state: TimePicker unmounts when the
   // sheet collapses or the tab switches, and a local mode would reset to 'now'
   // while departureTime/arriveBy keep steering the actual search.
@@ -43,7 +45,7 @@ export default function TimePicker({ departureTime, setDepartureTime, arriveBy, 
             className={`${styles.modeBtn} ${mode === m ? styles.active : ''}`}
             onClick={() => handleModeChange(m)}
           >
-            {m === 'now' ? 'Now' : m === 'depart' ? 'Depart At' : 'Arrive By'}
+            {m === 'now' ? t('time.now') : m === 'depart' ? t('time.departAt') : t('time.arriveBy')}
           </button>
         ))}
       </div>

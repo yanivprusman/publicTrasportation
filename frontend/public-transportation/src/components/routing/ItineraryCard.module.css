@@ -50,7 +50,7 @@
 }
 
 .times {
-  margin-left: auto;
+  margin-inline-start: auto;
   font-size: 13px;
   color: var(--text-secondary);
   font-weight: 500;

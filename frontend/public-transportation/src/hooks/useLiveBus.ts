@@ -148,7 +148,8 @@ export function useLiveBus(itinerary: Itinerary | null, active: boolean): LiveBu
         // /api/stops returns nearest-first.
         const stop = stops[0]
         if (!stop) {
-          fail(`No station found matching the boarding stop "${currentLeg.from.name}"`, currentLeg.from.name)
+          // Translation key; localized with the stop name by LiveBusStatus.
+          fail('liveBus.noStation', currentLeg.from.name)
           return
         }
         await poll(stop.stopCode, stop.stopName)

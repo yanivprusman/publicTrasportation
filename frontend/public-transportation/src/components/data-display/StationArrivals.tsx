@@ -1,5 +1,6 @@
 import { Fragment, useState, useEffect } from 'react'
 import type { SiriData, MonitoredStopVisit } from '../../types'
+import { useI18n } from '../../i18n'
 
 interface StationArrivalsProps {
   siriData: SiriData | null
@@ -10,6 +11,7 @@ interface StationArrivalsProps {
 }
 
 function StationArrivals({ siriData, error, stationCode, lineFilter, onVehicleSelect }: StationArrivalsProps) {
+  const { t } = useI18n()
   // Expansion is tracked by a stable per-visit key, not list index: the list
   // refreshes every 15s and rows shift as buses arrive/depart (and the line
   // filter changes which rows exist), so an index would silently point the
@@ -22,14 +24,14 @@ function StationArrivals({ siriData, error, stationCode, lineFilter, onVehicleSe
     return () => clearInterval(id)
   }, [])
 
-  if (error) return <h2>Error: {error}</h2>
-  if (!siriData) return <h2>Loading...</h2>
+  if (error) return <h2>{t('arrivals.error', { message: error })}</h2>
+  if (!siriData) return <h2>{t('arrivals.loading')}</h2>
 
   const allVisits = siriData?.Siri?.ServiceDelivery?.StopMonitoringDelivery?.[0]?.MonitoredStopVisit || []
   const stopNames = siriData?._stopNames || {}
 
   if (allVisits.length === 0) {
-    return <h2>No vehicles are currently being monitored for station {stationCode}</h2>
+    return <h2>{t('arrivals.noneMonitored', { code: stationCode })}</h2>
   }
 
   const trimmedFilter = lineFilter?.trim().toLowerCase() || ''
@@ -51,12 +53,12 @@ function StationArrivals({ siriData, error, stationCode, lineFilter, onVehicleSe
   const monitoredStopVisits = [...filteredVisits].sort((a, b) => arrivalMs(a) - arrivalMs(b))
 
   if (trimmedFilter && monitoredStopVisits.length === 0) {
-    return <h2>No vehicles match line {lineFilter?.trim()}</h2>
+    return <h2>{t('arrivals.noMatch', { line: lineFilter?.trim() ?? '' })}</h2>
   }
 
   const heading = trimmedFilter
-    ? `Showing ${monitoredStopVisits.length} of ${allVisits.length} vehicles`
-    : `Monitored Vehicles: ${allVisits.length}`
+    ? t('arrivals.showing', { n: monitoredStopVisits.length, m: allVisits.length })
+    : t('arrivals.monitored', { n: allVisits.length })
 
   return (
     <div>
@@ -65,11 +67,11 @@ function StationArrivals({ siriData, error, stationCode, lineFilter, onVehicleSe
         <table className="vehicle-table">
           <thead>
             <tr>
-              <th>Line</th>
-              <th>Dir</th>
-              <th>Dest</th>
-              <th>Arrival</th>
-              <th>Distance</th>
+              <th>{t('arrivals.thLine')}</th>
+              <th>{t('arrivals.thDir')}</th>
+              <th>{t('arrivals.thDest')}</th>
+              <th>{t('arrivals.thArrival')}</th>
+              <th>{t('arrivals.thDistance')}</th>
             </tr>
           </thead>
           <tbody>
@@ -87,9 +89,9 @@ function StationArrivals({ siriData, error, stationCode, lineFilter, onVehicleSe
                 fullArrivalTime = date.toLocaleString()
                 const diffMin = Math.round((date.getTime() - Date.now()) / 60000)
                 if (diffMin < 1) {
-                  arrivalDisplay = { primary: diffMin < 0 ? absTime : 'now' }
+                  arrivalDisplay = { primary: diffMin < 0 ? absTime : t('arrivals.now') }
                 } else if (diffMin <= 60) {
-                  arrivalDisplay = { primary: `in ${diffMin} min`, secondary: absTime }
+                  arrivalDisplay = { primary: t('arrivals.inMin', { n: diffMin }), secondary: absTime }
                 } else {
                   arrivalDisplay = { primary: absTime }
                 }
@@ -126,13 +128,13 @@ function StationArrivals({ siriData, error, stationCode, lineFilter, onVehicleSe
                       <td colSpan={5}>
                         <div className="detail-content">
                           <div className="detail-item">
-                            <span className="detail-label">Vehicle ID:</span> {journey.VehicleRef || 'N/A'}
+                            <span className="detail-label">{t('arrivals.vehicleId')}</span> {journey.VehicleRef || 'N/A'}
                           </div>
                           <div className="detail-item">
-                            <span className="detail-label">Exact distance:</span> {exactMeters != null ? `${exactMeters} m` : 'N/A'}
+                            <span className="detail-label">{t('arrivals.exactDistance')}</span> {exactMeters != null ? t('dist.m', { n: exactMeters }) : 'N/A'}
                           </div>
                           <div className="detail-item">
-                            <span className="detail-label">Full arrival:</span> {fullArrivalTime}
+                            <span className="detail-label">{t('arrivals.fullArrival')}</span> {fullArrivalTime}
                           </div>
                           {vehicleLocation && onVehicleSelect && (
                             <div className="detail-item">
@@ -145,7 +147,7 @@ function StationArrivals({ siriData, error, stationCode, lineFilter, onVehicleSe
                                 }}
                                 className="show-on-map-btn"
                               >
-                                Show on map
+                                {t('arrivals.showOnMap')}
                               </button>
                             </div>
                           )}

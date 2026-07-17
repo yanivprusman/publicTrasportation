@@ -4,6 +4,7 @@ import L from 'leaflet'
 import { simplifyShape } from '../../utils/ShapeSimplifier'
 import { getDirectionColor } from '../../utils/mode-colors'
 import { formatHeadsign } from '../../utils/line-name'
+import { useI18n } from '../../i18n'
 import type { LineShapeData, Coordinates } from '../../types'
 import type { LineFocusRequest } from '../../hooks/useLineExplorer'
 
@@ -24,6 +25,7 @@ const fitToPoints = (map: L.Map, points: Coordinates[]) => {
 }
 
 const LineShapeLayer = ({ line, data, hiddenDirections, focus }: LineShapeLayerProps) => {
+  const { t } = useI18n()
   const map = useMap()
 
   const directions = useMemo(() => {
@@ -67,7 +69,7 @@ const LineShapeLayer = ({ line, data, hiddenDirections, focus }: LineShapeLayerP
               pathOptions={{ color: d.color, weight: 5, opacity: 0.8, lineCap: 'round' }}
             >
               <Popup>
-                <strong>Line {line}</strong><br />
+                <strong>{t('lines.line', { n: line })}</strong><br />
                 {d.headsign}
               </Popup>
             </Polyline>
@@ -76,14 +78,14 @@ const LineShapeLayer = ({ line, data, hiddenDirections, focus }: LineShapeLayerP
               radius={6}
               pathOptions={{ color: d.color, weight: 3, fillColor: '#ffffff', fillOpacity: 1 }}
             >
-              <Popup><strong>Line {line}</strong> — departs: {d.headsign}</Popup>
+              <Popup><strong>{t('lines.line', { n: line })}</strong> {t('lines.popupDeparts', { h: d.headsign })}</Popup>
             </CircleMarker>
             <CircleMarker
               center={end}
               radius={6}
               pathOptions={{ color: '#ffffff', weight: 2, fillColor: d.color, fillOpacity: 1 }}
             >
-              <Popup><strong>Line {line}</strong> — terminus: {d.headsign}</Popup>
+              <Popup><strong>{t('lines.line', { n: line })}</strong> {t('lines.popupTerminus', { h: d.headsign })}</Popup>
             </CircleMarker>
           </Fragment>
         )

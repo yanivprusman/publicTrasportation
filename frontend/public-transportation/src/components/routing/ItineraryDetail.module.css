@@ -105,7 +105,7 @@
   font-size: 12px;
   font-weight: 700;
   color: var(--text-primary);
-  text-align: right;
+  text-align: end;
   font-variant-numeric: tabular-nums;
 }
 
@@ -310,7 +310,7 @@
 .stop::before {
   content: '';
   position: absolute;
-  left: -23px;
+  inset-inline-start: -23px;
   top: 50%;
   transform: translateY(-50%);
   width: 6px;

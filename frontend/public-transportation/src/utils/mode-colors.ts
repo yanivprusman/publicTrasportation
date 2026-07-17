@@ -1,4 +1,6 @@
 import type { TransitMode } from '../types'
+import { getLanguage, translate } from '../i18n'
+import { isTranslationKey } from '../i18n/translations'
 
 interface ModeStyle {
   color: string
@@ -34,12 +36,6 @@ export function getDirectionColor(direction: string): string {
 }
 
 export function getModeLabel(mode: TransitMode): string {
-  switch (mode) {
-    case 'WALK': return 'Walk'
-    case 'BUS': return 'Bus'
-    case 'RAIL': return 'Train'
-    case 'TRAM': return 'Tram'
-    case 'SUBWAY': return 'Subway'
-    default: return mode
-  }
+  const key = `modes.${mode}`
+  return isTranslationKey(key) ? translate(getLanguage(), key) : mode
 }

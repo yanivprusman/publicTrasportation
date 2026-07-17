@@ -1,5 +1,6 @@
 import type { SavedRoute } from '../../hooks/useSavedRoutes'
 import { routeKey } from '../../hooks/useSavedRoutes'
+import { useI18n } from '../../i18n'
 import styles from './SavedRoutesBar.module.css'
 
 interface SavedRoutesBarProps {
@@ -29,6 +30,7 @@ function RouteChip({
   onSelect: (route: SavedRoute) => void
   onRemove: (route: SavedRoute) => void
 }) {
+  const { t } = useI18n()
   const label = `${shortName(route.origin.name)} → ${shortName(route.destination.name)}`
   const idBase = favorite ? 'favorite-route' : 'recent-route'
   return (
@@ -50,8 +52,8 @@ function RouteChip({
           e.stopPropagation()
           onRemove(route)
         }}
-        title="Remove"
-        aria-label={`Remove ${label}`}
+        title={t('saved.remove')}
+        aria-label={t('places.removeName', { name: label })}
         data-id={`remove-${idBase}`}
       >
         &times;
@@ -67,6 +69,7 @@ export default function SavedRoutesBar({
   onRemoveFavorite,
   onRemoveRecent,
 }: SavedRoutesBarProps) {
+  const { t } = useI18n()
   const favoriteKeys = new Set(favorites.map((f) => routeKey(f.origin, f.destination)))
   // A route shown as a favorite should not also appear in the recents row.
   const recentsToShow = recents.filter(
@@ -79,7 +82,7 @@ export default function SavedRoutesBar({
     <div className={styles.bar} data-id="saved-routes-bar">
       {favorites.length > 0 && (
         <div className={styles.section}>
-          <div className={styles.sectionLabel}>Saved</div>
+          <div className={styles.sectionLabel}>{t('saved.saved')}</div>
           <div className={styles.chips}>
             {favorites.map((route) => (
               <RouteChip
@@ -95,7 +98,7 @@ export default function SavedRoutesBar({
       )}
       {recentsToShow.length > 0 && (
         <div className={styles.section}>
-          <div className={styles.sectionLabel}>Recent</div>
+          <div className={styles.sectionLabel}>{t('saved.recent')}</div>
           <div className={styles.chips}>
             {recentsToShow.map((route) => (
               <RouteChip

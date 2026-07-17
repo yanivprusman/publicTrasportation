@@ -1,6 +1,7 @@
 import type { UseNearbyStopsReturn } from '../../hooks/useNearbyStops'
 import type { NearbyStop } from '../../services/transport-api'
 import { formatStopDistance, walkMinutes } from '../../utils/distance'
+import { useI18n } from '../../i18n'
 import styles from './NearbyStops.module.css'
 
 const RADIUS_OPTIONS = [300, 600, 1000]
@@ -11,6 +12,7 @@ interface NearbyStopsProps {
 }
 
 export default function NearbyStops({ nearby, onSelect }: NearbyStopsProps) {
+  const { t, tm } = useI18n()
   return (
     <div className={styles.wrap}>
       <button
@@ -21,11 +23,11 @@ export default function NearbyStops({ nearby, onSelect }: NearbyStopsProps) {
         data-id="locate-nearby-stops"
       >
         <span className={styles.locateIcon} aria-hidden="true">📍</span>
-        {nearby.loading ? 'Searching…' : nearby.located ? 'Update my location' : 'Find stops near me'}
+        {nearby.loading ? t('nearby.searching') : nearby.located ? t('nearby.update') : t('nearby.find')}
       </button>
 
       <div className={styles.radiusRow}>
-        <span className={styles.radiusLabel}>Within</span>
+        <span className={styles.radiusLabel}>{t('nearby.within')}</span>
         {RADIUS_OPTIONS.map(r => (
           <button
             key={r}
@@ -35,34 +37,35 @@ export default function NearbyStops({ nearby, onSelect }: NearbyStopsProps) {
             type="button"
             data-id="set-nearby-radius"
           >
-            {r < 1000 ? `${r} m` : `${r / 1000} km`}
+            {r < 1000 ? t('dist.m', { n: r }) : t('dist.km', { n: r / 1000 })}
           </button>
         ))}
       </div>
 
       {nearby.error && (
         <div className={styles.error} role="alert" data-id="nearby-stops-error">
-          {nearby.error}
+          {tm(nearby.error)}
         </div>
       )}
 
       {!nearby.located && !nearby.error && !nearby.loading && (
         <div className={styles.empty}>
-          See every bus and train stop around you, sorted by walking distance.
-          Tap a stop to open its live departure board.
+          {t('nearby.empty')}
         </div>
       )}
 
       {nearby.located && !nearby.error && !nearby.loading && nearby.stops.length === 0 && (
         <div className={styles.empty} data-id="nearby-stops-empty">
-          No stops within {formatStopDistance(nearby.radius)} of you — try a wider radius.
+          {t('nearby.none', { d: formatStopDistance(nearby.radius) })}
         </div>
       )}
 
       {nearby.stops.length > 0 && !nearby.error && (
         <>
           <div className={styles.countLine}>
-            {nearby.stops.length === 1 ? '1 stop' : `${nearby.stops.length} stops`} within {formatStopDistance(nearby.radius)} — numbered on the map
+            {nearby.stops.length === 1
+              ? t('nearby.countOne', { d: formatStopDistance(nearby.radius) })
+              : t('nearby.countMany', { n: nearby.stops.length, d: formatStopDistance(nearby.radius) })}
           </div>
           <div className={styles.list}>
             {nearby.stops.map((stop, i) => (
@@ -71,17 +74,17 @@ export default function NearbyStops({ nearby, onSelect }: NearbyStopsProps) {
                 className={styles.stopRow}
                 onClick={() => onSelect(stop)}
                 type="button"
-                title="Show live arrivals for this stop"
+                title={t('nearby.showArrivals')}
                 data-id="select-nearby-stop"
               >
                 <span className={styles.stopIndex}>{i + 1}</span>
                 <span className={styles.stopInfo}>
                   <span className={styles.stopName} dir="auto">{stop.stopName}</span>
-                  <span className={styles.stopMeta}>Stop {stop.stopCode}</span>
+                  <span className={styles.stopMeta}>{t('nearby.stopCode', { code: stop.stopCode })}</span>
                 </span>
                 <span className={styles.stopDistance}>
                   <span className={styles.distanceValue}>{formatStopDistance(stop.distanceMeters)}</span>
-                  <span className={styles.walkTime}>~{walkMinutes(stop.distanceMeters)} min walk</span>
+                  <span className={styles.walkTime}>{t('nearby.walkTime', { n: walkMinutes(stop.distanceMeters) })}</span>
                 </span>
               </button>
             ))}

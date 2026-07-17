@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { CircleMarker, Popup, useMap, useMapEvents } from 'react-leaflet'
 import type L from 'leaflet'
 import { fetchStopsInBounds, type StopResult } from '../../services/transport-api'
+import { useI18n } from '../../i18n'
 
 // Below this zoom the layer is empty — a city-wide viewport would drown the
 // map in thousands of dots (and the API caps the response anyway).
@@ -27,6 +28,7 @@ interface StopsLayerProps {
 // is zoomed to street level. Tapping a dot opens a popup with the stop's name
 // and a jump to its live departure board.
 const StopsLayer = ({ activeStopCode, onStopSelect }: StopsLayerProps) => {
+  const { t } = useI18n()
   const map = useMap()
   const [stops, setStops] = useState<StopResult[]>([])
   const [zoom, setZoom] = useState(() => map.getZoom())
@@ -97,7 +99,7 @@ const StopsLayer = ({ activeStopCode, onStopSelect }: StopsLayerProps) => {
           >
             <Popup>
               <strong dir="auto">{stop.stopName}</strong><br />
-              Stop {stop.stopCode}<br />
+              {t('map.stop', { code: stop.stopCode })}<br />
               <button
                 type="button"
                 style={{ marginTop: 6, padding: '4px 10px', border: 'none', borderRadius: 6, background: '#2196F3', color: '#fff', fontWeight: 600, cursor: 'pointer' }}
@@ -107,7 +109,7 @@ const StopsLayer = ({ activeStopCode, onStopSelect }: StopsLayerProps) => {
                 }}
                 data-id="map-stop-arrivals"
               >
-                Live arrivals →
+                {t('map.liveArrivals')}
               </button>
             </Popup>
           </CircleMarker>

@@ -164,17 +164,19 @@ export function useRouting(): UseRoutingReturn {
       )
       if (seq !== searchSeqRef.current) return
       if (!data.itineraries || data.itineraries.length === 0) {
+        // Known conditions are stored as translation keys and localized at
+        // render, so they follow a language switch.
         setError(
           isDefaultOptions(optionsRef.current)
-            ? 'No routes found'
-            : 'No routes found with these filters — allow more modes or a longer walk'
+            ? 'errors.noRoutes'
+            : 'errors.noRoutesFiltered'
         )
       } else {
         setResults(data)
       }
     } catch (err) {
       if (seq !== searchSeqRef.current) return
-      setError(err instanceof Error ? err.message : 'Route search failed')
+      setError(err instanceof Error ? err.message : 'errors.searchFailed')
     } finally {
       if (seq === searchSeqRef.current) setLoading(false)
     }
@@ -182,7 +184,7 @@ export function useRouting(): UseRoutingReturn {
 
   const search = useCallback(async () => {
     if (!origin || !destination) {
-      setError('Set both origin and destination')
+      setError('errors.setBoth')
       return
     }
     doSearch(origin, destination, departureTime, arriveBy)
@@ -219,11 +221,11 @@ export function useRouting(): UseRoutingReturn {
         })
       }
       if (fresh.length === 0) {
-        setPagingNotice(direction === 'earlier' ? 'No earlier trips found' : 'No later trips found')
+        setPagingNotice(direction === 'earlier' ? 'errors.noEarlier' : 'errors.noLater')
       }
     } catch (err) {
       if (seq !== searchSeqRef.current) return
-      setPagingNotice(err instanceof Error ? err.message : 'Failed to load more trips')
+      setPagingNotice(err instanceof Error ? err.message : 'errors.loadMoreFailed')
     } finally {
       if (seq === searchSeqRef.current) setPagingDirection(null)
     }

@@ -2,6 +2,7 @@ import { useEffect, useMemo } from 'react'
 import { Marker, Popup, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import { formatStopDistance, walkMinutes } from '../../utils/distance'
+import { useI18n } from '../../i18n'
 import type { NearbyStop } from '../../services/transport-api'
 import type { Coordinates } from '../../types'
 
@@ -30,6 +31,7 @@ const userIcon = L.divIcon({
 })
 
 const NearbyStopsLayer = ({ stops, userLocation, focusSeq, onStopSelect }: NearbyStopsLayerProps) => {
+  const { t } = useI18n()
   const map = useMap()
 
   // Refit whenever a fresh result set lands (locate / radius change), never on
@@ -53,21 +55,21 @@ const NearbyStopsLayer = ({ stops, userLocation, focusSeq, onStopSelect }: Nearb
     <>
       {userLocation && (
         <Marker position={userLocation} icon={userIcon} zIndexOffset={1000}>
-          <Popup>You are here</Popup>
+          <Popup>{t('popup.youAreHere')}</Popup>
         </Marker>
       )}
       {stops.map((stop, i) => (
         <Marker key={`nearby-${stop.stopCode}`} position={[stop.lat, stop.lon]} icon={icons[i]}>
           <Popup>
             <strong dir="auto">{stop.stopName}</strong><br />
-            Stop {stop.stopCode} · {formatStopDistance(stop.distanceMeters)} · ~{walkMinutes(stop.distanceMeters)} min walk<br />
+            {t('nearby.stopCode', { code: stop.stopCode })} · {formatStopDistance(stop.distanceMeters)} · {t('nearby.walkTime', { n: walkMinutes(stop.distanceMeters) })}<br />
             <button
               type="button"
               style={{ marginTop: 6, padding: '4px 10px', border: 'none', borderRadius: 6, background: '#2196F3', color: '#fff', fontWeight: 600, cursor: 'pointer' }}
               onClick={() => onStopSelect(stop)}
               data-id="nearby-marker-arrivals"
             >
-              Live arrivals →
+              {t('map.liveArrivals')}
             </button>
           </Popup>
         </Marker>

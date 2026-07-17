@@ -3,6 +3,7 @@ import { Marker, Popup } from 'react-leaflet'
 import L from 'leaflet'
 import { formatStopDistance } from '../../utils/distance'
 import { formatTime } from '../../utils/time-format'
+import { useI18n } from '../../i18n'
 import type { LiveBusVehicle } from '../../hooks/useLiveBus'
 
 export interface LiveBusMarkerData {
@@ -33,6 +34,7 @@ const busIcon = (line: string) => L.divIcon({
 
 /** The tracked vehicle of the selected itinerary's next bus leg, pulsing live. */
 const LiveBusLayer = ({ bus }: { bus: LiveBusMarkerData | null }) => {
+  const { t } = useI18n()
   const icon = useMemo(() => (bus ? busIcon(bus.lineNumber) : null), [bus?.lineNumber]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!bus || !icon) return null
@@ -40,12 +42,12 @@ const LiveBusLayer = ({ bus }: { bus: LiveBusMarkerData | null }) => {
   return (
     <Marker position={bus.vehicle.position} icon={icon} zIndexOffset={1500}>
       <Popup>
-        <strong>Bus {bus.lineNumber} — your ride</strong><br />
-        {formatStopDistance(bus.vehicle.distanceFromStopMeters)} from <span dir="auto">{bus.stopName}</span>
+        <strong>{t('liveBus.marker', { line: bus.lineNumber })}</strong><br />
+        {t('liveBus.markerFrom', { distance: formatStopDistance(bus.vehicle.distanceFromStopMeters) })} <span dir="auto">{bus.stopName}</span>
         {bus.expectedArrival && (
           <>
             <br />
-            Expected arrival: {formatTime(bus.expectedArrival)}
+            {t('popup.expectedArrival')} {formatTime(bus.expectedArrival)}
           </>
         )}
       </Popup>

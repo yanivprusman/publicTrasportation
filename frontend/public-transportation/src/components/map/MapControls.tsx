@@ -1,3 +1,4 @@
+import { useI18n } from '../../i18n'
 import styles from './MapControls.module.css'
 
 interface MapControlsProps {
@@ -22,12 +23,13 @@ const MapControls = ({
   positionAddress,
   destinationAddress
 }: MapControlsProps) => {
+  const { t, tm } = useI18n()
   return (
     <div className={styles.container}>
       <div>
         <input
           type="text"
-          placeholder="Search for a location"
+          placeholder={t('mapCtl.searchPlaceholder')}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           onKeyPress={handleKeyPress}
@@ -36,19 +38,19 @@ const MapControls = ({
         />
         <div className={styles.buttonRow}>
           <button onClick={handleSetStartPoint} className={styles.startButton} data-id="set-starting-point">
-            Set Starting Point
+            {t('mapCtl.setStart')}
           </button>
           <button onClick={handleSetDestinationPoint} className={styles.destButton} data-id="set-destination-point">
-            Set Destination
+            {t('mapCtl.setDest')}
           </button>
         </div>
       </div>
-      {searchError && <p className={styles.error}>{searchError}</p>}
+      {searchError && <p className={styles.error}>{tm(searchError)}</p>}
       <div className={styles.infoBox}>
-        <p><strong>Start:</strong> {positionAddress || 'Loading...'}</p>
+        <p><strong>{t('mapCtl.start')}</strong> {positionAddress || t('mapCtl.loading')}</p>
       </div>
       <div className={styles.infoBoxDest}>
-        <p><strong>Destination:</strong> {destinationAddress || 'No destination set'}</p>
+        <p><strong>{t('popup.destination')}</strong> {destinationAddress || t('mapCtl.noDest')}</p>
       </div>
     </div>
   )

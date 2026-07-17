@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { UseLineExplorerReturn } from '../../hooks/useLineExplorer'
 import { getDirectionColor } from '../../utils/mode-colors'
 import { formatHeadsign } from '../../utils/line-name'
+import { useI18n } from '../../i18n'
 import type { Coordinates } from '../../types'
 import styles from './LineExplorer.module.css'
 
@@ -26,6 +27,7 @@ interface LineExplorerProps {
 }
 
 export default function LineExplorer({ explorer }: LineExplorerProps) {
+  const { t } = useI18n()
   const [query, setQuery] = useState('')
 
   const submit = () => {
@@ -48,7 +50,7 @@ export default function LineExplorer({ explorer }: LineExplorerProps) {
           value={query}
           onChange={e => setQuery(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') submit() }}
-          placeholder="Line number, e.g. 480"
+          placeholder={t('lines.placeholder')}
           data-id="line-explorer-input"
         />
         <button
@@ -58,7 +60,7 @@ export default function LineExplorer({ explorer }: LineExplorerProps) {
           type="button"
           data-id="explore-line"
         >
-          {explorer.loading ? 'Loading...' : 'Show Line'}
+          {explorer.loading ? t('lines.loading') : t('lines.show')}
         </button>
       </div>
 
@@ -87,18 +89,18 @@ export default function LineExplorer({ explorer }: LineExplorerProps) {
       {explorer.data && !explorer.error && (
         <>
           <div className={styles.lineHeader}>
-            <span className={styles.lineBadge} data-id="explored-line-badge">Line {explorer.line}</span>
+            <span className={styles.lineBadge} data-id="explored-line-badge">{t('lines.line', { n: explorer.line ?? '' })}</span>
             <span className={styles.lineSub}>
-              {directions.length === 1 ? '1 direction' : `${directions.length} directions`} on map
+              {directions.length === 1 ? t('lines.oneDirection') : t('lines.directions', { n: directions.length })}
             </span>
             <button
               className={styles.clearBtn}
               onClick={explorer.clear}
               type="button"
-              title="Remove line from map"
+              title={t('lines.clearTitle')}
               data-id="clear-explored-line"
             >
-              Clear
+              {t('lines.clear')}
             </button>
           </div>
 
@@ -117,27 +119,27 @@ export default function LineExplorer({ explorer }: LineExplorerProps) {
                     <div className={styles.headsign} dir="auto">
                       {formatHeadsign(explorer.data!.headsigns[direction], direction)}
                     </div>
-                    <div className={styles.meta}>{shapeLengthKm(points).toFixed(1)} km</div>
+                    <div className={styles.meta}>{t('lines.km', { n: shapeLengthKm(points).toFixed(1) })}</div>
                   </div>
                   <button
                     className={styles.dirBtn}
                     onClick={() => explorer.toggleDirection(direction)}
                     type="button"
                     aria-pressed={!hidden}
-                    title={hidden ? 'Show this direction on the map' : 'Hide this direction from the map'}
+                    title={hidden ? t('lines.showDirTitle') : t('lines.hideDirTitle')}
                     data-id="toggle-line-direction"
                   >
-                    {hidden ? 'Show' : 'Hide'}
+                    {hidden ? t('lines.showDir') : t('lines.hideDir')}
                   </button>
                   <button
                     className={styles.dirBtn}
                     onClick={() => explorer.focusDirection(direction)}
                     disabled={hidden}
                     type="button"
-                    title="Zoom the map to this direction"
+                    title={t('lines.zoomTitle')}
                     data-id="focus-line-direction"
                   >
-                    Zoom
+                    {t('lines.zoom')}
                   </button>
                 </div>
               )
@@ -148,7 +150,7 @@ export default function LineExplorer({ explorer }: LineExplorerProps) {
 
       {!explorer.data && !explorer.error && !explorer.loading && (
         <div className={styles.empty}>
-          Type a bus or train line number to draw its full route on the map.
+          {t('lines.empty')}
         </div>
       )}
     </div>

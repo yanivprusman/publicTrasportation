@@ -1,5 +1,6 @@
 import type { GeocodeSuggestion } from '../../types'
 import { placeKey } from '../../hooks/useSavedPlaces'
+import { useI18n } from '../../i18n'
 import styles from './SavedPlacesBar.module.css'
 
 interface SavedPlacesBarProps {
@@ -23,11 +24,12 @@ export default function SavedPlacesBar({
   onUseAsDestination,
   onRemove,
 }: SavedPlacesBarProps) {
+  const { t } = useI18n()
   if (places.length === 0) return null
 
   return (
     <div className={styles.bar} data-id="saved-places-bar">
-      <div className={styles.label}>Places</div>
+      <div className={styles.label}>{t('places.label')}</div>
       <div className={styles.chips}>
         {places.map((place) => {
           const name = shortName(place.name)
@@ -37,7 +39,7 @@ export default function SavedPlacesBar({
                 type="button"
                 className={styles.chipMain}
                 onClick={() => onUseAsDestination(place)}
-                title={`Route to ${place.name}`}
+                title={t('places.routeTo', { place: place.name })}
                 data-id="use-place-destination"
               >
                 <span className={styles.pin} aria-hidden="true">📍</span>
@@ -47,18 +49,18 @@ export default function SavedPlacesBar({
                 type="button"
                 className={styles.fromBtn}
                 onClick={() => onUseAsOrigin(place)}
-                title={`Route from ${place.name}`}
-                aria-label={`Set ${name} as start`}
+                title={t('places.routeFrom', { place: place.name })}
+                aria-label={t('places.setAsStart', { name })}
                 data-id="use-place-origin"
               >
-                From
+                {t('places.from')}
               </button>
               <button
                 type="button"
                 className={styles.removeBtn}
                 onClick={() => onRemove(place)}
-                title="Remove saved place"
-                aria-label={`Remove ${name}`}
+                title={t('places.remove')}
+                aria-label={t('places.removeName', { name })}
                 data-id="remove-saved-place"
               >
                 &times;

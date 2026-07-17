@@ -2,10 +2,13 @@ import { useEffect, useCallback, useRef } from 'react'
 import type { GeocodeSuggestion } from '../../types'
 import { geocodeSearch } from '../../services/routing-api'
 import { useAutocomplete } from '../../hooks/useAutocomplete'
+import { useI18n } from '../../i18n'
 import styles from './LocationInput.module.css'
 
 interface LocationInputProps {
   label: string
+  /** Stable English identifier for data-id attributes; label is localized. */
+  field: 'from' | 'to'
   value: GeocodeSuggestion | null
   onChange: (place: GeocodeSuggestion | null) => void
   placeholder?: string
@@ -17,7 +20,8 @@ interface LocationInputProps {
 
 const searchFn = (query: string) => geocodeSearch(query)
 
-export default function LocationInput({ label, value, onChange, placeholder, onGpsClick, gpsLoading, isSaved, onToggleSave }: LocationInputProps) {
+export default function LocationInput({ label, field, value, onChange, placeholder, onGpsClick, gpsLoading, isSaved, onToggleSave }: LocationInputProps) {
+  const { t } = useI18n()
   const ac = useAutocomplete<GeocodeSuggestion>({ searchFn, maxResults: 5 })
   // Editing a selected place invalidates it (onChange(null) below), which makes
   // the value→text sync effect fire with null and wipe the text the user just
@@ -69,13 +73,13 @@ export default function LocationInput({ label, value, onChange, placeholder, onG
         <input
           ref={ac.inputRef}
           className={styles.input}
-          data-id={`location-input-${label.toLowerCase()}`}
+          data-id={`location-input-${field}`}
           value={ac.text}
           onChange={onInput}
           onKeyDown={onKeyDown}
           onFocus={ac.handleFocus}
           onBlur={ac.handleBlur}
-          placeholder={placeholder || `Search ${label.toLowerCase()}...`}
+          placeholder={placeholder || label}
         />
         {onGpsClick && (
           <button
@@ -83,7 +87,7 @@ export default function LocationInput({ label, value, onChange, placeholder, onG
             onClick={onGpsClick}
             disabled={gpsLoading}
             type="button"
-            title="Use my location"
+            title={t('gps.title')}
             data-id="gps-button"
           >
             {gpsLoading ? (
@@ -107,16 +111,16 @@ export default function LocationInput({ label, value, onChange, placeholder, onG
             className={`${styles.saveBtn} ${isSaved ? styles.saveBtnActive : ''}`}
             onClick={onToggleSave}
             type="button"
-            title={isSaved ? 'Remove from saved places' : 'Save this place'}
-            aria-label={isSaved ? `Remove ${label} from saved places` : `Save ${label} as a place`}
+            title={isSaved ? t('input.removePlace') : t('input.savePlace')}
+            aria-label={isSaved ? t('input.removePlaceAria', { label }) : t('input.savePlaceAria', { label })}
             aria-pressed={isSaved}
-            data-id={`save-place-${label.toLowerCase()}`}
+            data-id={`save-place-${field}`}
           >
             {isSaved ? '★' : '☆'}
           </button>
         )}
         {ac.text && (
-          <button className={styles.clear} onClick={onClear} type="button" data-id={`clear-location-${label.toLowerCase()}`}>&times;</button>
+          <button className={styles.clear} onClick={onClear} type="button" data-id={`clear-location-${field}`}>&times;</button>
         )}
       </div>
       {ac.showDropdown && ac.suggestions.length > 0 && (

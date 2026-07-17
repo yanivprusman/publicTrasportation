@@ -2,6 +2,9 @@ import { useCallback, useEffect, useState } from 'react'
 import type { Itinerary, RouteLeg, TransitMode } from '../../types'
 import { formatDuration, formatTime } from '../../utils/time-format'
 import { getModeStyle, getModeLabel } from '../../utils/mode-colors'
+import { useI18n } from '../../i18n'
+import type { TranslateParams } from '../../i18n'
+import type { TranslationKey } from '../../i18n/translations'
 import styles from './JourneyNavigator.module.css'
 
 interface JourneyNavigatorProps {
@@ -36,28 +39,32 @@ interface StepInstruction {
   getOff: string | null
 }
 
+type Translate = (key: TranslationKey, params?: TranslateParams) => string
+
 /** Turn one leg into the human instruction shown big on the step card. */
-function instructionFor(leg: RouteLeg, isLast: boolean): StepInstruction {
+function instructionFor(leg: RouteLeg, isLast: boolean, t: Translate): StepInstruction {
   if (leg.mode === 'WALK') {
     return {
-      headline: isLast ? 'Walk to your destination' : `Walk to ${leg.to.name}`,
-      detail: `${formatDuration(leg.duration)} on foot`,
+      headline: isLast ? t('journey.walkToDest') : t('journey.walkTo', { place: leg.to.name }),
+      detail: t('journey.onFoot', { d: formatDuration(leg.duration) }),
       getOff: null,
     }
   }
-  const route = leg.routeShortName ? ` ${leg.routeShortName}` : ''
+  const ride = `${getModeLabel(leg.mode)}${leg.routeShortName ? ` ${leg.routeShortName}` : ''}`
   const stopCount = leg.intermediateStops?.length ?? 0
+  const stopsText = stopCount === 1 ? t('detail.stopsOne') : t('detail.stopsMany', { n: stopCount })
   const rideDetail = stopCount > 0
-    ? `${stopCount} ${stopCount === 1 ? 'stop' : 'stops'} · ${formatDuration(leg.duration)}`
+    ? `${stopsText} · ${formatDuration(leg.duration)}`
     : formatDuration(leg.duration)
   return {
-    headline: `Take ${getModeLabel(leg.mode)}${route}`,
+    headline: t('journey.take', { ride }),
     detail: rideDetail,
     getOff: leg.to.name,
   }
 }
 
 export default function JourneyNavigator({ itinerary, onClose }: JourneyNavigatorProps) {
+  const { t } = useI18n()
   const legs = itinerary.legs
   const [stepIndex, setStepIndex] = useState(0)
   // "Arrived" is a virtual final step after the last leg.
@@ -90,15 +97,15 @@ export default function JourneyNavigator({ itinerary, onClose }: JourneyNavigato
   const nextLeg = onArrived ? null : legs[stepIndex + 1] ?? null
 
   return (
-    <div className={styles.overlay} role="dialog" aria-modal="true" aria-label="Journey navigation" data-id="journey-navigator">
+    <div className={styles.overlay} role="dialog" aria-modal="true" aria-label={t('journey.ariaNav')} data-id="journey-navigator">
       <header className={styles.header}>
         <div className={styles.headerText}>
-          <span className={styles.headerLabel}>Journey</span>
+          <span className={styles.headerLabel}>{t('journey.label')}</span>
           <span className={styles.headerRange}>
             {formatTime(itinerary.startTime)} → {formatTime(itinerary.endTime)} · {formatDuration(itinerary.duration)}
           </span>
         </div>
-        <button className={styles.exitBtn} onClick={onClose} type="button" aria-label="Exit journey" data-id="exit-journey">
+        <button className={styles.exitBtn} onClick={onClose} type="button" aria-label={t('journey.exit')} data-id="exit-journey">
           ✕
         </button>
       </header>
@@ -129,20 +136,20 @@ export default function JourneyNavigator({ itinerary, onClose }: JourneyNavigato
 
         {nextLeg && (
           <div className={styles.upNext} data-id="journey-up-next">
-            <span className={styles.upNextLabel}>Up next</span>
+            <span className={styles.upNextLabel}>{t('journey.upNext')}</span>
             <span className={styles.upNextIcon} aria-hidden="true">{MODE_ICONS[nextLeg.mode]}</span>
             <span className={styles.upNextText}>
               {nextLeg.mode === 'WALK'
-                ? `Walk to ${nextLeg.to.name}`
+                ? t('journey.walkTo', { place: nextLeg.to.name })
                 : `${getModeLabel(nextLeg.mode)}${nextLeg.routeShortName ? ` ${nextLeg.routeShortName}` : ''} → ${nextLeg.to.name}`}
             </span>
           </div>
         )}
         {!onArrived && !nextLeg && (
           <div className={styles.upNext} data-id="journey-up-next">
-            <span className={styles.upNextLabel}>Up next</span>
+            <span className={styles.upNextLabel}>{t('journey.upNext')}</span>
             <span className={styles.upNextIcon} aria-hidden="true">🏁</span>
-            <span className={styles.upNextText}>Arrive at your destination</span>
+            <span className={styles.upNextText}>{t('journey.arriveDest')}</span>
           </div>
         )}
       </main>
@@ -155,18 +162,18 @@ export default function JourneyNavigator({ itinerary, onClose }: JourneyNavigato
           type="button"
           data-id="journey-prev-step"
         >
-          ‹ Back
+          {t('journey.back')}
         </button>
         <span className={styles.stepCounter}>
-          {onArrived ? 'Arrived' : `Step ${stepIndex + 1} of ${totalSteps}`}
+          {onArrived ? t('journey.arrived') : t('journey.stepOf', { n: stepIndex + 1, m: totalSteps })}
         </span>
         {onArrived ? (
           <button className={`${styles.navBtn} ${styles.navBtnPrimary}`} onClick={onClose} type="button" data-id="journey-finish">
-            Done
+            {t('journey.done')}
           </button>
         ) : (
           <button className={`${styles.navBtn} ${styles.navBtnPrimary}`} onClick={goNext} type="button" data-id="journey-next-step">
-            {stepIndex === legs.length - 1 ? 'Arrive ›' : 'Next ›'}
+            {stepIndex === legs.length - 1 ? t('journey.arrive') : t('journey.next')}
           </button>
         )}
       </footer>
@@ -183,12 +190,13 @@ interface StepCardProps {
 }
 
 function StepCard({ leg, isLast, nowMs, stepNumber, totalSteps }: StepCardProps) {
+  const { t } = useI18n()
   const style = getModeStyle(leg.mode, leg.routeColor)
-  const { headline, detail, getOff } = instructionFor(leg, isLast)
+  const { headline, detail, getOff } = instructionFor(leg, isLast, t)
   const startMs = new Date(leg.startTime).getTime()
   const hasTime = !Number.isNaN(startMs)
   const remaining = hasTime ? startMs - nowMs : NaN
-  const verb = leg.mode === 'WALK' ? 'Leave' : 'Departs'
+  const verb = leg.mode === 'WALK' ? t('journey.leave') : t('journey.departs')
 
   return (
     <section className={styles.stepCard} style={{ '--leg-color': style.color } as React.CSSProperties}>
@@ -197,12 +205,12 @@ function StepCard({ leg, isLast, nowMs, stepNumber, totalSteps }: StepCardProps)
       </div>
       <div className={styles.stepHeadline} data-id="journey-step-headline">{headline}</div>
       {leg.mode !== 'WALK' && (
-        <div className={styles.boardAt}>Board at <strong>{leg.from.name}</strong></div>
+        <div className={styles.boardAt}>{t('journey.boardAt')} <strong>{leg.from.name}</strong></div>
       )}
       {detail && <div className={styles.stepDetail}>{detail}</div>}
       {getOff && (
         <div className={styles.getOff}>
-          <span className={styles.getOffLabel}>Get off at</span>
+          <span className={styles.getOffLabel}>{t('journey.getOffAt')}</span>
           <span className={styles.getOffName}>{getOff}</span>
         </div>
       )}
@@ -210,15 +218,15 @@ function StepCard({ leg, isLast, nowMs, stepNumber, totalSteps }: StepCardProps)
         {hasTime && remaining > 0 ? (
           <>
             <span className={styles.timingBig}>{formatGap(remaining)}</span>
-            <span className={styles.timingLabel}>{verb} · scheduled {formatTime(leg.startTime)}</span>
+            <span className={styles.timingLabel}>{verb} · {t('journey.scheduled', { time: formatTime(leg.startTime) })}</span>
           </>
         ) : hasTime ? (
           <>
-            <span className={`${styles.timingBig} ${styles.timingNow}`}>Now</span>
-            <span className={styles.timingLabel}>Scheduled {formatTime(leg.startTime)}</span>
+            <span className={`${styles.timingBig} ${styles.timingNow}`}>{t('journey.now')}</span>
+            <span className={styles.timingLabel}>{t('journey.scheduledCap', { time: formatTime(leg.startTime) })}</span>
           </>
         ) : (
-          <span className={styles.timingLabel}>Step {stepNumber} of {totalSteps}</span>
+          <span className={styles.timingLabel}>{t('journey.stepOf', { n: stepNumber, m: totalSteps })}</span>
         )}
       </div>
     </section>
@@ -226,14 +234,15 @@ function StepCard({ leg, isLast, nowMs, stepNumber, totalSteps }: StepCardProps)
 }
 
 function ArrivedCard({ itinerary }: { itinerary: Itinerary }) {
+  const { t } = useI18n()
   const dest = itinerary.legs[itinerary.legs.length - 1]?.to.name
   return (
     <section className={`${styles.stepCard} ${styles.arrivedCard}`}>
       <div className={styles.arrivedIcon} aria-hidden="true">🏁</div>
-      <div className={styles.stepHeadline}>You&apos;ve arrived</div>
+      <div className={styles.stepHeadline}>{t('journey.youArrived')}</div>
       {dest && <div className={styles.getOffName}>{dest}</div>}
       <div className={styles.stepDetail}>
-        Arrived {formatTime(itinerary.endTime)} · {formatDuration(itinerary.duration)} total
+        {t('journey.arrivedSummary', { time: formatTime(itinerary.endTime), d: formatDuration(itinerary.duration) })}
       </div>
     </section>
   )

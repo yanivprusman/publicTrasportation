@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useMapEvents } from 'react-leaflet'
+import { useI18n } from '../../i18n'
 import styles from './MapContextMenu.module.css'
 
 interface MapContextMenuProps {
@@ -15,6 +16,7 @@ interface ContextMenuState {
 }
 
 export default function MapContextMenu({ onRouteFrom, onRouteTo }: MapContextMenuProps) {
+  const { t } = useI18n()
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
 
   useMapEvents({
@@ -55,13 +57,13 @@ export default function MapContextMenu({ onRouteFrom, onRouteTo }: MapContextMen
   return (
     <div className={styles.menu} style={{ top: contextMenu.y, left: contextMenu.x }}>
       <div onMouseDown={handleRouteFrom} className={styles.item} data-id="route-from-here">
-        Route from here
+        {t('map.routeFromHere')}
       </div>
       <div onMouseDown={handleRouteTo} className={styles.item} data-id="route-to-here">
-        Route to here
+        {t('map.routeToHere')}
       </div>
       <div onMouseDown={() => setContextMenu(null)} className={styles.cancel} data-id="close-context-menu">
-        Cancel
+        {t('map.cancel')}
       </div>
     </div>
   )

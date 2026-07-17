@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { MapContainer, TileLayer, Polyline, useMap, Marker, Popup } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
+import { useI18n } from '../../i18n'
 import type { Coordinates } from '../../types'
 import styles from './RouteMapView.module.css'
 
@@ -37,6 +38,7 @@ interface RouteMapViewProps {
 }
 
 const RouteMapView = ({ routeShape }: RouteMapViewProps) => {
+  const { t } = useI18n()
   const defaultCenter: Coordinates = [32.0, 35.0]
 
   return (
@@ -55,10 +57,10 @@ const RouteMapView = ({ routeShape }: RouteMapViewProps) => {
         {routeShape && routeShape.length > 1 && (
           <>
             <Marker position={routeShape[0]}>
-              <Popup>Start point</Popup>
+              <Popup>{t('routePanel.start')}</Popup>
             </Marker>
             <Marker position={routeShape[routeShape.length - 1]}>
-              <Popup>End point</Popup>
+              <Popup>{t('routePanel.end')}</Popup>
             </Marker>
           </>
         )}

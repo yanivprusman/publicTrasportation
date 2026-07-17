@@ -1,4 +1,5 @@
 import RouteMapView from './RouteMapView'
+import { useI18n } from '../../i18n'
 import type { Coordinates } from '../../types'
 import styles from './MapControlPanel.module.css'
 
@@ -15,12 +16,13 @@ const MapControlPanel = ({
   optimizedRouteShape,
   handleShowRoutePanel
 }: MapControlPanelProps) => {
+  const { t } = useI18n()
   return (
     <>
       {(showRoutePanel || optimizedRouteShape) && (
         <div className={styles.panel}>
-          <h3>Route Shape View</h3>
-          <button onClick={() => setShowRoutePanel(false)} data-id="close-route-panel">Close</button>
+          <h3>{t('routePanel.title')}</h3>
+          <button onClick={() => setShowRoutePanel(false)} data-id="close-route-panel">{t('routePanel.close')}</button>
           <div className={styles.panelMap}>
             <RouteMapView routeShape={optimizedRouteShape} />
           </div>
@@ -29,7 +31,7 @@ const MapControlPanel = ({
 
       {!showRoutePanel && optimizedRouteShape && (
         <button onClick={handleShowRoutePanel} className={styles.showButton} data-id="show-route-panel">
-          Show Route Panel
+          {t('routePanel.show')}
         </button>
       )}
     </>

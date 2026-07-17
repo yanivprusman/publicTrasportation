@@ -28,10 +28,10 @@ const useMapHandlers = (
         const { lat, lon } = response.data[0]
         setMapCenter([parseFloat(lat), parseFloat(lon)])
       } else {
-        setSearchError('Location not found.')
+        setSearchError('mapCtl.notFound')
       }
     } catch {
-      setSearchError('Error fetching location. Please try again.')
+      setSearchError('mapCtl.searchFailed')
     }
   }
 
@@ -61,7 +61,7 @@ const useMapHandlers = (
 
   const handleFindRoute = async (): Promise<Coordinates[] | null> => {
     if (!destination || !destination[0] || !destination[1]) {
-      setSearchError('Please set a destination first.')
+      setSearchError('mapCtl.needDest')
       return null
     }
 
@@ -72,11 +72,11 @@ const useMapHandlers = (
       if (routeData) {
         return routeData
       } else {
-        setSearchError('No route found. Please try again with different locations.')
+        setSearchError('mapCtl.noRoute')
         return null
       }
     } catch {
-      setSearchError('Error fetching route. Please try again.')
+      setSearchError('mapCtl.routeFailed')
       return null
     }
   }

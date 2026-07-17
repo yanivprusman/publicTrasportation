@@ -48,7 +48,8 @@ export function useNearbyStops(): UseNearbyStopsReturn {
 
   const locate = useCallback(() => {
     if (!navigator.geolocation) {
-      setError('Location is not available on this device.')
+      // Known conditions are stored as translation keys, localized at render.
+      setError('nearby.noGeo')
       return
     }
     const seq = ++seqRef.current
@@ -64,11 +65,7 @@ export function useNearbyStops(): UseNearbyStopsReturn {
       (err) => {
         if (seq !== seqRef.current) return
         setLoading(false)
-        setError(
-          err.code === err.PERMISSION_DENIED
-            ? 'Location permission denied — allow location access to find stops around you.'
-            : 'Could not get your location — try again in a spot with better reception.'
-        )
+        setError(err.code === err.PERMISSION_DENIED ? 'nearby.denied' : 'nearby.failed')
       },
       { enableHighAccuracy: true, timeout: 10000 }
     )

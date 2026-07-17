@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import type { Itinerary } from '../../types'
 import { formatTime } from '../../utils/time-format'
 import { getModeLabel } from '../../utils/mode-colors'
+import { useI18n } from '../../i18n'
 import styles from './DepartureCountdown.module.css'
 
 interface DepartureCountdownProps {
@@ -24,6 +25,7 @@ function formatClock(ms: number): { text: string; big: boolean } {
 }
 
 export default function DepartureCountdown({ itinerary }: DepartureCountdownProps) {
+  const { t } = useI18n()
   // Re-render every second so the countdown ticks live. A single interval keyed
   // to the itinerary's departure is enough — no per-leg timers.
   const [now, setNow] = useState(() => Date.now())
@@ -48,8 +50,8 @@ export default function DepartureCountdown({ itinerary }: DepartureCountdownProp
       <div className={`${styles.banner} ${styles.passed}`} data-id="departure-countdown" role="status">
         <span className={`${styles.clock} ${styles.clockSmall}`}>—</span>
         <div className={styles.text}>
-          <span className={styles.headline}>This departure has passed</span>
-          <span className={styles.sub}>Search again for an up-to-date route.</span>
+          <span className={styles.headline}>{t('countdown.passed')}</span>
+          <span className={styles.sub}>{t('countdown.searchAgain')}</span>
         </div>
       </div>
     )
@@ -60,14 +62,18 @@ export default function DepartureCountdown({ itinerary }: DepartureCountdownProp
   const totalMin = Math.floor(remaining / 60000)
 
   const headline = urgent
-    ? 'Leave now to catch it!'
+    ? t('countdown.leaveNow')
     : totalMin < 60
-      ? `Leave in ${totalMin} min to catch it`
-      : 'Leave on time to catch it'
+      ? t('countdown.leaveIn', { n: totalMin })
+      : t('countdown.leaveOnTime')
 
   const sub = firstRide
-    ? `Catch ${getModeLabel(firstRide.mode)}${firstRide.routeShortName ? ` ${firstRide.routeShortName}` : ''} at ${firstRide.from.name} · departs ${formatTime(firstRide.startTime)}`
-    : `Start walking to arrive by ${formatTime(itinerary.endTime)}`
+    ? t('countdown.catch', {
+        ride: `${getModeLabel(firstRide.mode)}${firstRide.routeShortName ? ` ${firstRide.routeShortName}` : ''}`,
+        stop: firstRide.from.name,
+        time: formatTime(firstRide.startTime),
+      })
+    : t('countdown.startWalking', { time: formatTime(itinerary.endTime) })
 
   return (
     <div

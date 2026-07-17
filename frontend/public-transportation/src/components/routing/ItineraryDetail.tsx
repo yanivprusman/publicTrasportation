@@ -7,6 +7,7 @@ import { buildTripLink, type SharedTrip } from '../../utils/trip-link'
 import DepartureCountdown from './DepartureCountdown'
 import LiveBusStatus from './LiveBusStatus'
 import JourneyNavigator from './JourneyNavigator'
+import { useI18n } from '../../i18n'
 import styles from './ItineraryDetail.module.css'
 
 interface ItineraryDetailProps {
@@ -34,6 +35,7 @@ function waitSecondsBetween(prev: RouteLeg, next: RouteLeg): number {
 }
 
 export default function ItineraryDetail({ itinerary, trip, liveBus, onShowLiveBusOnMap }: ItineraryDetailProps) {
+  const { t } = useI18n()
   const legs = itinerary.legs
   const [navigating, setNavigating] = useState(false)
   return (
@@ -46,7 +48,11 @@ export default function ItineraryDetail({ itinerary, trip, liveBus, onShowLiveBu
           {' · '}
           {formatDuration(itinerary.duration)}
           {' · '}
-          {itinerary.transfers} transfer{itinerary.transfers !== 1 ? 's' : ''}
+          {itinerary.transfers === 0
+            ? t('card.direct')
+            : itinerary.transfers === 1
+              ? t('card.transfersOne')
+              : t('card.transfersMany', { n: itinerary.transfers })}
         </div>
         {trip && <ShareTripButton trip={trip} />}
       </div>
@@ -58,7 +64,7 @@ export default function ItineraryDetail({ itinerary, trip, liveBus, onShowLiveBu
           data-id="start-journey"
         >
           <span className={styles.startJourneyIcon} aria-hidden="true">{'\u{1F9ED}'}</span>
-          Start journey
+          {t('detail.startJourney')}
         </button>
       )}
       {navigating && (
@@ -92,6 +98,7 @@ export default function ItineraryDetail({ itinerary, trip, liveBus, onShowLiveBu
 }
 
 function ShareTripButton({ trip }: { trip: SharedTrip }) {
+  const { t } = useI18n()
   const [status, setStatus] = useState<'idle' | 'copied' | 'error'>('idle')
   const resetTimerRef = useRef<number | null>(null)
 
@@ -129,10 +136,10 @@ function ShareTripButton({ trip }: { trip: SharedTrip }) {
       className={`${styles.shareBtn} ${status === 'copied' ? styles.shareBtnCopied : ''}`}
       onClick={handleShare}
       type="button"
-      title="Share this trip as a link"
+      title={t('detail.shareTitle')}
       data-id="share-trip"
     >
-      {status === 'copied' ? '✓ Link copied' : status === 'error' ? 'Share failed' : '\u{1F517} Share trip'}
+      {status === 'copied' ? t('detail.shareCopied') : status === 'error' ? t('detail.shareFailed') : t('detail.share')}
     </button>
   )
 }
@@ -145,6 +152,7 @@ interface TimelineNodeProps {
 }
 
 function TimelineNode({ kind, time, name, waitSeconds = 0 }: TimelineNodeProps) {
+  const { t } = useI18n()
   const dotClass =
     kind === 'origin' ? styles.dotOrigin :
     kind === 'destination' ? styles.dotDestination :
@@ -158,7 +166,7 @@ function TimelineNode({ kind, time, name, waitSeconds = 0 }: TimelineNodeProps) 
       <div className={styles.nodeContent}>
         <span className={styles.nodeName}>{name}</span>
         {waitSeconds > 0 && (
-          <span className={styles.waitChip}>Wait {formatDuration(waitSeconds)}</span>
+          <span className={styles.waitChip}>{t('detail.wait', { d: formatDuration(waitSeconds) })}</span>
         )}
       </div>
     </div>
@@ -166,10 +174,11 @@ function TimelineNode({ kind, time, name, waitSeconds = 0 }: TimelineNodeProps) 
 }
 
 function LegSegment({ leg }: { leg: RouteLeg }) {
+  const { t } = useI18n()
   const style = getModeStyle(leg.mode, leg.routeColor)
   const [stopsOpen, setStopsOpen] = useState(false)
   const stopCount = leg.intermediateStops?.length ?? 0
-  const stopsLabel = `${stopCount} ${stopCount === 1 ? 'stop' : 'stops'}`
+  const stopsLabel = stopCount === 1 ? t('detail.stopsOne') : t('detail.stopsMany', { n: stopCount })
   const isWalk = leg.mode === 'WALK'
 
   return (
@@ -185,7 +194,7 @@ function LegSegment({ leg }: { leg: RouteLeg }) {
         {isWalk ? (
           <div className={styles.walkLine}>
             <span className={styles.modeIcon} aria-hidden="true">{MODE_ICONS.WALK}</span>
-            <span>Walk {formatDuration(leg.duration)}</span>
+            <span>{t('detail.walk', { d: formatDuration(leg.duration) })}</span>
           </div>
         ) : (
           <>

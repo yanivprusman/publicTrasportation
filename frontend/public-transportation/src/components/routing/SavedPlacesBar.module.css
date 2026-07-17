@@ -76,7 +76,7 @@
 
 .fromBtn {
   border: none;
-  border-left: 1px solid var(--border);
+  border-inline-start: 1px solid var(--border);
   background: none;
   padding: 0 9px;
   font-size: 11px;

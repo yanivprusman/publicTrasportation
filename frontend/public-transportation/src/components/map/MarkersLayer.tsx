@@ -1,6 +1,8 @@
 import { Marker, Popup } from 'react-leaflet'
 import { originIcon, destinationIcon, centerIcon, createBusIcon, stopIcon } from './MapMarkers'
 import { formatTime } from '../../utils/time-format'
+import { formatStopDistance } from '../../utils/distance'
+import { useI18n } from '../../i18n'
 import type { Coordinates, VehicleMarker, StopInfo } from '../../types'
 
 // SIRI gives ExpectedArrivalTime as a raw ISO string; render a readable HH:MM
@@ -10,9 +12,6 @@ const formatArrival = (iso: string): string => {
   if (!iso || isNaN(new Date(iso).getTime())) return 'N/A'
   return formatTime(iso)
 }
-
-const formatDistance = (meters: number): string =>
-  meters >= 1000 ? `${(meters / 1000).toFixed(1)} km` : `${meters} m`
 
 interface MarkersLayerProps {
   position: Coordinates
@@ -37,12 +36,13 @@ const MarkersLayer = ({
   selectedStop,
   handleSetStartPoint
 }: MarkersLayerProps) => {
+  const { t } = useI18n()
   return (
     <>
       <Marker position={position} icon={originIcon}>
         <Popup>
-          <strong>Origin:</strong> {positionAddress}<br/>
-          Coordinates: {position[0].toFixed(6)}, {position[1].toFixed(6)}
+          <strong>{t('popup.origin')}</strong> {positionAddress}<br/>
+          {t('popup.coordinates')} {position[0].toFixed(6)}, {position[1].toFixed(6)}
         </Popup>
       </Marker>
 
@@ -50,8 +50,8 @@ const MarkersLayer = ({
         <Marker position={destination} icon={destinationIcon}>
           <Popup>
             <div>
-              <strong>Destination:</strong> {destinationAddress}<br/>
-              <strong>Coordinates:</strong> {destination[0].toFixed(6)}, {destination[1].toFixed(6)}
+              <strong>{t('popup.destination')}</strong> {destinationAddress}<br/>
+              <strong>{t('popup.coordinates')}</strong> {destination[0].toFixed(6)}, {destination[1].toFixed(6)}
             </div>
           </Popup>
         </Marker>
@@ -67,10 +67,10 @@ const MarkersLayer = ({
         >
           <Popup>
             <div>
-              <strong>Line:</strong> {vehicle.lineNumber}<br/>
-              <strong>Vehicle:</strong> {vehicle.vehicleRef}<br/>
-              <strong>Expected arrival:</strong> {formatArrival(vehicle.expectedArrival)}<br/>
-              <strong>Distance from stop:</strong> {formatDistance(vehicle.distanceFromStop)}
+              <strong>{t('popup.line')}</strong> {vehicle.lineNumber}<br/>
+              <strong>{t('popup.vehicle')}</strong> {vehicle.vehicleRef}<br/>
+              <strong>{t('popup.expectedArrival')}</strong> {formatArrival(vehicle.expectedArrival)}<br/>
+              <strong>{t('popup.distanceFromStop')}</strong> {formatStopDistance(vehicle.distanceFromStop)}
             </div>
           </Popup>
         </Marker>
@@ -84,10 +84,10 @@ const MarkersLayer = ({
         >
           <Popup>
             <div>
-              <strong>Stop:</strong> {stop.stopName}<br/>
-              <strong>ID:</strong> {stop.stopId}<br/>
+              <strong>{t('popup.stop')}</strong> {stop.stopName}<br/>
+              <strong>{t('popup.id')}</strong> {stop.stopId}<br/>
               <button onClick={() => handleSetStartPoint([stop.lat, stop.lon])}>
-                Set as starting point
+                {t('popup.setAsStart')}
               </button>
             </div>
           </Popup>

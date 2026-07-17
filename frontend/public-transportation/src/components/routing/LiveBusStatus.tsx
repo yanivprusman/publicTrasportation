@@ -3,6 +3,7 @@ import type { Coordinates } from '../../types'
 import type { LiveBusState } from '../../hooks/useLiveBus'
 import { formatStopDistance } from '../../utils/distance'
 import { formatTime } from '../../utils/time-format'
+import { useI18n } from '../../i18n'
 import styles from './LiveBusStatus.module.css'
 
 interface LiveBusStatusProps {
@@ -10,17 +11,8 @@ interface LiveBusStatusProps {
   onShowOnMap: (position: Coordinates) => void
 }
 
-function etaText(expectedArrival: string | null, now: number): string | null {
-  if (!expectedArrival) return null
-  const ms = Date.parse(expectedArrival)
-  if (Number.isNaN(ms)) return null
-  const mins = Math.round((ms - now) / 60000)
-  const clock = formatTime(expectedArrival)
-  if (mins <= 0) return `arriving now (${clock})`
-  return `arrives ${clock} · in ${mins} min`
-}
-
 export default function LiveBusStatus({ state, onShowOnMap }: LiveBusStatusProps) {
+  const { t, tm } = useI18n()
   // Keep the "in N min" text fresh between the hook's 15s polls.
   const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
@@ -34,7 +26,9 @@ export default function LiveBusStatus({ state, onShowOnMap }: LiveBusStatusProps
     return (
       <div className={`${styles.card} ${styles.muted}`} role="status" data-id="live-bus-status">
         <span className={styles.offDot} aria-hidden="true" />
-        <span className={styles.text}>Live bus tracking unavailable: {state.error}</span>
+        <span className={styles.text}>
+          {t('liveBus.unavailable', { error: tm(state.error ?? '', { stop: state.stopName }) })}
+        </span>
       </div>
     )
   }
@@ -43,7 +37,7 @@ export default function LiveBusStatus({ state, onShowOnMap }: LiveBusStatusProps
     return (
       <div className={`${styles.card} ${styles.muted}`} role="status" data-id="live-bus-status">
         <span className={styles.liveDot} aria-hidden="true" />
-        <span className={styles.text}>Looking for bus {state.lineNumber} near {state.stopName}…</span>
+        <span className={styles.text}>{t('liveBus.looking', { line: state.lineNumber, stop: state.stopName })}</span>
       </div>
     )
   }
@@ -53,29 +47,43 @@ export default function LiveBusStatus({ state, onShowOnMap }: LiveBusStatusProps
       <div className={`${styles.card} ${styles.muted}`} role="status" data-id="live-bus-status">
         <span className={styles.offDot} aria-hidden="true" />
         <span className={styles.text}>
-          No live bus {state.lineNumber} heading to {state.stopName} in the next hour yet.
+          {t('liveBus.none', { line: state.lineNumber, stop: state.stopName })}
         </span>
       </div>
     )
   }
 
-  const eta = etaText(state.expectedArrival, now)
+  let eta: string | null = null
+  if (state.expectedArrival) {
+    const ms = Date.parse(state.expectedArrival)
+    if (!Number.isNaN(ms)) {
+      const mins = Math.round((ms - now) / 60000)
+      const clock = formatTime(state.expectedArrival)
+      eta = mins <= 0
+        ? t('liveBus.arrivingNow', { time: clock })
+        : t('liveBus.arrives', { time: clock, n: mins })
+    }
+  }
 
   return (
     <div className={styles.card} role="status" data-id="live-bus-status">
       <span className={styles.liveBadge}>
         <span className={styles.liveDot} aria-hidden="true" />
-        LIVE
+        {t('liveBus.live')}
       </span>
       <div className={styles.body}>
         <span className={styles.headline}>
           {state.phase === 'live' && state.vehicle
-            ? `Bus ${state.lineNumber} is ${formatStopDistance(state.vehicle.distanceFromStopMeters)} from ${state.stopName}`
-            : `Bus ${state.lineNumber} is on its way to ${state.stopName}`}
+            ? t('liveBus.distanceFrom', {
+                line: state.lineNumber,
+                distance: formatStopDistance(state.vehicle.distanceFromStopMeters),
+                stop: state.stopName,
+              })
+            : t('liveBus.onWay', { line: state.lineNumber, stop: state.stopName })}
         </span>
         <span className={styles.sub}>
-          {eta ?? (state.phase === 'tracked' ? 'No arrival estimate yet' : 'Arrival estimate unavailable')}
-          {state.phase === 'tracked' && ' · no GPS position yet'}
+          {eta ?? (state.phase === 'tracked' ? t('liveBus.noEstimate') : t('liveBus.estimateUnavailable'))}
+          {state.phase === 'tracked' && t('liveBus.noGps')}
         </span>
       </div>
       {state.phase === 'live' && state.vehicle && (
@@ -85,7 +93,7 @@ export default function LiveBusStatus({ state, onShowOnMap }: LiveBusStatusProps
           onClick={() => onShowOnMap(state.vehicle!.position)}
           data-id="show-live-bus-on-map"
         >
-          Show on map
+          {t('liveBus.showOnMap')}
         </button>
       )}
     </div>

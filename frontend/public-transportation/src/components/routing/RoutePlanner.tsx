@@ -11,6 +11,7 @@ import SavedPlacesBar from './SavedPlacesBar'
 import { useSavedRoutes, type SavedRoute } from '../../hooks/useSavedRoutes'
 import { useSavedPlaces } from '../../hooks/useSavedPlaces'
 import { useTheme } from '../../hooks/useTheme'
+import { useI18n } from '../../i18n'
 import type { LiveBusState } from '../../hooks/useLiveBus'
 import type { Coordinates, GeocodeSuggestion } from '../../types'
 import styles from './RoutePlanner.module.css'
@@ -36,6 +37,7 @@ export default function RoutePlanner({
   const saved = useSavedRoutes()
   const places = useSavedPlaces()
   const { theme, toggleTheme } = useTheme()
+  const { lang, t, tm, toggleLanguage } = useI18n()
 
   const handleUseAsOrigin = useCallback((place: GeocodeSuggestion) => {
     routing.setOrigin(place)
@@ -93,7 +95,7 @@ export default function RoutePlanner({
     // permission or timeout used to just stop the spinner with no feedback,
     // leaving the user unsure whether it was working. Surface a clear message.
     if (!navigator.geolocation) {
-      setGpsError('Location is not available on this device — type an origin instead.')
+      setGpsError('gps.unavailable')
       return
     }
     setGpsLoading(true)
@@ -105,11 +107,8 @@ export default function RoutePlanner({
       },
       (err) => {
         setGpsLoading(false)
-        setGpsError(
-          err.code === err.PERMISSION_DENIED
-            ? 'Location permission denied — enable it or type an origin.'
-            : 'Could not get your location — try again or type an origin.'
-        )
+        // Stored as translation keys so a language switch retranslates them.
+        setGpsError(err.code === err.PERMISSION_DENIED ? 'gps.denied' : 'gps.failed')
       },
       { enableHighAccuracy: true, timeout: 10000 }
     )
@@ -123,43 +122,53 @@ export default function RoutePlanner({
           onClick={() => onTabChange('route')}
           type="button"
           data-id="tab-route-planner"
-          data-active-tab={activeTab === 'route' ? 'Routes' : undefined}
+          data-active-tab={activeTab === 'route' ? t('tabs.routes') : undefined}
         >
-          Routes
+          {t('tabs.routes')}
         </button>
         <button
           className={`${styles.tab} ${activeTab === 'nearby' ? styles.activeTab : ''}`}
           onClick={() => onTabChange('nearby')}
           type="button"
           data-id="tab-nearby"
-          data-active-tab={activeTab === 'nearby' ? 'Nearby' : undefined}
+          data-active-tab={activeTab === 'nearby' ? t('tabs.nearby') : undefined}
         >
-          Nearby
+          {t('tabs.nearby')}
         </button>
         <button
           className={`${styles.tab} ${activeTab === 'arrivals' ? styles.activeTab : ''}`}
           onClick={() => onTabChange('arrivals')}
           type="button"
           data-id="tab-station-arrivals"
-          data-active-tab={activeTab === 'arrivals' ? 'Arrivals' : undefined}
+          data-active-tab={activeTab === 'arrivals' ? t('tabs.arrivals') : undefined}
         >
-          Arrivals
+          {t('tabs.arrivals')}
         </button>
         <button
           className={`${styles.tab} ${activeTab === 'lines' ? styles.activeTab : ''}`}
           onClick={() => onTabChange('lines')}
           type="button"
           data-id="tab-lines"
-          data-active-tab={activeTab === 'lines' ? 'Lines' : undefined}
+          data-active-tab={activeTab === 'lines' ? t('tabs.lines') : undefined}
         >
-          Lines
+          {t('tabs.lines')}
+        </button>
+        <button
+          className={styles.themeBtn}
+          onClick={toggleLanguage}
+          type="button"
+          title={t('lang.toggleTitle')}
+          aria-label={t('lang.toggleTitle')}
+          data-id="toggle-language"
+        >
+          {lang === 'he' ? 'EN' : 'עב'}
         </button>
         <button
           className={styles.themeBtn}
           onClick={toggleTheme}
           type="button"
-          title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-          aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          title={theme === 'dark' ? t('theme.toLight') : t('theme.toDark')}
+          aria-label={theme === 'dark' ? t('theme.toLight') : t('theme.toDark')}
           data-id="toggle-theme"
         >
           {theme === 'dark' ? '☀️' : '🌙'}
@@ -178,7 +187,7 @@ export default function RoutePlanner({
             <div className={styles.searchBar} onClick={handleCollapsedClick} data-id="open-route-planner">
               {routing.origin && routing.destination
                 ? `${routing.origin.name} → ${routing.destination.name}`
-                : 'Where to?'}
+                : t('planner.whereTo')}
             </div>
           ) : (
             <>
@@ -199,20 +208,22 @@ export default function RoutePlanner({
                 <div className={styles.inputsRow}>
                   <div className={styles.inputsFields}>
                     <LocationInput
-                      label="From"
+                      label={t('planner.from')}
+                      field="from"
                       value={routing.origin}
                       onChange={routing.setOrigin}
-                      placeholder="Origin"
+                      placeholder={t('planner.originPlaceholder')}
                       onGpsClick={handleGpsClick}
                       gpsLoading={gpsLoading}
                       isSaved={!!routing.origin && places.isSaved(routing.origin)}
                       onToggleSave={routing.origin ? () => places.toggleSave(routing.origin!) : undefined}
                     />
                     <LocationInput
-                      label="To"
+                      label={t('planner.to')}
+                      field="to"
                       value={routing.destination}
                       onChange={routing.setDestination}
-                      placeholder="Destination"
+                      placeholder={t('planner.destinationPlaceholder')}
                       isSaved={!!routing.destination && places.isSaved(routing.destination)}
                       onToggleSave={routing.destination ? () => places.toggleSave(routing.destination!) : undefined}
                     />
@@ -222,7 +233,7 @@ export default function RoutePlanner({
                     onClick={routing.swapOriginDestination}
                     disabled={!routing.origin && !routing.destination}
                     type="button"
-                    title="Swap origin and destination"
+                    title={t('planner.swapTitle')}
                     data-id="swap-origin-destination"
                   >
                     &#8693;
@@ -230,7 +241,7 @@ export default function RoutePlanner({
                 </div>
                 {gpsError && (
                   <div className={styles.gpsError} role="alert" data-id="gps-error">
-                    {gpsError}
+                    {tm(gpsError)}
                   </div>
                 )}
                 <TimePicker
@@ -248,14 +259,14 @@ export default function RoutePlanner({
                     type="button"
                     data-id="search-routes"
                   >
-                    {routing.loading ? 'Searching...' : 'Search Routes'}
+                    {routing.loading ? t('planner.searching') : t('planner.search')}
                   </button>
                   <button
                     className={`${styles.favBtn} ${isFavorited ? styles.favBtnActive : ''}`}
                     onClick={handleToggleFavorite}
                     disabled={!canFavorite}
                     type="button"
-                    title={isFavorited ? 'Remove from saved routes' : 'Save this route'}
+                    title={isFavorited ? t('planner.removeSavedRoute') : t('planner.saveRoute')}
                     aria-pressed={isFavorited}
                     data-id="toggle-favorite-route"
                   >
