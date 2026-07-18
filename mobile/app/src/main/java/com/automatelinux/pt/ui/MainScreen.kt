@@ -6,6 +6,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import com.automatelinux.pt.BuildConfig
 import com.google.android.gms.location.LocationServices
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -22,16 +23,24 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Layers
+import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.MyLocation
+import androidx.compose.material.icons.filled.SatelliteAlt
 import androidx.compose.material.icons.filled.Work
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.SmallFloatingActionButton
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -71,6 +80,7 @@ import com.automatelinux.pt.ui.lines.LineShapeData
 import com.automatelinux.pt.ui.lines.LinesBrowserPanel
 import com.automatelinux.pt.ui.map.GpsLocationOverlay
 import com.automatelinux.pt.ui.map.LineShapeOverlay
+import com.automatelinux.pt.ui.map.MapStyles
 import com.automatelinux.pt.ui.map.OriginDestinationMarkers
 import com.automatelinux.pt.ui.map.OsmMapView
 import com.automatelinux.pt.ui.map.RouteOverlay
@@ -139,6 +149,8 @@ fun MainScreen(
     var journeyMode by remember { mutableStateOf(false) }
     var boardMode by remember { mutableStateOf(false) }
     var shareTripLink by remember { mutableStateOf<String?>(null) }
+    var mapStyle by remember { mutableStateOf(settingsStore.mapStyle) }
+    var showMapStyleMenu by remember { mutableStateOf(false) }
 
     val preSuggestions = remember(recentSearchesVersion, strings) {
         buildList {
@@ -685,6 +697,7 @@ fun MainScreen(
                 OsmMapView(
                     center = GeoPoint(31.77, 35.21),
                     zoom = 13.0,
+                    mapStyle = mapStyle,
                     onMapReady = { map -> mapView = map },
                     onLongPress = { point ->
                         if (routingState.origin == null) {
@@ -749,35 +762,85 @@ fun MainScreen(
                     )
                 }
 
-                SmallFloatingActionButton(
-                    onClick = {
-                        if (LocationHelper.hasPermission(context)) {
-                            followingLocation = !followingLocation
-                            if (followingLocation) {
-                                centerMapOnCurrentLocation()
-                            }
-                        } else {
-                            permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
-                        }
-                    },
+                Column(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
                         .padding(top = 48.dp, end = 12.dp),
-                    containerColor = if (followingLocation)
-                        MaterialTheme.colorScheme.primary
-                    else
-                        MaterialTheme.colorScheme.surface,
-                    contentColor = if (followingLocation)
-                        MaterialTheme.colorScheme.onPrimary
-                    else
-                        MaterialTheme.colorScheme.primary,
-                    elevation = FloatingActionButtonDefaults.elevation(4.dp)
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Icon(
-                        Icons.Default.MyLocation,
-                        contentDescription = strings.followMyLocation,
-                        modifier = Modifier.size(22.dp)
-                    )
+                    SmallFloatingActionButton(
+                        onClick = {
+                            if (LocationHelper.hasPermission(context)) {
+                                followingLocation = !followingLocation
+                                if (followingLocation) {
+                                    centerMapOnCurrentLocation()
+                                }
+                            } else {
+                                permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+                            }
+                        },
+                        containerColor = if (followingLocation)
+                            MaterialTheme.colorScheme.primary
+                        else
+                            MaterialTheme.colorScheme.surface,
+                        contentColor = if (followingLocation)
+                            MaterialTheme.colorScheme.onPrimary
+                        else
+                            MaterialTheme.colorScheme.primary,
+                        elevation = FloatingActionButtonDefaults.elevation(4.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.MyLocation,
+                            contentDescription = strings.followMyLocation,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+
+                    Box {
+                        SmallFloatingActionButton(
+                            onClick = { showMapStyleMenu = true },
+                            containerColor = MaterialTheme.colorScheme.surface,
+                            contentColor = MaterialTheme.colorScheme.primary,
+                            elevation = FloatingActionButtonDefaults.elevation(4.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Layers,
+                                contentDescription = strings.mapStyle,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = showMapStyleMenu,
+                            onDismissRequest = { showMapStyleMenu = false }
+                        ) {
+                            val styleOptions = listOf(
+                                Triple(MapStyles.DARK, Icons.Default.DarkMode, strings.mapStyleDark),
+                                Triple(MapStyles.LIGHT, Icons.Default.LightMode, strings.mapStyleLight),
+                                Triple(MapStyles.SATELLITE, Icons.Default.SatelliteAlt, strings.mapStyleSatellite)
+                            )
+                            for ((style, icon, label) in styleOptions) {
+                                DropdownMenuItem(
+                                    text = { Text(label) },
+                                    leadingIcon = { Icon(icon, contentDescription = null) },
+                                    trailingIcon = if (mapStyle == style) {
+                                        {
+                                            Icon(
+                                                Icons.Default.Check,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
+                                    } else null,
+                                    onClick = {
+                                        settingsStore.mapStyle = style
+                                        mapStyle = style
+                                        showMapStyleMenu = false
+                                    }
+                                )
+                            }
+                        }
+                    }
                 }
 
                 if (showOpacitySlider) {

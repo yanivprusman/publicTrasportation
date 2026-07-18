@@ -18,10 +18,10 @@ import org.osmdroid.events.MapEventsReceiver
 import org.osmdroid.events.MapListener
 import org.osmdroid.events.ScrollEvent
 import org.osmdroid.events.ZoomEvent
-import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.BoundingBox
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
+import org.osmdroid.views.overlay.CopyrightOverlay
 import org.osmdroid.views.overlay.MapEventsOverlay
 
 object MapZoomHandler {
@@ -39,6 +39,7 @@ fun OsmMapView(
     modifier: Modifier = Modifier,
     center: GeoPoint = GeoPoint(31.77, 35.21),
     zoom: Double = 13.0,
+    mapStyle: String = MapStyles.DARK,
     onMapReady: (MapView) -> Unit = {},
     onLongPress: ((GeoPoint) -> Unit)? = null,
     onMapMoved: ((GeoPoint) -> Unit)? = null,
@@ -60,13 +61,15 @@ fun OsmMapView(
         modifier = modifier.fillMaxSize(),
         factory = { ctx ->
             MapView(ctx).apply {
-                setTileSource(TileSourceFactory.MAPNIK)
                 setMultiTouchControls(true)
                 zoomController.setVisibility(org.osmdroid.views.CustomZoomButtonsController.Visibility.NEVER)
                 controller.setZoom(zoom)
                 controller.setCenter(center)
                 minZoomLevel = 5.0
                 maxZoomLevel = 19.0
+
+                overlays.add(CopyrightOverlay(ctx))
+                MapStyles.apply(this, mapStyle)
 
                 if (onLongPress != null) {
                     overlays.add(MapEventsOverlay(object : MapEventsReceiver {
@@ -110,7 +113,7 @@ fun OsmMapView(
                 onMapReady(this)
             }
         },
-        update = { _ -> }
+        update = { map -> MapStyles.apply(map, mapStyle) }
     )
 
     mapView?.let { map ->

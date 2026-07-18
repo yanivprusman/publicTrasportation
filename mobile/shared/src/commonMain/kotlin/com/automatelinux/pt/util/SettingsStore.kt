@@ -57,6 +57,11 @@ class SettingsStore(private val prefs: Settings) {
         get() = prefs.getString("location_icon_style", "dot")
         set(value) { prefs.putString("location_icon_style", value) }
 
+    /** Base map style: "dark" (default, matches the app theme), "light", or "satellite". */
+    var mapStyle: String
+        get() = prefs.getString("map_style", "dark")
+        set(value) { prefs.putString("map_style", value) }
+
     var language: String
         get() = prefs.getString("language", "en")
         set(value) { prefs.putString("language", value) }
