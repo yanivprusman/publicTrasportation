@@ -83,9 +83,17 @@ echo "Restarting MOTIS service..."
 systemctl restart motis
 
 # --- Health check (retry up to 30 seconds) ---
-echo "Waiting for MOTIS to start..."
+# Port comes from config.yml — peers run MOTIS on different ports (desktop
+# 3504, NUC 3506), and a hardcoded port makes the check lie on every peer
+# but one.
+MOTIS_PORT=$(awk '/^server:/{s=1;next} s&&/^[[:space:]]*port:/{print $2; exit}' "$SCRIPT_DIR/config.yml")
+if [[ -z "$MOTIS_PORT" ]]; then
+    echo "ERROR: could not read server.port from $SCRIPT_DIR/config.yml"
+    exit 1
+fi
+echo "Waiting for MOTIS to start (port $MOTIS_PORT)..."
 for i in $(seq 1 15); do
-    if curl -sf "http://localhost:3504/api/v1/geocode?text=tel+aviv" > /dev/null 2>&1; then
+    if curl -sf "http://localhost:${MOTIS_PORT}/api/v1/geocode?text=tel+aviv" > /dev/null 2>&1; then
         echo "Health check passed"
         break
     fi
