@@ -453,7 +453,8 @@ fun MainScreen(
                                 scope.launch { bottomSheetState.expand() }
                             }
                         },
-                        onDebugLongClick = { showDebugSettings = true }
+                        onDebugLongClick = { showDebugSettings = true },
+                        showDebugFill = BuildConfig.FEEDBACK_ENABLED
                     )
                     SheetTabRow(
                         activeTab = activeTab,

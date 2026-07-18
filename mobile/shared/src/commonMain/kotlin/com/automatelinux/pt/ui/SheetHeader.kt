@@ -43,7 +43,8 @@ fun SheetDragHandleRow(
     onSheetOpacityChange: (Float) -> Unit,
     onSheetOpacityFinished: () -> Unit,
     onDebugFill: () -> Unit,
-    onDebugLongClick: () -> Unit
+    onDebugLongClick: () -> Unit,
+    showDebugFill: Boolean = true
 ) {
     Row(
         modifier = Modifier
@@ -71,20 +72,22 @@ fun SheetDragHandleRow(
         Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
             BottomSheetDefaults.DragHandle()
         }
-        Icon(
-            Icons.Default.BugReport,
-            contentDescription = strings.debugFill,
-            tint = if (loading) MaterialTheme.colorScheme.tertiary.copy(alpha = 0.38f)
-                   else MaterialTheme.colorScheme.tertiary,
-            modifier = Modifier
-                .size(36.dp)
-                .combinedClickable(
-                    enabled = !loading,
-                    onClick = onDebugFill,
-                    onLongClick = onDebugLongClick
-                )
-                .padding(6.dp)
-        )
+        if (showDebugFill) {
+            Icon(
+                Icons.Default.BugReport,
+                contentDescription = strings.debugFill,
+                tint = if (loading) MaterialTheme.colorScheme.tertiary.copy(alpha = 0.38f)
+                       else MaterialTheme.colorScheme.tertiary,
+                modifier = Modifier
+                    .size(36.dp)
+                    .combinedClickable(
+                        enabled = !loading,
+                        onClick = onDebugFill,
+                        onLongClick = onDebugLongClick
+                    )
+                    .padding(6.dp)
+            )
+        }
     }
 }
 
