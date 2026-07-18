@@ -21,10 +21,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.DirectionsBike
 import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DirectionsBoat
 import androidx.compose.material.icons.filled.DirectionsBus
+import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.DirectionsSubway
 import androidx.compose.material.icons.filled.Train
@@ -71,6 +73,8 @@ private fun modeIcon(mode: TransitMode): ImageVector = when (mode) {
     TransitMode.TRAM -> Icons.Default.Tram
     TransitMode.SUBWAY -> Icons.Default.DirectionsSubway
     TransitMode.FERRY -> Icons.Default.DirectionsBoat
+    TransitMode.BIKE -> Icons.AutoMirrored.Filled.DirectionsBike
+    TransitMode.CAR -> Icons.Default.DirectionsCar
 }
 
 // mm:ss under an hour, "Hh MMm" above — the live gap to a step's start time.

@@ -26,7 +26,7 @@ object TransitModeSerializer : KSerializer<TransitMode> {
 
 @Serializable(with = TransitModeSerializer::class)
 enum class TransitMode {
-    WALK, BUS, RAIL, TRAM, SUBWAY, FERRY;
+    WALK, BUS, RAIL, TRAM, SUBWAY, FERRY, BIKE, CAR;
 
     companion object {
         fun fromString(s: String): TransitMode = when {
@@ -36,6 +36,8 @@ enum class TransitMode {
             s.equals("SUBWAY", ignoreCase = true) -> SUBWAY
             s.equals("METRO", ignoreCase = true) -> SUBWAY
             s.equals("FERRY", ignoreCase = true) -> FERRY
+            s.equals("BIKE", ignoreCase = true) -> BIKE
+            s.equals("CAR", ignoreCase = true) -> CAR
             s.contains("RAIL", ignoreCase = true) -> RAIL
             else -> WALK
         }
@@ -77,7 +79,7 @@ data class Itinerary(
                 TransitMode.SUBWAY -> fare += 5.50
                 TransitMode.RAIL -> fare += 15.0
                 TransitMode.FERRY -> fare += 25.0
-                TransitMode.WALK -> {}
+                TransitMode.WALK, TransitMode.BIKE, TransitMode.CAR -> {}
             }
         }
         return fare
@@ -88,7 +90,17 @@ enum class RouteSortMode {
     FASTEST, FEWER_TRANSFERS, LESS_WALKING
 }
 
+// One direct street route (the fastest per mode) returned alongside the transit
+// itineraries for the bike/car comparison strip. `distance` is street meters.
+@Serializable
+data class DirectAlternative(
+    val mode: TransitMode,
+    val distance: Int,
+    val itinerary: Itinerary
+)
+
 @Serializable
 data class RouteResult(
-    val itineraries: List<Itinerary>
+    val itineraries: List<Itinerary>,
+    val alternatives: List<DirectAlternative> = emptyList()
 )

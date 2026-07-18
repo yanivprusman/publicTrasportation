@@ -19,9 +19,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.DirectionsBike
 import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
 import androidx.compose.material.icons.filled.DirectionsBoat
 import androidx.compose.material.icons.filled.DirectionsBus
+import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.DirectionsSubway
 import androidx.compose.material.icons.filled.GpsFixed
 import androidx.compose.material.icons.filled.Navigation
@@ -85,6 +87,8 @@ private fun modeIcon(mode: TransitMode): ImageVector = when (mode) {
     TransitMode.TRAM -> Icons.Default.Tram
     TransitMode.SUBWAY -> Icons.Default.DirectionsSubway
     TransitMode.FERRY -> Icons.Default.DirectionsBoat
+    TransitMode.BIKE -> Icons.AutoMirrored.Filled.DirectionsBike
+    TransitMode.CAR -> Icons.Default.DirectionsCar
 }
 
 @Composable

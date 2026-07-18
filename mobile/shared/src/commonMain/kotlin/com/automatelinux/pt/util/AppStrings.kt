@@ -36,6 +36,15 @@ data class AppStrings(
     val tramMode: String,
     val subwayMode: String,
     val ferryMode: String,
+    val bikeMode: String,
+    val carMode: String,
+    val compareTransit: String,
+    val directBikeTitle: String,
+    val directCarTitle: String,
+    val directKm: (String) -> String,
+    val directArrive: (String) -> String,
+    val directBikeNote: String,
+    val directCarNote: String,
     val formatDuration: (Long) -> String,
     val station: String,
     val updatedAgo: (String) -> String,
@@ -197,6 +206,15 @@ val EnStrings = AppStrings(
     tramMode = "Tram",
     subwayMode = "Subway",
     ferryMode = "Ferry",
+    bikeMode = "Bike",
+    carMode = "Car",
+    compareTransit = "Transit",
+    directBikeTitle = "Bike route",
+    directCarTitle = "Car route",
+    directKm = { km -> "$km km" },
+    directArrive = { time -> "Arrive at $time" },
+    directBikeNote = "Via streets and roads open to bikes",
+    directCarNote = "Estimate — traffic not included",
     formatDuration = { seconds ->
         val mins = seconds / 60
         when {
@@ -365,6 +383,15 @@ val HeStrings = AppStrings(
     tramMode = "רכבת קלה",
     subwayMode = "מטרו",
     ferryMode = "מעבורת",
+    bikeMode = "אופניים",
+    carMode = "רכב",
+    compareTransit = "תחב\"צ",
+    directBikeTitle = "מסלול אופניים",
+    directCarTitle = "מסלול ברכב",
+    directKm = { km -> "$km ק\"מ" },
+    directArrive = { time -> "הגעה ב-$time" },
+    directBikeNote = "דרך רחובות ודרכים הפתוחים לאופניים",
+    directCarNote = "הערכה — ללא עומסי תנועה",
     formatDuration = { seconds ->
         val mins = seconds / 60
         when {

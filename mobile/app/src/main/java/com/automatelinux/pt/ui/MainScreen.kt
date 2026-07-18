@@ -485,6 +485,7 @@ fun MainScreen(
                                     },
                                     sortMode = routingState.sortMode,
                                     onSortChange = { routingViewModel.setSortMode(it) },
+                                    onTravelModeChange = { routingViewModel.setTravelMode(it) },
                                     onEarlier = { routingViewModel.searchEarlier() },
                                     onLater = { routingViewModel.searchLater() },
                                     homePlace = settingsStore.homePlace,
@@ -636,7 +637,7 @@ fun MainScreen(
                 ) { map ->
                     RouteOverlay(
                         map = map,
-                        itinerary = routingState.selectedItinerary
+                        itinerary = routingState.displayedItinerary
                     )
 
                     OriginDestinationMarkers(

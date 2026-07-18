@@ -24,6 +24,8 @@ fun getModeColor(mode: TransitMode): Int = when (mode) {
     TransitMode.TRAM -> Color.parseColor("#FF5722")
     TransitMode.SUBWAY -> Color.parseColor("#9C27B0")
     TransitMode.FERRY -> Color.parseColor("#00ACC1")
+    TransitMode.BIKE -> Color.parseColor("#00ACC1")
+    TransitMode.CAR -> Color.parseColor("#546E7A")
 }
 
 fun getModeColorWithRoute(mode: TransitMode, routeColor: String?): Int {
@@ -74,7 +76,11 @@ fun RouteOverlay(
             }
             map.overlays.add(polyline)
 
-            if (leg.mode != TransitMode.WALK) {
+            // Stop dots only make sense on transit legs; street legs (walk/bike/car)
+            // have no boarding points to mark.
+            val isStreet = leg.mode == TransitMode.WALK ||
+                leg.mode == TransitMode.BIKE || leg.mode == TransitMode.CAR
+            if (!isStreet) {
                 val stops = mutableListOf<GeoPoint>()
                 stops.add(GeoPoint(leg.from.lat, leg.from.lon))
                 leg.intermediateStops?.forEach { stop ->

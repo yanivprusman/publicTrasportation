@@ -1,10 +1,12 @@
 package com.automatelinux.pt.ui.viewmodel
 
 import com.automatelinux.pt.data.model.DayOverviewResult
+import com.automatelinux.pt.data.model.DirectAlternative
 import com.automatelinux.pt.data.model.GeocodeSuggestion
 import com.automatelinux.pt.data.model.Itinerary
 import com.automatelinux.pt.data.model.RouteResult
 import com.automatelinux.pt.data.model.RouteSortMode
+import com.automatelinux.pt.data.model.TransitMode
 import com.automatelinux.pt.data.model.VehicleMarker
 import kotlinx.datetime.Instant
 
@@ -13,6 +15,11 @@ data class TrackedBus(
     val lineName: String,
     val marker: VehicleMarker?
 )
+
+/** TRANSIT shows the itinerary list; BIKE/CAR show that direct street route. */
+enum class TravelMode {
+    TRANSIT, BIKE, CAR
+}
 
 data class RoutingState(
     val origin: GeocodeSuggestion? = null,
@@ -24,6 +31,7 @@ data class RoutingState(
     val loading: Boolean = false,
     val error: String? = null,
     val sortMode: RouteSortMode = RouteSortMode.FASTEST,
+    val travelMode: TravelMode = TravelMode.TRANSIT,
     val trackedBus: TrackedBus? = null,
     val showDayOverview: Boolean = false,
     val dayOverview: DayOverviewResult? = null,
@@ -43,4 +51,15 @@ data class RoutingState(
 
     val selectedItinerary: Itinerary?
         get() = sortedItineraries.getOrNull(selectedIndex)
+
+    val selectedAlternative: DirectAlternative?
+        get() = when (travelMode) {
+            TravelMode.TRANSIT -> null
+            TravelMode.BIKE -> results?.alternatives?.firstOrNull { it.mode == TransitMode.BIKE }
+            TravelMode.CAR -> results?.alternatives?.firstOrNull { it.mode == TransitMode.CAR }
+        }
+
+    /** What the map should draw: the chosen street route, or the selected transit itinerary. */
+    val displayedItinerary: Itinerary?
+        get() = selectedAlternative?.itinerary ?: selectedItinerary
 }

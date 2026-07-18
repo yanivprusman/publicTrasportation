@@ -37,6 +37,7 @@ import com.automatelinux.pt.data.model.RouteLeg
 import com.automatelinux.pt.data.model.RouteSortMode
 import com.automatelinux.pt.ui.components.PreSuggestion
 import com.automatelinux.pt.ui.viewmodel.RoutingState
+import com.automatelinux.pt.ui.viewmodel.TravelMode
 import com.automatelinux.pt.util.LocalAppStrings
 import kotlinx.datetime.Instant
 
@@ -62,6 +63,7 @@ fun RoutePlannerPanel(
     onLongPressSuggestion: ((GeocodeSuggestion) -> Unit)? = null,
     sortMode: RouteSortMode = RouteSortMode.FASTEST,
     onSortChange: ((RouteSortMode) -> Unit)? = null,
+    onTravelModeChange: ((TravelMode) -> Unit)? = null,
     onEarlier: (() -> Unit)? = null,
     onLater: (() -> Unit)? = null,
     homePlace: GeocodeSuggestion? = null,
@@ -177,34 +179,52 @@ fun RoutePlannerPanel(
 
         Spacer(Modifier.height(8.dp))
 
-        RouteResults(
-            sortedItineraries = state.sortedItineraries,
-            selectedIndex = state.selectedIndex,
-            onSelect = onSelectItinerary,
-            loading = state.loading,
-            error = state.error,
-            searched = state.results != null,
-            onRetry = onSearch,
-            sortMode = sortMode,
-            onSortChange = if (state.results?.itineraries?.isNotEmpty() == true) onSortChange else null,
-            onEarlier = if (state.results?.itineraries?.isNotEmpty() == true) onEarlier else null,
-            onLater = if (state.results?.itineraries?.isNotEmpty() == true) onLater else null,
-            cardOpacity = cardOpacity
-        )
-
-        state.selectedItinerary?.let { itinerary ->
-            Spacer(Modifier.height(8.dp))
-            ItineraryDetail(
-                itinerary = itinerary,
-                onLegClick = onLegClick,
-                onStopClick = onStopClick,
-                onTrackBus = onTrackBus,
-                trackedLegIndex = trackedLegIndex,
-                onSetReminder = onSetReminder,
-                activeReminderLegIndex = activeReminderLegIndex,
-                onCancelReminder = onCancelReminder,
-                onStartJourney = onStartJourney
+        val results = state.results
+        if (onTravelModeChange != null && results != null && !state.loading && state.error == null &&
+            (results.itineraries.isNotEmpty() || results.alternatives.isNotEmpty())
+        ) {
+            TravelModeStrip(
+                transitDuration = results.itineraries.minOfOrNull { it.duration },
+                alternatives = results.alternatives,
+                travelMode = state.travelMode,
+                onSelect = onTravelModeChange
             )
+            Spacer(Modifier.height(4.dp))
+        }
+
+        val alternative = state.selectedAlternative
+        if (alternative != null && !state.loading && state.error == null) {
+            DirectRouteCard(alternative = alternative)
+        } else {
+            RouteResults(
+                sortedItineraries = state.sortedItineraries,
+                selectedIndex = state.selectedIndex,
+                onSelect = onSelectItinerary,
+                loading = state.loading,
+                error = state.error,
+                searched = state.results != null,
+                onRetry = onSearch,
+                sortMode = sortMode,
+                onSortChange = if (state.results?.itineraries?.isNotEmpty() == true) onSortChange else null,
+                onEarlier = if (state.results?.itineraries?.isNotEmpty() == true) onEarlier else null,
+                onLater = if (state.results?.itineraries?.isNotEmpty() == true) onLater else null,
+                cardOpacity = cardOpacity
+            )
+
+            state.selectedItinerary?.let { itinerary ->
+                Spacer(Modifier.height(8.dp))
+                ItineraryDetail(
+                    itinerary = itinerary,
+                    onLegClick = onLegClick,
+                    onStopClick = onStopClick,
+                    onTrackBus = onTrackBus,
+                    trackedLegIndex = trackedLegIndex,
+                    onSetReminder = onSetReminder,
+                    activeReminderLegIndex = activeReminderLegIndex,
+                    onCancelReminder = onCancelReminder,
+                    onStartJourney = onStartJourney
+                )
+            }
         }
     }
 }

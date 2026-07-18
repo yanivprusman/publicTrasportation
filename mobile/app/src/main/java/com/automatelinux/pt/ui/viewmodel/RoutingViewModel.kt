@@ -64,6 +64,10 @@ class RoutingViewModel @Inject constructor(
         _state.value = _state.value.copy(sortMode = mode, selectedIndex = 0)
     }
 
+    fun setTravelMode(mode: TravelMode) {
+        _state.value = _state.value.copy(travelMode = mode)
+    }
+
     fun searchEarlier() {
         val s = _state.value
         val earliest = s.results?.itineraries?.minByOrNull { it.startTime }?.startTime
@@ -217,6 +221,7 @@ class RoutingViewModel @Inject constructor(
                 _state.value = _state.value.copy(
                     results = result,
                     selectedIndex = 0,
+                    travelMode = TravelMode.TRANSIT,
                     loading = false
                 )
             } catch (e: Exception) {
