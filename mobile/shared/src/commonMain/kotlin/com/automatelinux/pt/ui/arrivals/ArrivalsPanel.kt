@@ -118,6 +118,15 @@ fun ArrivalsPanel(
             onToggleFavoriteLine = onToggleFavoriteLine
         )
 
+        if (state.stationCode.isNotEmpty()) {
+            StationTimetable(
+                stationCode = state.stationCode,
+                entries = state.timetable,
+                loading = state.timetableLoading,
+                error = state.timetableError
+            )
+        }
+
         if (nearbyStops.isNotEmpty()) {
             NearbyStopsSection(
                 stops = nearbyStops,

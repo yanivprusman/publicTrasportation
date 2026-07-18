@@ -5,6 +5,7 @@ import com.automatelinux.pt.data.model.GeocodeSuggestion
 import com.automatelinux.pt.data.model.RouteResult
 import com.automatelinux.pt.data.model.SiriResponse
 import com.automatelinux.pt.data.model.StopResult
+import com.automatelinux.pt.data.model.StoptimesResponse
 import retrofit2.http.GET
 import retrofit2.http.Query
 
@@ -51,6 +52,12 @@ interface PtApi {
         @Query("lon") lon: Double,
         @Query("radius") radius: Int = 500
     ): List<StopResult>
+
+    @GET("/api/stoptimes")
+    suspend fun getStoptimes(
+        @Query("stopId") stopId: String,
+        @Query("n") n: Int = 30
+    ): StoptimesResponse
 
     @GET("/api/transport")
     suspend fun getTransport(
