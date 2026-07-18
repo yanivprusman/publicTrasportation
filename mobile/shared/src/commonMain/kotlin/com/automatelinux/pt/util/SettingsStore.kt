@@ -61,6 +61,19 @@ class SettingsStore(private val prefs: Settings) {
         get() = prefs.getString("language", "en")
         set(value) { prefs.putString("language", value) }
 
+    /** Persisted route-options mode filter as backend api keys ("bus,train,tram"). */
+    var routeModes: Set<String>
+        get() {
+            val s = prefs.getStringOrNull("route_modes") ?: return emptySet()
+            return s.split(",").filter { it.isNotBlank() }.toSet()
+        }
+        set(value) { prefs.putString("route_modes", value.joinToString(",")) }
+
+    /** Persisted max-walk limit in minutes; 0 means no limit. */
+    var maxWalkMinutes: Int
+        get() = prefs.getInt("max_walk_minutes", 0)
+        set(value) { prefs.putInt("max_walk_minutes", value) }
+
     private val suggestionListSerializer = ListSerializer(GeocodeSuggestion.serializer())
 
     fun getRecentSearches(): List<GeocodeSuggestion> {

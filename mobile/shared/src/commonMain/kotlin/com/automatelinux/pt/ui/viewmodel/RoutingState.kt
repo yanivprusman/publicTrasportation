@@ -21,6 +21,11 @@ enum class TravelMode {
     TRANSIT, BIKE, CAR
 }
 
+/** Transit-mode filter groups understood by the backend's ?modes= parameter. */
+enum class TransitFilter(val apiKey: String) {
+    BUS("bus"), TRAIN("train"), TRAM("tram")
+}
+
 data class RoutingState(
     val origin: GeocodeSuggestion? = null,
     val destination: GeocodeSuggestion? = null,
@@ -32,6 +37,8 @@ data class RoutingState(
     val error: String? = null,
     val sortMode: RouteSortMode = RouteSortMode.FASTEST,
     val travelMode: TravelMode = TravelMode.TRANSIT,
+    val enabledModes: Set<TransitFilter> = TransitFilter.entries.toSet(),
+    val maxWalkMinutes: Int? = null,
     val trackedBus: TrackedBus? = null,
     val showDayOverview: Boolean = false,
     val dayOverview: DayOverviewResult? = null,

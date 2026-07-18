@@ -9,6 +9,7 @@ import com.automatelinux.pt.data.model.RouteResult
 import com.automatelinux.pt.data.model.RouteSortMode
 import com.automatelinux.pt.data.model.VehicleMarker
 import com.automatelinux.pt.data.model.extractVehicleMarkers
+import com.automatelinux.pt.util.SettingsStore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -31,12 +32,37 @@ import javax.inject.Inject
 
 @HiltViewModel
 class RoutingViewModel @Inject constructor(
-    private val api: PtApi
+    private val api: PtApi,
+    private val settingsStore: SettingsStore
 ) : ViewModel() {
 
-    private val _state = MutableStateFlow(RoutingState())
+    private val _state = MutableStateFlow(RoutingState(
+        enabledModes = restoreModes(settingsStore),
+        maxWalkMinutes = settingsStore.maxWalkMinutes.takeIf { it in 1..60 }
+    ))
     val state: StateFlow<RoutingState> = _state.asStateFlow()
     private var trackingJob: Job? = null
+
+    fun toggleModeFilter(filter: TransitFilter) {
+        val current = _state.value.enabledModes
+        // The last enabled mode can't be turned off — an all-off filter means "no routes".
+        if (current == setOf(filter)) return
+        val updated = if (filter in current) current - filter else current + filter
+        settingsStore.routeModes = updated.map { it.apiKey }.toSet()
+        _state.value = _state.value.copy(enabledModes = updated)
+        researchIfSearched()
+    }
+
+    fun setMaxWalk(minutes: Int?) {
+        settingsStore.maxWalkMinutes = minutes ?: 0
+        _state.value = _state.value.copy(maxWalkMinutes = minutes)
+        researchIfSearched()
+    }
+
+    private fun researchIfSearched() {
+        val s = _state.value
+        if (s.origin != null && s.destination != null && (s.results != null || s.loading)) search()
+    }
 
     fun setOrigin(suggestion: GeocodeSuggestion?) {
         _state.value = _state.value.copy(origin = suggestion, results = null, error = null)
@@ -201,12 +227,23 @@ class RoutingViewModel @Inject constructor(
 
     companion object {
         private const val MAP_LOCATION_LABEL = "Selected location"
+
+        private fun restoreModes(store: SettingsStore): Set<TransitFilter> {
+            val saved = store.routeModes
+            val restored = TransitFilter.entries.filter { it.apiKey in saved }.toSet()
+            return restored.ifEmpty { TransitFilter.entries.toSet() }
+        }
     }
+
+    // Filter chips can re-fire search while one is in flight; only the newest
+    // request may write results, or a slow stale response would overwrite them.
+    private var searchSeq = 0
 
     fun search() {
         val s = _state.value
         val origin = s.origin ?: return
         val destination = s.destination ?: return
+        val seq = ++searchSeq
 
         viewModelScope.launch {
             _state.value = _state.value.copy(loading = true, error = null)
@@ -216,8 +253,16 @@ class RoutingViewModel @Inject constructor(
                 // Instant.toString() is ISO-8601 (UTC "Z" form); same instant the API expects.
                 val time = s.departureTime?.toString()
                 val arriveBy = if (s.arriveBy) true else null
+                // Omit ?modes= when every group is enabled — that is the backend default
+                // and keeps the unfiltered search on the warm server-side cache key.
+                val modes = if (s.enabledModes.size == TransitFilter.entries.size) null
+                else s.enabledModes.map { it.apiKey }.sorted().joinToString(",")
 
-                val result = api.searchRoute(from = from, to = to, time = time, arriveBy = arriveBy)
+                val result = api.searchRoute(
+                    from = from, to = to, time = time, arriveBy = arriveBy,
+                    modes = modes, maxWalk = s.maxWalkMinutes
+                )
+                if (seq != searchSeq) return@launch
                 _state.value = _state.value.copy(
                     results = result,
                     selectedIndex = 0,
@@ -225,6 +270,7 @@ class RoutingViewModel @Inject constructor(
                     loading = false
                 )
             } catch (e: Exception) {
+                if (seq != searchSeq) return@launch
                 _state.value = _state.value.copy(
                     loading = false,
                     error = e.message ?: "Route search failed"

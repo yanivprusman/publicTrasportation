@@ -15,7 +15,9 @@ interface PtApi {
         @Query("from") from: String,
         @Query("to") to: String,
         @Query("time") time: String? = null,
-        @Query("arriveBy") arriveBy: Boolean? = null
+        @Query("arriveBy") arriveBy: Boolean? = null,
+        @Query("modes") modes: String? = null,
+        @Query("maxWalk") maxWalk: Int? = null
     ): RouteResult
 
     @GET("/api/day-overview")

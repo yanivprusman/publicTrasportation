@@ -37,6 +37,7 @@ import com.automatelinux.pt.data.model.RouteLeg
 import com.automatelinux.pt.data.model.RouteSortMode
 import com.automatelinux.pt.ui.components.PreSuggestion
 import com.automatelinux.pt.ui.viewmodel.RoutingState
+import com.automatelinux.pt.ui.viewmodel.TransitFilter
 import com.automatelinux.pt.ui.viewmodel.TravelMode
 import com.automatelinux.pt.util.LocalAppStrings
 import kotlinx.datetime.Instant
@@ -64,6 +65,8 @@ fun RoutePlannerPanel(
     sortMode: RouteSortMode = RouteSortMode.FASTEST,
     onSortChange: ((RouteSortMode) -> Unit)? = null,
     onTravelModeChange: ((TravelMode) -> Unit)? = null,
+    onToggleModeFilter: ((TransitFilter) -> Unit)? = null,
+    onMaxWalkChange: ((Int?) -> Unit)? = null,
     onEarlier: (() -> Unit)? = null,
     onLater: (() -> Unit)? = null,
     homePlace: GeocodeSuggestion? = null,
@@ -142,6 +145,16 @@ fun RoutePlannerPanel(
             arriveBy = state.arriveBy,
             onArriveByChange = onArriveByChange
         )
+
+        if (onToggleModeFilter != null && onMaxWalkChange != null) {
+            Spacer(Modifier.height(4.dp))
+            RouteOptionsSection(
+                enabledModes = state.enabledModes,
+                maxWalkMinutes = state.maxWalkMinutes,
+                onToggleMode = onToggleModeFilter,
+                onMaxWalkChange = onMaxWalkChange
+            )
+        }
 
         Spacer(Modifier.height(8.dp))
 
