@@ -29,6 +29,8 @@ enum class TransitFilter(val apiKey: String) {
 data class RoutingState(
     val origin: GeocodeSuggestion? = null,
     val destination: GeocodeSuggestion? = null,
+    val via: GeocodeSuggestion? = null,
+    val viaFieldVisible: Boolean = false,
     val departureTime: Instant? = null,
     val arriveBy: Boolean = false,
     val results: RouteResult? = null,

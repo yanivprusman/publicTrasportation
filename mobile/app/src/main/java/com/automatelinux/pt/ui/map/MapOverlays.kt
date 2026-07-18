@@ -126,15 +126,31 @@ fun RouteOverlay(
 fun OriginDestinationMarkers(
     map: MapView,
     origin: GeoPoint?,
-    destination: GeoPoint?
+    destination: GeoPoint?,
+    via: GeoPoint? = null,
+    // Re-append the markers when the drawn route changes, so they stay above
+    // RouteOverlay's polylines and transfer dots (osmdroid draws in list order).
+    redrawKey: Any? = null
 ) {
-    LaunchedEffect(origin, destination) {
+    LaunchedEffect(origin, destination, via, redrawKey) {
         (map.overlays.firstOrNull { (it as? Marker)?.id == "origin" }
             as? Marker)?.let { m ->
             (m.icon as? AnimatedOriginDrawable)?.stopAnimation()
         }
         map.overlays.removeAll { (it as? Marker)?.id == "origin" }
         map.overlays.removeAll { (it as? Marker)?.id == "dest" }
+        map.overlays.removeAll { (it as? Marker)?.id == "via" }
+
+        via?.let { pt ->
+            val marker = Marker(map).apply {
+                id = "via"
+                position = pt
+                setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+                icon = createCircleDrawable(Color.parseColor("#FF9800"), 11, Color.WHITE, 3f)
+                setInfoWindow(null)
+            }
+            map.overlays.add(marker)
+        }
 
         origin?.let { pt ->
             val density = map.resources.displayMetrics.density

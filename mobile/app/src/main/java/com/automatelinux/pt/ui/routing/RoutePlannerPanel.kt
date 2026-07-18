@@ -13,11 +13,15 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.AddLocationAlt
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.RemoveCircleOutline
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material.icons.filled.Work
+import androidx.compose.foundation.layout.Box
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Card
@@ -47,6 +51,9 @@ fun RoutePlannerPanel(
     state: RoutingState,
     onOriginSelect: (GeocodeSuggestion?) -> Unit,
     onDestinationSelect: (GeocodeSuggestion?) -> Unit,
+    onViaSelect: (GeocodeSuggestion?) -> Unit,
+    onShowViaField: () -> Unit,
+    onRemoveVia: () -> Unit,
     onSwap: () -> Unit,
     onTimeChange: (Instant?) -> Unit,
     onArriveByChange: (Boolean) -> Unit,
@@ -110,16 +117,48 @@ fun RoutePlannerPanel(
             modifier = Modifier.fillMaxWidth()
         )
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Center
-        ) {
-            IconButton(onClick = onSwap) {
+        Box(modifier = Modifier.fillMaxWidth()) {
+            if (!state.viaFieldVisible) {
+                TextButton(
+                    onClick = onShowViaField,
+                    modifier = Modifier.align(Alignment.CenterStart)
+                ) {
+                    Icon(
+                        Icons.Default.AddLocationAlt,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Text(strings.addStop, modifier = Modifier.padding(start = 4.dp))
+                }
+            }
+            IconButton(onClick = onSwap, modifier = Modifier.align(Alignment.Center)) {
                 Icon(
                     Icons.Default.SwapVert,
                     contentDescription = strings.swapOriginDestination,
                     tint = MaterialTheme.colorScheme.primary
                 )
+            }
+        }
+
+        if (state.viaFieldVisible) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                LocationInput(
+                    label = strings.stopAlongTheWay,
+                    value = state.via,
+                    onSelect = { onViaSelect(it) },
+                    onClear = { onViaSelect(null) },
+                    onGeocode = onGeocode,
+                    preSuggestions = preSuggestions,
+                    onLongPressSuggestion = onLongPressSuggestion,
+                    modifier = Modifier.weight(1f)
+                )
+                IconButton(onClick = onRemoveVia) {
+                    Icon(
+                        Icons.Default.RemoveCircleOutline,
+                        contentDescription = strings.removeStop,
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                }
             }
         }
 
@@ -167,7 +206,9 @@ fun RoutePlannerPanel(
             Text("  ${strings.searchRoutes}", modifier = Modifier.padding(start = 4.dp))
         }
 
-        if (onToggleDayOverview != null && state.origin != null && state.destination != null) {
+        // Day overview and street alternatives are point-to-point only — the
+        // backend doesn't produce them for trips stitched through a via stop.
+        if (onToggleDayOverview != null && state.origin != null && state.destination != null && state.via == null) {
             Spacer(Modifier.height(4.dp))
             OutlinedButton(
                 onClick = onToggleDayOverview,
@@ -193,7 +234,7 @@ fun RoutePlannerPanel(
         Spacer(Modifier.height(8.dp))
 
         val results = state.results
-        if (onTravelModeChange != null && results != null && !state.loading && state.error == null &&
+        if (onTravelModeChange != null && state.via == null && results != null && !state.loading && state.error == null &&
             (results.itineraries.isNotEmpty() || results.alternatives.isNotEmpty())
         ) {
             TravelModeStrip(

@@ -74,6 +74,26 @@ class RoutingViewModel @Inject constructor(
         clearDayOverview()
     }
 
+    fun showViaField() {
+        _state.value = _state.value.copy(viaFieldVisible = true)
+    }
+
+    fun setVia(suggestion: GeocodeSuggestion?) {
+        _state.value = _state.value.copy(via = suggestion, results = null, error = null)
+        clearDayOverview()
+    }
+
+    fun removeVia() {
+        val s = _state.value
+        if (s.via == null) {
+            // Field was shown but never filled — just hide it, keep any results.
+            _state.value = s.copy(viaFieldVisible = false)
+            return
+        }
+        _state.value = s.copy(via = null, viaFieldVisible = false, results = null, error = null)
+        clearDayOverview()
+    }
+
     fun setDepartureTime(time: Instant?) {
         _state.value = _state.value.copy(departureTime = time)
     }
@@ -258,10 +278,16 @@ class RoutingViewModel @Inject constructor(
                 val modes = if (s.enabledModes.size == TransitFilter.entries.size) null
                 else s.enabledModes.map { it.apiKey }.sorted().joinToString(",")
 
-                val result = api.searchRoute(
-                    from = from, to = to, time = time, arriveBy = arriveBy,
+                val viaPlace = s.via
+                val via = viaPlace?.let { "${it.lat},${it.lon}" }
+
+                val raw = api.searchRoute(
+                    from = from, to = to, via = via, time = time, arriveBy = arriveBy,
                     modes = modes, maxWalk = s.maxWalkMinutes
                 )
+                // Stitched via trips carry MOTIS's literal "END"/"START" place names at
+                // the seam between the two halves; show the chosen stop's name instead.
+                val result = if (viaPlace != null) renameViaBoundaries(raw, viaPlace.name) else raw
                 if (seq != searchSeq) return@launch
                 _state.value = _state.value.copy(
                     results = result,
@@ -278,6 +304,20 @@ class RoutingViewModel @Inject constructor(
             }
         }
     }
+
+    private fun renameViaBoundaries(result: RouteResult, viaName: String): RouteResult =
+        result.copy(itineraries = result.itineraries.map { itin ->
+            itin.copy(legs = itin.legs.mapIndexed { i, leg ->
+                var renamed = leg
+                if (i > 0 && renamed.from.name == "START") {
+                    renamed = renamed.copy(from = renamed.from.copy(name = viaName))
+                }
+                if (i < itin.legs.lastIndex && renamed.to.name == "END") {
+                    renamed = renamed.copy(to = renamed.to.copy(name = viaName))
+                }
+                renamed
+            })
+        })
 
     fun trackBusOnLeg(legIndex: Int, lat: Double, lon: Double, lineName: String) {
         stopTracking()

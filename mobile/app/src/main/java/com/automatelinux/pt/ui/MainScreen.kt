@@ -449,6 +449,15 @@ fun MainScreen(
                                             recentSearchesVersion++
                                         }
                                     },
+                                    onViaSelect = { s ->
+                                        routingViewModel.setVia(s)
+                                        if (s != null) {
+                                            settingsStore.addRecentSearch(s)
+                                            recentSearchesVersion++
+                                        }
+                                    },
+                                    onShowViaField = { routingViewModel.showViaField() },
+                                    onRemoveVia = { routingViewModel.removeVia() },
                                     onSwap = { routingViewModel.swapOriginDestination() },
                                     onTimeChange = { routingViewModel.setDepartureTime(it) },
                                     onArriveByChange = { routingViewModel.setArriveBy(it) },
@@ -645,7 +654,9 @@ fun MainScreen(
                     OriginDestinationMarkers(
                         map = map,
                         origin = routingState.origin?.let { GeoPoint(it.lat, it.lon) },
-                        destination = routingState.destination?.let { GeoPoint(it.lat, it.lon) }
+                        destination = routingState.destination?.let { GeoPoint(it.lat, it.lon) },
+                        via = routingState.via?.let { GeoPoint(it.lat, it.lon) },
+                        redrawKey = routingState.displayedItinerary
                     )
 
                     if (activeTab == ActiveTab.ARRIVALS) {

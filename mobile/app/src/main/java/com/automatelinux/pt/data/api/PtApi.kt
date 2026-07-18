@@ -14,6 +14,7 @@ interface PtApi {
     suspend fun searchRoute(
         @Query("from") from: String,
         @Query("to") to: String,
+        @Query("via") via: String? = null,
         @Query("time") time: String? = null,
         @Query("arriveBy") arriveBy: Boolean? = null,
         @Query("modes") modes: String? = null,
