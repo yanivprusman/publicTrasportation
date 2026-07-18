@@ -19,8 +19,10 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.NearMe
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.Widgets
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -56,6 +58,7 @@ fun ArrivalsPanel(
     isStationFavorite: Boolean = false,
     onToggleFavoriteStation: (() -> Unit)? = null,
     onOpenBoard: (() -> Unit)? = null,
+    onPinWidget: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val strings = LocalAppStrings.current
@@ -105,6 +108,24 @@ fun ArrivalsPanel(
                 )
                 Spacer(Modifier.width(8.dp))
                 Text(strings.departureBoard, fontWeight = FontWeight.Bold)
+            }
+        }
+
+        if (onPinWidget != null && state.stationCode.isNotEmpty()) {
+            OutlinedButton(
+                onClick = onPinWidget,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 4.dp),
+                shape = RoundedCornerShape(10.dp)
+            ) {
+                Icon(
+                    Icons.Default.Widgets,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(strings.pinWidget)
             }
         }
 

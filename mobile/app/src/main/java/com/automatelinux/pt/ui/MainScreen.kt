@@ -82,8 +82,10 @@ import com.automatelinux.pt.ui.map.fitBounds
 import com.automatelinux.pt.ui.routing.DebugSettingsDialog
 import com.automatelinux.pt.ui.routing.JourneyNavigator
 import com.automatelinux.pt.ui.routing.RoutePlannerPanel
+import android.widget.Toast
 import com.automatelinux.pt.ui.viewmodel.ArrivalsViewModel
 import com.automatelinux.pt.ui.viewmodel.RoutingViewModel
+import com.automatelinux.pt.widget.DeparturesWidgetProvider
 import com.automatelinux.pt.util.LocalAppStrings
 import com.automatelinux.pt.util.PolylineDecoder
 import com.automatelinux.pt.util.SettingsStore
@@ -100,6 +102,8 @@ fun MainScreen(
     onLanguageChange: (String) -> Unit,
     sharedTrip: TripLink.SharedTrip? = null,
     onSharedTripConsumed: () -> Unit = {},
+    widgetStation: Pair<String, String>? = null,
+    onWidgetStationConsumed: () -> Unit = {},
     routingViewModel: RoutingViewModel = hiltViewModel(),
     arrivalsViewModel: ArrivalsViewModel = hiltViewModel()
 ) {
@@ -374,6 +378,16 @@ fun MainScreen(
         }
     }
 
+    // A tap on a home-screen departures widget lands here with its station.
+    LaunchedEffect(widgetStation) {
+        if (widgetStation != null) {
+            activeTab = ActiveTab.ARRIVALS
+            arrivalsViewModel.setStationCode(widgetStation.first, widgetStation.second)
+            bottomSheetState.expand()
+            onWidgetStationConsumed()
+        }
+    }
+
     LaunchedEffect(sharedTrip) {
         if (sharedTrip != null) {
             activeTab = ActiveTab.ROUTE
@@ -630,6 +644,20 @@ fun MainScreen(
                                     onOpenBoard = {
                                         keyboardController?.hide()
                                         boardMode = true
+                                    },
+                                    onPinWidget = {
+                                        val pinned = DeparturesWidgetProvider.requestPin(
+                                            context,
+                                            arrivalsState.stationCode,
+                                            arrivalsState.stationName
+                                        )
+                                        if (!pinned) {
+                                            Toast.makeText(
+                                                context,
+                                                strings.widgetPinUnsupported,
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
                                     }
                                 )
                             }

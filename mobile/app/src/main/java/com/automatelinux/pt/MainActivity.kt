@@ -38,6 +38,7 @@ import com.automatelinux.pt.util.ServerConfig
 import com.automatelinux.pt.util.SettingsStore
 import com.automatelinux.pt.util.TripLink
 import com.automatelinux.pt.ui.map.MapZoomHandler
+import com.automatelinux.pt.widget.DeparturesWidgetProvider
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -48,9 +49,23 @@ class MainActivity : ComponentActivity() {
     // Trip arriving via a shared https link (VIEW intent); consumed by MainScreen.
     private val pendingSharedTrip = mutableStateOf<TripLink.SharedTrip?>(null)
 
+    // Station arriving via a tap on a home-screen departures widget; consumed by MainScreen.
+    private val pendingWidgetStation = mutableStateOf<Pair<String, String>?>(null)
+
+    private fun parseWidgetStation(intent: Intent?) {
+        val code = intent?.getStringExtra(DeparturesWidgetProvider.EXTRA_STATION_CODE)
+        if (!code.isNullOrBlank()) {
+            pendingWidgetStation.value = Pair(
+                code,
+                intent.getStringExtra(DeparturesWidgetProvider.EXTRA_STATION_NAME) ?: ""
+            )
+        }
+    }
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         TripLink.parse(intent.data)?.let { pendingSharedTrip.value = it }
+        parseWidgetStation(intent)
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
@@ -76,6 +91,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         MapZoomHandler.clear()
         TripLink.parse(intent?.data)?.let { pendingSharedTrip.value = it }
+        parseWidgetStation(intent)
         setContent {
             var language by remember { mutableStateOf(settingsStore.language) }
             val strings = if (language == "he") HeStrings else EnStrings
@@ -94,6 +110,8 @@ class MainActivity : ComponentActivity() {
                             settingsStore = settingsStore,
                             sharedTrip = pendingSharedTrip.value,
                             onSharedTripConsumed = { pendingSharedTrip.value = null },
+                            widgetStation = pendingWidgetStation.value,
+                            onWidgetStationConsumed = { pendingWidgetStation.value = null },
                             onLanguageChange = { newLang ->
                                 settingsStore.language = newLang
                                 language = newLang
@@ -111,6 +129,8 @@ private fun ServerCheckScreen(
     settingsStore: SettingsStore,
     sharedTrip: TripLink.SharedTrip?,
     onSharedTripConsumed: () -> Unit,
+    widgetStation: Pair<String, String>?,
+    onWidgetStationConsumed: () -> Unit,
     onLanguageChange: (String) -> Unit
 ) {
     val strings = LocalAppStrings.current
@@ -133,7 +153,9 @@ private fun ServerCheckScreen(
             settingsStore = settingsStore,
             onLanguageChange = onLanguageChange,
             sharedTrip = sharedTrip,
-            onSharedTripConsumed = onSharedTripConsumed
+            onSharedTripConsumed = onSharedTripConsumed,
+            widgetStation = widgetStation,
+            onWidgetStationConsumed = onWidgetStationConsumed
         )
     } else {
         Box(

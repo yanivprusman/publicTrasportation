@@ -147,4 +147,20 @@ class SettingsStore(private val prefs: Settings) {
     }
 
     fun isStationFavorite(code: String): Boolean = getFavoriteStations().any { it.first == code }
+
+    // Home-screen departure widgets: each widget instance remembers its own station.
+    fun getWidgetStation(widgetId: Int): Pair<String, String>? {
+        val code = prefs.getStringOrNull("widget_${widgetId}_code") ?: return null
+        return Pair(code, prefs.getString("widget_${widgetId}_name", ""))
+    }
+
+    fun setWidgetStation(widgetId: Int, code: String, name: String) {
+        prefs.putString("widget_${widgetId}_code", code)
+        prefs.putString("widget_${widgetId}_name", name)
+    }
+
+    fun removeWidgetStation(widgetId: Int) {
+        prefs.remove("widget_${widgetId}_code")
+        prefs.remove("widget_${widgetId}_name")
+    }
 }
