@@ -1,5 +1,6 @@
 package com.automatelinux.pt
 
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.view.KeyEvent
@@ -35,6 +36,7 @@ import com.automatelinux.pt.util.HeStrings
 import com.automatelinux.pt.util.LocalAppStrings
 import com.automatelinux.pt.util.ServerConfig
 import com.automatelinux.pt.util.SettingsStore
+import com.automatelinux.pt.util.TripLink
 import com.automatelinux.pt.ui.map.MapZoomHandler
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -42,6 +44,14 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     @Inject lateinit var settingsStore: SettingsStore
+
+    // Trip arriving via a shared https link (VIEW intent); consumed by MainScreen.
+    private val pendingSharedTrip = mutableStateOf<TripLink.SharedTrip?>(null)
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        TripLink.parse(intent.data)?.let { pendingSharedTrip.value = it }
+    }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (event.action == KeyEvent.ACTION_DOWN) {
@@ -65,6 +75,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         MapZoomHandler.clear()
+        TripLink.parse(intent?.data)?.let { pendingSharedTrip.value = it }
         setContent {
             var language by remember { mutableStateOf(settingsStore.language) }
             val strings = if (language == "he") HeStrings else EnStrings
@@ -79,10 +90,15 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.fillMaxSize(),
                         color = MaterialTheme.colorScheme.background
                     ) {
-                        ServerCheckScreen(settingsStore) { newLang ->
-                            settingsStore.language = newLang
-                            language = newLang
-                        }
+                        ServerCheckScreen(
+                            settingsStore = settingsStore,
+                            sharedTrip = pendingSharedTrip.value,
+                            onSharedTripConsumed = { pendingSharedTrip.value = null },
+                            onLanguageChange = { newLang ->
+                                settingsStore.language = newLang
+                                language = newLang
+                            }
+                        )
                     }
                 }
             }
@@ -93,6 +109,8 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun ServerCheckScreen(
     settingsStore: SettingsStore,
+    sharedTrip: TripLink.SharedTrip?,
+    onSharedTripConsumed: () -> Unit,
     onLanguageChange: (String) -> Unit
 ) {
     val strings = LocalAppStrings.current
@@ -111,7 +129,12 @@ private fun ServerCheckScreen(
     }
 
     if (serverReady) {
-        MainScreen(settingsStore = settingsStore, onLanguageChange = onLanguageChange)
+        MainScreen(
+            settingsStore = settingsStore,
+            onLanguageChange = onLanguageChange,
+            sharedTrip = sharedTrip,
+            onSharedTripConsumed = onSharedTripConsumed
+        )
     } else {
         Box(
             modifier = Modifier.fillMaxSize(),

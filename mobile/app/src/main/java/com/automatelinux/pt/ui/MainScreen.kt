@@ -87,6 +87,7 @@ import com.automatelinux.pt.ui.viewmodel.RoutingViewModel
 import com.automatelinux.pt.util.LocalAppStrings
 import com.automatelinux.pt.util.PolylineDecoder
 import com.automatelinux.pt.util.SettingsStore
+import com.automatelinux.pt.util.TripLink
 import kotlinx.coroutines.launch
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
@@ -97,6 +98,8 @@ import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 fun MainScreen(
     settingsStore: SettingsStore,
     onLanguageChange: (String) -> Unit,
+    sharedTrip: TripLink.SharedTrip? = null,
+    onSharedTripConsumed: () -> Unit = {},
     routingViewModel: RoutingViewModel = hiltViewModel(),
     arrivalsViewModel: ArrivalsViewModel = hiltViewModel()
 ) {
@@ -131,6 +134,7 @@ fun MainScreen(
     var lineShapeData by remember { mutableStateOf(LineShapeData()) }
     var journeyMode by remember { mutableStateOf(false) }
     var boardMode by remember { mutableStateOf(false) }
+    var shareTripLink by remember { mutableStateOf<String?>(null) }
 
     val preSuggestions = remember(recentSearchesVersion, strings) {
         buildList {
@@ -362,10 +366,24 @@ fun MainScreen(
     }
 
     LaunchedEffect(Unit) {
-        if (routingState.origin == null) {
+        // A trip arriving via a shared link supplies the origin — GPS must not overwrite it.
+        if (routingState.origin == null && sharedTrip == null) {
             if (LocationHelper.hasPermission(context)) {
                 fetchCurrentLocation()
             }
+        }
+    }
+
+    LaunchedEffect(sharedTrip) {
+        if (sharedTrip != null) {
+            activeTab = ActiveTab.ROUTE
+            routingViewModel.setOrigin(sharedTrip.origin)
+            routingViewModel.setDestination(sharedTrip.destination)
+            routingViewModel.setDepartureTime(sharedTrip.departureTime)
+            routingViewModel.setArriveBy(sharedTrip.arriveBy)
+            routingViewModel.search()
+            bottomSheetState.expand()
+            onSharedTripConsumed()
         }
     }
 
@@ -532,6 +550,19 @@ fun MainScreen(
                                     onStartJourney = {
                                         keyboardController?.hide()
                                         journeyMode = true
+                                    },
+                                    onShareTrip = {
+                                        val origin = routingState.origin
+                                        val destination = routingState.destination
+                                        if (origin != null && destination != null) {
+                                            keyboardController?.hide()
+                                            shareTripLink = TripLink.build(
+                                                origin = origin,
+                                                destination = destination,
+                                                departureTime = routingState.departureTime,
+                                                arriveBy = routingState.arriveBy
+                                            )
+                                        }
                                     },
                                     onToggleDayOverview = {
                                         keyboardController?.hide()
@@ -756,6 +787,19 @@ fun MainScreen(
                 getDestinationName = { arrivalsViewModel.getDestinationName(it) },
                 onClose = { boardMode = false }
             )
+        }
+
+        shareTripLink?.let { link ->
+            val origin = routingState.origin
+            val destination = routingState.destination
+            if (origin != null && destination != null) {
+                com.automatelinux.pt.ui.routing.ShareTripDialog(
+                    origin = origin,
+                    destination = destination,
+                    link = link,
+                    onDismiss = { shareTripLink = null }
+                )
+            }
         }
 
         savePlaceTarget?.let { target ->

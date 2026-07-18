@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.GpsFixed
 import androidx.compose.material.icons.filled.Navigation
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsOff
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Train
 import androidx.compose.material.icons.filled.Tram
 import androidx.compose.material3.Button
@@ -102,6 +103,7 @@ fun ItineraryDetail(
     activeReminderLegIndex: Int? = null,
     onCancelReminder: (() -> Unit)? = null,
     onStartJourney: (() -> Unit)? = null,
+    onShareTrip: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val strings = LocalAppStrings.current
@@ -115,20 +117,37 @@ fun ItineraryDetail(
             fontWeight = FontWeight.Bold
         )
 
-        if (onStartJourney != null) {
+        if (onStartJourney != null || onShareTrip != null) {
             Spacer(Modifier.height(8.dp))
-            Button(
-                onClick = onStartJourney,
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Icon(
-                    Icons.Default.Navigation,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(Modifier.width(6.dp))
-                Text(strings.startJourney, fontWeight = FontWeight.Bold)
+            Row(modifier = Modifier.fillMaxWidth()) {
+                if (onStartJourney != null) {
+                    Button(
+                        onClick = onStartJourney,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Navigation,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(strings.startJourney, fontWeight = FontWeight.Bold)
+                    }
+                }
+                if (onShareTrip != null) {
+                    if (onStartJourney != null) Spacer(Modifier.width(8.dp))
+                    FilledTonalButton(
+                        onClick = onShareTrip,
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Share,
+                            contentDescription = strings.shareTrip,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
             }
         }
 

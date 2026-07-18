@@ -17,6 +17,7 @@ core-ktx = "1.15.0"
 activity-compose = "1.9.3"
 osmdroid = "6.1.20"
 play-services-location = "21.3.0"
+zxing = "3.5.3"
 
 [libraries]
 # Compose BOM
@@ -57,6 +58,9 @@ osmdroid = { group = "org.osmdroid", name = "osmdroid-android", version.ref = "o
 
 # Location
 play-services-location = { group = "com.google.android.gms", name = "play-services-location", version.ref = "play-services-location" }
+
+# QR encoding
+zxing-core = { group = "com.google.zxing", name = "core", version.ref = "zxing" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

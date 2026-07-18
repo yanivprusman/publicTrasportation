@@ -100,6 +100,9 @@ dependencies {
     // Location
     implementation(libs.play.services.location)
 
+    // QR code for trip sharing
+    implementation(libs.zxing.core)
+
     // Feedback lib (dev flavor only)
     "devImplementation"(project(":feedback-lib"))
 }

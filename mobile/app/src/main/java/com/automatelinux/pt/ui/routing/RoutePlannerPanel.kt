@@ -85,6 +85,7 @@ fun RoutePlannerPanel(
     activeReminderLegIndex: Int? = null,
     onCancelReminder: (() -> Unit)? = null,
     onStartJourney: (() -> Unit)? = null,
+    onShareTrip: (() -> Unit)? = null,
     onToggleDayOverview: (() -> Unit)? = null,
     onSelectDayDeparture: ((Int?) -> Unit)? = null,
     onPickDayDeparture: ((String) -> Unit)? = null,
@@ -276,7 +277,8 @@ fun RoutePlannerPanel(
                     onSetReminder = onSetReminder,
                     activeReminderLegIndex = activeReminderLegIndex,
                     onCancelReminder = onCancelReminder,
-                    onStartJourney = onStartJourney
+                    onStartJourney = onStartJourney,
+                    onShareTrip = onShareTrip
                 )
             }
         }

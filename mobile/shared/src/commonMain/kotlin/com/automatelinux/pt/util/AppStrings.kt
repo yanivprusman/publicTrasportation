@@ -178,6 +178,12 @@ data class AppStrings(
     val boardClose: String,
     val boardFilterNote: (String) -> String,
     val boardStop: (String) -> String,
+    val shareTrip: String,
+    val scanToOpenTrip: String,
+    val shareLink: String,
+    val copyLink: String,
+    val linkCopied: String,
+    val close: String,
 )
 
 val EnStrings = AppStrings(
@@ -363,6 +369,12 @@ val EnStrings = AppStrings(
     boardClose = "Close board",
     boardFilterNote = { line -> "Line $line only" },
     boardStop = { code -> "Stop $code" },
+    shareTrip = "Share trip",
+    scanToOpenTrip = "Scan to open this trip",
+    shareLink = "Share link",
+    copyLink = "Copy",
+    linkCopied = "Link copied",
+    close = "Close",
 )
 
 val HeStrings = AppStrings(
@@ -548,6 +560,12 @@ val HeStrings = AppStrings(
     boardClose = "סגור לוח",
     boardFilterNote = { line -> "קו $line בלבד" },
     boardStop = { code -> "תחנה $code" },
+    shareTrip = "שתף מסע",
+    scanToOpenTrip = "סרוק כדי לפתוח את המסע",
+    shareLink = "שתף קישור",
+    copyLink = "העתק",
+    linkCopied = "הקישור הועתק",
+    close = "סגור",
 )
 
 val LocalAppStrings = compositionLocalOf { EnStrings }
