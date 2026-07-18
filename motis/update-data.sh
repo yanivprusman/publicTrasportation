@@ -104,10 +104,13 @@ for i in $(seq 1 15); do
     sleep 2
 done
 
-# --- Copy GTFS to PT backend for line-shape endpoint ---
-if [[ -d "$PT_BACKEND_GTFS_DIR" ]]; then
-    cp -f "$DATA_INPUT_DIR/israel-gtfs.zip" "$PT_BACKEND_GTFS_DIR/israel-gtfs.zip"
-    echo "GTFS copied to PT backend: $PT_BACKEND_GTFS_DIR"
-fi
+# --- Copy GTFS to PT backend + extract the files it reads directly ---
+# /api/stops and /api/transport read gtfs/israel-public-transportation/stops.txt.
+# Create the dir unconditionally: the NUC replica had no gtfs/ dir at all, so
+# the old [[ -d ]] guard silently skipped this and stops stayed empty forever.
+mkdir -p "$PT_BACKEND_GTFS_DIR/israel-public-transportation"
+cp -f "$DATA_INPUT_DIR/israel-gtfs.zip" "$PT_BACKEND_GTFS_DIR/israel-gtfs.zip"
+unzip -o -q -d "$PT_BACKEND_GTFS_DIR/israel-public-transportation" "$PT_BACKEND_GTFS_DIR/israel-gtfs.zip" stops.txt
+echo "GTFS copied + stops.txt extracted to $PT_BACKEND_GTFS_DIR"
 
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] MOTIS data update complete"
