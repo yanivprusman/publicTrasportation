@@ -28,6 +28,16 @@ val keystoreProps = Properties().apply {
 }
 val hasSigningConfig = keystoreProps.getProperty("storeFile") != null
 
+// Google Sign-In web client id, supplied via a gitignored oauth.properties.
+// Absent, GOOGLE_SIGN_IN_ENABLED is false and the app keeps the manual
+// registration path — a missing client id must not fail the build, and must
+// not produce a sign-in button that cannot work.
+val oauthPropsFile = rootProject.file("oauth.properties")
+val oauthProps = Properties().apply {
+    if (oauthPropsFile.exists()) oauthPropsFile.inputStream().use { load(it) }
+}
+val webClientId: String = oauthProps.getProperty("webClientId") ?: ""
+
 android {
     namespace = "com.automatelinux.pt"
     compileSdk = 35
@@ -38,6 +48,8 @@ android {
         targetSdk = 35
         versionCode = gitCommitCount
         versionName = "v${gitCommitCount} (${gitShortHash})"
+        buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$webClientId\"")
+        buildConfigField("boolean", "GOOGLE_SIGN_IN_ENABLED", (webClientId.isNotEmpty()).toString())
     }
 
     productFlavors {
