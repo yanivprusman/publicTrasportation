@@ -18,6 +18,7 @@ activity-compose = "1.9.3"
 osmdroid = "6.1.20"
 play-services-location = "21.3.0"
 zxing = "3.5.3"
+install-referrer = "2.2"
 
 [libraries]
 # Compose BOM
@@ -61,6 +62,7 @@ play-services-location = { group = "com.google.android.gms", name = "play-servic
 
 # QR encoding
 zxing-core = { group = "com.google.zxing", name = "core", version.ref = "zxing" }
+install-referrer = { group = "com.android.installreferrer", name = "installreferrer", version.ref = "install-referrer" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

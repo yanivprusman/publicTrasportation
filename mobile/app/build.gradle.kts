@@ -103,6 +103,9 @@ dependencies {
     // QR code for trip sharing
     implementation(libs.zxing.core)
 
+    // Play Install Referrer — referral attribution, readable only once per install
+    implementation(libs.install.referrer)
+
     // Feedback lib (dev flavor only)
     "devImplementation"(project(":feedback-lib"))
 }

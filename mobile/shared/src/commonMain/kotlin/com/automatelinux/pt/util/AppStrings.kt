@@ -197,6 +197,26 @@ data class AppStrings(
     val copyLink: String,
     val linkCopied: String,
     val close: String,
+    // Up-front pricing disclosure — shown on first launch and kept in settings.
+    val pricingNoticeTitle: String,
+    val pricingNoticeFree: String,
+    val pricingNoticeFuture: String,
+    val pricingNoticeWarning: String,
+    val pricingNoticeFounder: String,
+    val pricingNoticeAcknowledge: String,
+    val pricingSectionTitle: String,
+    val pricingSectionBody: String,
+    // Registration
+    val registerTitle: String,
+    val registerSubtitle: String,
+    val registerEmail: String,
+    val registerPhone: String,
+    val registerSubmit: String,
+    val registerSubmitting: String,
+    val registerInvalidEmail: String,
+    val registerInvalidPhone: String,
+    val registerFailed: String,
+    val registerPrivacy: String,
 )
 
 val EnStrings = AppStrings(
@@ -401,6 +421,31 @@ val EnStrings = AppStrings(
     copyLink = "Copy",
     linkCopied = "Link copied",
     close = "Close",
+    pricingNoticeTitle = "Free today — paid one day",
+    pricingNoticeFree = "Every feature is open to everyone, free. We never ask for a credit card.",
+    pricingNoticeFuture = "We're telling you up front so you're never surprised: one day this app will " +
+        "become paid. The price will be small — no more than a single ride's fare per year — and " +
+        "you'll choose between paying yearly or once, for life.",
+    pricingNoticeWarning = "We'll let you know in advance before anything changes. " +
+        "You will never be charged without warning.",
+    pricingNoticeFounder = "Users who were with us from the start will get the best price.",
+    pricingNoticeAcknowledge = "Got it",
+    pricingSectionTitle = "Pricing",
+    pricingSectionBody = "The app is free for everyone right now. It will become paid later — no more " +
+        "than one ride's fare per year, or a one-time payment for life, your choice. " +
+        "We'll let you know in advance.",
+    registerTitle = "Create your account",
+    registerSubtitle = "Free to use. We need a way to reach you so we can give you notice " +
+        "before the app ever becomes paid — and so your early-user price follows you " +
+        "to your next phone.",
+    registerEmail = "Email",
+    registerPhone = "Phone",
+    registerSubmit = "Continue",
+    registerSubmitting = "Registering…",
+    registerInvalidEmail = "Please enter a valid email address",
+    registerInvalidPhone = "Please enter a valid phone number",
+    registerFailed = "Registration failed. Please check your connection and try again.",
+    registerPrivacy = "We use these only to contact you about the app. Nothing else, no ads.",
 )
 
 val HeStrings = AppStrings(
@@ -605,6 +650,29 @@ val HeStrings = AppStrings(
     copyLink = "העתק",
     linkCopied = "הקישור הועתק",
     close = "סגור",
+    pricingNoticeTitle = "האפליקציה חינם — ויום אחד תהיה בתשלום",
+    pricingNoticeFree = "כל היכולות פתוחות לכולם, בחינם. לעולם לא נבקש כרטיס אשראי.",
+    pricingNoticeFuture = "אנחנו אומרים את זה מראש כדי שלא תופתע: בעתיד האפליקציה תהפוך לבתשלום. " +
+        "המחיר יהיה קטן — לא יותר ממחיר נסיעה אחת בשנה — ותוכל לבחור בין תשלום שנתי " +
+        "לבין תשלום חד־פעמי לכל החיים.",
+    pricingNoticeWarning = "נודיע לך מראש לפני כל שינוי. לא ניגבה ממך כסף בלי התראה.",
+    pricingNoticeFounder = "משתמשים שהיו איתנו מההתחלה יקבלו את המחיר הטוב ביותר.",
+    pricingNoticeAcknowledge = "הבנתי",
+    pricingSectionTitle = "תמחור",
+    pricingSectionBody = "האפליקציה חינם לכולם כרגע. בעתיד תהפוך לבתשלום — לא יותר ממחיר נסיעה אחת " +
+        "בשנה, או תשלום חד־פעמי לכל החיים, לבחירתך. נודיע לך מראש.",
+    registerTitle = "פתיחת חשבון",
+    registerSubtitle = "השימוש חינם. אנחנו צריכים דרך ליצור איתך קשר כדי להודיע לך מראש " +
+        "לפני שהאפליקציה תהפוך לבתשלום — וכדי שמחיר המשתמשים הוותיקים יעבור איתך " +
+        "גם לטלפון הבא.",
+    registerEmail = "אימייל",
+    registerPhone = "טלפון",
+    registerSubmit = "המשך",
+    registerSubmitting = "רושם…",
+    registerInvalidEmail = "נא להזין כתובת אימייל תקינה",
+    registerInvalidPhone = "נא להזין מספר טלפון תקין",
+    registerFailed = "ההרשמה נכשלה. בדוק את החיבור ונסה שוב.",
+    registerPrivacy = "נשתמש בפרטים רק כדי ליצור איתך קשר בנוגע לאפליקציה. לא לשום דבר אחר, ובלי פרסומות.",
 )
 
 val LocalAppStrings = compositionLocalOf { EnStrings }

@@ -27,7 +27,13 @@ object TripLink {
         origin: GeocodeSuggestion,
         destination: GeocodeSuggestion,
         departureTime: Instant?,
-        arriveBy: Boolean
+        arriveBy: Boolean,
+        /**
+         * Sharer's anonymous install id, carried so an install that starts from
+         * this link can be credited back. Attribution only — [parse] ignores it,
+         * so it can never affect which journey the recipient sees.
+         */
+        referrerInstallId: String? = null
     ): String {
         val builder = Uri.parse(baseUrl).buildUpon()
             .appendQueryParameter("from", formatCoords(origin.lat, origin.lon))
@@ -36,6 +42,7 @@ object TripLink {
             .appendQueryParameter("toName", destination.name)
         if (departureTime != null) builder.appendQueryParameter("time", departureTime.toString())
         if (arriveBy) builder.appendQueryParameter("arriveBy", "1")
+        if (!referrerInstallId.isNullOrBlank()) builder.appendQueryParameter("ref", referrerInstallId)
         return builder.build().toString()
     }
 

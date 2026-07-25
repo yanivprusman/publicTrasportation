@@ -587,7 +587,12 @@ fun MainScreen(
                                                 origin = origin,
                                                 destination = destination,
                                                 departureTime = routingState.departureTime,
-                                                arriveBy = routingState.arriveBy
+                                                arriveBy = routingState.arriveBy,
+                                                // Credits this user if the recipient installs.
+                                                // Null until the first launch ping has run —
+                                                // in that case the link simply carries no ref
+                                                // rather than inventing an attribution.
+                                                referrerInstallId = settingsStore.installId
                                             )
                                         }
                                     },

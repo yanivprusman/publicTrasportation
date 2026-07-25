@@ -29,8 +29,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.lifecycleScope
+import com.automatelinux.pt.analytics.AnalyticsRepository
 import com.automatelinux.pt.ui.MainScreen
+import com.automatelinux.pt.ui.PricingNoticeDialog
+import com.automatelinux.pt.ui.RegistrationScreen
 import com.automatelinux.pt.ui.theme.PTTheme
+import kotlinx.coroutines.launch
 import com.automatelinux.pt.util.EnStrings
 import com.automatelinux.pt.util.HeStrings
 import com.automatelinux.pt.util.LocalAppStrings
@@ -45,6 +50,7 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     @Inject lateinit var settingsStore: SettingsStore
+    @Inject lateinit var analytics: AnalyticsRepository
 
     // Trip arriving via a shared https link (VIEW intent); consumed by MainScreen.
     private val pendingSharedTrip = mutableStateOf<TripLink.SharedTrip?>(null)
@@ -92,6 +98,9 @@ class MainActivity : ComponentActivity() {
         MapZoomHandler.clear()
         TripLink.parse(intent?.data)?.let { pendingSharedTrip.value = it }
         parseWidgetStation(intent)
+        // Anonymous launch ping. Fire-and-forget on the activity scope so it can
+        // never delay first paint; AnalyticsRepository swallows its own failures.
+        lifecycleScope.launch { analytics.trackLaunch() }
         setContent {
             var language by remember { mutableStateOf(settingsStore.language) }
             val strings = if (language == "he") HeStrings else EnStrings
@@ -106,6 +115,43 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.fillMaxSize(),
                         color = MaterialTheme.colorScheme.background
                     ) {
+                        // Told up front, on the very first launch: the app is free
+                        // now and will become paid later. Nobody gets surprised.
+                        var showPricingNotice by remember {
+                            mutableStateOf(!settingsStore.pricingNoticeAcknowledged)
+                        }
+                        var registered by remember {
+                            mutableStateOf(settingsStore.isRegistered)
+                        }
+
+                        if (showPricingNotice) {
+                            PricingNoticeDialog(
+                                onDismiss = {
+                                    settingsStore.pricingNoticeAcknowledged = true
+                                    showPricingNotice = false
+                                    lifecycleScope.launch {
+                                        analytics.trackEvent("notice_acknowledged")
+                                    }
+                                }
+                            )
+                        }
+
+                        // The pricing promise is shown before registration is
+                        // asked for, so nobody hands over contact details without
+                        // first knowing what they are being told about.
+                        if (!registered) {
+                            RegistrationScreen(
+                                onSubmit = { email, phone, onError ->
+                                    lifecycleScope.launch {
+                                        analytics.register(email, phone)
+                                            .onSuccess { registered = true }
+                                            .onFailure { onError(strings.registerFailed) }
+                                    }
+                                }
+                            )
+                            return@Surface
+                        }
+
                         ServerCheckScreen(
                             settingsStore = settingsStore,
                             sharedTrip = pendingSharedTrip.value,

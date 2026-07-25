@@ -9,21 +9,30 @@ import java.net.URL
 object ServerConfig {
     private val port = BuildConfig.SERVER_PORT
 
-    val servers = listOf(
-        "http://10.7.0.2:$port",
-        "http://10.7.0.1:$port",
-        "http://10.7.0.4:$port",
-        "http://10.7.0.6:$port",
+    private val publicServer =
         if (BuildConfig.FEEDBACK_ENABLED) "https://pt.dev.ya-niv.com" else "https://pt.prod.ya-niv.com"
-    )
+
+    // Private WireGuard peers are a developer convenience and must never ship.
+    // On a real user's phone every one of these is unreachable, so probing them
+    // would stall startup for seconds behind connect timeouts before the public
+    // URL is ever tried — and would advertise the internal topology besides.
+    private val peerServers =
+        if (BuildConfig.PEER_SERVERS_ENABLED) listOf(
+            "http://10.7.0.2:$port",
+            "http://10.7.0.1:$port",
+            "http://10.7.0.4:$port",
+            "http://10.7.0.6:$port"
+        ) else emptyList()
+
+    val servers = peerServers + publicServer
 
     val serverLabels = mapOf(
         "http://10.7.0.2:$port" to "Desktop",
         "http://10.7.0.1:$port" to "NUC (Leader)",
         "http://10.7.0.4:$port" to "Ubuntu Levtov",
         "http://10.7.0.6:$port" to "RPi Ubuntu",
-        (if (BuildConfig.FEEDBACK_ENABLED) "https://pt.dev.ya-niv.com" else "https://pt.prod.ya-niv.com") to "Public"
-    )
+        publicServer to "Public"
+    ).filterKeys { it in servers }
 
     @Volatile
     var activeServer: String = servers.first()

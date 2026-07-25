@@ -5,8 +5,14 @@ import com.automatelinux.pt.data.model.GeocodeSuggestion
 import com.automatelinux.pt.data.model.RouteResult
 import com.automatelinux.pt.data.model.SiriResponse
 import com.automatelinux.pt.data.model.StopResult
+import com.automatelinux.pt.data.model.AppPingRequest
+import com.automatelinux.pt.data.model.AppPingResponse
+import com.automatelinux.pt.data.model.AppRegisterRequest
+import com.automatelinux.pt.data.model.AppRegisterResponse
 import com.automatelinux.pt.data.model.StoptimesResponse
+import retrofit2.http.Body
 import retrofit2.http.GET
+import retrofit2.http.POST
 import retrofit2.http.Query
 
 interface PtApi {
@@ -70,4 +76,10 @@ interface PtApi {
     suspend fun getLineShape(
         @Query("line") line: String
     ): Map<String, List<List<Double>>>
+
+    @POST("/api/app/ping")
+    suspend fun appPing(@Body body: AppPingRequest): AppPingResponse
+
+    @POST("/api/app/register")
+    suspend fun appRegister(@Body body: AppRegisterRequest): AppRegisterResponse
 }

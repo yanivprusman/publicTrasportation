@@ -153,6 +153,62 @@ class SettingsStore(private val prefs: Settings) {
 
     fun isStationFavorite(code: String): Boolean = getFavoriteStations().any { it.first == code }
 
+    // --- Anonymous analytics ---
+    // installId is a random UUID generated on the device. It identifies an
+    // install, not a person: no account, no device id, no ad id. Generation is
+    // platform-side (java.util.UUID / NSUUID); only storage lives here.
+
+    var installId: String?
+        get() = prefs.getStringOrNull("install_id")
+        set(value) { if (value != null) prefs.putString("install_id", value) }
+
+    /** Local day ("yyyy-MM-dd") the app was last seen active, for active-day counting. */
+    var lastActiveDay: String?
+        get() = prefs.getStringOrNull("last_active_day")
+        set(value) { if (value != null) prefs.putString("last_active_day", value) }
+
+    /** Days the user actually opened the app — the honest measure of value delivered. */
+    var activeDays: Int
+        get() = prefs.getInt("active_days", 0)
+        set(value) { prefs.putInt("active_days", value) }
+
+    /**
+     * Raw Play Install Referrer string, held until a ping successfully delivers it.
+     * Play hands this over exactly once, so it must survive until the server has it.
+     */
+    var pendingReferrer: String?
+        get() = prefs.getStringOrNull("pending_referrer")
+        set(value) {
+            if (value == null) prefs.remove("pending_referrer")
+            else prefs.putString("pending_referrer", value)
+        }
+
+    /** True once the Play referrer has been read, so it is never queried twice. */
+    var referrerChecked: Boolean
+        get() = prefs.getBoolean("referrer_checked", false)
+        set(value) { prefs.putBoolean("referrer_checked", value) }
+
+    /** True once the user has seen and dismissed the pricing disclosure. */
+    var pricingNoticeAcknowledged: Boolean
+        get() = prefs.getBoolean("pricing_notice_ack", false)
+        set(value) { prefs.putBoolean("pricing_notice_ack", value) }
+
+    /** Set once registration has been accepted by the server. */
+    var registeredEmail: String?
+        get() = prefs.getStringOrNull("registered_email")
+        set(value) {
+            if (value == null) prefs.remove("registered_email")
+            else prefs.putString("registered_email", value)
+        }
+
+    /** Server-confirmed date this account first registered — the founder date. */
+    var founderSince: String?
+        get() = prefs.getStringOrNull("founder_since")
+        set(value) { if (value != null) prefs.putString("founder_since", value) }
+
+    val isRegistered: Boolean
+        get() = !registeredEmail.isNullOrBlank()
+
     // Home-screen departure widgets: each widget instance remembers its own station.
     fun getWidgetStation(widgetId: Int): Pair<String, String>? {
         val code = prefs.getStringOrNull("widget_${widgetId}_code") ?: return null
