@@ -425,14 +425,14 @@ val EnStrings = AppStrings(
     pricingNoticeFree = "Every feature is open to everyone, free. We never ask for a credit card.",
     pricingNoticeFuture = "We're telling you up front so you're never surprised: one day this app will " +
         "become paid. The price will be small — no more than a single ride's fare per year — and " +
-        "you'll choose between paying yearly or once, for life.",
+        "you'll choose between paying yearly or once for ten years.",
     pricingNoticeWarning = "We'll let you know in advance before anything changes. " +
         "You will never be charged without warning.",
     pricingNoticeFounder = "Users who were with us from the start will get the best price.",
     pricingNoticeAcknowledge = "Got it",
     pricingSectionTitle = "Pricing",
     pricingSectionBody = "The app is free for everyone right now. It will become paid later — no more " +
-        "than one ride's fare per year, or a one-time payment for life, your choice. " +
+        "than one ride's fare per year, or a single payment covering ten years, your choice. " +
         "We'll let you know in advance.",
     registerTitle = "Create your account",
     registerSubtitle = "Free to use. We need a way to reach you so we can give you notice " +
@@ -654,13 +654,13 @@ val HeStrings = AppStrings(
     pricingNoticeFree = "כל היכולות פתוחות לכולם, בחינם. לעולם לא נבקש כרטיס אשראי.",
     pricingNoticeFuture = "אנחנו אומרים את זה מראש כדי שלא תופתע: בעתיד האפליקציה תהפוך לבתשלום. " +
         "המחיר יהיה קטן — לא יותר ממחיר נסיעה אחת בשנה — ותוכל לבחור בין תשלום שנתי " +
-        "לבין תשלום חד־פעמי לכל החיים.",
+        "לבין תשלום אחד שמכסה עשר שנים.",
     pricingNoticeWarning = "נודיע לך מראש לפני כל שינוי. לא ניגבה ממך כסף בלי התראה.",
     pricingNoticeFounder = "משתמשים שהיו איתנו מההתחלה יקבלו את המחיר הטוב ביותר.",
     pricingNoticeAcknowledge = "הבנתי",
     pricingSectionTitle = "תמחור",
     pricingSectionBody = "האפליקציה חינם לכולם כרגע. בעתיד תהפוך לבתשלום — לא יותר ממחיר נסיעה אחת " +
-        "בשנה, או תשלום חד־פעמי לכל החיים, לבחירתך. נודיע לך מראש.",
+        "בשנה, או תשלום אחד שמכסה עשר שנים, לבחירתך. נודיע לך מראש.",
     registerTitle = "פתיחת חשבון",
     registerSubtitle = "השימוש חינם. אנחנו צריכים דרך ליצור איתך קשר כדי להודיע לך מראש " +
         "לפני שהאפליקציה תהפוך לבתשלום — וכדי שמחיר המשתמשים הוותיקים יעבור איתך " +
