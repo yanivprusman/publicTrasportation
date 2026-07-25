@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sendToDaemon, isUuid } from "../../../../lib/daemon";
+import { rateLimit, clientIp } from "../../../../lib/rate-limit";
+
+// A real person registers once. 10/hour leaves room for retries, a shared NAT,
+// and a household, while making bulk junk registration pointless.
+const REGISTER_LIMIT = 10;
+const REGISTER_WINDOW_SECONDS = 3600;
 
 // User registration: email + phone, linked to the anonymous install UUID.
 //
@@ -14,6 +20,19 @@ import { sendToDaemon, isUuid } from "../../../../lib/daemon";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
+  // Checked before parsing the body so a flood costs as little as possible.
+  const limit = rateLimit(
+    `register:${clientIp(req)}`,
+    REGISTER_LIMIT,
+    REGISTER_WINDOW_SECONDS
+  );
+  if (!limit.allowed) {
+    return NextResponse.json(
+      { error: "Too many registration attempts. Please try again later." },
+      { status: 429, headers: { "Retry-After": String(limit.retryAfterSeconds) } }
+    );
+  }
+
   let body: Record<string, unknown>;
   try {
     body = await req.json();

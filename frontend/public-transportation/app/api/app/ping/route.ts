@@ -1,5 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sendToDaemon, isUuid } from "../../../../lib/daemon";
+import { rateLimit, clientIp } from "../../../../lib/rate-limit";
+
+// Pings fire on launch and on a few user actions, and several people can share
+// one NAT address, so this is set well above real usage — it exists to stop a
+// flood, not to police normal traffic.
+const PING_LIMIT = 240;
+const PING_WINDOW_SECONDS = 3600;
 
 // Anonymous install/usage ping from the native app.
 //
@@ -22,6 +29,14 @@ const ALLOWED_EVENTS = new Set([
 ]);
 
 export async function POST(req: NextRequest) {
+  const limit = rateLimit(`ping:${clientIp(req)}`, PING_LIMIT, PING_WINDOW_SECONDS);
+  if (!limit.allowed) {
+    return NextResponse.json(
+      { error: "Too many requests" },
+      { status: 429, headers: { "Retry-After": String(limit.retryAfterSeconds) } }
+    );
+  }
+
   let body: Record<string, unknown>;
   try {
     body = await req.json();
