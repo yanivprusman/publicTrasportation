@@ -1,8 +1,18 @@
 # Google Sign-In — OAuth setup
 
-Everything that can be prepared from this machine is done. The remaining steps
-need your Google account, so they are written out with the exact values already
-filled in.
+**Status: created 2026-07-25.** Project, consent screen and all three clients
+exist; the web client id is in the (gitignored) `oauth.properties`. What remains
+is step 5 only — it cannot be done until the first Play upload.
+
+| Resource | Value |
+| :--- | :--- |
+| GCP project | `public-transportation-503515` |
+| Publishing status | **In production** (any Google account may sign in) |
+| Web client (`pt-server`) | `504769134062-m9hi5c2gearhgjeh5fvocvdbki2e651a.apps.googleusercontent.com` |
+| Android dev | `pt-android-dev` → `com.automatelinux.pt.dev` |
+| Android prod | `pt-android-prod` → `com.automatelinux.pt` |
+
+The steps below are kept as the record of how it was configured.
 
 ## Your values
 
