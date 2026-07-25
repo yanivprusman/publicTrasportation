@@ -1,6 +1,13 @@
 *.iml
 .gradle
 /local.properties
+
+# Signing material — never commit. The keystore itself lives outside the repo
+# (see keystore.properties). Losing the upload key is recoverable via Play
+# App Signing, but leaking it lets anyone publish as you.
+keystore.properties
+*.jks
+*.keystore
 /.idea
 .DS_Store
 /build

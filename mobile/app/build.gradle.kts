@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -15,6 +17,17 @@ val gitShortHash = providers.exec {
     commandLine("git", "rev-parse", "--short", "HEAD")
 }.standardOutput.asText.get().trim()
 
+// Signing material is read from a gitignored keystore.properties that points at
+// a keystore stored outside the repo. When it is absent (CI, a fresh clone, or
+// anyone but the release machine) the release build is left unsigned rather
+// than silently falling back to the debug key — an app signed with the debug
+// key is rejected by Play, and finding that out at upload time wastes a cycle.
+val keystorePropsFile = rootProject.file("keystore.properties")
+val keystoreProps = Properties().apply {
+    if (keystorePropsFile.exists()) keystorePropsFile.inputStream().use { load(it) }
+}
+val hasSigningConfig = keystoreProps.getProperty("storeFile") != null
+
 android {
     namespace = "com.automatelinux.pt"
     compileSdk = 35
@@ -30,9 +43,26 @@ android {
     productFlavors {
         getByName("dev") {
             buildConfigField("int", "SERVER_PORT", "3003")
+            // Probe the WireGuard peers — local development only.
+            buildConfigField("boolean", "PEER_SERVERS_ENABLED", "true")
         }
         getByName("prod") {
             buildConfigField("int", "SERVER_PORT", "3002")
+            // Public builds talk only to the public URL: the private peer
+            // addresses are unreachable from a user's phone, so probing them
+            // would stall startup behind connect timeouts on every launch.
+            buildConfigField("boolean", "PEER_SERVERS_ENABLED", "false")
+        }
+    }
+
+    signingConfigs {
+        if (hasSigningConfig) {
+            create("upload") {
+                storeFile = file(keystoreProps.getProperty("storeFile"))
+                storePassword = keystoreProps.getProperty("storePassword")
+                keyAlias = keystoreProps.getProperty("keyAlias")
+                keyPassword = keystoreProps.getProperty("keyPassword")
+            }
         }
     }
 
@@ -43,6 +73,9 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            if (hasSigningConfig) {
+                signingConfig = signingConfigs.getByName("upload")
+            }
         }
     }
     compileOptions {
