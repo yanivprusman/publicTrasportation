@@ -217,6 +217,7 @@ data class AppStrings(
     val registerInvalidPhone: String,
     val registerFailed: String,
     val registerPrivacy: String,
+    val registerPickNumber: String,
 )
 
 val EnStrings = AppStrings(
@@ -446,6 +447,7 @@ val EnStrings = AppStrings(
     registerInvalidPhone = "Please enter a valid phone number",
     registerFailed = "Registration failed. Please check your connection and try again.",
     registerPrivacy = "We use these only to contact you about the app. Nothing else, no ads.",
+    registerPickNumber = "Use my number",
 )
 
 val HeStrings = AppStrings(
@@ -673,6 +675,7 @@ val HeStrings = AppStrings(
     registerInvalidPhone = "נא להזין מספר טלפון תקין",
     registerFailed = "ההרשמה נכשלה. בדוק את החיבור ונסה שוב.",
     registerPrivacy = "נשתמש בפרטים רק כדי ליצור איתך קשר בנוגע לאפליקציה. לא לשום דבר אחר, ובלי פרסומות.",
+    registerPickNumber = "המספר שלי",
 )
 
 val LocalAppStrings = compositionLocalOf { EnStrings }

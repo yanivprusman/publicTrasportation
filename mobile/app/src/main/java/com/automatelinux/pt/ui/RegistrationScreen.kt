@@ -12,6 +12,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -21,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.automatelinux.pt.analytics.rememberPhoneNumberHint
 import com.automatelinux.pt.util.LocalAppStrings
 
 /**
@@ -43,6 +45,13 @@ fun RegistrationScreen(
     var phone by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
     var submitting by remember { mutableStateOf(false) }
+
+    // One tap instead of typing 10 digits. Falls through to the manual field
+    // when the device has no number to offer.
+    val pickPhoneNumber = rememberPhoneNumberHint { picked ->
+        phone = picked
+        error = null
+    }
 
     fun looksLikeEmail(value: String): Boolean {
         val at = value.indexOf('@')
@@ -79,6 +88,11 @@ fun RegistrationScreen(
             singleLine = true,
             enabled = !submitting,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+            trailingIcon = {
+                TextButton(onClick = pickPhoneNumber, enabled = !submitting) {
+                    Text(strings.registerPickNumber)
+                }
+            },
             modifier = Modifier.fillMaxWidth()
         )
 

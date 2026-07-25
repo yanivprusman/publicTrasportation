@@ -139,6 +139,10 @@ dependencies {
     // Play Install Referrer — referral attribution, readable only once per install
     implementation(libs.install.referrer)
 
+    // Phone Number Hint — one-tap picker of the numbers already on the device.
+    // Needs no runtime permission and no OAuth setup.
+    implementation(libs.play.services.auth)
+
     // Feedback lib (dev flavor only)
     "devImplementation"(project(":feedback-lib"))
 }
