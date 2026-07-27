@@ -6,11 +6,20 @@ import TransportControls from './components/controls/TransportControls'
 import RoutePlanner from './components/routing/RoutePlanner'
 import LineExplorer from './components/lines/LineExplorer'
 import NearbyStops from './components/nearby/NearbyStops'
+import StationTimetable from './components/arrivals/StationTimetable'
+import ServiceAlertBanner from './components/arrivals/ServiceAlertBanner'
+import FavoriteStationsBar from './components/arrivals/FavoriteStationsBar'
+import PricingNotice from './components/onboarding/PricingNotice'
+import RegistrationScreen from './components/onboarding/RegistrationScreen'
 import { useRouting } from './hooks/useRouting'
 import { useLiveBus } from './hooks/useLiveBus'
 import { useLineExplorer } from './hooks/useLineExplorer'
 import { useNearbyStops } from './hooks/useNearbyStops'
 import { useSessionState } from './hooks/useSessionState'
+import { useFavorites, type FavoriteStation } from './hooks/useFavorites'
+import { useMapStyle } from './hooks/useMapStyle'
+import { useTheme } from './hooks/useTheme'
+import { useRegistration } from './hooks/useRegistration'
 import { fetchStationArrivals, extractVehicleMarkers, type NearbyStop, type StopResult } from './services/transport-api'
 import { geocodeSearch } from './services/routing-api'
 import { parseTripLink } from './utils/trip-link'
@@ -37,6 +46,10 @@ function AppInner() {
   const routing = useRouting()
   const lineExplorer = useLineExplorer()
   const nearby = useNearbyStops()
+  const favorites = useFavorites()
+  const { theme } = useTheme()
+  const { mapStyle, setMapStyle } = useMapStyle(theme)
+  const registration = useRegistration()
 
   // Initialize routing with defaults when no saved route exists. A URL that
   // carries a trip (shared link or debug params) supplies its own points —
@@ -193,8 +206,25 @@ function AppInner() {
     setMapCenter([stop.lat, stop.lon])
   }, [handleStationChange, setActiveTab])
 
+  // Picking a favorite behaves like any other station switch, and re-centres the
+  // map only once the stop's coordinates are known (the chip stores name + code).
+  const handleFavoriteStationSelect = useCallback((station: FavoriteStation) => {
+    handleStationChange(station.code)
+  }, [handleStationChange])
+
+  const handleToggleFavoriteStation = useCallback((name: string) => {
+    if (!stationCode) return
+    favorites.toggleStation({ code: stationCode, name })
+  }, [stationCode, favorites])
+
   const arrivalsContent = (
     <>
+      <FavoriteStationsBar
+        stations={favorites.stations}
+        activeCode={stationCode}
+        onSelect={handleFavoriteStationSelect}
+        onRemove={favorites.removeStation}
+      />
       <TransportControls
         stationCode={stationCode}
         setStationCode={handleStationChange}
@@ -204,7 +234,10 @@ function AppInner() {
         showVehicleMarkers={showVehicleMarkers}
         setShowVehicleMarkers={setShowVehicleMarkers}
         onOpenBoard={() => setBoardMode(true)}
+        isFavorite={favorites.isStationFavorite(stationCode)}
+        onToggleFavorite={handleToggleFavoriteStation}
       />
+      <ServiceAlertBanner />
       <StationArrivals
         siriData={siriData}
         error={error}
@@ -212,6 +245,7 @@ function AppInner() {
         lineFilter={lineFilter}
         onVehicleSelect={handleVehicleSelect}
       />
+      <StationTimetable stationCode={stationCode} />
       {boardMode && (
         <DepartureBoard
           siriData={siriData}
@@ -224,6 +258,21 @@ function AppInner() {
       )}
     </>
   )
+
+  // The pricing promise is shown before registration is asked for, so nobody
+  // hands over contact details without first knowing what they are being told
+  // about. Both gates resolve from localStorage after mount; until then the app
+  // renders normally so a returning user never sees a flash of the gate.
+  if (registration.state === 'needsRegistration') {
+    return (
+      <>
+        {!registration.noticeAcknowledged && (
+          <PricingNotice onAcknowledge={registration.acknowledgeNotice} />
+        )}
+        <RegistrationScreen onSubmit={registration.register} />
+      </>
+    )
+  }
 
   return (
     <div className="combined-app">
@@ -265,6 +314,8 @@ function AppInner() {
           stopName: liveBus.stopName,
           expectedArrival: liveBus.expectedArrival,
         } : null}
+        mapStyle={mapStyle}
+        onMapStyleChange={setMapStyle}
       />
 
       <RoutePlanner
@@ -274,7 +325,7 @@ function AppInner() {
         activeTab={activeTab}
         onTabChange={setActiveTab}
         arrivalsContent={arrivalsContent}
-        linesContent={<LineExplorer explorer={lineExplorer} />}
+        linesContent={<LineExplorer explorer={lineExplorer} favorites={favorites} />}
         nearbyContent={<NearbyStops nearby={nearby} onSelect={handleNearbyStopSelect} />}
         liveBus={liveBus}
         onShowLiveBusOnMap={handleShowLiveBusOnMap}

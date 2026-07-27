@@ -113,8 +113,6 @@ const en = {
   'detail.stopsMany': '{n} stops',
   'detail.startJourney': 'Start journey',
   'detail.share': '\u{1F517} Share trip',
-  'detail.shareCopied': '✓ Link copied',
-  'detail.shareFailed': 'Share failed',
   'detail.shareTitle': 'Share this trip as a link',
 
   // Journey navigator
@@ -293,6 +291,96 @@ const en = {
   'routePanel.start': 'Start point',
   'routePanel.end': 'End point',
 
+  // Route sorting
+  'sort.label': 'Sort by',
+  'sort.fastest': 'Fastest',
+  'sort.fewerTransfers': 'Fewer transfers',
+  'sort.lessWalking': 'Less walking',
+
+  // Fare estimate
+  'fare.estimate': '~₪{n}',
+  'fare.title': 'Estimated fare for this trip',
+
+  // Service alerts
+  'alerts.title': 'Service Alerts',
+  'alerts.peak': 'Peak hours — expect delays on busy lines',
+  'alerts.normal': 'All lines operating normally',
+
+  // Favorites
+  'fav.stations': 'Favorite Stations',
+  'fav.lines': 'Favorite Lines',
+  'fav.none': 'No favorites yet',
+  'fav.addStation': 'Add this station to favorites',
+  'fav.removeStation': 'Remove this station from favorites',
+  'fav.addLine': 'Add this line to favorites',
+  'fav.removeLine': 'Remove this line from favorites',
+  'fav.removeNamed': 'Remove {name} from favorites',
+  'fav.showStation': 'Show arrivals for {name}',
+  'fav.showLine': 'Show line {name} on the map',
+
+  // Departure reminder
+  'reminder.set': 'Departure reminder',
+  'reminder.cancel': 'Cancel reminder',
+  'reminder.scheduled': '⏰ Reminder set for {time}',
+  'reminder.cancelled': 'Reminder cancelled',
+  'reminder.minutesBefore': '{n} min before departure',
+  'reminder.unsupported': 'This browser does not support notifications.',
+  'reminder.denied': 'Notifications are blocked — enable them in your browser settings.',
+  'reminder.tooSoon': 'That departure is too soon to set a reminder for.',
+  'reminder.notifyTitle': 'Time to go — {line}',
+  'reminder.notifyBody': 'Departs {time} from {stop}',
+
+  // Map controls
+  'map.follow': 'Follow my location',
+  'map.unfollow': 'Stop following my location',
+  'map.style': 'Map style',
+  'map.styleDark': 'Dark',
+  'map.styleLight': 'Light',
+  'map.styleSatellite': 'Satellite',
+
+  // Scheduled timetable
+  'timetable.title': 'Timetable',
+  'timetable.caption': 'Scheduled departures',
+  'timetable.all': 'All',
+  'timetable.tomorrow': 'Tomorrow',
+  'timetable.now': 'NOW',
+  'timetable.none': 'No scheduled departures',
+  'timetable.unavailable': 'Timetable is unavailable for this stop',
+  'timetable.loading': 'Loading timetable...',
+
+  // Share trip dialog
+  'share.title': 'Share trip',
+  'share.scan': 'Scan to open this trip',
+  'share.link': 'Share link',
+  'share.copy': 'Copy',
+  'share.copied': '✓ Link copied',
+  'share.close': 'Close',
+  'share.qrAlt': 'QR code for this trip link',
+  'share.qrFailed': 'Could not render the QR code',
+
+  // Pricing notice
+  'pricing.title': 'Free today — paid one day',
+  'pricing.free': 'Every feature is open to everyone, free. We never ask for a credit card.',
+  'pricing.future': "We're telling you up front so you're never surprised: one day this app will become paid. The price will be small — no more than a single ride's fare per year — and you'll choose between paying yearly or once for ten years.",
+  'pricing.warning': "We'll let you know in advance before anything changes. You will never be charged without warning.",
+  'pricing.founder': 'Users who were with us from the start will get the best price.',
+  'pricing.ack': 'Got it',
+
+  // Registration
+  'register.title': 'Create your account',
+  'register.subtitle': 'Free to use. We need a way to reach you so we can give you notice before the app ever becomes paid — and so your early-user price follows you to your next device.',
+  'register.email': 'Email',
+  'register.phone': 'Phone',
+  'register.emailPlaceholder': 'you@example.com',
+  'register.phonePlaceholder': '050-000-0000',
+  'register.submit': 'Continue',
+  'register.submitting': 'Registering…',
+  'register.invalidEmail': 'Please enter a valid email address',
+  'register.invalidPhone': 'Please enter a valid phone number',
+  'register.failed': 'Registration failed. Please check your connection and try again.',
+  'register.privacy': 'We use these only to contact you about the app. Nothing else, no ads.',
+  'register.privacyLink': 'Privacy policy',
+
   // Units
   'duration.na': 'N/A',
   'duration.min': '{n} min',
@@ -402,8 +490,6 @@ const he: Record<keyof typeof en, string> = {
   'detail.stopsMany': '{n} עצירות',
   'detail.startJourney': 'התחל ניווט',
   'detail.share': '\u{1F517} שתף מסלול',
-  'detail.shareCopied': '✓ הקישור הועתק',
-  'detail.shareFailed': 'השיתוף נכשל',
   'detail.shareTitle': 'שתף מסלול זה כקישור',
 
   'journey.label': 'מסע',
@@ -572,6 +658,86 @@ const he: Record<keyof typeof en, string> = {
   'routePanel.show': 'הצג חלונית מסלול',
   'routePanel.start': 'נקודת מוצא',
   'routePanel.end': 'נקודת סיום',
+
+  'sort.label': 'מיין לפי',
+  'sort.fastest': 'המהיר ביותר',
+  'sort.fewerTransfers': 'פחות החלפות',
+  'sort.lessWalking': 'פחות הליכה',
+
+  'fare.estimate': '~{n} ₪',
+  'fare.title': 'עלות משוערת לנסיעה זו',
+
+  'alerts.title': 'התראות שירות',
+  'alerts.peak': 'שעות עומס — צפו לעיכובים בקווים עמוסים',
+  'alerts.normal': 'כל הקווים פועלים כסדרם',
+
+  'fav.stations': 'תחנות מועדפות',
+  'fav.lines': 'קווים מועדפים',
+  'fav.none': 'אין מועדפים עדיין',
+  'fav.addStation': 'הוסף תחנה זו למועדפים',
+  'fav.removeStation': 'הסר תחנה זו מהמועדפים',
+  'fav.addLine': 'הוסף קו זה למועדפים',
+  'fav.removeLine': 'הסר קו זה מהמועדפים',
+  'fav.removeNamed': 'הסר את {name} מהמועדפים',
+  'fav.showStation': 'הצג הגעות לתחנת {name}',
+  'fav.showLine': 'הצג את קו {name} על המפה',
+
+  'reminder.set': 'תזכורת יציאה',
+  'reminder.cancel': 'בטל תזכורת',
+  'reminder.scheduled': '⏰ תזכורת נקבעה ל־{time}',
+  'reminder.cancelled': 'התזכורת בוטלה',
+  'reminder.minutesBefore': "{n} דק' לפני היציאה",
+  'reminder.unsupported': 'הדפדפן הזה אינו תומך בהתראות.',
+  'reminder.denied': 'ההתראות חסומות — אפשר אותן בהגדרות הדפדפן.',
+  'reminder.tooSoon': 'מועד היציאה קרוב מדי מכדי לקבוע תזכורת.',
+  'reminder.notifyTitle': 'זמן לצאת — {line}',
+  'reminder.notifyBody': 'יוצא ב־{time} מתחנת {stop}',
+
+  'map.follow': 'עקוב אחרי המיקום שלי',
+  'map.unfollow': 'הפסק לעקוב אחרי המיקום שלי',
+  'map.style': 'סגנון מפה',
+  'map.styleDark': 'כהה',
+  'map.styleLight': 'בהיר',
+  'map.styleSatellite': 'לוויין',
+
+  'timetable.title': 'לוח זמנים',
+  'timetable.caption': 'יציאות מתוכננות לפי לוח הזמנים',
+  'timetable.all': 'הכל',
+  'timetable.tomorrow': 'מחר',
+  'timetable.now': 'עכשיו',
+  'timetable.none': 'אין יציאות מתוכננות',
+  'timetable.unavailable': 'לוח הזמנים אינו זמין לתחנה זו',
+  'timetable.loading': 'טוען לוח זמנים...',
+
+  'share.title': 'שתף מסע',
+  'share.scan': 'סרוק כדי לפתוח את המסע',
+  'share.link': 'שתף קישור',
+  'share.copy': 'העתק',
+  'share.copied': '✓ הקישור הועתק',
+  'share.close': 'סגור',
+  'share.qrAlt': 'קוד QR לקישור המסע',
+  'share.qrFailed': 'לא ניתן להציג את קוד ה־QR',
+
+  'pricing.title': 'האפליקציה חינם — ויום אחד תהיה בתשלום',
+  'pricing.free': 'כל היכולות פתוחות לכולם, בחינם. לעולם לא נבקש כרטיס אשראי.',
+  'pricing.future': 'אנחנו אומרים את זה מראש כדי שלא תופתע: בעתיד האפליקציה תהפוך לבתשלום. המחיר יהיה קטן — לא יותר ממחיר נסיעה אחת בשנה — ותוכל לבחור בין תשלום שנתי לבין תשלום אחד שמכסה עשר שנים.',
+  'pricing.warning': 'נודיע לך מראש לפני כל שינוי. לא ניגבה ממך כסף בלי התראה.',
+  'pricing.founder': 'משתמשים שהיו איתנו מההתחלה יקבלו את המחיר הטוב ביותר.',
+  'pricing.ack': 'הבנתי',
+
+  'register.title': 'פתיחת חשבון',
+  'register.subtitle': 'השימוש חינם. אנחנו צריכים דרך ליצור איתך קשר כדי להודיע לך מראש לפני שהאפליקציה תהפוך לבתשלום — וכדי שמחיר המשתמשים הוותיקים יעבור איתך גם למכשיר הבא.',
+  'register.email': 'אימייל',
+  'register.phone': 'טלפון',
+  'register.emailPlaceholder': 'you@example.com',
+  'register.phonePlaceholder': '050-000-0000',
+  'register.submit': 'המשך',
+  'register.submitting': 'רושם…',
+  'register.invalidEmail': 'נא להזין כתובת אימייל תקינה',
+  'register.invalidPhone': 'נא להזין מספר טלפון תקין',
+  'register.failed': 'ההרשמה נכשלה. בדוק את החיבור ונסה שוב.',
+  'register.privacy': 'נשתמש בפרטים רק כדי ליצור איתך קשר בנוגע לאפליקציה. לא לשום דבר אחר, ובלי פרסומות.',
+  'register.privacyLink': 'מדיניות פרטיות',
 
   'duration.na': '—',
   'duration.min': "{n} דק'",

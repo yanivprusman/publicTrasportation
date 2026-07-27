@@ -1,13 +1,16 @@
-import { Fragment, useEffect, useRef, useState } from 'react'
+import { Fragment, useState } from 'react'
 import type { Coordinates, Itinerary, RouteLeg, TransitMode } from '../../types'
 import type { LiveBusState } from '../../hooks/useLiveBus'
+import { useDepartureReminder } from '../../hooks/useDepartureReminder'
 import { formatDuration, formatTime } from '../../utils/time-format'
 import { getModeStyle, getModeLabel } from '../../utils/mode-colors'
 import { buildTripLink, type SharedTrip } from '../../utils/trip-link'
 import DepartureCountdown from './DepartureCountdown'
 import LiveBusStatus from './LiveBusStatus'
 import JourneyNavigator from './JourneyNavigator'
+import ShareTripDialog from './ShareTripDialog'
 import { useI18n } from '../../i18n'
+import type { TranslationKey } from '../../i18n/translations'
 import styles from './ItineraryDetail.module.css'
 
 interface ItineraryDetailProps {
@@ -69,6 +72,7 @@ export default function ItineraryDetail({ itinerary, trip, liveBus, onShowLiveBu
           {t('detail.startJourney')}
         </button>
       )}
+      {legs.length > 0 && <DepartureReminderButton itinerary={itinerary} />}
       {navigating && (
         <JourneyNavigator itinerary={itinerary} onClose={() => setNavigating(false)} />
       )}
@@ -99,50 +103,92 @@ export default function ItineraryDetail({ itinerary, trip, liveBus, onShowLiveBu
   )
 }
 
+/**
+ * Opens the share dialog (QR + copy/share). The link is built when the dialog
+ * opens rather than on every render, so a trip edited mid-view still shares the
+ * trip the user is looking at.
+ */
 function ShareTripButton({ trip }: { trip: SharedTrip }) {
   const { t } = useI18n()
-  const [status, setStatus] = useState<'idle' | 'copied' | 'error'>('idle')
-  const resetTimerRef = useRef<number | null>(null)
+  const [open, setOpen] = useState(false)
+  const url = open ? buildTripLink(trip) : ''
 
-  useEffect(() => () => {
-    if (resetTimerRef.current !== null) clearTimeout(resetTimerRef.current)
-  }, [])
+  return (
+    <>
+      <button
+        className={styles.shareBtn}
+        onClick={() => setOpen(true)}
+        type="button"
+        title={t('detail.shareTitle')}
+        data-id="share-trip"
+      >
+        {t('detail.share')}
+      </button>
+      {open && (
+        <ShareTripDialog
+          url={url}
+          title={`${trip.origin.name} → ${trip.destination.name}`}
+          onClose={() => setOpen(false)}
+        />
+      )}
+    </>
+  )
+}
 
-  const flash = (next: 'copied' | 'error') => {
-    if (resetTimerRef.current !== null) clearTimeout(resetTimerRef.current)
-    setStatus(next)
-    resetTimerRef.current = window.setTimeout(() => setStatus('idle'), 2500)
-  }
+/**
+ * Sets a browser notification ahead of the itinerary's departure. Only offered
+ * for trips that actually depart later — a reminder for a bus leaving now is
+ * noise, and the hook refuses it anyway.
+ */
+function DepartureReminderButton({ itinerary }: { itinerary: Itinerary }) {
+  const { t } = useI18n()
+  const reminder = useDepartureReminder()
 
-  const handleShare = async () => {
-    const url = buildTripLink(trip)
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: `${trip.origin.name} → ${trip.destination.name}`, url })
-      } catch (err) {
-        // Closing the OS share sheet is a user choice, not a failure
-        if (!(err instanceof Error) || err.name !== 'AbortError') flash('error')
-      }
+  const firstTransit = itinerary.legs.find(leg => leg.mode !== 'WALK')
+  const departureIso = firstTransit?.startTime ?? itinerary.startTime
+  const scheduled = reminder.isScheduledFor(departureIso)
+
+  const line = firstTransit
+    ? `${getModeLabel(firstTransit.mode)}${firstTransit.routeShortName ? ` ${firstTransit.routeShortName}` : ''}`
+    : getModeLabel('WALK')
+  const stop = firstTransit?.from.name ?? itinerary.legs[0]?.from.name ?? ''
+
+  const handleClick = () => {
+    if (scheduled) {
+      reminder.cancel()
       return
     }
-    try {
-      await navigator.clipboard.writeText(url)
-      flash('copied')
-    } catch {
-      flash('error')
-    }
+    reminder.schedule({ departureIso, line, stop })
   }
 
   return (
-    <button
-      className={`${styles.shareBtn} ${status === 'copied' ? styles.shareBtnCopied : ''}`}
-      onClick={handleShare}
-      type="button"
-      title={t('detail.shareTitle')}
-      data-id="share-trip"
-    >
-      {status === 'copied' ? t('detail.shareCopied') : status === 'error' ? t('detail.shareFailed') : t('detail.share')}
-    </button>
+    <div className={styles.reminderRow}>
+      <button
+        className={`${styles.reminderBtn} ${scheduled ? styles.reminderBtnActive : ''}`}
+        onClick={handleClick}
+        type="button"
+        aria-pressed={scheduled}
+        data-id="toggle-departure-reminder"
+      >
+        <span aria-hidden="true">{scheduled ? '🔕' : '⏰'}</span>
+        {scheduled ? t('reminder.cancel') : t('reminder.set')}
+      </button>
+      {reminder.status.kind === 'scheduled' && (
+        <span className={styles.reminderNote} role="status">
+          {t('reminder.scheduled', {
+            time: new Date(reminder.status.fireAt).toLocaleTimeString([], {
+              hour: '2-digit',
+              minute: '2-digit',
+            }),
+          })}
+        </span>
+      )}
+      {reminder.status.kind === 'error' && (
+        <span className={styles.reminderError} role="alert">
+          {t(reminder.status.messageKey as TranslationKey)}
+        </span>
+      )}
+    </div>
   )
 }
 

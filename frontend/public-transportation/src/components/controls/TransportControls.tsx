@@ -13,6 +13,8 @@ interface TransportControlsProps {
   showVehicleMarkers: boolean
   setShowVehicleMarkers: (show: boolean) => void
   onOpenBoard: () => void
+  isFavorite: boolean
+  onToggleFavorite: (name: string) => void
 }
 
 const searchFn = (query: string) => searchStops(query)
@@ -26,21 +28,30 @@ function TransportControls({
   showVehicleMarkers,
   setShowVehicleMarkers,
   onOpenBoard,
+  isFavorite,
+  onToggleFavorite,
 }: TransportControlsProps) {
   const { t } = useI18n()
   const [agoText, setAgoText] = useState('')
   const [stationName, setStationName] = useState('')
   const ac = useAutocomplete<StopResult>({ searchFn })
 
-  // Resolve initial station name on mount
+  // Resolve the station name whenever the code changes — the station can be set
+  // from outside this panel (favorites bar, nearby list, a stop tapped on the
+  // map), and a stale name would mislabel the favorite button and placeholder.
   useEffect(() => {
-    if (stationCode && !stationName) {
-      searchStops(stationCode).then(results => {
-        const match = results.find(s => s.stopCode === stationCode)
-        if (match) setStationName(match.stopName)
-      })
+    if (!stationCode) {
+      setStationName('')
+      return
     }
-  }, [])
+    let cancelled = false
+    searchStops(stationCode).then(results => {
+      if (cancelled) return
+      const match = results.find(s => s.stopCode === stationCode)
+      setStationName(match ? match.stopName : '')
+    })
+    return () => { cancelled = true }
+  }, [stationCode])
 
   useEffect(() => {
     if (!lastUpdated) return
@@ -97,6 +108,18 @@ function TransportControls({
             </ul>
           )}
         </div>
+        <button
+          type="button"
+          className={`${styles.favBtn} ${isFavorite ? styles.favBtnActive : ''}`}
+          onClick={() => onToggleFavorite(stationName)}
+          disabled={!stationCode}
+          title={isFavorite ? t('fav.removeStation') : t('fav.addStation')}
+          aria-label={isFavorite ? t('fav.removeStation') : t('fav.addStation')}
+          aria-pressed={isFavorite}
+          data-id="toggle-favorite-station"
+        >
+          {isFavorite ? '★' : '☆'}
+        </button>
         {lastUpdated && <span className={styles.updatedAgo}>{t('arrivals.updated', { ago: agoText })}</span>}
       </div>
       <div className={styles.row}>

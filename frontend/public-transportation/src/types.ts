@@ -127,4 +127,10 @@ export interface GeocodeSuggestion {
   lat: number
   lon: number
   type?: string
+  /**
+   * MOTIS place id (e.g. "israel_13684"), present on STOP results and passed
+   * straight through by /api/geocode. Needed to look a stop's schedule up via
+   * /api/stoptimes, which keys on MOTIS ids rather than GTFS stop codes.
+   */
+  id?: string
 }

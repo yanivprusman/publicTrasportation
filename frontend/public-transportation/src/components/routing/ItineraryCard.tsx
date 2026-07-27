@@ -1,6 +1,7 @@
 import type { Itinerary } from '../../types'
 import { formatDuration, formatTime } from '../../utils/time-format'
 import { getModeStyle, getModeLabel } from '../../utils/mode-colors'
+import { estimateFare } from '../../utils/fare'
 import { useI18n } from '../../i18n'
 import styles from './ItineraryCard.module.css'
 
@@ -13,6 +14,8 @@ interface ItineraryCardProps {
 export default function ItineraryCard({ itinerary, selected, onClick }: ItineraryCardProps) {
   const { t } = useI18n()
   const totalLegSeconds = itinerary.legs.reduce((sum, leg) => sum + (leg.duration || 0), 0)
+  // Walk-only itineraries cost nothing — no badge rather than a "~₪0".
+  const fare = estimateFare(itinerary)
   const barDescription = itinerary.legs
     .map(leg => {
       const what = `${getModeLabel(leg.mode)}${leg.routeShortName ? ` ${leg.routeShortName}` : ''}`
@@ -40,6 +43,11 @@ export default function ItineraryCard({ itinerary, selected, onClick }: Itinerar
     >
       <div className={styles.header}>
         <span className={styles.duration}>{formatDuration(itinerary.duration)}</span>
+        {fare > 0 && (
+          <span className={styles.fare} title={t('fare.title')} data-id="itinerary-fare">
+            {t('fare.estimate', { n: Math.round(fare) })}
+          </span>
+        )}
         <span className={styles.transfers}>
           {itinerary.transfers === 0
             ? t('card.direct')

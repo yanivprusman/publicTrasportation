@@ -49,6 +49,16 @@
   border-radius: 4px;
 }
 
+.fare {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--success-text);
+  background: var(--success-soft);
+  padding: 2px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
 .times {
   margin-inline-start: auto;
   font-size: 13px;

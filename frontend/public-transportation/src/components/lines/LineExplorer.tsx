@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { UseLineExplorerReturn } from '../../hooks/useLineExplorer'
+import type { UseFavoritesReturn } from '../../hooks/useFavorites'
 import { getDirectionColor } from '../../utils/mode-colors'
 import { formatHeadsign } from '../../utils/line-name'
 import { useI18n } from '../../i18n'
@@ -24,11 +25,13 @@ const shapeLengthKm = (points: Coordinates[]): number => {
 
 interface LineExplorerProps {
   explorer: UseLineExplorerReturn
+  favorites: UseFavoritesReturn
 }
 
-export default function LineExplorer({ explorer }: LineExplorerProps) {
+export default function LineExplorer({ explorer, favorites }: LineExplorerProps) {
   const { t } = useI18n()
   const [query, setQuery] = useState('')
+  const isFavoriteLine = !!explorer.line && favorites.isLineFavorite(explorer.line)
 
   const submit = () => {
     if (query.trim()) explorer.explore(query)
@@ -64,6 +67,35 @@ export default function LineExplorer({ explorer }: LineExplorerProps) {
         </button>
       </div>
 
+      {favorites.lines.length > 0 && (
+        <div className={styles.favRow}>
+          <span className={styles.favLabel}>★ {t('fav.lines')}</span>
+          {favorites.lines.map(l => (
+            <div key={l} className={`${styles.favChip} ${l === explorer.line ? styles.favChipActive : ''}`}>
+              <button
+                className={styles.favChipMain}
+                onClick={() => { setQuery(l); explorer.explore(l) }}
+                type="button"
+                title={t('fav.showLine', { name: l })}
+                data-id="select-favorite-line"
+              >
+                {l}
+              </button>
+              <button
+                className={styles.favChipRemove}
+                onClick={() => favorites.removeLine(l)}
+                type="button"
+                title={t('fav.removeNamed', { name: l })}
+                aria-label={t('fav.removeNamed', { name: l })}
+                data-id="remove-favorite-line"
+              >
+                &times;
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
       {explorer.recentLines.length > 0 && (
         <div className={styles.recentRow}>
           {explorer.recentLines.map(l => (
@@ -93,6 +125,17 @@ export default function LineExplorer({ explorer }: LineExplorerProps) {
             <span className={styles.lineSub}>
               {directions.length === 1 ? t('lines.oneDirection') : t('lines.directions', { n: directions.length })}
             </span>
+            <button
+              className={`${styles.lineFavBtn} ${isFavoriteLine ? styles.lineFavBtnActive : ''}`}
+              onClick={() => explorer.line && favorites.toggleLine(explorer.line)}
+              type="button"
+              title={isFavoriteLine ? t('fav.removeLine') : t('fav.addLine')}
+              aria-label={isFavoriteLine ? t('fav.removeLine') : t('fav.addLine')}
+              aria-pressed={isFavoriteLine}
+              data-id="toggle-favorite-line"
+            >
+              {isFavoriteLine ? '★' : '☆'}
+            </button>
             <button
               className={styles.clearBtn}
               onClick={explorer.clear}

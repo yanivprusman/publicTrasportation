@@ -1,0 +1,32 @@
+.banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  margin: 4px 0 8px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.icon {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.text {
+  flex: 1;
+}
+
+.peak {
+  background: var(--warn-soft);
+  border-color: var(--warn-border);
+  color: var(--warn-text);
+}
+
+.normal {
+  background: var(--success-soft);
+  border-color: var(--success-border);
+  color: var(--success-text);
+}

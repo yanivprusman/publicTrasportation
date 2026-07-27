@@ -15,6 +15,9 @@ import LineShapeLayer from './LineShapeLayer'
 import NearbyStopsLayer from './NearbyStopsLayer'
 import StopsLayer from './StopsLayer'
 import LiveBusLayer, { type LiveBusMarkerData } from './LiveBusLayer'
+import MapStyleControls from './MapStyleControls'
+import { tilesFor, type MapStyle } from '../../hooks/useMapStyle'
+import { useFollowLocation } from '../../hooks/useFollowLocation'
 import type { LineFocusRequest } from '../../hooks/useLineExplorer'
 import type { NearbyStop, StopResult } from '../../services/transport-api'
 import type { Coordinates, VehicleMarker, StopInfo, Itinerary, LineShapeData } from '../../types'
@@ -78,6 +81,8 @@ interface MapViewProps {
   activeStopCode?: string | null
   onMapStopSelect?: (stop: StopResult) => void
   liveBus?: LiveBusMarkerData | null
+  mapStyle: MapStyle
+  onMapStyleChange: (style: MapStyle) => void
 }
 
 function MapView({
@@ -113,8 +118,11 @@ function MapView({
   onNearbyStopSelect = () => {},
   activeStopCode = null,
   onMapStopSelect = () => {},
-  liveBus = null
+  liveBus = null,
+  mapStyle,
+  onMapStyleChange
 }: MapViewProps) {
+  const follow = useFollowLocation()
   const [position, setPosition] = useState<Coordinates>(startingPoint || defaultStartingPoint || [latitude, longitude])
   const [route, setRoute] = useState<Coordinates[] | null>(null)
   const [mapReady, setMapReady] = useState(false)
@@ -134,6 +142,15 @@ function MapView({
   useEffect(() => {
     setMapCenterLocal(center)
   }, [center])
+
+  // Follow mode: every fix re-centres the map. Panning away is allowed — the
+  // next fix pulls it back, which is what "follow" means; the user turns the
+  // mode off to browse freely.
+  useEffect(() => {
+    if (follow.following && follow.position) {
+      setMapCenterLocal(follow.position)
+    }
+  }, [follow.following, follow.position])
 
   useEffect(() => {
     if (defaultDestination && (!destination || !destination[0])) {
@@ -232,6 +249,14 @@ function MapView({
         handleShowRoutePanel={handleShowRoutePanel}
       />
 
+      <MapStyleControls
+        mapStyle={mapStyle}
+        onStyleChange={onMapStyleChange}
+        following={follow.following}
+        onToggleFollow={follow.toggle}
+        locating={follow.locating}
+      />
+
       <MapContainer
         center={mapCenter}
         zoom={13}
@@ -240,9 +265,12 @@ function MapView({
         whenReady={() => setMapReady(true)}
         preferCanvas={true}
       >
+        {/* Keyed on the style so Leaflet tears the layer down and rebuilds it —
+            it does not pick up a changed tile URL in place. */}
         <TileLayer
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          key={mapStyle}
+          url={tilesFor(mapStyle).url}
+          attribution={tilesFor(mapStyle).attribution}
         />
         <UpdateMapView position={mapCenter} />
         <TrackMapMovement setMapCenter={setMapCenterLocal} />

@@ -39,6 +39,14 @@
   --danger: #d32f2f;
   --danger-text: #c62828;
   --danger-soft: #fdecea;
+  /* Fare badges and the "service is normal" banner. */
+  --success-soft: #e8f5e9;
+  --success-text: #2e7d32;
+  --success-border: #a5d6a7;
+  /* Peak-hours service warning. */
+  --warn-soft: #fff3e0;
+  --warn-text: #e65100;
+  --warn-border: #ffcc80;
   --disabled-bg: #b0bec5;
   --fav-bg: #fff8e1;
   --fav-bg-hover: #fff2c4;
@@ -73,6 +81,12 @@ html[data-theme="dark"] {
   --danger: #ef5350;
   --danger-text: #ff8a80;
   --danger-soft: #3a2527;
+  --success-soft: #16301a;
+  --success-text: #81c784;
+  --success-border: #2e5c33;
+  --warn-soft: #33230c;
+  --warn-text: #ffb74d;
+  --warn-border: #6b4d1f;
   --disabled-bg: #3f4a56;
   --fav-bg: #2e2a1a;
   --fav-bg-hover: #3a3420;
@@ -202,12 +216,30 @@ code {
   color: var(--text-primary);
 }
 
-html[data-theme="dark"] .leaflet-tile-pane {
+/* The basemap has its own style (dark/light/satellite), stamped on <html> by
+   useMapStyle. Until the user picks one it mirrors the app theme, which is why
+   the dark-theme selector is still here as the pre-choice default. Satellite
+   imagery must never be inverted. */
+html[data-theme="dark"]:not([data-map-style]) .leaflet-tile-pane,
+html[data-map-style="dark"] .leaflet-tile-pane {
   filter: invert(1) hue-rotate(180deg) brightness(0.91) contrast(0.9) saturate(0.7);
 }
 
-html[data-theme="dark"] .leaflet-container {
+html[data-map-style="light"] .leaflet-tile-pane,
+html[data-map-style="satellite"] .leaflet-tile-pane {
+  filter: none;
+}
+
+/* Only visible where tiles have not loaded yet — keep it close to the basemap
+   so loading gaps do not flash the opposite colour. */
+html[data-theme="dark"]:not([data-map-style]) .leaflet-container,
+html[data-map-style="dark"] .leaflet-container,
+html[data-map-style="satellite"] .leaflet-container {
   background: #10141b;
+}
+
+html[data-map-style="light"] .leaflet-container {
+  background: #e6e6e6;
 }
 
 html[data-theme="dark"] .leaflet-control-attribution {

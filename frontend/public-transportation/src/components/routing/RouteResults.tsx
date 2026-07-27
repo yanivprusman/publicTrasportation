@@ -1,7 +1,16 @@
+import { useMemo, useState } from 'react'
 import type { RouteResult } from '../../types'
 import ItineraryCard from './ItineraryCard'
+import { ROUTE_SORT_MODES, sortItineraries, type RouteSortMode } from '../../utils/route-sort'
 import { useI18n } from '../../i18n'
+import type { TranslationKey } from '../../i18n/translations'
 import styles from './RouteResults.module.css'
+
+const SORT_LABELS: Record<RouteSortMode, TranslationKey> = {
+  fastest: 'sort.fastest',
+  fewerTransfers: 'sort.fewerTransfers',
+  lessWalking: 'sort.lessWalking',
+}
 
 interface RouteResultsProps {
   results: RouteResult | null
@@ -22,6 +31,14 @@ export default function RouteResults({
   onLoadEarlier, onLoadLater, loadingEarlier, loadingLater, pagingNotice,
 }: RouteResultsProps) {
   const { t, tm } = useI18n()
+  const [sortMode, setSortMode] = useState<RouteSortMode>('fastest')
+
+  // Sorted entries keep their original index, so selecting a card still refers
+  // to the same itinerary the map and detail panel are working from.
+  const ordered = useMemo(
+    () => (results ? sortItineraries(results.itineraries, sortMode) : []),
+    [results, sortMode]
+  )
 
   if (loading) {
     return <div className={styles.status}><div className={styles.spinner} />{t('results.searching')}</div>
@@ -49,6 +66,24 @@ export default function RouteResults({
 
   return (
     <div className={styles.list}>
+      {/* Sorting only reorders the trips already found — it never re-queries,
+          so switching is instant and cannot lose the current selection. */}
+      {results.itineraries.length > 1 && (
+        <div className={styles.sortRow} role="group" aria-label={t('sort.label')}>
+          {ROUTE_SORT_MODES.map(mode => (
+            <button
+              key={mode}
+              type="button"
+              className={`${styles.sortChip} ${sortMode === mode ? styles.sortChipActive : ''}`}
+              onClick={() => setSortMode(mode)}
+              aria-pressed={sortMode === mode}
+              data-id={`sort-routes-${mode}`}
+            >
+              {t(SORT_LABELS[mode])}
+            </button>
+          ))}
+        </div>
+      )}
       {results.previousPageCursor && onLoadEarlier && (
         <button
           className={styles.pageBtn}
@@ -61,12 +96,12 @@ export default function RouteResults({
           {t('results.earlier')}
         </button>
       )}
-      {results.itineraries.map((itin, i) => (
+      {ordered.map(({ itinerary, index }) => (
         <ItineraryCard
-          key={i}
-          itinerary={itin}
-          selected={i === selectedIndex}
-          onClick={() => onSelect(i)}
+          key={index}
+          itinerary={itinerary}
+          selected={index === selectedIndex}
+          onClick={() => onSelect(index)}
         />
       ))}
       {results.nextPageCursor && onLoadLater && (
