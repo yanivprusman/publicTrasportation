@@ -5,6 +5,23 @@ const REGISTERED_EMAIL_KEY = 'pt-registered-email'
 const NOTICE_ACK_KEY = 'pt-pricing-notice-ack'
 
 /**
+ * RFC 4122 v4 UUID built from crypto.getRandomValues.
+ *
+ * Deliberately not crypto.randomUUID: that one is secure-context only, so it is
+ * undefined whenever the app is served over plain HTTP from a LAN or VPN
+ * address — which is exactly how it is reached from a phone, and how the dev
+ * server is reached from anything that is not localhost. getRandomValues carries
+ * no such restriction, so this is the one path that works from every device.
+ */
+function uuidv4(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(16))
+  bytes[6] = (bytes[6] & 0x0f) | 0x40 // version 4
+  bytes[8] = (bytes[8] & 0x3f) | 0x80 // variant 10xx
+  const hex = Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('')
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`
+}
+
+/**
  * Anonymous install id, generated once per browser and reused. It links a
  * registration to the same install the way the Android app's install UUID does,
  * and identifies nothing about the person.
@@ -13,13 +30,13 @@ export function getInstallId(): string {
   try {
     const existing = localStorage.getItem(INSTALL_ID_KEY)
     if (existing) return existing
-    const created = crypto.randomUUID()
+    const created = uuidv4()
     localStorage.setItem(INSTALL_ID_KEY, created)
     return created
   } catch {
     // Private-mode storage refusal: a per-session id still lets registration
     // succeed, it just will not be remembered.
-    return crypto.randomUUID()
+    return uuidv4()
   }
 }
 
