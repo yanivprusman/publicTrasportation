@@ -1,29 +1,10 @@
 import axios from 'axios'
+import { reverseGeocode } from '../../services/routing-api'
 import type { Coordinates } from '../../types'
-
-export const buildAddressLabel = (data: { display_name?: string; address?: Record<string, string> }): string => {
-  const addr = data.address
-  if (addr) {
-    const road = addr.road || addr.pedestrian || addr.neighbourhood || ''
-    const houseNumber = addr.house_number || ''
-    const settlement = addr.village || addr.hamlet || addr.town || addr.city || ''
-    const street = houseNumber ? `${road} ${houseNumber}`.trim() : road
-    if (street && settlement) return `${street}, ${settlement}`
-    if (settlement) return settlement
-    if (street) return street
-  }
-  if (data.display_name) {
-    return data.display_name.split(',').slice(0, 3).join(',').trim()
-  }
-  return 'Address not found'
-}
 
 export const fetchAddress = async (lat: number, lon: number, setAddress: (addr: string) => void) => {
   try {
-    const response = await axios.get(
-      `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=he&addressdetails=1&countrycodes=il`
-    )
-    setAddress(buildAddressLabel(response.data))
+    setAddress(await reverseGeocode(lat, lon))
   } catch {
     setAddress('Error fetching address')
   }

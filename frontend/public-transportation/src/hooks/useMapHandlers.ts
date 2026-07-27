@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import axios from 'axios'
 import { fetchAddress, findRoute } from '../components/map/MapUtilities'
+import { geocodeSearch } from '../services/routing-api'
 import type { Coordinates } from '../types'
 
 const useMapHandlers = (
@@ -21,12 +21,12 @@ const useMapHandlers = (
 
     try {
       setSearchError(null)
-      const response = await axios.get(
-        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(searchQuery)}&format=json`
-      )
-      if (response.data.length > 0) {
-        const { lat, lon } = response.data[0]
-        setMapCenter([parseFloat(lat), parseFloat(lon)])
+      // Same server-side geocoder the route planner's place fields use, so a
+      // map search resolves stations as well as addresses — and so the browser
+      // never talks to Nominatim itself (shared-IP 429s, no CORS headers).
+      const results = await geocodeSearch(searchQuery)
+      if (results.length > 0) {
+        setMapCenter([results[0].lat, results[0].lon])
       } else {
         setSearchError('mapCtl.notFound')
       }

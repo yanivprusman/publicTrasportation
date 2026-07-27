@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import MapView from './components/map/MapView'
 import StationArrivals from './components/data-display/StationArrivals'
 import DepartureBoard from './components/data-display/DepartureBoard'
@@ -66,16 +66,18 @@ function AppInner() {
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Derive marker positions from routing state
-  const startingPoint: Coordinates = routing.origin
+  // Derive marker positions from routing state. Memoized because the map keys
+  // effects off these props: a fresh array on every render makes the map treat
+  // an unchanged pin as a move and re-geocode it.
+  const startingPoint: Coordinates = useMemo(() => routing.origin
     ? [routing.origin.lat, routing.origin.lon]
-    : defaultStartingPoint
-  const destination: Coordinates = routing.destination
+    : defaultStartingPoint, [routing.origin])
+  const destination: Coordinates = useMemo(() => routing.destination
     ? [routing.destination.lat, routing.destination.lon]
-    : defaultDestination
-  const viaPoint: Coordinates | null = routing.via
+    : defaultDestination, [routing.destination])
+  const viaPoint: Coordinates | null = useMemo(() => routing.via
     ? [routing.via.lat, routing.via.lon]
-    : null
+    : null, [routing.via])
   const [lineFilter, setLineFilter] = useSessionState('lineFilter', '')
   // Kiosk board mode survives a reload (sessionStorage) so a phone or tablet
   // propped up as a station display comes back as a board, not the planner.
@@ -86,6 +88,16 @@ function AppInner() {
   // Track the actual vehicle serving the selected route's next bus leg; only
   // while the Routes tab is showing, so other tabs don't keep SIRI polling.
   const liveBus = useLiveBus(routing.selectedItinerary, activeTab === 'route')
+
+  // Rebuilt only when the tracked vehicle actually changes. A fresh object per
+  // render would re-render the bus marker's popup on every unrelated state
+  // change, and an open Leaflet popup re-pans the map each time it updates.
+  const liveBusMarker = useMemo(() => liveBus.vehicle ? {
+    vehicle: liveBus.vehicle,
+    lineNumber: liveBus.lineNumber,
+    stopName: liveBus.stopName,
+    expectedArrival: liveBus.expectedArrival,
+  } : null, [liveBus.vehicle, liveBus.lineNumber, liveBus.stopName, liveBus.expectedArrival])
 
   // "Show on map" on the live-bus banner: center on the bus and drop the sheet
   // to half so the map is actually visible on mobile.
@@ -308,12 +320,7 @@ function AppInner() {
         onNearbyStopSelect={handleNearbyStopSelect}
         activeStopCode={activeTab === 'arrivals' ? stationCode : null}
         onMapStopSelect={handleMapStopSelect}
-        liveBus={liveBus.vehicle ? {
-          vehicle: liveBus.vehicle,
-          lineNumber: liveBus.lineNumber,
-          stopName: liveBus.stopName,
-          expectedArrival: liveBus.expectedArrival,
-        } : null}
+        liveBus={liveBusMarker}
         mapStyle={mapStyle}
         onMapStyleChange={setMapStyle}
       />

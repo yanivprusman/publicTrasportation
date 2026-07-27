@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ensureMotis } from '@/lib/motis-manager';
+import { nominatim } from '@/lib/nominatim';
 
 const MOTIS_PORT = process.env.MOTIS_PORT || '3504';
 const MOTIS_BASE = `http://localhost:${MOTIS_PORT}`;
@@ -43,14 +44,9 @@ function formatNominatimName(r: NominatimResult): string {
 }
 
 async function nominatimSearch(text: string): Promise<unknown[]> {
-  const response = await fetch(
-    `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(text)}&format=json&accept-language=he&countrycodes=il&limit=10&addressdetails=1`,
-    {
-      signal: AbortSignal.timeout(5000),
-      headers: { 'User-Agent': 'com.automatelinux.pt/1.0' }
-    }
+  const results = await nominatim<NominatimResult[]>(
+    `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(text)}&format=json&accept-language=he&countrycodes=il&limit=10&addressdetails=1`
   );
-  const results: NominatimResult[] = await response.json();
   return results.map(r => ({
     type: 'ADDRESS',
     name: formatNominatimName(r),

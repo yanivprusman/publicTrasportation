@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { memo, useMemo } from 'react'
 import { Marker, Popup } from 'react-leaflet'
 import L from 'leaflet'
 import { formatStopDistance } from '../../utils/distance'
@@ -55,4 +55,8 @@ const LiveBusLayer = ({ bus }: { bus: LiveBusMarkerData | null }) => {
   )
 }
 
-export default LiveBusLayer
+// Memoized: react-leaflet calls popup.update() whenever the popup's children
+// change identity, and an open popup that does not fit auto-pans the map on
+// update. Re-rendering this layer for every unrelated map move turned that into
+// a pan -> render -> pan loop.
+export default memo(LiveBusLayer)

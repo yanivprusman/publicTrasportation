@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useRef } from 'react'
 import { MapContainer, TileLayer, useMapEvents, useMap } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import { fetchAddress } from './MapUtilities'
@@ -25,12 +25,43 @@ import styles from './MapView.module.css'
 
 configureDefaultLeafletIcons()
 
+/** Two centres that describe the same spot (~0.1 m apart). */
+const sameCenter = (a: Coordinates | null, b: Coordinates): boolean =>
+  a !== null && Math.abs(a[0] - b[0]) < 1e-6 && Math.abs(a[1] - b[1]) < 1e-6
+
+/**
+ * Mirrors the map's centre into React state.
+ *
+ * This is a feedback edge — the state it writes flows back down as the map's
+ * centre — so it must only report movement the *user* caused. Two guards keep
+ * it from feeding itself:
+ *
+ *  - Popup auto-pan is not navigation. Leaflet nudges the map whenever an open
+ *    popup would not fit, and react-leaflet calls `popup.update()` on every
+ *    render of the popup's children. Mirroring that pan re-renders the map,
+ *    which updates the popup, which pans again: an unbounded render loop that
+ *    ends in "Maximum update depth exceeded". `autopanstart` marks those moves.
+ *  - A centre equal to the one already published is dropped, so a moveend that
+ *    lands where we already are cannot churn state with a fresh array.
+ */
 function TrackMapMovement({ setMapCenter }: { setMapCenter: (c: Coordinates) => void }) {
+  const publishedRef = useRef<Coordinates | null>(null)
+  const autoPanningRef = useRef(false)
+
   useMapEvents({
+    autopanstart: () => {
+      autoPanningRef.current = true
+    },
     moveend: (event) => {
-      const map = event.target
-      const center = map.getCenter()
-      setMapCenter([center.lat, center.lng])
+      if (autoPanningRef.current) {
+        autoPanningRef.current = false
+        return
+      }
+      const center = event.target.getCenter()
+      const next: Coordinates = [center.lat, center.lng]
+      if (sameCenter(publishedRef.current, next)) return
+      publishedRef.current = next
+      setMapCenter(next)
     },
   })
   return null
@@ -177,17 +208,23 @@ function MapView({
     if (onStartingPointSet) onStartingPointSet(newPos)
   }, destination, onDestinationSet, setMapCenterLocal, mapCenter)
 
+  // Keyed on the coordinates themselves, not on the array holding them: the
+  // parent rebuilds these arrays on every render, and depending on identity
+  // fired one reverse geocode per render — hundreds of requests a second under
+  // any render loop, which is how the geocoder's quota got burned.
+  const destinationKey = destination?.length === 2 ? `${destination[0]},${destination[1]}` : ''
   useEffect(() => {
-    if (destination && Array.isArray(destination) && destination.length === 2) {
-      fetchAddress(destination[0], destination[1], setDestinationAddress)
-    }
-  }, [destination])
+    if (!destinationKey) return
+    const [lat, lon] = destinationKey.split(',').map(Number)
+    fetchAddress(lat, lon, setDestinationAddress)
+  }, [destinationKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  const positionKey = position?.length === 2 ? `${position[0]},${position[1]}` : ''
   useEffect(() => {
-    if (position && Array.isArray(position) && position.length === 2) {
-      fetchAddress(position[0], position[1], setPositionAddress)
-    }
-  }, [position])
+    if (!positionKey) return
+    const [lat, lon] = positionKey.split(',').map(Number)
+    fetchAddress(lat, lon, setPositionAddress)
+  }, [positionKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (calculateRoute && position && destination) {

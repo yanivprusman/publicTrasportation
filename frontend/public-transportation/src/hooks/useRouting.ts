@@ -1,9 +1,7 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
-import axios from 'axios'
 import type { GeocodeSuggestion, RouteResult, Itinerary, DirectAlternative } from '../types'
-import { searchRoute, type RouteQueryOptions } from '../services/routing-api'
+import { searchRoute, reverseGeocode, type RouteQueryOptions } from '../services/routing-api'
 import { useRouteOptions, toRouteQueryOptions, isDefaultOptions, type UseRouteOptionsReturn } from './useRouteOptions'
-import { buildAddressLabel } from '../components/map/MapUtilities'
 
 const ROUTE_STORAGE_KEY = 'pt-saved-route'
 
@@ -29,12 +27,11 @@ function itineraryKey(itin: Itinerary): string {
   return `${itin.startTime}|${itin.endTime}|${legs}`
 }
 
-async function reverseGeocode(lat: number, lon: number): Promise<string> {
+/** Address for a dropped pin; the raw coordinates are the label when the
+ *  geocoder cannot name the spot, so a picked point always shows something. */
+async function placeName(lat: number, lon: number): Promise<string> {
   try {
-    const resp = await axios.get(
-      `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=he&addressdetails=1&countrycodes=il`
-    )
-    return buildAddressLabel(resp.data)
+    return await reverseGeocode(lat, lon)
   } catch {
     return `${lat.toFixed(4)}, ${lon.toFixed(4)}`
   }
@@ -127,14 +124,14 @@ export function useRouting(): UseRoutingReturn {
   const setOriginFromCoords = useCallback((lat: number, lon: number, name?: string) => {
     setOrigin({ name: name || `${lat.toFixed(4)}, ${lon.toFixed(4)}`, lat, lon })
     if (!name) {
-      reverseGeocode(lat, lon).then(addr => setOrigin(prev => prev && prev.lat === lat ? { ...prev, name: addr } : prev))
+      placeName(lat, lon).then(addr => setOrigin(prev => prev && prev.lat === lat ? { ...prev, name: addr } : prev))
     }
   }, [])
 
   const setDestinationFromCoords = useCallback((lat: number, lon: number, name?: string) => {
     setDestination({ name: name || `${lat.toFixed(4)}, ${lon.toFixed(4)}`, lat, lon })
     if (!name) {
-      reverseGeocode(lat, lon).then(addr => setDestination(prev => prev && prev.lat === lat ? { ...prev, name: addr } : prev))
+      placeName(lat, lon).then(addr => setDestination(prev => prev && prev.lat === lat ? { ...prev, name: addr } : prev))
     }
   }, [])
 

@@ -79,6 +79,24 @@ export async function geocodeSearch(text: string): Promise<GeocodeSuggestion[]> 
   return res.json()
 }
 
+/**
+ * Address for a coordinate, resolved by our own server.
+ *
+ * Never call Nominatim from the browser: every visitor shares this deployment's
+ * exit IP, so the anonymous quota is exhausted within minutes and the 429 page
+ * it answers with carries no CORS headers — the request then fails as an opaque
+ * network error rather than a readable status. The server route holds the
+ * User-Agent Nominatim's policy requires and caches results.
+ */
+export async function reverseGeocode(lat: number, lon: number): Promise<string> {
+  const res = await fetch(`/api/reverse-geocode?lat=${lat}&lon=${lon}`)
+  if (!res.ok) throw new Error(`Reverse geocode failed (${res.status})`)
+  const results: { name?: string }[] = await res.json()
+  const name = results[0]?.name
+  if (!name) throw new Error('Reverse geocode returned no address')
+  return name
+}
+
 export async function fetchStoptimes(stopId: string, n = 5): Promise<unknown> {
   const res = await fetch(`/api/stoptimes?stopId=${encodeURIComponent(stopId)}&n=${n}`)
   if (!res.ok) throw new Error(`Failed to fetch stoptimes (${res.status})`)
