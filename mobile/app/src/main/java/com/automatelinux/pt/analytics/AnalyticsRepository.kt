@@ -6,6 +6,7 @@ import com.automatelinux.pt.BuildConfig
 import com.automatelinux.pt.data.api.PtApi
 import com.automatelinux.pt.data.model.AppPingRequest
 import com.automatelinux.pt.data.model.AppRegisterRequest
+import com.automatelinux.pt.data.model.AppStateRequest
 import com.automatelinux.pt.util.SettingsStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -60,20 +61,28 @@ class AnalyticsRepository @Inject constructor(
      */
     suspend fun resolveIdentity() {
         if (store.isRegistered) {
-            _identityState.value = IdentityState.REGISTERED
             vault.save(installId(), store.registeredEmail!!, store.founderSince)
-            return
+        } else {
+            val vaulted = vault.restore()
+            if (vaulted == null) {
+                _identityState.value = IdentityState.UNREGISTERED
+                return
+            }
+            store.installId = vaulted.installId
+            store.registeredEmail = vaulted.email
+            vaulted.founderSince?.let { store.founderSince = it }
+            Log.d(TAG, "identity restored from vault")
         }
-        val vaulted = vault.restore()
-        if (vaulted == null) {
-            _identityState.value = IdentityState.UNREGISTERED
-            return
-        }
-        store.installId = vaulted.installId
-        store.registeredEmail = vaulted.email
-        vaulted.founderSince?.let { store.founderSince = it }
-        Log.d(TAG, "identity restored from vault")
+
+        // A device with no local state is the reinstall path, and it has nothing
+        // to render yet: waiting for the account's favourites costs one request,
+        // whereas painting an empty list and filling it in a moment later reads
+        // as data loss followed by a glitch. A device that already has state
+        // paints first and reconciles behind the UI.
+        val hadLocalState = store.stateUpdatedAt != 0L
+        if (!hadLocalState) syncState()
         _identityState.value = IdentityState.REGISTERED
+        if (hadLocalState) syncState()
     }
 
     /**
@@ -120,6 +129,62 @@ class AnalyticsRepository @Inject constructor(
     } catch (e: Exception) {
         Log.d(TAG, "registration failed", e)
         Result.failure(e)
+    }
+
+    /**
+     * Reconciles this device's favourites with the account's copy.
+     *
+     * Whichever side edited last wins outright — the alternative, merging two
+     * sets, would silently resurrect stations the user deliberately unstarred
+     * on their other phone. After a reinstall the local timestamp is 0, so the
+     * server always wins and the favourites come back.
+     *
+     * Must run after [resolveIdentity]: an install the server cannot tie to an
+     * account has nothing to sync, and would be told so.
+     */
+    suspend fun syncState() {
+        if (!store.isRegistered) return
+        try {
+            val remote = api.appGetState(installId())
+            val localUpdatedAt = store.stateUpdatedAt
+
+            if (remote.payload != null && remote.updatedAt > localUpdatedAt) {
+                store.applySyncedState(remote.payload!!, remote.updatedAt)
+                Log.d(TAG, "state adopted from server (${remote.updatedAt})")
+                return
+            }
+            // Nothing local worth pushing and nothing remote to take: a fresh
+            // account that has never starred anything.
+            if (localUpdatedAt == 0L) return
+
+            pushState()
+        } catch (e: Exception) {
+            // Favourites are already on screen from local storage; a failed
+            // sync must not interrupt someone checking their bus.
+            Log.d(TAG, "state sync failed", e)
+        }
+    }
+
+    /**
+     * Sends this device's state up. Safe to call on every favourite toggle: the
+     * server keeps whichever write is newest, so a burst of stars settles on the
+     * last one regardless of the order they land in.
+     */
+    suspend fun pushState() {
+        if (!store.isRegistered) return
+        val updatedAt = store.stateUpdatedAt
+        if (updatedAt == 0L) return
+        try {
+            api.appPutState(
+                AppStateRequest(
+                    installId = installId(),
+                    payload = store.collectSyncedState(),
+                    updatedAt = updatedAt
+                )
+            )
+        } catch (e: Exception) {
+            Log.d(TAG, "state push failed", e)
+        }
     }
 
     private suspend fun send(event: String) {

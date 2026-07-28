@@ -1,7 +1,9 @@
 package com.automatelinux.pt.util
 
 import com.automatelinux.pt.data.model.GeocodeSuggestion
+import com.automatelinux.pt.data.model.SyncedState
 import com.russhwolf.settings.Settings
+import kotlinx.datetime.Clock
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.PairSerializer
 import kotlinx.serialization.builtins.SetSerializer
@@ -133,6 +135,7 @@ class SettingsStore(private val prefs: Settings) {
         val current = getFavoriteLines().toMutableSet()
         val added = if (current.contains(lineName)) { current.remove(lineName); false } else { current.add(lineName); true }
         prefs.putString("favorite_lines", json.encodeToString(lineSetSerializer, current))
+        markStateEdited()
         return added
     }
 
@@ -148,10 +151,55 @@ class SettingsStore(private val prefs: Settings) {
         val existing = current.indexOfFirst { it.first == code }
         val added = if (existing >= 0) { current.removeAt(existing); false } else { current.add(Pair(code, name)); true }
         prefs.putString("favorite_stations", json.encodeToString(stationListSerializer, current))
+        markStateEdited()
         return added
     }
 
     fun isStationFavorite(code: String): Boolean = getFavoriteStations().any { it.first == code }
+
+    // --- Account-synced state ---
+    // Favourites and the pricing acknowledgement belong to the account, not the
+    // handset: they are pushed to the server and pulled back after a reinstall.
+    // stateUpdatedAt is the local clock at the last edit and is what decides
+    // last-write-wins against another device — it must be bumped by every
+    // setter whose value is carried in SyncedState.
+
+    var stateUpdatedAt: Long
+        get() = prefs.getLong("state_updated_at", 0L)
+        set(value) { prefs.putLong("state_updated_at", value) }
+
+    private fun markStateEdited() {
+        stateUpdatedAt = Clock.System.now().toEpochMilliseconds()
+    }
+
+    /** Replaces all synced values with the account's copy from the server. */
+    fun applySyncedState(state: SyncedState, updatedAt: Long) {
+        prefs.putString(
+            "favorite_stations",
+            json.encodeToString(
+                stationListSerializer,
+                state.favoriteStations.mapNotNull {
+                    if (it.size >= 2) Pair(it[0], it[1]) else null
+                }
+            )
+        )
+        prefs.putString(
+            "favorite_lines",
+            json.encodeToString(lineSetSerializer, state.favoriteLines.toSet())
+        )
+        prefs.putBoolean("pricing_notice_ack", state.pricingNoticeAck)
+        // Deliberately assigned, not bumped to now: adopting someone else's
+        // write is not an edit, and stamping it as one would make this device
+        // win the next comparison against a newer device.
+        stateUpdatedAt = updatedAt
+    }
+
+    /** The current synced values, for pushing to the server. */
+    fun collectSyncedState(): SyncedState = SyncedState(
+        favoriteStations = getFavoriteStations().map { listOf(it.first, it.second) },
+        favoriteLines = getFavoriteLines().toList(),
+        pricingNoticeAck = pricingNoticeAcknowledged
+    )
 
     // --- Anonymous analytics ---
     // installId is a random UUID generated on the device. It identifies an
@@ -191,7 +239,7 @@ class SettingsStore(private val prefs: Settings) {
     /** True once the user has seen and dismissed the pricing disclosure. */
     var pricingNoticeAcknowledged: Boolean
         get() = prefs.getBoolean("pricing_notice_ack", false)
-        set(value) { prefs.putBoolean("pricing_notice_ack", value) }
+        set(value) { prefs.putBoolean("pricing_notice_ack", value); markStateEdited() }
 
     /** Set once registration has been accepted by the server. */
     var registeredEmail: String?

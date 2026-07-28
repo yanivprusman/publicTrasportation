@@ -114,6 +114,9 @@ fun MainScreen(
     onSharedTripConsumed: () -> Unit = {},
     widgetStation: Pair<String, String>? = null,
     onWidgetStationConsumed: () -> Unit = {},
+    // Called after any edit to state the account owns (favourites), so it can
+    // be pushed to the server instead of living only on this handset.
+    onSyncedStateChanged: () -> Unit = {},
     routingViewModel: RoutingViewModel = hiltViewModel(),
     arrivalsViewModel: ArrivalsViewModel = hiltViewModel()
 ) {
@@ -646,6 +649,7 @@ fun MainScreen(
                                     onToggleFavoriteLine = { line ->
                                         settingsStore.toggleFavoriteLine(line)
                                         favoriteLines = settingsStore.getFavoriteLines()
+                                        onSyncedStateChanged()
                                     },
                                     favoriteStations = favoriteStations,
                                     isStationFavorite = arrivalsState.stationCode.isNotEmpty() &&
@@ -657,6 +661,7 @@ fun MainScreen(
                                                 arrivalsState.stationName
                                             )
                                             favoriteStations = settingsStore.getFavoriteStations()
+                                            onSyncedStateChanged()
                                         }
                                     },
                                     onOpenBoard = {

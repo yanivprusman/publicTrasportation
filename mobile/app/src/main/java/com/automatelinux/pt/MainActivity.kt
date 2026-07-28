@@ -105,6 +105,8 @@ class MainActivity : ComponentActivity() {
         //
         // Anonymous launch ping. Fire-and-forget on the activity scope so it can
         // never delay first paint; AnalyticsRepository swallows its own failures.
+        // resolveIdentity also pulls the account's favourites back — the vault
+        // proves who the user is, and that is the state identity buys back.
         lifecycleScope.launch {
             analytics.resolveIdentity()
             analytics.trackLaunch()
@@ -123,11 +125,6 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.fillMaxSize(),
                         color = MaterialTheme.colorScheme.background
                     ) {
-                        // Told up front, on the very first launch: the app is free
-                        // now and will become paid later. Nobody gets surprised.
-                        var showPricingNotice by remember {
-                            mutableStateOf(!settingsStore.pricingNoticeAcknowledged)
-                        }
                         // Not read from SettingsStore directly: on a reinstall the
                         // prefs are empty but the Block Store vault may still hold
                         // the account, so the answer is only known once
@@ -136,6 +133,22 @@ class MainActivity : ComponentActivity() {
                         // details again for no reason.
                         val identity by analytics.identityState.collectAsStateWithLifecycle()
 
+                        if (identity == AnalyticsRepository.IdentityState.RESOLVING) {
+                            // Blank rather than a spinner: the vault answers in
+                            // milliseconds, and a flashed spinner reads as a stall.
+                            return@Surface
+                        }
+
+                        // Told up front, on the very first launch: the app is free
+                        // now and will become paid later. Nobody gets surprised.
+                        //
+                        // Read only now: before identity resolves, the prefs of a
+                        // reinstalling device are empty, and this would re-show a
+                        // notice the account acknowledged long ago.
+                        var showPricingNotice by remember {
+                            mutableStateOf(!settingsStore.pricingNoticeAcknowledged)
+                        }
+
                         if (showPricingNotice) {
                             PricingNoticeDialog(
                                 onDismiss = {
@@ -143,6 +156,7 @@ class MainActivity : ComponentActivity() {
                                     showPricingNotice = false
                                     lifecycleScope.launch {
                                         analytics.trackEvent("notice_acknowledged")
+                                        analytics.pushState()
                                     }
                                 }
                             )
@@ -151,11 +165,6 @@ class MainActivity : ComponentActivity() {
                         // The pricing promise is shown before registration is
                         // asked for, so nobody hands over contact details without
                         // first knowing what they are being told about.
-                        if (identity == AnalyticsRepository.IdentityState.RESOLVING) {
-                            // Blank rather than a spinner: the vault answers in
-                            // milliseconds, and a flashed spinner reads as a stall.
-                            return@Surface
-                        }
 
                         if (identity == AnalyticsRepository.IdentityState.UNREGISTERED) {
                             RegistrationScreen(
@@ -178,6 +187,9 @@ class MainActivity : ComponentActivity() {
                             onLanguageChange = { newLang ->
                                 settingsStore.language = newLang
                                 language = newLang
+                            },
+                            onSyncedStateChanged = {
+                                lifecycleScope.launch { analytics.pushState() }
                             }
                         )
                     }
@@ -194,7 +206,8 @@ private fun ServerCheckScreen(
     onSharedTripConsumed: () -> Unit,
     widgetStation: Pair<String, String>?,
     onWidgetStationConsumed: () -> Unit,
-    onLanguageChange: (String) -> Unit
+    onLanguageChange: (String) -> Unit,
+    onSyncedStateChanged: () -> Unit
 ) {
     val strings = LocalAppStrings.current
     var serverReady by remember { mutableStateOf(false) }
@@ -218,7 +231,8 @@ private fun ServerCheckScreen(
             sharedTrip = sharedTrip,
             onSharedTripConsumed = onSharedTripConsumed,
             widgetStation = widgetStation,
-            onWidgetStationConsumed = onWidgetStationConsumed
+            onWidgetStationConsumed = onWidgetStationConsumed,
+            onSyncedStateChanged = onSyncedStateChanged
         )
     } else {
         Box(
