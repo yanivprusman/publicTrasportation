@@ -24,6 +24,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -98,9 +99,16 @@ class MainActivity : ComponentActivity() {
         MapZoomHandler.clear()
         TripLink.parse(intent?.data)?.let { pendingSharedTrip.value = it }
         parseWidgetStation(intent)
+        // Identity first, ping second: trackLaunch reads the install id, and
+        // minting a fresh one before the vault has been consulted would report a
+        // reinstalling user as a brand-new install.
+        //
         // Anonymous launch ping. Fire-and-forget on the activity scope so it can
         // never delay first paint; AnalyticsRepository swallows its own failures.
-        lifecycleScope.launch { analytics.trackLaunch() }
+        lifecycleScope.launch {
+            analytics.resolveIdentity()
+            analytics.trackLaunch()
+        }
         setContent {
             var language by remember { mutableStateOf(settingsStore.language) }
             val strings = if (language == "he") HeStrings else EnStrings
@@ -120,9 +128,13 @@ class MainActivity : ComponentActivity() {
                         var showPricingNotice by remember {
                             mutableStateOf(!settingsStore.pricingNoticeAcknowledged)
                         }
-                        var registered by remember {
-                            mutableStateOf(settingsStore.isRegistered)
-                        }
+                        // Not read from SettingsStore directly: on a reinstall the
+                        // prefs are empty but the Block Store vault may still hold
+                        // the account, so the answer is only known once
+                        // resolveIdentity has run. Showing the registration screen
+                        // in the meantime would ask a returning user to type their
+                        // details again for no reason.
+                        val identity by analytics.identityState.collectAsStateWithLifecycle()
 
                         if (showPricingNotice) {
                             PricingNoticeDialog(
@@ -139,12 +151,17 @@ class MainActivity : ComponentActivity() {
                         // The pricing promise is shown before registration is
                         // asked for, so nobody hands over contact details without
                         // first knowing what they are being told about.
-                        if (!registered) {
+                        if (identity == AnalyticsRepository.IdentityState.RESOLVING) {
+                            // Blank rather than a spinner: the vault answers in
+                            // milliseconds, and a flashed spinner reads as a stall.
+                            return@Surface
+                        }
+
+                        if (identity == AnalyticsRepository.IdentityState.UNREGISTERED) {
                             RegistrationScreen(
                                 onSubmit = { email, phone, onError ->
                                     lifecycleScope.launch {
                                         analytics.register(email, phone)
-                                            .onSuccess { registered = true }
                                             .onFailure { onError(strings.registerFailed) }
                                     }
                                 }

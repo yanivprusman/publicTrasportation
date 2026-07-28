@@ -155,6 +155,10 @@ dependencies {
     // Needs no runtime permission and no OAuth setup.
     implementation(libs.play.services.auth)
 
+    // Block Store — keeps the identity token outside app storage so a reinstall
+    // (or a new phone) does not lose the account. See IdentityVault.
+    implementation(libs.play.services.auth.blockstore)
+
     // Feedback lib (dev flavor only)
     "devImplementation"(project(":feedback-lib"))
 }

@@ -8,6 +8,9 @@ import com.automatelinux.pt.data.model.AppPingRequest
 import com.automatelinux.pt.data.model.AppRegisterRequest
 import com.automatelinux.pt.util.SettingsStore
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import java.time.LocalDate
 import java.util.UUID
 import javax.inject.Inject
@@ -28,15 +31,50 @@ import javax.inject.Singleton
 class AnalyticsRepository @Inject constructor(
     @ApplicationContext private val context: Context,
     private val api: PtApi,
-    private val store: SettingsStore
+    private val store: SettingsStore,
+    private val vault: IdentityVault
 ) {
     private companion object {
         const val TAG = "Analytics"
     }
 
+    /** Whether this install already belongs to a known user. */
+    enum class IdentityState { RESOLVING, REGISTERED, UNREGISTERED }
+
+    private val _identityState = MutableStateFlow(IdentityState.RESOLVING)
+    val identityState: StateFlow<IdentityState> = _identityState.asStateFlow()
+
     /** Stable per-install id, created on first use. */
     fun installId(): String =
         store.installId ?: UUID.randomUUID().toString().also { store.installId = it }
+
+    /**
+     * Works out who this install belongs to, and must run before anything else
+     * reads [installId] — minting a fresh UUID first and restoring the vaulted
+     * one afterwards would leave the server with two installs for one person.
+     *
+     * A reinstall wipes SharedPreferences but not the Block Store vault, so the
+     * previous identity comes back here and the registration screen never
+     * reappears. Users who registered before the vault existed get their
+     * identity written into it on this pass, so their next reinstall is covered.
+     */
+    suspend fun resolveIdentity() {
+        if (store.isRegistered) {
+            _identityState.value = IdentityState.REGISTERED
+            vault.save(installId(), store.registeredEmail!!, store.founderSince)
+            return
+        }
+        val vaulted = vault.restore()
+        if (vaulted == null) {
+            _identityState.value = IdentityState.UNREGISTERED
+            return
+        }
+        store.installId = vaulted.installId
+        store.registeredEmail = vaulted.email
+        vaulted.founderSince?.let { store.founderSince = it }
+        Log.d(TAG, "identity restored from vault")
+        _identityState.value = IdentityState.REGISTERED
+    }
 
     /**
      * Counts a day the user actually opened the app, rather than a calendar day
@@ -71,6 +109,10 @@ class AnalyticsRepository @Inject constructor(
         if (response.ok) {
             store.registeredEmail = email
             response.founderSince?.let { store.founderSince = it }
+            _identityState.value = IdentityState.REGISTERED
+            // Vaulted immediately: if the user uninstalls before the next launch,
+            // this is the only copy that will still exist.
+            vault.save(installId(), email, store.founderSince)
             Result.success(Unit)
         } else {
             Result.failure(IllegalStateException("Registration rejected"))

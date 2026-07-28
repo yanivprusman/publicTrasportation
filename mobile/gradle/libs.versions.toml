@@ -18,6 +18,7 @@ activity-compose = "1.9.3"
 osmdroid = "6.1.20"
 play-services-location = "21.3.0"
 play-services-auth = "21.3.0"
+play-services-auth-blockstore = "16.4.0"
 zxing = "3.5.3"
 install-referrer = "2.2"
 
@@ -65,6 +66,7 @@ play-services-location = { group = "com.google.android.gms", name = "play-servic
 zxing-core = { group = "com.google.zxing", name = "core", version.ref = "zxing" }
 install-referrer = { group = "com.android.installreferrer", name = "installreferrer", version.ref = "install-referrer" }
 play-services-auth = { group = "com.google.android.gms", name = "play-services-auth", version.ref = "play-services-auth" }
+play-services-auth-blockstore = { group = "com.google.android.gms", name = "play-services-auth-blockstore", version.ref = "play-services-auth-blockstore" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
