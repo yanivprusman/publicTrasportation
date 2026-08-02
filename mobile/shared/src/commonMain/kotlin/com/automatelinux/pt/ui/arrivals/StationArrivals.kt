@@ -3,6 +3,8 @@ package com.automatelinux.pt.ui.arrivals
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,16 +21,20 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -143,6 +149,14 @@ fun NextArrivalHero(
     }
 }
 
+// Stable identity for a visit across refreshes — the list reorders every poll,
+// so expansion must not be keyed by index.
+private fun visitKey(visit: MonitoredStopVisit): String {
+    val journey = visit.monitoredVehicleJourney
+    return journey?.vehicleRef
+        ?: "${journey?.publishedLineName}|${journey?.destinationRef}|${journey?.monitoredCall?.expectedArrivalTime}"
+}
+
 @Composable
 fun StationArrivals(
     visits: List<MonitoredStopVisit>,
@@ -152,10 +166,14 @@ fun StationArrivals(
     onVehicleSelect: ((Double, Double) -> Unit)? = null,
     favoriteLines: Set<String> = emptySet(),
     onToggleFavoriteLine: ((String) -> Unit)? = null,
+    availableLines: List<String> = emptyList(),
+    lineFilter: String = "",
+    onLineFilterChange: ((String) -> Unit)? = null,
+    onRetry: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val strings = LocalAppStrings.current
-    var expandedIndex by remember { mutableIntStateOf(-1) }
+    var expandedKey by remember { mutableStateOf<String?>(null) }
     var tick by remember { mutableLongStateOf(0L) }
 
     LaunchedEffect(Unit) {
@@ -166,13 +184,45 @@ fun StationArrivals(
     }
 
     Column(modifier = modifier) {
-        if (error != null) {
-            Text(
-                text = error,
-                color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(16.dp)
-            )
+        if (error != null && availableLines.isEmpty()) {
+            // Nothing cached to show — full error state.
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    text = strings.arrivalsFetchError,
+                    color = MaterialTheme.colorScheme.error
+                )
+                if (onRetry != null) {
+                    OutlinedButton(
+                        onClick = onRetry,
+                        modifier = Modifier.padding(top = 8.dp)
+                    ) {
+                        Text(strings.retry)
+                    }
+                }
+            }
             return@Column
+        }
+
+        if (error != null) {
+            // Refresh failed but the previous board is still valid — keep showing it.
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = strings.arrivalsRefreshFailed,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.weight(1f)
+                )
+                if (onRetry != null) {
+                    TextButton(onClick = onRetry) {
+                        Text(strings.retry)
+                    }
+                }
+            }
         }
 
         if (visits.isNotEmpty()) {
@@ -191,7 +241,44 @@ fun StationArrivals(
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
         )
 
-        if (visits.isEmpty() && !loading) {
+        if (availableLines.size > 1 && onLineFilterChange != null) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                FilterChip(
+                    selected = lineFilter.isBlank(),
+                    onClick = { onLineFilterChange("") },
+                    label = { Text(strings.allLinesChip) }
+                )
+                availableLines.forEach { line ->
+                    FilterChip(
+                        selected = lineFilter.equals(line, ignoreCase = true),
+                        onClick = {
+                            onLineFilterChange(
+                                if (lineFilter.equals(line, ignoreCase = true)) "" else line
+                            )
+                        },
+                        label = { Text(line) }
+                    )
+                }
+            }
+        }
+
+        if (visits.isEmpty() && loading) {
+            Row(
+                modifier = Modifier.padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+            }
+            return@Column
+        }
+
+        if (visits.isEmpty()) {
             Text(
                 text = strings.noVehiclesFound,
                 modifier = Modifier.padding(16.dp),
@@ -215,20 +302,21 @@ fun StationArrivals(
         HorizontalDivider()
 
         Column {
-            visits.forEachIndexed { index, visit ->
-                val journey = visit.monitoredVehicleJourney ?: return@forEachIndexed
+            visits.forEach { visit ->
+                val journey = visit.monitoredVehicleJourney ?: return@forEach
                 val call = journey.monitoredCall
                 val arrivalDisplay = formatArrivalTime(call?.expectedArrivalTime, tick, strings)
                 val destName = getDestinationName(journey.destinationRef)
                 val distance = call?.distanceFromStop?.let { "${it}m" } ?: ""
-                val isExpanded = index == expandedIndex
+                val key = visitKey(visit)
+                val isExpanded = key == expandedKey
 
                 Column {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable {
-                                expandedIndex = if (isExpanded) -1 else index
+                                expandedKey = if (isExpanded) null else key
                             }
                             .padding(horizontal = 12.dp, vertical = 8.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,

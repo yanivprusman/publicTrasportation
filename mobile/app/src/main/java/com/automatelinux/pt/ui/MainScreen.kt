@@ -43,6 +43,9 @@ import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -100,6 +103,7 @@ import com.automatelinux.pt.util.LocalAppStrings
 import com.automatelinux.pt.util.PolylineDecoder
 import com.automatelinux.pt.util.SettingsStore
 import com.automatelinux.pt.util.TripLink
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.launch
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
@@ -416,13 +420,19 @@ fun MainScreen(
         }
     }
 
-    DisposableEffect(activeTab) {
-        if (activeTab == ActiveTab.ARRIVALS) {
+    // Poll only while the Arrivals tab is showing AND the app is foregrounded —
+    // otherwise a backgrounded app keeps hitting the SIRI endpoint every 15s.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    LaunchedEffect(activeTab, lifecycleOwner) {
+        if (activeTab != ActiveTab.ARRIVALS) return@LaunchedEffect
+        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
             arrivalsViewModel.startPolling()
-        } else {
-            arrivalsViewModel.stopPolling()
+            try {
+                awaitCancellation()
+            } finally {
+                arrivalsViewModel.stopPolling()
+            }
         }
-        onDispose { arrivalsViewModel.stopPolling() }
     }
 
     com.automatelinux.feedbacklib.ui.FeedbackOverlay(
@@ -681,7 +691,8 @@ fun MainScreen(
                                                 Toast.LENGTH_SHORT
                                             ).show()
                                         }
-                                    }
+                                    },
+                                    onRetry = { arrivalsViewModel.fetchArrivals() }
                                 )
                             }
                         }

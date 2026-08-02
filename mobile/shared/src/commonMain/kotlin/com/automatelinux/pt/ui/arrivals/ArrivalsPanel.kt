@@ -59,6 +59,7 @@ fun ArrivalsPanel(
     onToggleFavoriteStation: (() -> Unit)? = null,
     onOpenBoard: (() -> Unit)? = null,
     onPinWidget: (() -> Unit)? = null,
+    onRetry: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val strings = LocalAppStrings.current
@@ -80,8 +81,6 @@ fun ArrivalsPanel(
             stationName = state.stationName,
             onStationSelect = onStationSelect,
             lastUpdated = state.lastUpdated,
-            lineFilter = state.lineFilter,
-            onLineFilterChange = onLineFilterChange,
             showVehicleMarkers = state.showVehicleMarkers,
             onShowVehicleMarkersChange = onShowVehicleMarkersChange,
             onSearchStops = onSearchStops,
@@ -136,7 +135,11 @@ fun ArrivalsPanel(
             getDestinationName = getDestinationName,
             onVehicleSelect = onVehicleSelect,
             favoriteLines = favoriteLines,
-            onToggleFavoriteLine = onToggleFavoriteLine
+            onToggleFavoriteLine = onToggleFavoriteLine,
+            availableLines = state.availableLines,
+            lineFilter = state.lineFilter,
+            onLineFilterChange = onLineFilterChange,
+            onRetry = onRetry
         )
 
         if (state.stationCode.isNotEmpty()) {

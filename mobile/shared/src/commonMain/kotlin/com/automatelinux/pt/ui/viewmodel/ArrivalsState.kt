@@ -4,6 +4,7 @@ import com.automatelinux.pt.data.model.MonitoredStopVisit
 import com.automatelinux.pt.data.model.SiriResponse
 import com.automatelinux.pt.data.model.StopTimeEntry
 import com.automatelinux.pt.data.model.VehicleMarker
+import kotlinx.datetime.Instant
 
 data class ArrivalsState(
     val stationCode: String = "26472",
@@ -21,14 +22,27 @@ data class ArrivalsState(
     val timetableLoading: Boolean = false,
     val timetableError: Boolean = false
 ) {
-    val visits: List<MonitoredStopVisit>
+    // All monitored visits, soonest arrival first (server order is not guaranteed).
+    val allVisits: List<MonitoredStopVisit>
         get() {
-            val allVisits = siriData?.siri?.serviceDelivery?.stopMonitoringDelivery
+            val raw = siriData?.siri?.serviceDelivery?.stopMonitoringDelivery
                 ?.flatMap { it.monitoredStopVisit ?: emptyList() } ?: emptyList()
-
-            return if (lineFilter.isBlank()) allVisits
-            else allVisits.filter {
-                it.monitoredVehicleJourney?.publishedLineName?.contains(lineFilter, ignoreCase = true) == true
+            return raw.sortedBy { visit ->
+                visit.monitoredVehicleJourney?.monitoredCall?.expectedArrivalTime
+                    ?.let { runCatching { Instant.parse(it) }.getOrNull() }
+                    ?: Instant.DISTANT_FUTURE
             }
+        }
+
+    // Lines present in the live feed, for the filter chips. Numeric lines sort numerically.
+    val availableLines: List<String>
+        get() = allVisits.mapNotNull { it.monitoredVehicleJourney?.publishedLineName }
+            .distinct()
+            .sortedWith(compareBy({ it.toIntOrNull() ?: Int.MAX_VALUE }, { it }))
+
+    val visits: List<MonitoredStopVisit>
+        get() = if (lineFilter.isBlank()) allVisits
+        else allVisits.filter {
+            it.monitoredVehicleJourney?.publishedLineName?.equals(lineFilter, ignoreCase = true) == true
         }
 }

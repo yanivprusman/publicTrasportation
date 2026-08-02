@@ -179,10 +179,8 @@ fun DepartureBoardScreen(
             HorizontalDivider(color = BoardAmberDim, thickness = 2.dp)
 
             when {
-                state.error != null -> BoardMessage(state.error!!)
-                state.siriData == null -> BoardMessage(strings.boardLoading)
-                visits.isEmpty() -> BoardMessage(strings.boardNone)
-                else -> Column(
+                // A failed refresh must not blank a board that still has data.
+                visits.isNotEmpty() -> Column(
                     modifier = Modifier
                         .weight(1f)
                         .verticalScroll(rememberScrollState())
@@ -196,6 +194,9 @@ fun DepartureBoardScreen(
                         )
                     }
                 }
+                state.error != null -> BoardMessage(strings.arrivalsFetchError)
+                state.siriData == null -> BoardMessage(strings.boardLoading)
+                else -> BoardMessage(strings.boardNone)
             }
 
             BoardFooter(state.lastUpdated, now)

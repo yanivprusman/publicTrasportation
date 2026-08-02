@@ -15,7 +15,6 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -39,8 +38,6 @@ fun TransportControls(
     stationName: String,
     onStationSelect: (String, String) -> Unit,
     lastUpdated: Long?,
-    lineFilter: String,
-    onLineFilterChange: (String) -> Unit,
     showVehicleMarkers: Boolean,
     onShowVehicleMarkersChange: (Boolean) -> Unit,
     onSearchStops: suspend (String) -> List<StopResult>,
@@ -130,23 +127,11 @@ fun TransportControls(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            OutlinedTextField(
-                value = lineFilter,
-                onValueChange = onLineFilterChange,
-                label = { Text(strings.filterByLine) },
-                modifier = Modifier.weight(1f),
-                singleLine = true
+            Checkbox(
+                checked = showVehicleMarkers,
+                onCheckedChange = onShowVehicleMarkersChange
             )
-
-            Spacer(Modifier.width(8.dp))
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Checkbox(
-                    checked = showVehicleMarkers,
-                    onCheckedChange = onShowVehicleMarkersChange
-                )
-                Text(strings.vehicles, style = MaterialTheme.typography.bodySmall)
-            }
+            Text(strings.vehicles, style = MaterialTheme.typography.bodySmall)
         }
     }
 }
