@@ -51,8 +51,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.automatelinux.pt.data.model.MonitoredStopVisit
 import com.automatelinux.pt.ui.viewmodel.ArrivalsState
+import com.automatelinux.pt.ui.viewmodel.DepartureEntry
+import com.automatelinux.pt.ui.viewmodel.buildDepartures
 import com.automatelinux.pt.util.LocalAppStrings
 import kotlinx.coroutines.delay
 import kotlinx.datetime.Clock
@@ -66,16 +67,6 @@ private val BoardAmber = Color(0xFFFFB300)
 private val BoardAmberBright = Color(0xFFFFD54F)
 private val BoardAmberDim = Color(0xFF9A7B26)
 private val BoardRowLine = Color(0xFF1F1A0E)
-
-private fun arrivalEpochMs(visit: MonitoredStopVisit): Long {
-    val iso = visit.monitoredVehicleJourney?.monitoredCall?.expectedArrivalTime
-        ?: return Long.MAX_VALUE
-    return try {
-        Instant.parse(iso).toEpochMilliseconds()
-    } catch (_: Exception) {
-        Long.MAX_VALUE
-    }
-}
 
 private fun clockText(now: Instant): String {
     val local = now.toLocalDateTime(TimeZone.currentSystemDefault()).time
@@ -120,8 +111,15 @@ fun DepartureBoardScreen(
         onDispose { view.keepScreenOn = false }
     }
 
-    val visits = remember(state.siriData, state.lineFilter) {
-        state.visits.sortedBy { arrivalEpochMs(it) }
+    // Rebuild at most twice a minute — the merge itself is cheap, but there is
+    // no reason to re-parse timetable instants on every 1s clock tick.
+    val departures = remember(
+        state.siriData,
+        state.timetable,
+        state.lineFilter,
+        now.toEpochMilliseconds() / 30_000
+    ) {
+        buildDepartures(state.allVisits, state.timetable, state.lineFilter, now)
     }
 
     val blink = rememberInfiniteTransition(label = "boardBlink")
@@ -180,14 +178,14 @@ fun DepartureBoardScreen(
 
             when {
                 // A failed refresh must not blank a board that still has data.
-                visits.isNotEmpty() -> Column(
+                departures.isNotEmpty() -> Column(
                     modifier = Modifier
                         .weight(1f)
                         .verticalScroll(rememberScrollState())
                 ) {
-                    visits.forEach { visit ->
+                    departures.forEach { entry ->
                         BoardRow(
-                            visit = visit,
+                            entry = entry,
                             nowMs = now.toEpochMilliseconds(),
                             blinkAlpha = blinkAlpha,
                             getDestinationName = getDestinationName
@@ -195,7 +193,7 @@ fun DepartureBoardScreen(
                     }
                 }
                 state.error != null -> BoardMessage(strings.arrivalsFetchError)
-                state.siriData == null -> BoardMessage(strings.boardLoading)
+                state.siriData == null && state.timetable.isEmpty() -> BoardMessage(strings.boardLoading)
                 else -> BoardMessage(strings.boardNone)
             }
 
@@ -288,19 +286,27 @@ private fun BoardHeader(
 
 @Composable
 private fun BoardRow(
-    visit: MonitoredStopVisit,
+    entry: DepartureEntry,
     nowMs: Long,
     blinkAlpha: Float,
     getDestinationName: (String?) -> String
 ) {
     val strings = LocalAppStrings.current
-    val journey = visit.monitoredVehicleJourney ?: return
-    val call = journey.monitoredCall
-    val destName = getDestinationName(journey.destinationRef)
+    val journey = entry.visit?.monitoredVehicleJourney
+    val call = journey?.monitoredCall
+    val destName = journey?.let { getDestinationName(it.destinationRef) }
+        ?: entry.stopTime?.headsign?.replace('_', ' ')
+        ?: ""
 
-    val arrivalMs = arrivalEpochMs(visit)
-    val hasTime = arrivalMs != Long.MAX_VALUE
-    val diffMin = if (hasTime) ((arrivalMs - nowMs) / 60_000L) else 0L
+    val arrivalMs = entry.time.toEpochMilliseconds()
+    val diffMin = (arrivalMs - nowMs) / 60_000L
+    val isTomorrow = Instant.fromEpochMilliseconds(arrivalMs)
+        .toLocalDateTime(TimeZone.currentSystemDefault()).date !=
+        Instant.fromEpochMilliseconds(nowMs)
+            .toLocalDateTime(TimeZone.currentSystemDefault()).date
+    // Scheduled rows render in the dimmer amber — on a real board the realtime
+    // rows are the bright ones.
+    val valueColor = if (entry.isLive) BoardAmber else BoardAmberDim
 
     Row(
         modifier = Modifier
@@ -312,13 +318,13 @@ private fun BoardRow(
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(8.dp))
-                    .background(lineColor(journey.publishedLineName))
+                    .background(lineColor(entry.line))
                     .widthIn(min = 56.dp)
                     .padding(horizontal = 8.dp, vertical = 4.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = journey.publishedLineName ?: "—",
+                    text = entry.line,
                     color = Color.White,
                     fontSize = 22.sp,
                     fontWeight = FontWeight.Bold,
@@ -335,9 +341,17 @@ private fun BoardRow(
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
-            call?.distanceFromStop?.let { meters ->
+            if (entry.isLive) {
+                call?.distanceFromStop?.let { meters ->
+                    Text(
+                        text = strings.distanceMeters(meters),
+                        color = BoardAmberDim,
+                        fontSize = 12.sp
+                    )
+                }
+            } else {
                 Text(
-                    text = strings.distanceMeters(meters),
+                    text = strings.scheduledTag,
                     color = BoardAmberDim,
                     fontSize = 12.sp
                 )
@@ -348,23 +362,17 @@ private fun BoardRow(
             modifier = Modifier.width(88.dp)
         ) {
             when {
-                !hasTime -> Text(
-                    text = "—",
-                    color = BoardAmber,
-                    fontSize = 26.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                diffMin < 1L -> Text(
+                diffMin < 1L && !isTomorrow -> Text(
                     text = strings.boardNow,
-                    color = BoardAmberBright,
+                    color = if (entry.isLive) BoardAmberBright else BoardAmberDim,
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
-                    modifier = Modifier.alpha(blinkAlpha)
+                    modifier = if (entry.isLive) Modifier.alpha(blinkAlpha) else Modifier
                 )
-                diffMin <= 60L -> Row(verticalAlignment = Alignment.Bottom) {
+                diffMin <= 60L && !isTomorrow -> Row(verticalAlignment = Alignment.Bottom) {
                     Text(
                         text = diffMin.toString(),
-                        color = BoardAmber,
+                        color = valueColor,
                         fontSize = 30.sp,
                         fontWeight = FontWeight.Bold,
                         fontFamily = FontFamily.Monospace
@@ -379,18 +387,25 @@ private fun BoardRow(
                 }
                 else -> Text(
                     text = hhmm(arrivalMs),
-                    color = BoardAmber,
+                    color = valueColor,
                     fontSize = 22.sp,
                     fontWeight = FontWeight.Bold,
                     fontFamily = FontFamily.Monospace
                 )
             }
-            if (hasTime && diffMin in 1L..60L) {
+            if (diffMin in 1L..60L && !isTomorrow) {
                 Text(
                     text = hhmm(arrivalMs),
                     color = BoardAmberDim,
                     fontSize = 12.sp,
                     fontFamily = FontFamily.Monospace
+                )
+            }
+            if (isTomorrow) {
+                Text(
+                    text = strings.timetableTomorrow,
+                    color = BoardAmberDim,
+                    fontSize = 12.sp
                 )
             }
         }

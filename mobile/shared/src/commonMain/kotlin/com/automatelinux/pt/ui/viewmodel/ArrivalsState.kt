@@ -69,13 +69,17 @@ data class DepartureEntry(
     val isLive: Boolean get() = visit != null
 }
 
-private const val DEDUP_WINDOW_MINUTES = 3L
+private const val DEDUP_WINDOW_MINUTES = 6L
 private const val MAX_BOARD_ROWS = 20
 
 // Merge the live SIRI feed with the GTFS timetable into one chronological board.
-// A scheduled departure on the same line within DEDUP_WINDOW_MINUTES of a live
-// arrival is the same bus — the live row wins. Live entries without a parseable
-// expected time are dropped (the board is strictly chronological).
+// Dedup is one-to-one: each live bus consumes its NEAREST unconsumed same-line
+// scheduled departure within the window, and that scheduled row is hidden. A
+// blind "any live within N minutes" test either doubles a bus running early
+// (window too small) or swallows genuine back-to-back departures on frequent
+// lines (window too big); nearest-unmatched assignment does neither. Live
+// entries without a parseable expected time are dropped (the board is strictly
+// chronological).
 fun buildDepartures(
     liveVisits: List<MonitoredStopVisit>,
     timetable: List<StopTimeEntry>,
@@ -88,17 +92,30 @@ fun buildDepartures(
             ?.let { runCatching { Instant.parse(it) }.getOrNull() }
             ?: return@mapNotNull null
         DepartureEntry(instant, journey.publishedLineName ?: "?", visit = visit)
-    }
-    val scheduled = timetable.mapNotNull { entry ->
+    }.sortedBy { it.time }
+
+    val scheduledAll = timetable.mapNotNull { entry ->
         val iso = entry.place.departure ?: entry.place.scheduledDeparture ?: return@mapNotNull null
         val instant = runCatching { Instant.parse(iso) }.getOrNull() ?: return@mapNotNull null
         DepartureEntry(instant, entry.lineLabel, stopTime = entry)
-    }.filter { sched ->
-        live.none { l ->
-            l.line == sched.line &&
-                (l.time - sched.time).inWholeMinutes in -DEDUP_WINDOW_MINUTES..DEDUP_WINDOW_MINUTES
-        }
     }
+
+    val consumed = BooleanArray(scheduledAll.size)
+    live.forEach { l ->
+        var best = -1
+        var bestDiff = Long.MAX_VALUE
+        scheduledAll.forEachIndexed { i, s ->
+            if (consumed[i] || s.line != l.line) return@forEachIndexed
+            val diff = (l.time - s.time).inWholeMinutes.let { if (it < 0) -it else it }
+            if (diff <= DEDUP_WINDOW_MINUTES && diff < bestDiff) {
+                best = i
+                bestDiff = diff
+            }
+        }
+        if (best >= 0) consumed[best] = true
+    }
+    val scheduled = scheduledAll.filterIndexed { i, _ -> !consumed[i] }
+
     return (live + scheduled)
         .filter { (it.time - now).inWholeMinutes >= -1 }
         .filter { lineFilter.isBlank() || it.line.equals(lineFilter, ignoreCase = true) }
