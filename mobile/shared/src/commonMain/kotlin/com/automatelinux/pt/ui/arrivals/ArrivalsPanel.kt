@@ -114,7 +114,12 @@ fun ArrivalsPanel(
                         selected = stop.stopCode == state.stationCode,
                         onClick = { onStationSelect(stop.stopCode, stop.stopName) },
                         label = {
-                            Text("${stop.stopName} · ${strings.walkingDistance(stop.distanceMeters)}")
+                            // FSI/PDI isolate the (often Hebrew) stop name so the
+                            // "· 153m walk" suffix keeps its order in mixed bidi text.
+                            Text(
+                                "⁨${stop.stopName}⁩ · " +
+                                    strings.walkingDistance(stop.distanceMeters)
+                            )
                         }
                     )
                 }
