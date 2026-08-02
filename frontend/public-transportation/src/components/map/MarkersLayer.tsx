@@ -14,7 +14,7 @@ const formatArrival = (iso: string): string => {
 }
 
 interface MarkersLayerProps {
-  position: Coordinates
+  position: Coordinates | null
   positionAddress: string
   destination: Coordinates | null
   destinationAddress: string
@@ -43,12 +43,14 @@ const MarkersLayer = ({
   const { t } = useI18n()
   return (
     <>
-      <Marker position={position} icon={originIcon}>
-        <Popup>
-          <strong>{t('popup.origin')}</strong> {positionAddress}<br/>
-          {t('popup.coordinates')} {position[0].toFixed(6)}, {position[1].toFixed(6)}
-        </Popup>
-      </Marker>
+      {position && (
+        <Marker position={position} icon={originIcon}>
+          <Popup>
+            <strong>{t('popup.origin')}</strong> {positionAddress}<br/>
+            {t('popup.coordinates')} {position[0].toFixed(6)}, {position[1].toFixed(6)}
+          </Popup>
+        </Marker>
+      )}
 
       {viaPoint && (
         <Marker position={viaPoint} icon={viaIcon}>

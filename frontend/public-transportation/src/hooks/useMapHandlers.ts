@@ -4,7 +4,7 @@ import { geocodeSearch } from '../services/routing-api'
 import type { Coordinates } from '../types'
 
 const useMapHandlers = (
-  position: Coordinates,
+  position: Coordinates | null,
   setPosition: (pos: Coordinates) => void,
   destination: Coordinates | null,
   onDestinationSet: (dest: Coordinates) => void,
@@ -60,6 +60,10 @@ const useMapHandlers = (
   }
 
   const handleFindRoute = async (): Promise<Coordinates[] | null> => {
+    if (!position) {
+      setSearchError('mapCtl.needStart')
+      return null
+    }
     if (!destination || !destination[0] || !destination[1]) {
       setSearchError('mapCtl.needDest')
       return null

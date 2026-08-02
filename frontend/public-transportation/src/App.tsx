@@ -29,8 +29,9 @@ import { LanguageProvider, useI18n } from './i18n'
 
 function AppInner() {
   const { t } = useI18n()
-  const defaultStartingPoint: Coordinates = [32.0783, 34.8120]
-  const defaultDestination: Coordinates = [32.0673, 34.7835]
+  // Initial map viewport only (Tel Aviv). Never seeded into the route: a new
+  // user starts with empty origin/destination fields.
+  const initialMapCenter: Coordinates = [32.0783, 34.8120]
 
   const [siriData, setSiriData] = useState<SiriData | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -40,7 +41,7 @@ function AppInner() {
   const [showVehicleMarkers, setShowVehicleMarkers] = useSessionState('showVehicleMarkers', false)
   const [vehicleMarkers, setVehicleMarkers] = useState<VehicleMarker[]>([])
 
-  const [mapCenter, setMapCenter] = useState<Coordinates>(defaultStartingPoint)
+  const [mapCenter, setMapCenter] = useState<Coordinates>(initialMapCenter)
   const [calculateRoute, setCalculateRoute] = useState(false)
 
   const routing = useRouting()
@@ -51,30 +52,15 @@ function AppInner() {
   const { mapStyle, setMapStyle } = useMapStyle(theme)
   const registration = useRegistration()
 
-  // Initialize routing with defaults when no saved route exists. A URL that
-  // carries a trip (shared link or debug params) supplies its own points —
-  // seeding defaults then would fire reverse geocodes that can overwrite the
-  // link's place names after the trip is restored.
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    if (parseTripLink(params) || (params.get('origin') && params.get('destination'))) return
-    if (!routing.origin) {
-      routing.setOriginFromCoords(defaultStartingPoint[0], defaultStartingPoint[1])
-    }
-    if (!routing.destination) {
-      routing.setDestinationFromCoords(defaultDestination[0], defaultDestination[1])
-    }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
   // Derive marker positions from routing state. Memoized because the map keys
   // effects off these props: a fresh array on every render makes the map treat
   // an unchanged pin as a move and re-geocode it.
-  const startingPoint: Coordinates = useMemo(() => routing.origin
+  const startingPoint: Coordinates | null = useMemo(() => routing.origin
     ? [routing.origin.lat, routing.origin.lon]
-    : defaultStartingPoint, [routing.origin])
-  const destination: Coordinates = useMemo(() => routing.destination
+    : null, [routing.origin])
+  const destination: Coordinates | null = useMemo(() => routing.destination
     ? [routing.destination.lat, routing.destination.lon]
-    : defaultDestination, [routing.destination])
+    : null, [routing.destination])
   const viaPoint: Coordinates | null = useMemo(() => routing.via
     ? [routing.via.lat, routing.via.lon]
     : null, [routing.via])
@@ -303,8 +289,6 @@ function AppInner() {
         viaPoint={viaPoint}
         viaName={routing.via?.name || ''}
         center={mapCenter}
-        defaultStartingPoint={defaultStartingPoint}
-        defaultDestination={defaultDestination}
         calculateRoute={calculateRoute}
         onRouteCalculated={() => setCalculateRoute(false)}
         selectedItinerary={routing.selectedItinerary}

@@ -47,7 +47,7 @@ const MapControls = ({
       </div>
       {searchError && <p className={styles.error}>{tm(searchError)}</p>}
       <div className={styles.infoBox}>
-        <p><strong>{t('mapCtl.start')}</strong> {positionAddress || t('mapCtl.loading')}</p>
+        <p><strong>{t('mapCtl.start')}</strong> {positionAddress || t('mapCtl.noStart')}</p>
       </div>
       <div className={styles.infoBoxDest}>
         <p><strong>{t('popup.destination')}</strong> {destinationAddress || t('mapCtl.noDest')}</p>

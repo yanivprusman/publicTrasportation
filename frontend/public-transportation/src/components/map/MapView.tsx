@@ -83,7 +83,7 @@ interface MapViewProps {
   longitude: number
   destination: Coordinates | null
   onDestinationSet: (dest: Coordinates) => void
-  startingPoint: Coordinates
+  startingPoint: Coordinates | null
   mapCenter: Coordinates
   setMapCenter: (center: Coordinates) => void
   vehicleMarkers?: VehicleMarker[]
@@ -91,8 +91,6 @@ interface MapViewProps {
   stops?: StopInfo[]
   selectedStop?: string | null
   center: Coordinates
-  defaultStartingPoint: Coordinates
-  defaultDestination: Coordinates
   calculateRoute: boolean
   onRouteCalculated: () => void
   onStartingPointSet: (pos: Coordinates) => void
@@ -129,8 +127,6 @@ function MapView({
   stops = [],
   selectedStop = null,
   center,
-  defaultStartingPoint,
-  defaultDestination,
   calculateRoute,
   onRouteCalculated,
   onStartingPointSet,
@@ -154,7 +150,8 @@ function MapView({
   onMapStyleChange
 }: MapViewProps) {
   const follow = useFollowLocation()
-  const [position, setPosition] = useState<Coordinates>(startingPoint || defaultStartingPoint || [latitude, longitude])
+  // null until the user sets an origin — no marker, no reverse geocode.
+  const [position, setPosition] = useState<Coordinates | null>(startingPoint)
   const [route, setRoute] = useState<Coordinates[] | null>(null)
   const [mapReady, setMapReady] = useState(false)
   const [mapCenter, setMapCenterLocal] = useState<Coordinates>(center || initialMapCenter || [latitude, longitude])
@@ -183,12 +180,6 @@ function MapView({
     }
   }, [follow.following, follow.position])
 
-  useEffect(() => {
-    if (defaultDestination && (!destination || !destination[0])) {
-      onDestinationSet(defaultDestination)
-    }
-  }, [defaultDestination, destination, onDestinationSet])
-
   const {
     searchQuery,
     setSearchQuery,
@@ -214,14 +205,20 @@ function MapView({
   // any render loop, which is how the geocoder's quota got burned.
   const destinationKey = destination?.length === 2 ? `${destination[0]},${destination[1]}` : ''
   useEffect(() => {
-    if (!destinationKey) return
+    if (!destinationKey) {
+      setDestinationAddress('')
+      return
+    }
     const [lat, lon] = destinationKey.split(',').map(Number)
     fetchAddress(lat, lon, setDestinationAddress)
   }, [destinationKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const positionKey = position?.length === 2 ? `${position[0]},${position[1]}` : ''
   useEffect(() => {
-    if (!positionKey) return
+    if (!positionKey) {
+      setPositionAddress('')
+      return
+    }
     const [lat, lon] = positionKey.split(',').map(Number)
     fetchAddress(lat, lon, setPositionAddress)
   }, [positionKey]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -237,9 +234,12 @@ function MapView({
 
   useEffect(() => {
     if (startingPoint && Array.isArray(startingPoint) && startingPoint.length === 2) {
-      if (startingPoint[0] !== position[0] || startingPoint[1] !== position[1]) {
+      if (!position || startingPoint[0] !== position[0] || startingPoint[1] !== position[1]) {
         setPosition(startingPoint)
       }
+    } else if (!startingPoint && position) {
+      // Origin cleared upstream (input × button) — remove the marker too.
+      setPosition(null)
     }
   }, [startingPoint, position])
 
