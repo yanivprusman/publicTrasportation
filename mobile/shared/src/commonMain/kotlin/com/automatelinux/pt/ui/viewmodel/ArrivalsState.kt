@@ -5,6 +5,7 @@ import com.automatelinux.pt.data.model.SiriResponse
 import com.automatelinux.pt.data.model.StopResult
 import com.automatelinux.pt.data.model.StopTimeEntry
 import com.automatelinux.pt.data.model.VehicleMarker
+import com.automatelinux.pt.data.model.lineLabel
 import kotlinx.datetime.Instant
 
 data class ArrivalsState(
@@ -41,9 +42,13 @@ data class ArrivalsState(
             }
         }
 
-    // Lines present in the live feed, for the filter chips. Numeric lines sort numerically.
+    // Lines present in the live feed OR the timetable, for the filter chips.
+    // Numeric lines sort numerically.
     val availableLines: List<String>
-        get() = allVisits.mapNotNull { it.monitoredVehicleJourney?.publishedLineName }
+        get() = (
+            allVisits.mapNotNull { it.monitoredVehicleJourney?.publishedLineName } +
+                timetable.map { it.lineLabel }
+            )
             .distinct()
             .sortedWith(compareBy({ it.toIntOrNull() ?: Int.MAX_VALUE }, { it }))
 
@@ -52,4 +57,51 @@ data class ArrivalsState(
         else allVisits.filter {
             it.monitoredVehicleJourney?.publishedLineName?.equals(lineFilter, ignoreCase = true) == true
         }
+}
+
+// One row of the unified departure board — exactly one of visit/stopTime is set.
+data class DepartureEntry(
+    val time: Instant,
+    val line: String,
+    val visit: MonitoredStopVisit? = null,
+    val stopTime: StopTimeEntry? = null
+) {
+    val isLive: Boolean get() = visit != null
+}
+
+private const val DEDUP_WINDOW_MINUTES = 3L
+private const val MAX_BOARD_ROWS = 20
+
+// Merge the live SIRI feed with the GTFS timetable into one chronological board.
+// A scheduled departure on the same line within DEDUP_WINDOW_MINUTES of a live
+// arrival is the same bus — the live row wins. Live entries without a parseable
+// expected time are dropped (the board is strictly chronological).
+fun buildDepartures(
+    liveVisits: List<MonitoredStopVisit>,
+    timetable: List<StopTimeEntry>,
+    lineFilter: String,
+    now: Instant
+): List<DepartureEntry> {
+    val live = liveVisits.mapNotNull { visit ->
+        val journey = visit.monitoredVehicleJourney ?: return@mapNotNull null
+        val instant = journey.monitoredCall?.expectedArrivalTime
+            ?.let { runCatching { Instant.parse(it) }.getOrNull() }
+            ?: return@mapNotNull null
+        DepartureEntry(instant, journey.publishedLineName ?: "?", visit = visit)
+    }
+    val scheduled = timetable.mapNotNull { entry ->
+        val iso = entry.place.departure ?: entry.place.scheduledDeparture ?: return@mapNotNull null
+        val instant = runCatching { Instant.parse(iso) }.getOrNull() ?: return@mapNotNull null
+        DepartureEntry(instant, entry.lineLabel, stopTime = entry)
+    }.filter { sched ->
+        live.none { l ->
+            l.line == sched.line &&
+                (l.time - sched.time).inWholeMinutes in -DEDUP_WINDOW_MINUTES..DEDUP_WINDOW_MINUTES
+        }
+    }
+    return (live + scheduled)
+        .filter { (it.time - now).inWholeMinutes >= -1 }
+        .filter { lineFilter.isBlank() || it.line.equals(lineFilter, ignoreCase = true) }
+        .sortedBy { it.time }
+        .take(MAX_BOARD_ROWS)
 }

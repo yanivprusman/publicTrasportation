@@ -4,7 +4,6 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Star
@@ -43,9 +43,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.automatelinux.pt.data.model.MonitoredStopVisit
+import com.automatelinux.pt.data.model.StopTimeEntry
+import com.automatelinux.pt.ui.viewmodel.DepartureEntry
+import com.automatelinux.pt.ui.viewmodel.buildDepartures
 import com.automatelinux.pt.util.AppStrings
 import com.automatelinux.pt.util.LocalAppStrings
 import kotlinx.coroutines.delay
@@ -66,6 +70,8 @@ private val lineColors = listOf(
     Color(0xFF607D8B),
     Color(0xFF3F51B5),
 )
+
+private val LiveGreen = Color(0xFF4CAF50)
 
 fun lineColor(lineName: String?): Color {
     if (lineName.isNullOrBlank()) return Color(0xFF607D8B)
@@ -95,18 +101,88 @@ fun LineBadge(lineName: String?, modifier: Modifier = Modifier) {
     }
 }
 
+// Stable identity for a visit across refreshes — the list reorders every poll,
+// so expansion must not be keyed by index.
+private fun visitKey(visit: MonitoredStopVisit): String {
+    val journey = visit.monitoredVehicleJourney
+    return journey?.vehicleRef
+        ?: "${journey?.publishedLineName}|${journey?.destinationRef}|${journey?.monitoredCall?.expectedArrivalTime}"
+}
+
+// Presentation of one board entry. Live rows lead with the countdown (that is
+// the realtime information); scheduled rows lead with the timetable clock time.
+private data class EntryDisplay(
+    val countdown: String?,
+    val clockTime: String,
+    val destination: String,
+    val isTomorrow: Boolean
+)
+
+private fun formatEntry(
+    entry: DepartureEntry,
+    now: Instant,
+    strings: AppStrings,
+    getDestinationName: (String?) -> String
+): EntryDisplay {
+    val tz = TimeZone.currentSystemDefault()
+    val local = entry.time.toLocalDateTime(tz)
+    val clockTime = local.hour.toString().padStart(2, '0') + ":" +
+        local.minute.toString().padStart(2, '0')
+    val minutes = (entry.time - now).inWholeMinutes
+    val isTomorrow = local.date != now.toLocalDateTime(tz).date
+    val countdown = when {
+        isTomorrow -> strings.timetableTomorrow
+        minutes <= 0 -> strings.arrivalNow
+        minutes <= 120 -> strings.arrivalInMin(minutes)
+        else -> null
+    }
+    val destination = entry.visit?.monitoredVehicleJourney
+        ?.let { getDestinationName(it.destinationRef) }
+        ?: entry.stopTime?.headsign?.replace('_', ' ')
+        ?: ""
+    return EntryDisplay(countdown, clockTime, destination, isTomorrow)
+}
+
+@Composable
+private fun LiveScheduledTag(isLive: Boolean, agency: String?) {
+    val strings = LocalAppStrings.current
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        if (isLive) {
+            Text("●", style = MaterialTheme.typography.labelSmall, color = LiveGreen)
+            Spacer(Modifier.width(3.dp))
+            Text(
+                strings.liveTag,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        } else {
+            Text(
+                strings.scheduledTag,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            if (!agency.isNullOrBlank()) {
+                Text(
+                    " · $agency",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+    }
+}
+
 @Composable
 fun NextArrivalHero(
-    visit: MonitoredStopVisit,
-    tick: Long,
+    entry: DepartureEntry,
+    now: Instant,
     getDestinationName: (String?) -> String,
     modifier: Modifier = Modifier
 ) {
     val strings = LocalAppStrings.current
-    val journey = visit.monitoredVehicleJourney ?: return
-    val call = journey.monitoredCall
-    val arrivalDisplay = formatArrivalTime(call?.expectedArrivalTime, tick, strings)
-    val destName = getDestinationName(journey.destinationRef)
+    val display = formatEntry(entry, now, strings, getDestinationName)
 
     Column(
         modifier = modifier
@@ -124,42 +200,44 @@ fun NextArrivalHero(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center
         ) {
-            LineBadge(journey.publishedLineName)
+            LineBadge(entry.line)
             Spacer(Modifier.width(12.dp))
             Text(
-                text = arrivalDisplay.primary,
+                text = display.countdown ?: display.clockTime,
                 fontSize = 36.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
             )
         }
         Spacer(Modifier.height(2.dp))
-        Text(
-            text = "→ $destName",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        arrivalDisplay.secondary?.let {
+        if (display.destination.isNotBlank()) {
             Text(
-                text = it,
-                style = MaterialTheme.typography.bodySmall,
+                text = strings.toDestination(display.destination),
+                style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            LiveScheduledTag(isLive = entry.isLive, agency = null)
+            if (display.countdown != null) {
+                Text(
+                    " · ${display.clockTime}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }
 
-// Stable identity for a visit across refreshes — the list reorders every poll,
-// so expansion must not be keyed by index.
-private fun visitKey(visit: MonitoredStopVisit): String {
-    val journey = visit.monitoredVehicleJourney
-    return journey?.vehicleRef
-        ?: "${journey?.publishedLineName}|${journey?.destinationRef}|${journey?.monitoredCall?.expectedArrivalTime}"
-}
-
+// The unified departure board: live SIRI arrivals and GTFS scheduled departures
+// merged into one chronological list. Live rows expand to vehicle details.
 @Composable
 fun StationArrivals(
-    visits: List<MonitoredStopVisit>,
+    allVisits: List<MonitoredStopVisit>,
+    timetable: List<StopTimeEntry>,
+    timetableLoading: Boolean,
+    timetableError: Boolean,
     error: String?,
     loading: Boolean,
     getDestinationName: (String?) -> String,
@@ -183,8 +261,13 @@ fun StationArrivals(
         }
     }
 
+    val now = remember(tick, allVisits, timetable) { Clock.System.now() }
+    val departures = remember(allVisits, timetable, lineFilter, now) {
+        buildDepartures(allVisits, timetable, lineFilter, now)
+    }
+
     Column(modifier = modifier) {
-        if (error != null && availableLines.isEmpty()) {
+        if (error != null && allVisits.isEmpty() && timetable.isEmpty()) {
             // Nothing cached to show — full error state.
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
@@ -225,17 +308,17 @@ fun StationArrivals(
             }
         }
 
-        if (visits.isNotEmpty()) {
+        departures.firstOrNull()?.let { first ->
             NextArrivalHero(
-                visit = visits.first(),
-                tick = tick,
+                entry = first,
+                now = now,
                 getDestinationName = getDestinationName
             )
             HorizontalDivider()
         }
 
         Text(
-            text = strings.monitoredVehicles(visits.size),
+            text = strings.departuresTitle,
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
@@ -268,7 +351,7 @@ fun StationArrivals(
             }
         }
 
-        if (visits.isEmpty() && loading) {
+        if (departures.isEmpty() && (loading || timetableLoading)) {
             Row(
                 modifier = Modifier.padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -278,105 +361,183 @@ fun StationArrivals(
             return@Column
         }
 
-        if (visits.isEmpty()) {
+        if (departures.isEmpty()) {
             Text(
-                text = strings.noVehiclesFound,
+                text = strings.boardNone,
                 modifier = Modifier.padding(16.dp),
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            if (timetableError) {
+                TimetableUnavailableNote()
+            }
             return@Column
         }
 
-        // Header
+        Column {
+            departures.forEach { entry ->
+                val key = entry.visit?.let { visitKey(it) }
+                DepartureRow(
+                    entry = entry,
+                    now = now,
+                    isExpanded = key != null && key == expandedKey,
+                    onToggleExpand = {
+                        if (key != null) {
+                            expandedKey = if (expandedKey == key) null else key
+                        }
+                    },
+                    getDestinationName = getDestinationName,
+                    onVehicleSelect = onVehicleSelect,
+                    favoriteLines = favoriteLines,
+                    onToggleFavoriteLine = onToggleFavoriteLine
+                )
+            }
+        }
+
+        if (timetableError) {
+            TimetableUnavailableNote()
+        }
+    }
+}
+
+@Composable
+private fun TimetableUnavailableNote() {
+    val strings = LocalAppStrings.current
+    Text(
+        text = strings.timetableUnavailable,
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+    )
+}
+
+@Composable
+private fun DepartureRow(
+    entry: DepartureEntry,
+    now: Instant,
+    isExpanded: Boolean,
+    onToggleExpand: () -> Unit,
+    getDestinationName: (String?) -> String,
+    onVehicleSelect: ((Double, Double) -> Unit)?,
+    favoriteLines: Set<String>,
+    onToggleFavoriteLine: ((String) -> Unit)?
+) {
+    val strings = LocalAppStrings.current
+    val display = formatEntry(entry, now, strings, getDestinationName)
+    val journey = entry.visit?.monitoredVehicleJourney
+
+    Column {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 4.dp),
-            horizontalArrangement = Arrangement.SpaceBetween
+                .clickable(enabled = entry.isLive) { onToggleExpand() }
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(strings.headerLine, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.8f))
-            Text(strings.headerDest, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1.5f))
-            Text(strings.headerArrival, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-            Text(strings.headerDist, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.7f))
-        }
-        HorizontalDivider()
-
-        Column {
-            visits.forEach { visit ->
-                val journey = visit.monitoredVehicleJourney ?: return@forEach
-                val call = journey.monitoredCall
-                val arrivalDisplay = formatArrivalTime(call?.expectedArrivalTime, tick, strings)
-                val destName = getDestinationName(journey.destinationRef)
-                val distance = call?.distanceFromStop?.let { "${it}m" } ?: ""
-                val key = visitKey(visit)
-                val isExpanded = key == expandedKey
-
-                Column {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                expandedKey = if (isExpanded) null else key
-                            }
-                            .padding(horizontal = 12.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(modifier = Modifier.weight(0.8f)) {
-                            LineBadge(journey.publishedLineName)
-                        }
-                        Text(destName, modifier = Modifier.weight(1.5f), style = MaterialTheme.typography.bodySmall, maxLines = 1)
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(arrivalDisplay.primary, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
-                            arrivalDisplay.secondary?.let {
-                                Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                        }
-                        Text(distance, modifier = Modifier.weight(0.7f), style = MaterialTheme.typography.bodySmall)
+            LineBadge(entry.line)
+            Spacer(Modifier.width(10.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = display.destination,
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                LiveScheduledTag(
+                    isLive = entry.isLive,
+                    agency = entry.stopTime?.agencyName
+                )
+            }
+            Spacer(Modifier.width(8.dp))
+            Column(horizontalAlignment = Alignment.End) {
+                if (entry.isLive) {
+                    Text(
+                        text = display.countdown ?: display.clockTime,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    if (display.countdown != null) {
+                        Text(
+                            text = display.clockTime,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
-
-                    AnimatedVisibility(visible = isExpanded) {
-                        Column(modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)) {
-                            Text(strings.vehicleRef(journey.vehicleRef ?: strings.notAvailable), style = MaterialTheme.typography.bodySmall)
-                            call?.distanceFromStop?.let {
-                                Text(strings.distanceMeters(it), style = MaterialTheme.typography.bodySmall)
+                } else {
+                    Text(
+                        text = display.clockTime,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                    if (display.countdown != null) {
+                        Text(
+                            text = display.countdown,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (display.isTomorrow) {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            } else {
+                                MaterialTheme.colorScheme.primary
                             }
-                            call?.expectedArrivalTime?.let {
-                                Text(strings.fullArrival(it), style = MaterialTheme.typography.bodySmall)
-                            }
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                val loc = journey.vehicleLocation
-                                if (loc != null && onVehicleSelect != null) {
-                                    Button(onClick = { onVehicleSelect(loc.latitude, loc.longitude) }) {
-                                        Text(strings.showOnMap)
-                                    }
-                                    Spacer(Modifier.width(8.dp))
-                                }
-                                val lineName = journey.publishedLineName
-                                if (lineName != null && onToggleFavoriteLine != null) {
-                                    val isFav = favoriteLines.contains(lineName)
-                                    IconButton(onClick = { onToggleFavoriteLine(lineName) }) {
-                                        Icon(
-                                            if (isFav) Icons.Default.Star else Icons.Default.StarBorder,
-                                            contentDescription = null,
-                                            tint = if (isFav) Color(0xFFFFD700) else MaterialTheme.colorScheme.onSurfaceVariant,
-                                            modifier = Modifier.size(24.dp)
-                                        )
-                                    }
-                                }
-                            }
-                        }
+                        )
                     }
-
-                    HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
                 }
             }
         }
+
+        if (journey != null) {
+            AnimatedVisibility(visible = isExpanded) {
+                val call = journey.monitoredCall
+                Column(modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)) {
+                    Text(
+                        strings.vehicleRef(journey.vehicleRef ?: strings.notAvailable),
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    call?.distanceFromStop?.let {
+                        Text(strings.distanceMeters(it), style = MaterialTheme.typography.bodySmall)
+                    }
+                    call?.expectedArrivalTime?.let {
+                        Text(strings.fullArrival(it), style = MaterialTheme.typography.bodySmall)
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        val loc = journey.vehicleLocation
+                        if (loc != null && onVehicleSelect != null) {
+                            Button(onClick = { onVehicleSelect(loc.latitude, loc.longitude) }) {
+                                Text(strings.showOnMap)
+                            }
+                            Spacer(Modifier.width(8.dp))
+                        }
+                        val lineName = journey.publishedLineName
+                        if (lineName != null && onToggleFavoriteLine != null) {
+                            val isFav = favoriteLines.contains(lineName)
+                            IconButton(onClick = { onToggleFavoriteLine(lineName) }) {
+                                Icon(
+                                    if (isFav) Icons.Default.Star else Icons.Default.StarBorder,
+                                    contentDescription = if (isFav) {
+                                        strings.removeFavorite
+                                    } else {
+                                        strings.addFavorite
+                                    },
+                                    tint = if (isFav) {
+                                        Color(0xFFFFD700)
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                    },
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
     }
 }
 
 data class ArrivalDisplay(val primary: String, val secondary: String? = null)
 
+// Kept for the home-screen departures widget, which formats SIRI times directly.
 fun formatArrivalTime(isoString: String?, tick: Long, strings: AppStrings): ArrivalDisplay {
     if (isoString == null) return ArrivalDisplay("—")
     return try {

@@ -17,16 +17,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
 import androidx.compose.material.icons.filled.DepartureBoard
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.NearMe
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.Widgets
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -41,9 +37,6 @@ import androidx.compose.ui.unit.dp
 import com.automatelinux.pt.data.model.StopResult
 import com.automatelinux.pt.ui.viewmodel.ArrivalsState
 import com.automatelinux.pt.util.LocalAppStrings
-import kotlinx.datetime.Clock
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toLocalDateTime
 
 @Composable
 fun ArrivalsPanel(
@@ -69,8 +62,6 @@ fun ArrivalsPanel(
     val strings = LocalAppStrings.current
 
     Column(modifier = modifier) {
-        ServiceAlertBanner()
-
         if (state.stationCode.isEmpty() && (favoriteStations.isNotEmpty() || favoriteLines.isNotEmpty())) {
             FavoritesSection(
                 favoriteLines = favoriteLines,
@@ -167,7 +158,10 @@ fun ArrivalsPanel(
         }
 
         StationArrivals(
-            visits = state.visits,
+            allVisits = state.allVisits,
+            timetable = state.timetable,
+            timetableLoading = state.timetableLoading,
+            timetableError = state.timetableError,
             error = state.error,
             loading = state.loading,
             getDestinationName = getDestinationName,
@@ -179,15 +173,6 @@ fun ArrivalsPanel(
             onLineFilterChange = onLineFilterChange,
             onRetry = onRetry
         )
-
-        if (state.stationCode.isNotEmpty()) {
-            StationTimetable(
-                stationCode = state.stationCode,
-                entries = state.timetable,
-                loading = state.timetableLoading,
-                error = state.timetableError
-            )
-        }
 
         if (nearbyStops.isNotEmpty()) {
             NearbyStopsSection(
@@ -276,41 +261,6 @@ fun FavoritesSection(
         }
 
         HorizontalDivider(modifier = Modifier.padding(top = 8.dp))
-    }
-}
-
-@Composable
-fun ServiceAlertBanner() {
-    val strings = LocalAppStrings.current
-    val hour = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).hour
-    val isPeak = hour in 7..9 || hour in 16..19
-
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 4.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isPeak) Color(0xFF1A0E00) else Color(0xFF0A1A0A)
-        ),
-        shape = RoundedCornerShape(8.dp)
-    ) {
-        Row(
-            modifier = Modifier.padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                if (isPeak) Icons.Default.Warning else Icons.Default.Info,
-                contentDescription = null,
-                tint = if (isPeak) Color(0xFFFFB74D) else Color(0xFF81C784),
-                modifier = Modifier.size(20.dp)
-            )
-            Spacer(Modifier.width(8.dp))
-            Text(
-                text = if (isPeak) strings.peakHoursNotice else strings.normalServiceNotice,
-                style = MaterialTheme.typography.bodySmall,
-                color = if (isPeak) Color(0xFFFFB74D) else Color(0xFF81C784)
-            )
-        }
     }
 }
 

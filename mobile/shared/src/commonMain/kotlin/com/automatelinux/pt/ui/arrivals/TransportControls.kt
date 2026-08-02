@@ -112,7 +112,11 @@ fun TransportControls(
                     ) {
                         Icon(
                             if (isStationFavorite) Icons.Default.Star else Icons.Default.StarBorder,
-                            contentDescription = null,
+                            contentDescription = if (isStationFavorite) {
+                                strings.removeFavorite
+                            } else {
+                                strings.addFavorite
+                            },
                             tint = if (isStationFavorite) Color(0xFFFFD700) else MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(20.dp)
                         )
