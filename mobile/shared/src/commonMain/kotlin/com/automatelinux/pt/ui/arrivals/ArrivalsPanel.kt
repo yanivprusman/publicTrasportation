@@ -2,6 +2,8 @@ package com.automatelinux.pt.ui.arrivals
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -25,6 +27,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -52,6 +55,7 @@ fun ArrivalsPanel(
     onVehicleSelect: ((Double, Double) -> Unit)? = null,
     getDestinationName: (String?) -> String,
     nearbyStops: List<StopResult> = emptyList(),
+    gpsNearbyStops: List<StopResult> = emptyList(),
     favoriteLines: Set<String> = emptySet(),
     onToggleFavoriteLine: ((String) -> Unit)? = null,
     favoriteStations: List<Pair<String, String>> = emptyList(),
@@ -87,6 +91,35 @@ fun ArrivalsPanel(
             isStationFavorite = isStationFavorite,
             onToggleFavoriteStation = onToggleFavoriteStation
         )
+
+        // Quick-switch chips for the stops around the user's GPS position —
+        // one tap moves the board to the stop they're standing at.
+        if (gpsNearbyStops.isNotEmpty()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Icon(
+                    Icons.Default.NearMe,
+                    contentDescription = strings.nearbyStops,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(16.dp)
+                )
+                gpsNearbyStops.forEach { stop ->
+                    FilterChip(
+                        selected = stop.stopCode == state.stationCode,
+                        onClick = { onStationSelect(stop.stopCode, stop.stopName) },
+                        label = {
+                            Text("${stop.stopName} · ${strings.walkingDistance(stop.distanceMeters)}")
+                        }
+                    )
+                }
+            }
+        }
 
         if (onOpenBoard != null && state.stationCode.isNotEmpty()) {
             Button(

@@ -2,6 +2,7 @@ package com.automatelinux.pt.ui.viewmodel
 
 import com.automatelinux.pt.data.model.MonitoredStopVisit
 import com.automatelinux.pt.data.model.SiriResponse
+import com.automatelinux.pt.data.model.StopResult
 import com.automatelinux.pt.data.model.StopTimeEntry
 import com.automatelinux.pt.data.model.VehicleMarker
 import kotlinx.datetime.Instant
@@ -9,6 +10,12 @@ import kotlinx.datetime.Instant
 data class ArrivalsState(
     val stationCode: String = "26472",
     val stationName: String = "",
+    // True once the user picked a station themselves (search, favorite, nearby row,
+    // widget). Auto-select-nearest never overrides an explicit choice.
+    val stationExplicitlyChosen: Boolean = false,
+    // Stops around the user's GPS position (not the map center) for the
+    // quick-switch chips, nearest first.
+    val gpsNearbyStops: List<StopResult> = emptyList(),
     val siriData: SiriResponse? = null,
     val vehicleMarkers: List<VehicleMarker> = emptyList(),
     val showVehicleMarkers: Boolean = true,

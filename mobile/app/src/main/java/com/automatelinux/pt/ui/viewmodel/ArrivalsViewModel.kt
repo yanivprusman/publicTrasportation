@@ -25,6 +25,7 @@ import kotlin.math.sqrt
 // ArrivalsState now lives in commonMain (ui/viewmodel/ArrivalsState.kt).
 
 private const val TIMETABLE_TTL_MS = 5 * 60_000L
+private const val FAVORITE_SNAP_METERS = 150
 
 @HiltViewModel
 class ArrivalsViewModel @Inject constructor(
@@ -38,10 +39,15 @@ class ArrivalsViewModel @Inject constructor(
     private var timetableJob: Job? = null
 
     fun setStationCode(code: String, name: String = "") {
+        applyStation(code, name, explicit = true)
+    }
+
+    private fun applyStation(code: String, name: String, explicit: Boolean) {
         timetableJob?.cancel()
         _state.value = _state.value.copy(
             stationCode = code,
             stationName = name,
+            stationExplicitlyChosen = explicit || _state.value.stationExplicitlyChosen,
             siriData = null,
             error = null,
             timetable = emptyList(),
@@ -51,6 +57,25 @@ class ArrivalsViewModel @Inject constructor(
             timetableError = false
         )
         fetchArrivals()
+    }
+
+    // Location-first selection, run when the Arrivals tab opens with a GPS fix:
+    // fill the quick-switch chips and, unless the user explicitly picked a
+    // station, select the stop they're standing at (a favorite within
+    // FAVORITE_SNAP_METERS beats a marginally closer non-favorite).
+    fun autoSelectNearestStation(lat: Double, lon: Double, favoriteCodes: Set<String>) {
+        viewModelScope.launch {
+            val stops = fetchNearbyStops(lat, lon, radius = 500)
+            if (stops.isEmpty()) return@launch
+            _state.value = _state.value.copy(gpsNearbyStops = stops.take(3))
+            if (_state.value.stationExplicitlyChosen) return@launch
+            val favorite = stops.firstOrNull {
+                it.stopCode in favoriteCodes && it.distanceMeters <= FAVORITE_SNAP_METERS
+            }
+            val target = favorite ?: stops.first()
+            if (target.stopCode == _state.value.stationCode) return@launch
+            applyStation(target.stopCode, target.stopName, explicit = false)
+        }
     }
 
     fun setLineFilter(filter: String) {
@@ -66,9 +91,14 @@ class ArrivalsViewModel @Inject constructor(
         if (_state.value.stationCode.isBlank()) return
         maybeFetchTimetable()
         viewModelScope.launch {
+            val requestedStation = _state.value.stationCode
             _state.value = _state.value.copy(loading = true, error = null)
             try {
-                val response = api.getTransport(station = _state.value.stationCode)
+                val response = api.getTransport(station = requestedStation)
+                // The station may have changed while this request was in flight
+                // (auto-select, user tap) — a late response must not overwrite
+                // the new station's board.
+                if (_state.value.stationCode != requestedStation) return@launch
                 _state.value = _state.value.copy(
                     siriData = response,
                     vehicleMarkers = response.extractVehicleMarkers(),
@@ -76,6 +106,7 @@ class ArrivalsViewModel @Inject constructor(
                     loading = false
                 )
             } catch (e: Exception) {
+                if (_state.value.stationCode != requestedStation) return@launch
                 _state.value = _state.value.copy(
                     loading = false,
                     error = e.message ?: "Failed to fetch arrivals"

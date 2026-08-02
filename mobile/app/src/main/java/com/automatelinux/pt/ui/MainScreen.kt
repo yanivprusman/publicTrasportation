@@ -420,6 +420,24 @@ fun MainScreen(
         }
     }
 
+    // Location-first arrivals: opening the tab selects the stop the user is
+    // standing at (favorites within 150m win) unless they explicitly picked a
+    // station, and fills the GPS quick-switch chips.
+    LaunchedEffect(activeTab) {
+        if (activeTab != ActiveTab.ARRIVALS) return@LaunchedEffect
+        if (!LocationHelper.hasPermission(context)) return@LaunchedEffect
+        LocationHelper.fetchLocation(
+            fusedLocationClient = fusedLocationClient,
+            onLocation = { loc ->
+                arrivalsViewModel.autoSelectNearestStation(
+                    loc.latitude,
+                    loc.longitude,
+                    favoriteStations.map { it.first }.toSet()
+                )
+            }
+        )
+    }
+
     // Poll only while the Arrivals tab is showing AND the app is foregrounded —
     // otherwise a backgrounded app keeps hitting the SIRI endpoint every 15s.
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -655,6 +673,7 @@ fun MainScreen(
                                     },
                                     getDestinationName = { arrivalsViewModel.getDestinationName(it) },
                                     nearbyStops = nearbyStops,
+                                    gpsNearbyStops = arrivalsState.gpsNearbyStops,
                                     favoriteLines = favoriteLines,
                                     onToggleFavoriteLine = { line ->
                                         settingsStore.toggleFavoriteLine(line)
