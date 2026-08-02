@@ -68,7 +68,12 @@ export default function ItineraryCard({ itinerary, selected, onClick }: Itinerar
           const share = totalLegSeconds > 0
             ? (leg.duration || 0) / totalLegSeconds
             : 1 / itinerary.legs.length
-          const label = isWalk ? '\u{1F6B6}' : (leg.routeShortName || getModeLabel(leg.mode))
+          // Israel Railways "short" names are full route descriptions
+          // ("הרצליה<->ירושלים/יצחק נבון..."); a name that long can't work as a
+          // pill label, so fall back to the mode label and keep the full name
+          // in the tooltip/aria text.
+          const pillName = leg.routeShortName && leg.routeShortName.length <= 8 ? leg.routeShortName : null
+          const label = isWalk ? '\u{1F6B6}' : (pillName || getModeLabel(leg.mode))
           const what = `${getModeLabel(leg.mode)}${leg.routeShortName ? ` ${leg.routeShortName}` : ''}`
           return (
             <div

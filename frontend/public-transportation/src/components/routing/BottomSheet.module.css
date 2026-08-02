@@ -32,7 +32,9 @@
 .content {
   flex: 1;
   overflow-y: auto;
-  padding: 0 12px 12px;
+  /* Bottom clearance matches the floating feedback bubble, so the last
+     controls (search row, results tail) can always scroll out from under it. */
+  padding: 0 12px 96px;
   -webkit-overflow-scrolling: touch;
 }
 

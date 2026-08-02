@@ -21,7 +21,7 @@ import { useMapStyle } from './hooks/useMapStyle'
 import { useTheme } from './hooks/useTheme'
 import { useRegistration } from './hooks/useRegistration'
 import { fetchStationArrivals, extractVehicleMarkers, type NearbyStop, type StopResult } from './services/transport-api'
-import { geocodeSearch } from './services/routing-api'
+import { geocodeSearch, setGeocodeBias } from './services/routing-api'
 import { parseTripLink } from './utils/trip-link'
 import type { SheetState } from './components/routing/BottomSheet'
 import type { SiriData, VehicleMarker, Coordinates } from './types'
@@ -68,8 +68,19 @@ function AppInner() {
   // Kiosk board mode survives a reload (sessionStorage) so a phone or tablet
   // propped up as a station display comes back as a board, not the planner.
   const [boardMode, setBoardMode] = useSessionState('boardMode', false)
-  const [sheetState, setSheetState] = useState<SheetState>(routing.origin && routing.destination ? 'half' : 'collapsed')
+  // Desktop's side panel is permanently 400px wide — a "collapsed" state there
+  // is just a mostly-empty column, so open the planner form from the start.
+  // Mobile keeps the collapsed bar to leave the map visible.
+  const [sheetState, setSheetState] = useState<SheetState>(() => {
+    if (typeof window !== 'undefined' && window.innerWidth > 768) return 'half'
+    return routing.origin && routing.destination ? 'half' : 'collapsed'
+  })
   const [activeTab, setActiveTab] = useSessionState<'route' | 'nearby' | 'arrivals' | 'lines'>('activeTab', 'route')
+
+  // Geocoding prefers matches near where the user is looking at the map.
+  useEffect(() => {
+    setGeocodeBias(mapCenter[0], mapCenter[1])
+  }, [mapCenter])
 
   // Track the actual vehicle serving the selected route's next bus leg; only
   // while the Routes tab is showing, so other tabs don't keep SIRI polling.

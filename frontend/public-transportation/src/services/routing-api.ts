@@ -72,11 +72,28 @@ export async function fetchDayOverview(
   return res.json()
 }
 
+/** GTFS stop names carry machine suffixes riders shouldn't see: a "| القدس"-style
+ *  alternate-language tail. Display the primary name only — coordinates are
+ *  untouched, so routing still uses the exact stop. */
+function cleanPlaceName(name: string): string {
+  return name.split('|')[0].trim()
+}
+
+// Ambient viewport bias for geocoding: the map keeps this current, and every
+// autocomplete query sends it so same-name matches rank closest-first.
+let geocodeBias: { lat: number; lon: number } | null = null
+
+export function setGeocodeBias(lat: number, lon: number): void {
+  geocodeBias = { lat, lon }
+}
+
 export async function geocodeSearch(text: string): Promise<GeocodeSuggestion[]> {
   if (!text.trim()) return []
-  const res = await fetch(`/api/geocode?text=${encodeURIComponent(text)}`)
+  const near = geocodeBias ? `&near=${geocodeBias.lat},${geocodeBias.lon}` : ''
+  const res = await fetch(`/api/geocode?text=${encodeURIComponent(text)}${near}`)
   if (!res.ok) return []
-  return res.json()
+  const results: GeocodeSuggestion[] = await res.json()
+  return results.map(s => ({ ...s, name: cleanPlaceName(s.name) }))
 }
 
 /**
@@ -94,7 +111,7 @@ export async function reverseGeocode(lat: number, lon: number): Promise<string> 
   const results: { name?: string }[] = await res.json()
   const name = results[0]?.name
   if (!name) throw new Error('Reverse geocode returned no address')
-  return name
+  return cleanPlaceName(name)
 }
 
 export async function fetchStoptimes(stopId: string, n = 5): Promise<unknown> {

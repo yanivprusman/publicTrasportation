@@ -287,6 +287,13 @@
   font-variant-numeric: tabular-nums;
 }
 
+.routeLongName {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+  overflow-wrap: anywhere;
+}
+
 .rideDuration {
   font-size: 12px;
   font-weight: 600;

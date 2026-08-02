@@ -4,7 +4,6 @@ import 'leaflet/dist/leaflet.css'
 import { fetchAddress } from './MapUtilities'
 import MapContextMenu from './MapContextMenu'
 import { configureDefaultLeafletIcons } from './MapMarkers'
-import MapControls from './MapControls'
 import useMapHandlers from '../../hooks/useMapHandlers'
 import MapEffect from './MapEffect'
 import RouteLayer from './RouteLayer'
@@ -181,18 +180,11 @@ function MapView({
   }, [follow.following, follow.position])
 
   const {
-    searchQuery,
-    setSearchQuery,
-    searchError,
-    setSearchError,
     positionAddress,
     destinationAddress,
     setPositionAddress,
     setDestinationAddress,
-    handleSearch,
     handleSetStartPoint,
-    handleSetDestinationPoint,
-    handleKeyPress,
     handleFindRoute
   } = useMapHandlers(position, (newPos) => {
     setPosition(newPos)
@@ -267,18 +259,6 @@ function MapView({
 
   return (
     <div className={styles.wrapper}>
-      <MapControls
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-        handleSearch={handleSearch}
-        handleKeyPress={handleKeyPress}
-        handleSetStartPoint={handleSetStartPoint}
-        handleSetDestinationPoint={handleSetDestinationPoint}
-        searchError={searchError}
-        positionAddress={positionAddress}
-        destinationAddress={destinationAddress}
-      />
-
       <MapControlPanel
         showRoutePanel={showRoutePanel}
         setShowRoutePanel={setShowRoutePanel}

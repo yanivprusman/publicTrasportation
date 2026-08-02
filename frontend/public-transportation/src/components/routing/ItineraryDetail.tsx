@@ -250,12 +250,17 @@ function LegSegment({ leg }: { leg: RouteLeg }) {
               <span className={styles.modeChip}>
                 <span className={styles.modeIcon} aria-hidden="true">{MODE_ICONS[leg.mode]}</span>
                 <span>{getModeLabel(leg.mode)}</span>
-                {leg.routeShortName && (
+                {leg.routeShortName && leg.routeShortName.length <= 8 && (
                   <span className={styles.routeNumber}>{leg.routeShortName}</span>
                 )}
               </span>
               <span className={styles.rideDuration}>{formatDuration(leg.duration)}</span>
             </div>
+            {/* Israel Railways route names are whole descriptions — too long
+                for the chip, still worth reading. Wrapping muted line instead. */}
+            {leg.routeShortName && leg.routeShortName.length > 8 && (
+              <div className={styles.routeLongName} dir="auto">{leg.routeShortName}</div>
+            )}
             {(stopCount > 0 || leg.agencyName) && (
               <div className={styles.rideMeta}>
                 {stopCount > 0 && (

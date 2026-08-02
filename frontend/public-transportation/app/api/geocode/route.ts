@@ -72,6 +72,16 @@ function isDuplicate(a: GeoResult, b: GeoResult): boolean {
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const text = searchParams.get('text');
+  // Optional "near=lat,lon" viewport bias: equally relevant name matches are
+  // ordered closest-first, so "דיזנגוף סנטר" from a Tel Aviv map means the Tel
+  // Aviv mall, not Netanya's similarly named one (MOTIS itself ignores its
+  // place-bias parameter).
+  const near = searchParams.get('near');
+  let nearPoint: { lat: number; lon: number } | null = null;
+  if (near) {
+    const [lat, lon] = near.split(',').map(Number);
+    if (Number.isFinite(lat) && Number.isFinite(lon)) nearPoint = { lat, lon };
+  }
 
   if (!text) {
     return NextResponse.json(
@@ -120,13 +130,20 @@ export async function GET(request: NextRequest) {
   // whose casing differed from the result. Lowercase both sides. Array.sort is
   // stable, so equal-hit results keep their order (MOTIS-first is preserved).
   const queryWords = text.toLowerCase().split(/\s+/).filter(w => w.length >= 2);
-  if (queryWords.length > 0) {
+  if (queryWords.length > 0 || nearPoint) {
+    const dist = (r: GeoResult): number => {
+      if (!nearPoint) return 0;
+      const dlat = r.lat - nearPoint.lat;
+      const dlon = (r.lon - nearPoint.lon) * Math.cos(nearPoint.lat * Math.PI / 180);
+      return Math.sqrt(dlat * dlat + dlon * dlon);
+    };
     merged.sort((a, b) => {
       const aName = a.name.toLowerCase();
       const bName = b.name.toLowerCase();
       const aHits = queryWords.filter(w => aName.includes(w)).length;
       const bHits = queryWords.filter(w => bName.includes(w)).length;
-      return bHits - aHits;
+      // Name relevance first; proximity to the viewport breaks ties.
+      return (bHits - aHits) || (dist(a) - dist(b));
     });
   }
 

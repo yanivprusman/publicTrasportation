@@ -1,7 +1,7 @@
 import { useCallback, useRef, useEffect, useState } from 'react'
 import type { UseRoutingReturn } from '../../hooks/useRouting'
 import BottomSheet, { type SheetState } from './BottomSheet'
-import LocationInput from './LocationInput'
+import LocationInput, { type LocationInputHandle } from './LocationInput'
 import TimePicker from './TimePicker'
 import RouteOptions from './RouteOptions'
 import RouteResults from './RouteResults'
@@ -51,13 +51,31 @@ export default function RoutePlanner({
     routing.setDestination(place)
   }, [routing])
 
-  const handleSearch = useCallback(() => {
-    if (routing.origin && routing.destination) {
-      saved.recordSearch(routing.origin, routing.destination)
+  const fromInputRef = useRef<LocationInputHandle>(null)
+  const toInputRef = useRef<LocationInputHandle>(null)
+  const viaInputRef = useRef<LocationInputHandle>(null)
+  const [viaOpen, setViaOpen] = useState(!!routing.via)
+
+  const handleSearch = useCallback(async () => {
+    // A typed-but-unpicked field commits to its top geocode hit here, so
+    // Search always acts on what was typed instead of silently requiring a
+    // dropdown pick first (the button used to just sit disabled).
+    const from = routing.origin ?? (await fromInputRef.current?.resolvePending()) ?? null
+    const to = routing.destination ?? (await toInputRef.current?.resolvePending()) ?? null
+    if (!from || !to) {
+      routing.search() // surfaces the "set both origin and destination" error
+      onSheetStateChange('expanded')
+      return
     }
-    routing.search()
+    const stopAt = routing.via ?? (viaOpen ? (await viaInputRef.current?.resolvePending()) ?? null : null)
+    saved.recordSearch(from, to)
+    routing.initRoute(from, to, {
+      departureTime: routing.departureTime,
+      arriveBy: routing.arriveBy,
+      via: stopAt,
+    })
     onSheetStateChange('expanded')
-  }, [routing, onSheetStateChange, saved])
+  }, [routing, onSheetStateChange, saved, viaOpen])
 
   const handleSelectSaved = useCallback((route: SavedRoute) => {
     saved.recordSearch(route.origin, route.destination)
@@ -82,7 +100,6 @@ export default function RoutePlanner({
   const [gpsLoading, setGpsLoading] = useState(false)
   const [gpsError, setGpsError] = useState<string | null>(null)
   const [dayOverviewOpen, setDayOverviewOpen] = useState(false)
-  const [viaOpen, setViaOpen] = useState(!!routing.via)
 
   // A via arriving from outside the planner (shared link restore, persisted
   // route) must surface its input row, or the trip silently passes through an
@@ -237,6 +254,7 @@ export default function RoutePlanner({
                 <div className={styles.inputsRow}>
                   <div className={styles.inputsFields}>
                     <LocationInput
+                      ref={fromInputRef}
                       label={t('planner.from')}
                       field="from"
                       value={routing.origin}
@@ -251,6 +269,7 @@ export default function RoutePlanner({
                       <div className={styles.viaRow}>
                         <div className={styles.viaField}>
                           <LocationInput
+                            ref={viaInputRef}
                             label={t('planner.via')}
                             field="via"
                             value={routing.via}
@@ -271,6 +290,7 @@ export default function RoutePlanner({
                       </div>
                     )}
                     <LocationInput
+                      ref={toInputRef}
                       label={t('planner.to')}
                       field="to"
                       value={routing.destination}
@@ -317,7 +337,7 @@ export default function RoutePlanner({
                   <button
                     className={styles.searchBtn}
                     onClick={handleSearch}
-                    disabled={!routing.origin || !routing.destination || routing.loading}
+                    disabled={routing.loading}
                     type="button"
                     data-id="search-routes"
                   >

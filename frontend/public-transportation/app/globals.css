@@ -283,3 +283,12 @@ html[data-theme="dark"] .leaflet-bar a {
     opacity: 0.35;
   }
 }
+
+/* The feedback-lib bubble is fixed to the bottom-right by the shared package.
+   On mobile the bottom sheet owns that corner — lift the bubble above the
+   collapsed bar so it never covers the tab row or the sheet's buttons. */
+@media (max-width: 768px) {
+  [data-id="feedback-chat-bubble"] {
+    bottom: 76px !important;
+  }
+}

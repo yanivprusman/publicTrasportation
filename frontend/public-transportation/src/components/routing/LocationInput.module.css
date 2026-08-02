@@ -85,17 +85,15 @@
 }
 
 .dropdown {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
+  /* In normal flow on purpose: an absolutely-positioned list overlaid the
+     fields and buttons below it, so tapping "Search Routes" while suggestions
+     were open silently picked whichever suggestion covered the button. */
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 0 0 8px 8px;
+  border-radius: 8px;
   list-style: none;
-  margin: 0;
+  margin: 4px 0 0;
   padding: 0;
-  z-index: 1100;
   box-shadow: 0 4px 12px var(--shadow-color);
   max-height: 200px;
   overflow-y: auto;

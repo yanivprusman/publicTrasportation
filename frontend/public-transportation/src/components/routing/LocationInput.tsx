@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useRef } from 'react'
+import { useEffect, useCallback, useRef, forwardRef, useImperativeHandle } from 'react'
 import type { GeocodeSuggestion } from '../../types'
 import { geocodeSearch } from '../../services/routing-api'
 import { useAutocomplete } from '../../hooks/useAutocomplete'
@@ -18,9 +18,19 @@ interface LocationInputProps {
   onToggleSave?: () => void
 }
 
+export interface LocationInputHandle {
+  /** Commit typed-but-unpicked text to the top geocode hit, so a Search tap
+   *  works like pressing Enter would. Returns the place now in effect:
+   *  the already-picked value, the freshly resolved top hit, or null when
+   *  the field is empty / nothing matches. */
+  resolvePending: () => Promise<GeocodeSuggestion | null>
+}
+
 const searchFn = (query: string) => geocodeSearch(query)
 
-export default function LocationInput({ label, field, value, onChange, placeholder, onGpsClick, gpsLoading, isSaved, onToggleSave }: LocationInputProps) {
+const LocationInput = forwardRef<LocationInputHandle, LocationInputProps>(function LocationInput(
+  { label, field, value, onChange, placeholder, onGpsClick, gpsLoading, isSaved, onToggleSave }, handleRef
+) {
   const { t } = useI18n()
   const ac = useAutocomplete<GeocodeSuggestion>({ searchFn, maxResults: 5 })
   // Editing a selected place invalidates it (onChange(null) below), which makes
@@ -49,6 +59,17 @@ export default function LocationInput({ label, field, value, onChange, placehold
     ac.handleSelect(s)
   }, [onChange, ac])
 
+  useImperativeHandle(handleRef, () => ({
+    resolvePending: async () => {
+      if (value) return value
+      const query = ac.text.trim()
+      if (!query) return null
+      const top = ac.suggestions[0] ?? (await ac.forceSearch(query))[0] ?? null
+      if (top) selectItem(top)
+      return top
+    },
+  }), [value, ac, selectItem])
+
   const onClear = () => {
     onChange(null)
     ac.handleClear()
@@ -74,6 +95,7 @@ export default function LocationInput({ label, field, value, onChange, placehold
           ref={ac.inputRef}
           className={styles.input}
           data-id={`location-input-${field}`}
+          dir="auto"
           value={ac.text}
           onChange={onInput}
           onKeyDown={onKeyDown}
@@ -130,6 +152,7 @@ export default function LocationInput({ label, field, value, onChange, placehold
               key={i}
               className={`${styles.suggestion} ${i === ac.highlightIndex ? styles.highlighted : ''}`}
               data-id="select-geocode-suggestion"
+              dir="auto"
               onPointerDown={(e) => { e.preventDefault(); selectItem(s) }}
             >
               {s.name}
@@ -139,4 +162,6 @@ export default function LocationInput({ label, field, value, onChange, placehold
       )}
     </div>
   )
-}
+})
+
+export default LocationInput
