@@ -12,16 +12,22 @@ interface DepartureCountdownProps {
 // Time under which the banner turns urgent (red + pulse): the user has to move now.
 const URGENT_MS = 2 * 60 * 1000
 
-function formatClock(ms: number): { text: string; big: boolean } {
+function formatClock(ms: number): { text: string; big: boolean; minUnit: boolean } {
   const totalSec = Math.max(0, Math.round(ms / 1000))
   const hours = Math.floor(totalSec / 3600)
   if (hours > 0) {
     const mins = Math.floor((totalSec % 3600) / 60)
-    return { text: `${hours}h ${String(mins).padStart(2, '0')}m`, big: false }
+    return { text: `${hours}h ${String(mins).padStart(2, '0')}m`, big: false, minUnit: false }
   }
   const mins = Math.floor(totalSec / 60)
+  // A big bare "23:59" reads as a clock time, not a countdown. Whole minutes
+  // are enough at that horizon; ticking seconds only inside the last 10
+  // minutes, where they add urgency — and always with an explicit unit.
+  if (mins >= 10) {
+    return { text: `${mins}`, big: true, minUnit: true }
+  }
   const secs = totalSec % 60
-  return { text: `${mins}:${String(secs).padStart(2, '0')}`, big: true }
+  return { text: `${mins}:${String(secs).padStart(2, '0')}`, big: true, minUnit: true }
 }
 
 export default function DepartureCountdown({ itinerary }: DepartureCountdownProps) {
@@ -57,7 +63,7 @@ export default function DepartureCountdown({ itinerary }: DepartureCountdownProp
     )
   }
 
-  const { text, big } = formatClock(remaining)
+  const { text, big, minUnit } = formatClock(remaining)
   const urgent = remaining <= URGENT_MS
   const totalMin = Math.floor(remaining / 60000)
 
@@ -83,7 +89,10 @@ export default function DepartureCountdown({ itinerary }: DepartureCountdownProp
       // would make screen readers announce the countdown once per tick.
       aria-label={`${headline}. ${sub}`}
     >
-      <span className={`${styles.clock} ${big ? styles.clockBig : styles.clockSmall}`}>{text}</span>
+      <span className={`${styles.clock} ${big ? styles.clockBig : styles.clockSmall}`}>
+        {text}
+        {minUnit && <span className={styles.clockUnit}>{t('countdown.minUnit')}</span>}
+      </span>
       <div className={styles.text}>
         <span className={styles.headline}>{headline}</span>
         <span className={styles.sub}>{sub}</span>

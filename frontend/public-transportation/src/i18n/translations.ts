@@ -143,6 +143,7 @@ const en = {
 
   // Departure countdown
   'countdown.leaveNow': 'Leave now to catch it!',
+  'countdown.minUnit': 'min',
   'countdown.leaveIn': 'Leave in {n} min to catch it',
   'countdown.leaveOnTime': 'Leave on time to catch it',
   'countdown.passed': 'This departure has passed',
@@ -520,6 +521,7 @@ const he: Record<keyof typeof en, string> = {
   'journey.arrivedSummary': 'הגעה ב־{time} · {d} סה"כ',
 
   'countdown.leaveNow': 'צא עכשיו כדי להספיק!',
+  'countdown.minUnit': "דק'",
   'countdown.leaveIn': "צא בעוד {n} דק' כדי להספיק",
   'countdown.leaveOnTime': 'צא בזמן כדי להספיק',
   'countdown.passed': 'מועד היציאה הזה עבר',

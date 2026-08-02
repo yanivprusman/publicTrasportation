@@ -45,6 +45,13 @@
   font-size: 20px;
 }
 
+.clockUnit {
+  font-size: 12px;
+  font-weight: 600;
+  margin-inline-start: 4px;
+  opacity: 0.85;
+}
+
 .text {
   display: flex;
   flex-direction: column;
