@@ -79,7 +79,8 @@ export async function POST(req: NextRequest) {
       // The daemon takes the payload as a JSON string and validates it there,
       // so it is re-serialised rather than forwarded as a nested object.
       payload: JSON.stringify(payload),
-      updatedAt,
+      // Daemon args go over the wire as strings; it parses this back to int64.
+      updatedAt: String(updatedAt),
     });
 
     let parsed: { ok?: boolean; payload?: unknown; updatedAt?: number };
