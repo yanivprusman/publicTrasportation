@@ -8,11 +8,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import com.automatelinux.pt.data.model.StopResult
 import com.automatelinux.pt.map.LatLng
-import com.google.android.gms.location.LocationServices
 import org.osmdroid.views.MapView
+import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 
 /**
  * The Android map: osmdroid, driven from the shared declarative description.
@@ -34,7 +33,6 @@ actual fun PtMap(
     onCameraChanged: ((LatLng, Double) -> Unit)?,
     onStopTap: ((StopResult) -> Unit)?
 ) {
-    val context = LocalContext.current
     var map by remember { mutableStateOf<MapView?>(null) }
 
     OsmMapView(
@@ -69,17 +67,32 @@ actual fun PtMap(
     }
 
     // The device's own position. The overlay owns a location subscription, so it is torn
-    // down when the map goes away or the caller stops asking for it — leaving it running
-    // would keep GPS active behind a screen that is no longer visible.
+    // down when the map goes away, the icon changes, or the caller stops asking for it —
+    // leaving it running would keep GPS active behind a screen that is no longer visible.
     val currentMap = map
     if (overlays.showUserLocation && currentMap != null) {
-        DisposableEffect(currentMap) {
-            val gps = GpsLocationOverlay(currentMap, LocationServices.getFusedLocationProviderClient(context))
-            currentMap.overlays.add(gps.overlay)
-            gps.startUpdates()
+        DisposableEffect(currentMap, overlays.userLocationIcon) {
+            // Clear any previous marker first: re-adding without removing would stack
+            // overlays every time the icon setting changed.
+            currentMap.overlays.filterIsInstance<MyLocationNewOverlay>().forEach { it.disableMyLocation() }
+            currentMap.overlays.removeAll { it is MyLocationNewOverlay }
+
+            val overlay = MyLocationNewOverlay(currentMap)
+            if (overlays.userLocationIcon == PtUserLocationIcon.DOT) {
+                val dot = GpsLocationOverlay.createBlueDotBitmap(currentMap.resources.displayMetrics.density)
+                overlay.setPersonIcon(dot)
+                overlay.setPersonHotspot(dot.width / 2f, dot.height / 2f)
+                overlay.setDirectionIcon(dot)
+                overlay.setDirectionAnchor(0.5f, 0.5f)
+                overlay.isDrawAccuracyEnabled = false
+            }
+            overlay.enableMyLocation()
+            currentMap.overlays.add(overlay)
+            currentMap.invalidate()
+
             onDispose {
-                gps.stopUpdates()
-                currentMap.overlays.remove(gps.overlay)
+                overlay.disableMyLocation()
+                currentMap.overlays.remove(overlay)
             }
         }
     }

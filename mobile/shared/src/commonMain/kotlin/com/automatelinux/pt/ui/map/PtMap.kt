@@ -31,9 +31,23 @@ data class PtMapOverlays(
     /** Per-direction shape geometry for a browsed line, keyed by direction id. */
     val lineShape: Map<String, List<List<Double>>>? = null,
     val trackedBus: VehicleMarker? = null,
-    /** Whether to show the device's own position. The platform owns the location source. */
-    val showUserLocation: Boolean = false
+    /**
+     * Whether to show the device's own position. The platform owns the location source,
+     * and the caller owns the permission check — the map does not prompt.
+     */
+    val showUserLocation: Boolean = false,
+    /** Which marker to draw for the device's position; a user-facing setting. */
+    val userLocationIcon: PtUserLocationIcon = PtUserLocationIcon.DOT
 )
+
+/**
+ * The two location markers the app offers.
+ *
+ * DOT is the app's own blue dot; PLATFORM_DEFAULT is whatever the map engine ships with
+ * (osmdroid's directional person icon). Persisted as `locationIconStyle`, so it has to
+ * survive the port rather than be simplified away.
+ */
+enum class PtUserLocationIcon { DOT, PLATFORM_DEFAULT }
 
 /**
  * The map.
