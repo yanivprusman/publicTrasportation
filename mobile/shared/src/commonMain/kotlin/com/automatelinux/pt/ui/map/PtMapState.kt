@@ -74,5 +74,20 @@ class PtMapState(
     }
 }
 
-/** Tile styles the app offers. Was a set of string constants on the osmdroid side. */
-enum class PtMapStyle { DARK, LIGHT, SATELLITE }
+/**
+ * Tile styles the app offers.
+ *
+ * [stored] is the value persisted in settings, and matches the string constants this
+ * replaced — so existing installs keep the style they had, with no migration.
+ */
+enum class PtMapStyle(val stored: String) {
+    DARK("dark"),
+    LIGHT("light"),
+    SATELLITE("satellite");
+
+    companion object {
+        /** Unrecognised values fall back to DARK, the app's default. */
+        fun fromStored(value: String?): PtMapStyle =
+            entries.firstOrNull { it.stored == value } ?: DARK
+    }
+}

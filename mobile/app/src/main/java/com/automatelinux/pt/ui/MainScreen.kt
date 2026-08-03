@@ -81,17 +81,13 @@ import com.automatelinux.pt.ui.arrivals.ArrivalsPanel
 import com.automatelinux.pt.ui.components.PreSuggestion
 import com.automatelinux.pt.ui.lines.LineShapeData
 import com.automatelinux.pt.ui.lines.LinesBrowserPanel
-import com.automatelinux.pt.ui.map.GpsLocationOverlay
-import com.automatelinux.pt.ui.map.LineShapeOverlay
+import com.automatelinux.pt.map.LatLng
 import com.automatelinux.pt.ui.map.MapStyles
-import com.automatelinux.pt.ui.map.OriginDestinationMarkers
-import com.automatelinux.pt.ui.map.OsmMapView
-import com.automatelinux.pt.ui.map.RouteOverlay
-import com.automatelinux.pt.ui.map.StopMarkersOverlay
-import com.automatelinux.pt.ui.map.TrackedBusOverlay
-import com.automatelinux.pt.ui.map.VehicleMarkerOverlay
-import com.automatelinux.pt.ui.map.animateToPoint
-import com.automatelinux.pt.ui.map.fitBounds
+import com.automatelinux.pt.ui.map.PtMap
+import com.automatelinux.pt.ui.map.PtMapOverlays
+import com.automatelinux.pt.ui.map.PtMapState
+import com.automatelinux.pt.ui.map.PtMapStyle
+import com.automatelinux.pt.ui.map.PtUserLocationIcon
 import com.automatelinux.pt.ui.routing.DebugSettingsDialog
 import com.automatelinux.pt.ui.routing.JourneyNavigator
 import com.automatelinux.pt.ui.routing.RoutePlannerPanel
@@ -100,15 +96,11 @@ import com.automatelinux.pt.ui.viewmodel.ArrivalsViewModel
 import com.automatelinux.pt.ui.viewmodel.RoutingViewModel
 import com.automatelinux.pt.widget.DeparturesWidgetProvider
 import com.automatelinux.pt.util.LocalAppStrings
-import com.automatelinux.pt.ui.map.toGeoPoints
 import com.automatelinux.pt.util.PolylineDecoder
 import com.automatelinux.pt.util.SettingsStore
 import com.automatelinux.pt.util.TripLink
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.launch
-import org.osmdroid.util.GeoPoint
-import org.osmdroid.views.MapView
-import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -129,7 +121,7 @@ fun MainScreen(
     val routingState by routingViewModel.state.collectAsState()
     val arrivalsState by arrivalsViewModel.state.collectAsState()
     var activeTab by remember { mutableStateOf(ActiveTab.ROUTE) }
-    var mapView by remember { mutableStateOf<MapView?>(null) }
+    val mapState = remember { PtMapState() }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -147,7 +139,7 @@ fun MainScreen(
     var followingLocation by remember { mutableStateOf(false) }
     var nearbyStops by remember { mutableStateOf<List<StopResult>>(emptyList()) }
     var currentMapZoom by remember { mutableStateOf(13.0) }
-    var currentMapCenter by remember { mutableStateOf(GeoPoint(31.77, 35.21)) }
+    var currentMapCenter by remember { mutableStateOf(PtMapState.DEFAULT_CENTER) }
     var favoriteLines by remember { mutableStateOf(settingsStore.getFavoriteLines()) }
     var favoriteStations by remember { mutableStateOf(settingsStore.getFavoriteStations()) }
     var reminderLegIndex by remember { mutableStateOf<Int?>(null) }
@@ -192,7 +184,7 @@ fun MainScreen(
                         loc.latitude, loc.longitude,
                         placeholder = strings.selectedLocation
                     )
-                    mapView?.animateToPoint(GeoPoint(loc.latitude, loc.longitude), 15.0)
+                    mapState.animateTo(LatLng(loc.latitude, loc.longitude), 15.0)
                 },
                 onFailure = { gpsLoading = false }
             )
@@ -210,7 +202,7 @@ fun MainScreen(
                         loc.latitude, loc.longitude,
                         placeholder = strings.selectedLocation
                     )
-                    mapView?.animateToPoint(GeoPoint(loc.latitude, loc.longitude), 15.0)
+                    mapState.animateTo(LatLng(loc.latitude, loc.longitude), 15.0)
                 },
                 onFailure = { gpsLoadingDestination = false }
             )
@@ -220,7 +212,7 @@ fun MainScreen(
     val centerMapOnCurrentLocation = {
         if (LocationHelper.hasPermission(context)) {
             LocationHelper.centerOnLocation(fusedLocationClient) { loc ->
-                mapView?.animateToPoint(GeoPoint(loc.latitude, loc.longitude), 15.0)
+                mapState.animateTo(LatLng(loc.latitude, loc.longitude), 15.0)
             }
         }
     }
@@ -232,7 +224,7 @@ fun MainScreen(
             return@DisposableEffect onDispose {}
         }
         val callback = LocationHelper.startFollowing(fusedLocationClient) { loc ->
-            mapView?.animateToPoint(GeoPoint(loc.latitude, loc.longitude))
+            mapState.animateTo(LatLng(loc.latitude, loc.longitude))
         }
         onDispose { LocationHelper.stopFollowing(fusedLocationClient, callback) }
     }
@@ -307,31 +299,6 @@ fun MainScreen(
 
     var locationIconStyle by remember { mutableStateOf(settingsStore.locationIconStyle) }
 
-    DisposableEffect(mapView, locationIconStyle) {
-        val map = mapView ?: return@DisposableEffect onDispose {}
-        if (LocationHelper.hasPermission(context)) {
-            map.overlays.filterIsInstance<MyLocationNewOverlay>().forEach { it.disableMyLocation() }
-            map.overlays.removeAll { it is MyLocationNewOverlay }
-            val overlay = MyLocationNewOverlay(map)
-            if (locationIconStyle == "dot") {
-                val dot = GpsLocationOverlay.createBlueDotBitmap(map.resources.displayMetrics.density)
-                overlay.setPersonIcon(dot)
-                overlay.setPersonHotspot(dot.width / 2f, dot.height / 2f)
-                overlay.setDirectionIcon(dot)
-                overlay.setDirectionAnchor(0.5f, 0.5f)
-                overlay.isDrawAccuracyEnabled = false
-            }
-            overlay.enableMyLocation()
-            map.overlays.add(overlay)
-            map.invalidate()
-        }
-        onDispose {
-            map.overlays.filterIsInstance<MyLocationNewOverlay>().forEach {
-                it.disableMyLocation()
-            }
-            map.overlays.removeAll { it is MyLocationNewOverlay }
-        }
-    }
 
     LaunchedEffect(currentMapCenter, currentMapZoom) {
         if (currentMapZoom >= 14.5) {
@@ -385,7 +352,7 @@ fun MainScreen(
 
     LaunchedEffect(routingState.origin) {
         routingState.origin?.let { origin ->
-            mapView?.animateToPoint(GeoPoint(origin.lat, origin.lon), 15.0)
+            mapState.animateTo(LatLng(origin.lat, origin.lon), 15.0)
         }
     }
 
@@ -545,19 +512,19 @@ fun MainScreen(
                                     onSelectItinerary = { routingViewModel.selectItinerary(it) },
                                     onLegClick = { leg ->
                                         val points = if (leg.polyline.isNotBlank()) {
-                                            PolylineDecoder.decode(leg.polyline).toGeoPoints()
+                                            PolylineDecoder.decode(leg.polyline)
                                         } else {
                                             listOf(
-                                                GeoPoint(leg.from.lat, leg.from.lon),
-                                                GeoPoint(leg.to.lat, leg.to.lon)
+                                                LatLng(leg.from.lat, leg.from.lon),
+                                                LatLng(leg.to.lat, leg.to.lon)
                                             )
                                         }
                                         if (points.isNotEmpty()) {
-                                            mapView?.fitBounds(points)
+                                            mapState.fitBounds(points)
                                         }
                                     },
                                     onStopClick = { stop ->
-                                        mapView?.animateToPoint(GeoPoint(stop.lat, stop.lon), 17.0)
+                                        mapState.animateTo(LatLng(stop.lat, stop.lon), 17.0)
                                     },
                                     onGeocode = { routingViewModel.geocode(it) },
                                     onGpsClick = onGpsClick,
@@ -669,7 +636,7 @@ fun MainScreen(
                                     onShowVehicleMarkersChange = { arrivalsViewModel.setShowVehicleMarkers(it) },
                                     onSearchStops = { arrivalsViewModel.searchStops(it) },
                                     onVehicleSelect = { lat, lon ->
-                                        mapView?.animateToPoint(GeoPoint(lat, lon), 16.0)
+                                        mapState.animateTo(LatLng(lat, lon), 16.0)
                                         scope.launch { bottomSheetState.partialExpand() }
                                     },
                                     getDestinationName = { arrivalsViewModel.getDestinationName(it) },
@@ -736,11 +703,29 @@ fun MainScreen(
             },
             content = { _ ->
             Box(modifier = Modifier.fillMaxSize()) {
-                OsmMapView(
-                    center = GeoPoint(31.77, 35.21),
-                    zoom = 13.0,
-                    mapStyle = mapStyle,
-                    onMapReady = { map -> mapView = map },
+                PtMap(
+                    state = mapState,
+                    style = PtMapStyle.fromStored(mapStyle),
+                    overlays = PtMapOverlays(
+                        itinerary = routingState.displayedItinerary,
+                        origin = routingState.origin?.let { LatLng(it.lat, it.lon) },
+                        destination = routingState.destination?.let { LatLng(it.lat, it.lon) },
+                        via = routingState.via?.let { LatLng(it.lat, it.lon) },
+                        // Vehicles and line shapes belong to their own tabs; drawing them
+                        // everywhere would clutter a map being used for something else.
+                        vehicles = if (activeTab == ActiveTab.ARRIVALS) arrivalsState.vehicleMarkers else emptyList(),
+                        vehiclesVisible = arrivalsState.showVehicleMarkers,
+                        stops = nearbyStops,
+                        lineShape = if (activeTab == ActiveTab.LINES) lineShapeData.directions else null,
+                        trackedBus = routingState.trackedBus?.marker,
+                        // The map never prompts; it only draws what permission already allows.
+                        showUserLocation = LocationHelper.hasPermission(context),
+                        userLocationIcon = if (locationIconStyle == "dot") {
+                            PtUserLocationIcon.DOT
+                        } else {
+                            PtUserLocationIcon.PLATFORM_DEFAULT
+                        }
+                    ),
                     onLongPress = { point ->
                         if (routingState.origin == null) {
                             routingViewModel.setOriginFromCoords(
@@ -755,54 +740,16 @@ fun MainScreen(
                         }
                     },
                     onUserPan = { followingLocation = false },
-                    onMapChanged = { center, zoom ->
+                    onCameraChanged = { center, zoom ->
                         currentMapCenter = center
                         currentMapZoom = zoom
+                    },
+                    onStopTap = { stop ->
+                        activeTab = ActiveTab.ARRIVALS
+                        arrivalsViewModel.setStationCode(stop.stopCode, stop.stopName)
+                        scope.launch { bottomSheetState.expand() }
                     }
-                ) { map ->
-                    RouteOverlay(
-                        map = map,
-                        itinerary = routingState.displayedItinerary
-                    )
-
-                    OriginDestinationMarkers(
-                        map = map,
-                        origin = routingState.origin?.let { GeoPoint(it.lat, it.lon) },
-                        destination = routingState.destination?.let { GeoPoint(it.lat, it.lon) },
-                        via = routingState.via?.let { GeoPoint(it.lat, it.lon) },
-                        redrawKey = routingState.displayedItinerary
-                    )
-
-                    if (activeTab == ActiveTab.ARRIVALS) {
-                        VehicleMarkerOverlay(
-                            map = map,
-                            markers = arrivalsState.vehicleMarkers,
-                            visible = arrivalsState.showVehicleMarkers
-                        )
-                    }
-
-                    TrackedBusOverlay(
-                        map = map,
-                        marker = routingState.trackedBus?.marker
-                    )
-
-                    if (activeTab == ActiveTab.LINES) {
-                        LineShapeOverlay(
-                            map = map,
-                            directions = lineShapeData.directions
-                        )
-                    }
-
-                    StopMarkersOverlay(
-                        map = map,
-                        stops = nearbyStops,
-                        onStopTap = { stop ->
-                            activeTab = ActiveTab.ARRIVALS
-                            arrivalsViewModel.setStationCode(stop.stopCode, stop.stopName)
-                            scope.launch { bottomSheetState.expand() }
-                        }
-                    )
-                }
+                )
 
                 Column(
                     modifier = Modifier
