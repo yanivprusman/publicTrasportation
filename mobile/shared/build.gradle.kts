@@ -18,7 +18,11 @@ kotlin {
             jvmTarget.set(JvmTarget.JVM_17)
         }
     }
-    // iosArm64() / iosSimulatorArm64() are added in a later slice (needs the Mac to build).
+    // Declaring the Apple targets is what makes the compiler check that every `expect`
+    // has an iOS `actual`. The compilations themselves only RUN on macOS, so on Linux
+    // this buys the completeness check without buying a build.
+    iosArm64()
+    iosSimulatorArm64()
 
     sourceSets {
         commonMain.dependencies {
@@ -52,6 +56,9 @@ kotlin {
             // signature rather than this working implementation being rewritten.
             implementation(libs.osmdroid)
             implementation(libs.play.services.location)
+        }
+        iosMain.dependencies {
+            implementation(libs.ktor.client.darwin)
         }
     }
 }

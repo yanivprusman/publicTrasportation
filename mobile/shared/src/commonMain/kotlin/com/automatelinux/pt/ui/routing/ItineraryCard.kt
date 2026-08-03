@@ -22,6 +22,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import com.automatelinux.pt.util.toFixed
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -81,7 +82,7 @@ fun ItineraryCard(
                 val fare = itinerary.estimateFare()
                 if (fare > 0) {
                     Text(
-                        text = strings.fareEstimate("₪${String.format("%.0f", fare)}"),
+                        text = strings.fareEstimate("₪${fare.toFixed(0)}"),
                         modifier = Modifier
                             .background(Color(0xFF1B5E20).copy(alpha = 0.3f), RoundedCornerShape(4.dp))
                             .padding(horizontal = 6.dp, vertical = 2.dp),

@@ -17,6 +17,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import kotlinx.datetime.Clock
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
@@ -59,7 +60,7 @@ fun TransportControls(
 
     LaunchedEffect(lastUpdated, tick) {
         if (lastUpdated != null) {
-            val seconds = (System.currentTimeMillis() - lastUpdated) / 1000
+            val seconds = (Clock.System.now().toEpochMilliseconds() - lastUpdated) / 1000
             agoText = when {
                 seconds < 5 -> strings.justNow
                 seconds < 60 -> strings.secondsAgo(seconds)

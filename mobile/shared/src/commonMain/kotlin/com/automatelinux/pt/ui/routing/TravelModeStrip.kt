@@ -24,6 +24,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import com.automatelinux.pt.util.toFixed
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -125,7 +126,7 @@ fun DirectRouteCard(
     val modeColor = getModeColor(alternative.mode)
     val km = if (alternative.distance > 0) {
         val kmValue = alternative.distance / 1000.0
-        if (alternative.distance >= 10_000) "${kmValue.toInt()}" else String.format("%.1f", kmValue)
+        if (alternative.distance >= 10_000) "${kmValue.toInt()}" else kmValue.toFixed(1)
     } else null
 
     Card(
