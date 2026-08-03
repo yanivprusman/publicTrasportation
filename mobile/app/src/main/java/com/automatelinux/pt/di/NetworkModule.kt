@@ -2,22 +2,23 @@ package com.automatelinux.pt.di
 
 import com.automatelinux.pt.data.api.PtApi
 import com.automatelinux.pt.data.api.PtJson
-import com.automatelinux.pt.data.api.ptHttpClient
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import io.ktor.client.HttpClient
 import kotlinx.serialization.json.Json
+import org.koin.core.context.GlobalContext
 import javax.inject.Singleton
 
 /**
- * Hilt wiring for the HTTP stack.
+ * Bridges the HTTP stack from Koin into Hilt.
  *
- * The stack itself — engine, timeouts, JSON leniency, logging, and cross-peer failover —
- * now lives in `:shared` so iOS gets exactly the same behaviour. This module only hands
- * those shared pieces to Hilt; there is deliberately no Android-specific HTTP
- * configuration left here to drift from the iOS build.
+ * The stack itself — engine, timeouts, JSON leniency, logging and cross-peer failover —
+ * lives in `:shared` so iOS gets identical behaviour. These `@Provides` deliberately
+ * *resolve* rather than construct: Hilt building its own client and PtApi alongside
+ * Koin's would give the app two HTTP stacks with independent failover state, so the
+ * server one half believed was active would not be the one the other half was using.
  */
 @Module
 @InstallIn(SingletonComponent::class)
@@ -25,14 +26,14 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideHttpClient(): HttpClient = ptHttpClient()
+    fun provideHttpClient(): HttpClient = GlobalContext.get().get()
 
-    /** Exposed for the callers that serialise payloads themselves (analytics, widget). */
+    @Provides
+    @Singleton
+    fun providePtApi(): PtApi = GlobalContext.get().get()
+
+    /** A plain value, not a graph object — no bridging needed. */
     @Provides
     @Singleton
     fun provideJson(): Json = PtJson
-
-    @Provides
-    @Singleton
-    fun providePtApi(client: HttpClient): PtApi = PtApi(client)
 }

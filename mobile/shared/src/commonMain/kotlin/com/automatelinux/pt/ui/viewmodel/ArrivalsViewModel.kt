@@ -8,7 +8,6 @@ import com.automatelinux.pt.data.model.SiriResponse
 import com.automatelinux.pt.data.model.StopResult
 import com.automatelinux.pt.data.model.VehicleMarker
 import com.automatelinux.pt.data.model.extractVehicleMarkers
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -17,7 +16,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
-import javax.inject.Inject
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sqrt
@@ -27,8 +25,7 @@ import kotlin.math.sqrt
 private const val TIMETABLE_TTL_MS = 5 * 60_000L
 private const val FAVORITE_SNAP_METERS = 150
 
-@HiltViewModel
-class ArrivalsViewModel @Inject constructor(
+class ArrivalsViewModel(
     private val api: PtApi
 ) : ViewModel() {
 

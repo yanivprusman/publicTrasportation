@@ -10,6 +10,12 @@ multiplatform-settings = "1.2.0"
 # Pinned to the 3.0.x line: Kotlin metadata is not forward-compatible, so a Ktor
 # built with Kotlin 2.2 cannot be read by this project's 2.1.0 compiler.
 ktor = "3.0.3"
+# Koin 4.0.x for the same metadata reason as Ktor.
+koin = "4.0.4"
+# JetBrains' multiplatform port of androidx.lifecycle — this is what makes
+# `androidx.lifecycle.ViewModel` usable from commonMain. 2.8.4 is the line
+# Compose Multiplatform 1.7.3 is built against.
+jb-lifecycle = "2.8.4"
 retrofit-kotlinx-converter = "1.0.0"
 hilt = "2.53.1"
 hilt-navigation-compose = "1.2.0"
@@ -59,6 +65,18 @@ ktor-client-darwin = { group = "io.ktor", name = "ktor-client-darwin", version.r
 ktor-client-content-negotiation = { group = "io.ktor", name = "ktor-client-content-negotiation", version.ref = "ktor" }
 ktor-serialization-kotlinx-json = { group = "io.ktor", name = "ktor-serialization-kotlinx-json", version.ref = "ktor" }
 ktor-client-logging = { group = "io.ktor", name = "ktor-client-logging", version.ref = "ktor" }
+
+# Koin — the multiplatform DI graph. Hilt stays in :app for feedback-lib and the
+# Android entry points, and resolves shared objects from Koin so there is exactly
+# one instance of each; iOS will use this same graph with no Hilt at all.
+koin-core = { group = "io.insert-koin", name = "koin-core", version.ref = "koin" }
+koin-android = { group = "io.insert-koin", name = "koin-android", version.ref = "koin" }
+koin-compose = { group = "io.insert-koin", name = "koin-compose", version.ref = "koin" }
+koin-compose-viewmodel = { group = "io.insert-koin", name = "koin-compose-viewmodel", version.ref = "koin" }
+
+# Multiplatform lifecycle (ViewModel in commonMain)
+jb-lifecycle-viewmodel = { group = "org.jetbrains.androidx.lifecycle", name = "lifecycle-viewmodel", version.ref = "jb-lifecycle" }
+jb-lifecycle-viewmodel-compose = { group = "org.jetbrains.androidx.lifecycle", name = "lifecycle-viewmodel-compose", version.ref = "jb-lifecycle" }
 multiplatform-settings = { group = "com.russhwolf", name = "multiplatform-settings", version.ref = "multiplatform-settings" }
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
 okhttp-logging = { group = "com.squareup.okhttp3", name = "logging-interceptor", version.ref = "okhttp" }

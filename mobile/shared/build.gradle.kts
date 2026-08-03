@@ -36,7 +36,11 @@ kotlin {
             implementation(libs.ktor.client.content.negotiation)
             implementation(libs.ktor.serialization.kotlinx.json)
             implementation(libs.ktor.client.logging)
-            // DI deps are introduced as code migrates.
+            api(libs.koin.core)
+            implementation(libs.koin.compose)
+            implementation(libs.koin.compose.viewmodel)
+            api(libs.jb.lifecycle.viewmodel)
+            implementation(libs.jb.lifecycle.viewmodel.compose)
         }
         // The engine is the one part of the HTTP stack that cannot be common:
         // OkHttp here, Darwin on iOS. Everything else (timeouts, JSON, logging,

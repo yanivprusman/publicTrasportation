@@ -126,6 +126,10 @@ dependencies {
     implementation(libs.hilt.android)
     ksp(libs.hilt.android.compiler)
     implementation(libs.hilt.navigation.compose)
+    // Koin owns the shared graph (see :shared di/SharedModule.kt). Hilt remains only
+    // for feedback-lib and the Android entry points, and resolves from Koin.
+    implementation(libs.koin.android)
+    implementation(libs.koin.compose.viewmodel)
 
     // Networking. The PT backend is reached through :shared over Ktor; what remains
     // here is only what the dev-flavor FeedbackModule and feedback-lib still need,

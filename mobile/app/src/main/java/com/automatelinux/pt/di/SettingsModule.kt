@@ -1,28 +1,34 @@
 package com.automatelinux.pt.di
 
-import android.content.Context
 import com.automatelinux.pt.util.SettingsStore
 import com.russhwolf.settings.Settings
-import com.russhwolf.settings.SharedPreferencesSettings
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
-import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import org.koin.core.context.GlobalContext
 import javax.inject.Singleton
 
-// Android wiring for the commonMain SettingsStore. Hilt provides the platform Settings
-// (SharedPreferences-backed) and the store; iOS will provide an NSUserDefaults-backed
-// Settings when its target is added.
+/**
+ * Bridges persistence from Koin into Hilt.
+ *
+ * Both definitions resolve rather than construct. SettingsStore reads and writes straight
+ * through to the platform store on every access, so a duplicate would not corrupt anything
+ * today — but the moment anyone adds caching to it, two instances would start disagreeing,
+ * and that failure presents as settings randomly reverting rather than as a DI mistake.
+ *
+ * The Android `Settings` itself is defined in [androidPlatformModule]; iOS supplies an
+ * NSUserDefaults-backed one when that target is added.
+ */
 @Module
 @InstallIn(SingletonComponent::class)
 object SettingsModule {
-    @Provides
-    @Singleton
-    fun provideSettings(@ApplicationContext context: Context): Settings =
-        SharedPreferencesSettings(context.getSharedPreferences("pt_settings", Context.MODE_PRIVATE))
 
     @Provides
     @Singleton
-    fun provideSettingsStore(settings: Settings): SettingsStore = SettingsStore(settings)
+    fun provideSettings(): Settings = GlobalContext.get().get()
+
+    @Provides
+    @Singleton
+    fun provideSettingsStore(): SettingsStore = GlobalContext.get().get()
 }

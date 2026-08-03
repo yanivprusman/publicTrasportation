@@ -68,7 +68,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import org.koin.compose.viewmodel.koinViewModel
 import com.automatelinux.feedbacklib.ui.DismissibleSheet
 import com.automatelinux.feedbacklib.ui.rememberDismissibleSheetState
 import android.content.pm.PackageManager
@@ -121,8 +121,8 @@ fun MainScreen(
     // Called after any edit to state the account owns (favourites), so it can
     // be pushed to the server instead of living only on this handset.
     onSyncedStateChanged: () -> Unit = {},
-    routingViewModel: RoutingViewModel = hiltViewModel(),
-    arrivalsViewModel: ArrivalsViewModel = hiltViewModel()
+    routingViewModel: RoutingViewModel = koinViewModel(),
+    arrivalsViewModel: ArrivalsViewModel = koinViewModel()
 ) {
     val strings = LocalAppStrings.current
     val routingState by routingViewModel.state.collectAsState()

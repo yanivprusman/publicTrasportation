@@ -10,7 +10,6 @@ import com.automatelinux.pt.data.model.RouteSortMode
 import com.automatelinux.pt.data.model.VehicleMarker
 import com.automatelinux.pt.data.model.extractVehicleMarkers
 import com.automatelinux.pt.util.SettingsStore
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,12 +25,10 @@ import kotlinx.datetime.plus
 import kotlinx.datetime.toInstant
 import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Duration.Companion.minutes
-import javax.inject.Inject
 
 // RoutingState + TrackedBus now live in commonMain (ui/viewmodel/RoutingState.kt).
 
-@HiltViewModel
-class RoutingViewModel @Inject constructor(
+class RoutingViewModel(
     private val api: PtApi,
     private val settingsStore: SettingsStore
 ) : ViewModel() {
