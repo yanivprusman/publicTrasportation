@@ -127,9 +127,10 @@ dependencies {
     ksp(libs.hilt.android.compiler)
     implementation(libs.hilt.navigation.compose)
 
-    // Networking
+    // Networking. The PT backend is reached through :shared over Ktor; what remains
+    // here is only what the dev-flavor FeedbackModule and feedback-lib still need,
+    // both of which are Android-only tooling and are not ported to iOS.
     implementation(libs.retrofit)
-    implementation(libs.retrofit.kotlinx.serialization.converter)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.retrofit.converter.gson) // still used by dev-flavor FeedbackModule
     implementation(libs.okhttp)

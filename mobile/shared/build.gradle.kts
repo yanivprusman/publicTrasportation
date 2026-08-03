@@ -30,7 +30,19 @@ kotlin {
             implementation(libs.kotlinx.serialization.json)
             implementation(libs.kotlinx.datetime)
             implementation(libs.multiplatform.settings)
-            // DI / Ktor deps are introduced as code migrates.
+            // Ktor is `api`, not `implementation`: :app injects the PtApi instance
+            // through Hilt, so its consumers see Ktor types on the boundary.
+            api(libs.ktor.client.core)
+            implementation(libs.ktor.client.content.negotiation)
+            implementation(libs.ktor.serialization.kotlinx.json)
+            implementation(libs.ktor.client.logging)
+            // DI deps are introduced as code migrates.
+        }
+        // The engine is the one part of the HTTP stack that cannot be common:
+        // OkHttp here, Darwin on iOS. Everything else (timeouts, JSON, logging,
+        // peer failover) is configured once in commonMain.
+        androidMain.dependencies {
+            implementation(libs.ktor.client.okhttp)
         }
     }
 }

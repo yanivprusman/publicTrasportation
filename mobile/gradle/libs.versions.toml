@@ -7,6 +7,9 @@ compose-multiplatform = "1.7.3"
 kotlinx-serialization = "1.7.3"
 kotlinx-datetime = "0.6.1"
 multiplatform-settings = "1.2.0"
+# Pinned to the 3.0.x line: Kotlin metadata is not forward-compatible, so a Ktor
+# built with Kotlin 2.2 cannot be read by this project's 2.1.0 compiler.
+ktor = "3.0.3"
 retrofit-kotlinx-converter = "1.0.0"
 hilt = "2.53.1"
 hilt-navigation-compose = "1.2.0"
@@ -48,6 +51,14 @@ retrofit-converter-gson = { group = "com.squareup.retrofit2", name = "converter-
 retrofit-kotlinx-serialization-converter = { group = "com.jakewharton.retrofit", name = "retrofit2-kotlinx-serialization-converter", version.ref = "retrofit-kotlinx-converter" }
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
 kotlinx-datetime = { group = "org.jetbrains.kotlinx", name = "kotlinx-datetime", version.ref = "kotlinx-datetime" }
+
+# Ktor — multiplatform HTTP. okhttp engine on Android, darwin engine on iOS.
+ktor-client-core = { group = "io.ktor", name = "ktor-client-core", version.ref = "ktor" }
+ktor-client-okhttp = { group = "io.ktor", name = "ktor-client-okhttp", version.ref = "ktor" }
+ktor-client-darwin = { group = "io.ktor", name = "ktor-client-darwin", version.ref = "ktor" }
+ktor-client-content-negotiation = { group = "io.ktor", name = "ktor-client-content-negotiation", version.ref = "ktor" }
+ktor-serialization-kotlinx-json = { group = "io.ktor", name = "ktor-serialization-kotlinx-json", version.ref = "ktor" }
+ktor-client-logging = { group = "io.ktor", name = "ktor-client-logging", version.ref = "ktor" }
 multiplatform-settings = { group = "com.russhwolf", name = "multiplatform-settings", version.ref = "multiplatform-settings" }
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
 okhttp-logging = { group = "com.squareup.okhttp3", name = "logging-interceptor", version.ref = "okhttp" }
