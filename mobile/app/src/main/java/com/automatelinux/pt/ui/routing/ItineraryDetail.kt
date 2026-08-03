@@ -71,7 +71,7 @@ private val WaitChipColor = Color(0xFFFFB300)
 
 private fun legSpineColor(leg: RouteLeg): Color =
     if (leg.mode == TransitMode.WALK) WalkSpineColor
-    else Color(getModeColorWithRoute(leg.mode, leg.routeColor))
+    else getModeColorWithRoute(leg.mode, leg.routeColor)
 
 /** Seconds spent waiting at the transfer point between two legs; 0 when negligible or unparseable */
 private fun waitSecondsBetween(prev: RouteLeg, next: RouteLeg): Long = try {

@@ -122,7 +122,7 @@ fun DirectRouteCard(
 ) {
     val strings = LocalAppStrings.current
     val isBike = alternative.mode == TransitMode.BIKE
-    val modeColor = Color(getModeColor(alternative.mode))
+    val modeColor = getModeColor(alternative.mode)
     val km = if (alternative.distance > 0) {
         val kmValue = alternative.distance / 1000.0
         if (alternative.distance >= 10_000) "${kmValue.toInt()}" else String.format("%.1f", kmValue)

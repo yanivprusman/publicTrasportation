@@ -117,7 +117,7 @@ fun ItineraryCard(
                 for (leg in itinerary.legs) {
                     val isWalk = leg.mode == TransitMode.WALK
                     val color = if (isWalk) Color(0xFF616161)
-                        else Color(getModeColorWithRoute(leg.mode, leg.routeColor))
+                        else getModeColorWithRoute(leg.mode, leg.routeColor)
                     val share = if (totalLegSeconds > 0) leg.duration.toFloat() / totalLegSeconds
                         else 1f / itinerary.legs.size
                     Box(

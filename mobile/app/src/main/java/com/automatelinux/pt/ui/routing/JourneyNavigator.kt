@@ -194,7 +194,7 @@ fun JourneyNavigator(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 legs.forEachIndexed { i, leg ->
-                    val pipColor = Color(getModeColorWithRoute(leg.mode, leg.routeColor))
+                    val pipColor = getModeColorWithRoute(leg.mode, leg.routeColor)
                     val reached = i <= stepIndex
                     Box(
                         modifier = Modifier
@@ -286,7 +286,7 @@ private fun StepCard(
     totalSteps: Int,
     strings: AppStrings
 ) {
-    val legColor = Color(getModeColorWithRoute(leg.mode, leg.routeColor))
+    val legColor = getModeColorWithRoute(leg.mode, leg.routeColor)
     val instruction = instructionFor(leg, isLast, strings)
     val startMs = remember(leg.startTime) {
         try {

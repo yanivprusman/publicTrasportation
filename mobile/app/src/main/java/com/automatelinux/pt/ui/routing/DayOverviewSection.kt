@@ -332,7 +332,7 @@ private fun DayChart(
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         selected.lines.forEach { line ->
-                            val color = Color(getModeColor(line.mode))
+                            val color = getModeColor(line.mode)
                             Text(
                                 text = line.name.ifEmpty { "•" },
                                 modifier = Modifier

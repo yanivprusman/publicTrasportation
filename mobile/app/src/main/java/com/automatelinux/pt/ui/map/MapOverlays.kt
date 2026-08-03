@@ -5,6 +5,7 @@ import android.graphics.DashPathEffect
 import android.graphics.Paint
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.graphics.toArgb
 import com.automatelinux.pt.data.model.Itinerary
 import com.automatelinux.pt.data.model.TransitMode
 import com.automatelinux.pt.data.model.VehicleMarker
@@ -16,27 +17,6 @@ import org.osmdroid.views.overlay.Polyline
 
 private const val TAG_ROUTE = "route_overlay"
 private const val TAG_MARKER = "map_marker"
-
-fun getModeColor(mode: TransitMode): Int = when (mode) {
-    TransitMode.WALK -> Color.parseColor("#4A90D9")
-    TransitMode.BUS -> Color.parseColor("#4CAF50")
-    TransitMode.RAIL -> Color.parseColor("#2196F3")
-    TransitMode.TRAM -> Color.parseColor("#FF5722")
-    TransitMode.SUBWAY -> Color.parseColor("#9C27B0")
-    TransitMode.FERRY -> Color.parseColor("#00ACC1")
-    TransitMode.BIKE -> Color.parseColor("#00ACC1")
-    TransitMode.CAR -> Color.parseColor("#546E7A")
-}
-
-fun getModeColorWithRoute(mode: TransitMode, routeColor: String?): Int {
-    if (mode == TransitMode.WALK) return getModeColor(mode)
-    if (routeColor != null && routeColor.isNotBlank()) {
-        try {
-            return Color.parseColor(if (routeColor.startsWith("#")) routeColor else "#$routeColor")
-        } catch (_: Exception) {}
-    }
-    return getModeColor(mode)
-}
 
 @Composable
 fun RouteOverlay(
@@ -60,7 +40,8 @@ fun RouteOverlay(
             if (points.isEmpty()) continue
             allPoints.addAll(points)
 
-            val color = getModeColorWithRoute(leg.mode, leg.routeColor)
+            // The shared helper returns a Compose colour; osmdroid's Paint wants ARGB.
+            val color = getModeColorWithRoute(leg.mode, leg.routeColor).toArgb()
 
             val isWalk = leg.mode == TransitMode.WALK
             val polyline = Polyline(map).apply {
