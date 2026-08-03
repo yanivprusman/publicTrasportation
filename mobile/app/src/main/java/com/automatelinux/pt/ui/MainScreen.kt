@@ -100,6 +100,7 @@ import com.automatelinux.pt.ui.viewmodel.ArrivalsViewModel
 import com.automatelinux.pt.ui.viewmodel.RoutingViewModel
 import com.automatelinux.pt.widget.DeparturesWidgetProvider
 import com.automatelinux.pt.util.LocalAppStrings
+import com.automatelinux.pt.ui.map.toGeoPoints
 import com.automatelinux.pt.util.PolylineDecoder
 import com.automatelinux.pt.util.SettingsStore
 import com.automatelinux.pt.util.TripLink
@@ -544,7 +545,7 @@ fun MainScreen(
                                     onSelectItinerary = { routingViewModel.selectItinerary(it) },
                                     onLegClick = { leg ->
                                         val points = if (leg.polyline.isNotBlank()) {
-                                            PolylineDecoder.decode(leg.polyline)
+                                            PolylineDecoder.decode(leg.polyline).toGeoPoints()
                                         } else {
                                             listOf(
                                                 GeoPoint(leg.from.lat, leg.from.lon),

@@ -1,6 +1,7 @@
 package com.automatelinux.pt.util
 
-import org.osmdroid.util.GeoPoint
+import com.automatelinux.pt.map.LatLng
+import kotlin.math.pow
 
 /**
  * Decodes encoded polyline strings from MOTIS.
@@ -8,9 +9,9 @@ import org.osmdroid.util.GeoPoint
  */
 object PolylineDecoder {
 
-    fun decode(encoded: String, precision: Int = 7): List<GeoPoint> {
-        val factor = Math.pow(10.0, precision.toDouble())
-        val points = mutableListOf<GeoPoint>()
+    fun decode(encoded: String, precision: Int = 7): List<LatLng> {
+        val factor = 10.0.pow(precision)
+        val points = mutableListOf<LatLng>()
         var index = 0
         var lat = 0
         var lng = 0
@@ -35,7 +36,7 @@ object PolylineDecoder {
             } while (b >= 0x20)
             lng += if (result and 1 != 0) (result shr 1).inv() else result shr 1
 
-            points.add(GeoPoint(lat / factor, lng / factor))
+            points.add(LatLng(lat / factor, lng / factor))
         }
 
         return points

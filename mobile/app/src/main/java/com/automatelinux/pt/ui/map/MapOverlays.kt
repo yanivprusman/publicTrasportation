@@ -56,7 +56,7 @@ fun RouteOverlay(
 
         for (leg in itinerary.legs) {
             if (leg.polyline.isBlank()) continue
-            val points = PolylineDecoder.decode(leg.polyline)
+            val points = PolylineDecoder.decode(leg.polyline).toGeoPoints()
             if (points.isEmpty()) continue
             allPoints.addAll(points)
 
