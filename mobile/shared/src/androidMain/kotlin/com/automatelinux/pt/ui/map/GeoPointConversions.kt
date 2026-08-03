@@ -14,3 +14,5 @@ import org.osmdroid.util.GeoPoint
 fun LatLng.toGeoPoint(): GeoPoint = GeoPoint(latitude, longitude)
 
 fun List<LatLng>.toGeoPoints(): List<GeoPoint> = map { it.toGeoPoint() }
+
+fun GeoPoint.toLatLng(): LatLng = LatLng(latitude, longitude)

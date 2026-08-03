@@ -47,6 +47,11 @@ kotlin {
         // peer failover) is configured once in commonMain.
         androidMain.dependencies {
             implementation(libs.ktor.client.okhttp)
+            // The Android half of the PtMap seam. osmdroid stays the Android map engine
+            // (IOS_PORT_INVENTORY §6, Option A) — iOS gets MapLibre behind the same
+            // signature rather than this working implementation being rewritten.
+            implementation(libs.osmdroid)
+            implementation(libs.play.services.location)
         }
     }
 }
