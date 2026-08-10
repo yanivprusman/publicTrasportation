@@ -551,6 +551,13 @@ fun MainScreen(
                                         routingViewModel.search()
                                         scope.launch { bottomSheetState.expand() }
                                     },
+                                    onQuickDestination = { place ->
+                                        routingViewModel.setDestination(place)
+                                        if (routingState.origin != null) {
+                                            routingViewModel.search()
+                                            scope.launch { bottomSheetState.expand() }
+                                        }
+                                    },
                                     onTrackBus = { legIndex, leg ->
                                         if (routingState.trackedBus?.legIndex == legIndex) {
                                             routingViewModel.stopTracking()

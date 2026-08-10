@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material.icons.filled.Work
 import androidx.compose.foundation.layout.Box
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedButton
@@ -33,6 +34,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.automatelinux.pt.data.model.GeocodeSuggestion
@@ -79,6 +81,7 @@ fun RoutePlannerPanel(
     homePlace: GeocodeSuggestion? = null,
     workPlace: GeocodeSuggestion? = null,
     onQuickRoute: ((GeocodeSuggestion, GeocodeSuggestion) -> Unit)? = null,
+    onQuickDestination: ((GeocodeSuggestion) -> Unit)? = null,
     onTrackBus: ((Int, RouteLeg) -> Unit)? = null,
     trackedLegIndex: Int? = null,
     onSetReminder: ((RouteLeg) -> Unit)? = null,
@@ -176,6 +179,27 @@ fun RoutePlannerPanel(
             onLongPressSuggestion = onLongPressSuggestion,
             modifier = Modifier.fillMaxWidth()
         )
+
+        if (state.destination == null && onQuickDestination != null &&
+            (homePlace != null || workPlace != null)
+        ) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                homePlace?.let { place ->
+                    QuickDestinationChip(
+                        label = strings.home,
+                        icon = Icons.Default.Home,
+                        onClick = { onQuickDestination(place) }
+                    )
+                }
+                workPlace?.let { place ->
+                    QuickDestinationChip(
+                        label = strings.work,
+                        icon = Icons.Default.Work,
+                        onClick = { onQuickDestination(place) }
+                    )
+                }
+            }
+        }
 
         Spacer(Modifier.height(8.dp))
 
@@ -283,6 +307,26 @@ fun RoutePlannerPanel(
             }
         }
     }
+}
+
+@Composable
+private fun QuickDestinationChip(
+    label: String,
+    icon: ImageVector,
+    onClick: () -> Unit
+) {
+    AssistChip(
+        onClick = onClick,
+        label = { Text(label) },
+        leadingIcon = {
+            Icon(
+                icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+    )
 }
 
 @Composable
