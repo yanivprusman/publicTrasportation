@@ -558,6 +558,7 @@ fun MainScreen(
                                             scope.launch { bottomSheetState.expand() }
                                         }
                                     },
+                                    onSavePlace = { savePlaceTarget = it },
                                     onTrackBus = { legIndex, leg ->
                                         if (routingState.trackedBus?.legIndex == legIndex) {
                                             routingViewModel.stopTracking()

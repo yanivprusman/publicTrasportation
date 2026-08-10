@@ -15,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.AddLocationAlt
 import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.BookmarkAdd
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.RemoveCircleOutline
 import androidx.compose.material.icons.filled.Search
@@ -82,6 +83,7 @@ fun RoutePlannerPanel(
     workPlace: GeocodeSuggestion? = null,
     onQuickRoute: ((GeocodeSuggestion, GeocodeSuggestion) -> Unit)? = null,
     onQuickDestination: ((GeocodeSuggestion) -> Unit)? = null,
+    onSavePlace: ((GeocodeSuggestion) -> Unit)? = null,
     onTrackBus: ((Int, RouteLeg) -> Unit)? = null,
     trackedLegIndex: Int? = null,
     onSetReminder: ((RouteLeg) -> Unit)? = null,
@@ -180,7 +182,8 @@ fun RoutePlannerPanel(
             modifier = Modifier.fillMaxWidth()
         )
 
-        if (state.destination == null && onQuickDestination != null &&
+        val destination = state.destination
+        if (destination == null && onQuickDestination != null &&
             (homePlace != null || workPlace != null)
         ) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -198,6 +201,19 @@ fun RoutePlannerPanel(
                         onClick = { onQuickDestination(place) }
                     )
                 }
+            }
+        } else if (destination != null && onSavePlace != null &&
+            homePlace == null && workPlace == null &&
+            state.results == null && !state.loading
+        ) {
+            // Bootstrap: without a saved place the quick chips can never appear,
+            // and the only other way to save one is a long-press on a suggestion.
+            Row {
+                QuickDestinationChip(
+                    label = strings.saveAs,
+                    icon = Icons.Default.BookmarkAdd,
+                    onClick = { onSavePlace(destination) }
+                )
             }
         }
 
