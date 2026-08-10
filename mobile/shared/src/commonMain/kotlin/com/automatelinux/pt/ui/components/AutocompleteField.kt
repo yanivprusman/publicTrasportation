@@ -73,6 +73,13 @@ fun <T> AutocompleteField(
     LaunchedEffect(value) {
         if (justSelected || suppressSearch) {
             justSelected = false
+            // A programmatically-set value must still close an open dropdown,
+            // or it lingers over the panel (e.g. quick-destination chips).
+            if (value.isNotEmpty()) {
+                showPreSuggestions = false
+                showDropdown = false
+                suggestions = emptyList()
+            }
             return@LaunchedEffect
         }
         if (value.length < 2) {
