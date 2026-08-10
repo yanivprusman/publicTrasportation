@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.AddHome
 import androidx.compose.material.icons.filled.AddLocationAlt
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.BookmarkAdd
@@ -84,6 +85,7 @@ fun RoutePlannerPanel(
     onQuickRoute: ((GeocodeSuggestion, GeocodeSuggestion) -> Unit)? = null,
     onQuickDestination: ((GeocodeSuggestion) -> Unit)? = null,
     onSavePlace: ((GeocodeSuggestion) -> Unit)? = null,
+    onSetHome: (() -> Unit)? = null,
     onTrackBus: ((Int, RouteLeg) -> Unit)? = null,
     trackedLegIndex: Int? = null,
     onSetReminder: ((RouteLeg) -> Unit)? = null,
@@ -183,22 +185,34 @@ fun RoutePlannerPanel(
         )
 
         val destination = state.destination
-        if (destination == null && onQuickDestination != null &&
-            (homePlace != null || workPlace != null)
+        if (destination == null &&
+            (onQuickDestination != null && (homePlace != null || workPlace != null) ||
+                onSetHome != null && homePlace == null)
         ) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                homePlace?.let { place ->
-                    QuickDestinationChip(
-                        label = strings.home,
-                        icon = Icons.Default.Home,
-                        onClick = { onQuickDestination(place) }
-                    )
+                if (onQuickDestination != null) {
+                    homePlace?.let { place ->
+                        QuickDestinationChip(
+                            label = strings.home,
+                            icon = Icons.Default.Home,
+                            onClick = { onQuickDestination(place) }
+                        )
+                    }
+                    workPlace?.let { place ->
+                        QuickDestinationChip(
+                            label = strings.work,
+                            icon = Icons.Default.Work,
+                            onClick = { onQuickDestination(place) }
+                        )
+                    }
                 }
-                workPlace?.let { place ->
+                // The whole quick-destination feature is invisible until a home
+                // exists — advertise it in the same spot the Home chip will occupy.
+                if (onSetHome != null && homePlace == null) {
                     QuickDestinationChip(
-                        label = strings.work,
-                        icon = Icons.Default.Work,
-                        onClick = { onQuickDestination(place) }
+                        label = strings.setHome,
+                        icon = Icons.Default.AddHome,
+                        onClick = onSetHome
                     )
                 }
             }

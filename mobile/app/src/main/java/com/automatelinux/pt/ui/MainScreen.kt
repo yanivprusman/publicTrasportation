@@ -134,6 +134,7 @@ fun MainScreen(
     var cardOpacity by remember { mutableFloatStateOf(settingsStore.cardOpacity) }
 
     var savePlaceTarget by remember { mutableStateOf<com.automatelinux.pt.data.model.GeocodeSuggestion?>(null) }
+    var showSetHomeDialog by remember { mutableStateOf(false) }
     var recentSearchesVersion by remember { mutableIntStateOf(0) }
 
     var followingLocation by remember { mutableStateOf(false) }
@@ -559,6 +560,7 @@ fun MainScreen(
                                         }
                                     },
                                     onSavePlace = { savePlaceTarget = it },
+                                    onSetHome = { showSetHomeDialog = true },
                                     onTrackBus = { legIndex, leg ->
                                         if (routingState.trackedBus?.legIndex == legIndex) {
                                             routingViewModel.stopTracking()
@@ -888,6 +890,17 @@ fun MainScreen(
                     onDismiss = { shareTripLink = null }
                 )
             }
+        }
+
+        if (showSetHomeDialog) {
+            com.automatelinux.pt.ui.SetHomeDialog(
+                onGeocode = { routingViewModel.geocode(it) },
+                onSave = { place ->
+                    settingsStore.homePlace = place
+                    recentSearchesVersion++
+                },
+                onDismiss = { showSetHomeDialog = false }
+            )
         }
 
         savePlaceTarget?.let { target ->
