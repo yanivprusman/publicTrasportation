@@ -125,8 +125,12 @@ fun TrackedBusCard(
 
             Spacer(Modifier.size(6.dp))
 
+            // A failed refresh does not delete the bus. While a vehicle is still
+            // held, its arrival time keeps the headline and the freshness line
+            // below carries the doubt — saying "unavailable" over a position, a
+            // distance and a marker on the map contradicts the rest of the card.
             val marker = tracked.marker
-            if (tracked.status == TrackingStatus.LIVE && marker != null) {
+            if (marker != null) {
                 Text(
                     text = etaText(marker, now, strings),
                     fontSize = 32.sp,

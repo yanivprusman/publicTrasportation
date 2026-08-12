@@ -453,6 +453,31 @@ private fun DepartureRow(
                 )
             }
             Spacer(Modifier.width(8.dp))
+            // On the row, not inside the expansion. Seeing where the bus actually
+            // is is the ordinary reason to open a transit app; behind a disclosure
+            // triangle it may as well not exist.
+            val rowTrackLine = entry.line
+            if (entry.isLive && onTrackVehicle != null && rowTrackLine != null) {
+                IconButton(
+                    onClick = {
+                        onTrackVehicle(
+                            rowTrackLine,
+                            display.destination,
+                            journey?.lineRef,
+                            journey?.vehicleRef
+                        )
+                    },
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        Icons.Default.GpsFixed,
+                        contentDescription = strings.trackBus,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                Spacer(Modifier.width(4.dp))
+            }
             Column(horizontalAlignment = Alignment.End) {
                 if (entry.isLive) {
                     Text(
@@ -504,29 +529,6 @@ private fun DepartureRow(
                         Text(strings.fullArrival(it), style = MaterialTheme.typography.bodySmall)
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        // The live position is what people open a transit app for, so
-                        // it leads: full tracking, not a pan to a dot. "Show on Map"
-                        // stays for a quick look without leaving the arrivals list.
-                        val trackLine = entry.line
-                        if (onTrackVehicle != null && trackLine != null) {
-                            Button(onClick = {
-                                onTrackVehicle(
-                                    trackLine,
-                                    display.destination,
-                                    journey.lineRef,
-                                    journey.vehicleRef
-                                )
-                            }) {
-                                Icon(
-                                    Icons.Default.GpsFixed,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(Modifier.width(6.dp))
-                                Text(strings.trackBus)
-                            }
-                            Spacer(Modifier.width(8.dp))
-                        }
                         val loc = journey.vehicleLocation
                         if (loc != null && onVehicleSelect != null) {
                             TextButton(onClick = { onVehicleSelect(loc.latitude, loc.longitude) }) {
