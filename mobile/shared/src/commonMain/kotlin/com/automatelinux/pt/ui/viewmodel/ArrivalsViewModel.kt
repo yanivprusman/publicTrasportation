@@ -132,6 +132,7 @@ class ArrivalsViewModel(
                 // (auto-select, user tap) — a late response must not overwrite
                 // the new station's board.
                 if (_state.value.stationCode != requestedStation) return@launch
+                response.stopNames?.let { stopNames.putAll(it) }
                 _state.value = _state.value.copy(
                     siriData = response,
                     vehicleMarkers = response.extractVehicleMarkers(),
@@ -222,6 +223,16 @@ class ArrivalsViewModel(
         }
     }
 
+    /**
+     * Stop code → stop name, accumulated from every SIRI response the app receives.
+     *
+     * Free: `_stopNames` already rides along on each response and was being thrown away.
+     * Kept ViewModel-wide rather than per-response because the response that names a
+     * destination is usually not the one being displayed — the live-buses walk queries
+     * stops the arrivals board never shows, and it is those buses the user taps.
+     */
+    private val stopNames = mutableMapOf<String, String>()
+
     private var nearbyVehiclesJob: Job? = null
 
     /**
@@ -272,24 +283,31 @@ class ArrivalsViewModel(
                     if (queried >= NEARBY_VEHICLE_MAX_STOPS) break
                     // A round is issued concurrently: walking outward multiplies the
                     // requests, and sequentially they would outlast the poll interval.
-                    val found = coroutineScope {
+                    val responses = coroutineScope {
                         round.map { stop ->
                             async {
                                 try {
                                     api.getTransport(station = stop.stopCode)
-                                        .extractVehicleMarkers()
                                 } catch (e: CancellationException) {
                                     throw e
                                 } catch (_: Exception) {
                                     // One unreachable stop should not blank the others.
-                                    emptyList()
+                                    null
                                 }
                             }
                         }.awaitAll()
                     }
-                    // One bus is reported by every stop still ahead of it, so it must be
-                    // deduplicated or it draws several times.
-                    found.flatten().forEach { marker -> seen.putIfAbsent(marker.vehicleRef, marker) }
+                    for (response in responses.filterNotNull()) {
+                        // Harvested from the same response the markers come from — which is
+                        // the only place a bus tapped here can have its destination named,
+                        // since the arrivals board has never loaded these stops.
+                        response.stopNames?.let { stopNames.putAll(it) }
+                        // One bus is reported by every stop still ahead of it, so it must be
+                        // deduplicated or it draws several times.
+                        response.extractVehicleMarkers().forEach { marker ->
+                            seen.putIfAbsent(marker.vehicleRef, marker)
+                        }
+                    }
 
                     queried += round.size
                     reachedMeters = round.last().distanceMeters
@@ -329,9 +347,23 @@ class ArrivalsViewModel(
         }
     }
 
+    /**
+     * The name of the stop a bus is heading for, or "" if it is not known.
+     *
+     * Returns "" rather than the ref, and the difference is the whole point. The ref is a
+     * stop code — "15657" — and the card renders the destination after an arrow, so
+     * falling back to it printed "30 → 15657": a number no passenger recognises, in the
+     * one position on the card that means "this bus is going there". Blank is honest and
+     * the card already drops the arrow with it; a code there is worse than silence.
+     *
+     * Names are read from [stopNames], which every SIRI response carries and which is
+     * accumulated across all of them — the station board and each stop queried by the
+     * live-buses walk. Consulting one response's map could not work here: a bus tapped on
+     * the map was reported by a stop the arrivals board has never loaded.
+     */
     fun getDestinationName(destinationRef: String?): String {
         if (destinationRef == null) return ""
-        return _state.value.siriData?.stopNames?.get(destinationRef) ?: destinationRef
+        return stopNames[destinationRef] ?: ""
     }
 
     override fun onCleared() {
