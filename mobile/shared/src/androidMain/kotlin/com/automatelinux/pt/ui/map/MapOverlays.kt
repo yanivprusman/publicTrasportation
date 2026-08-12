@@ -165,9 +165,10 @@ fun OriginDestinationMarkers(
 fun VehicleMarkerOverlay(
     map: MapView,
     markers: List<VehicleMarker>,
-    visible: Boolean
+    visible: Boolean,
+    onVehicleTap: ((VehicleMarker) -> Unit)? = null
 ) {
-    LaunchedEffect(markers, visible) {
+    LaunchedEffect(markers, visible, onVehicleTap != null) {
         map.overlays.removeAll { (it as? Marker)?.id == "vehicle" }
 
         if (visible) {
@@ -179,6 +180,12 @@ fun VehicleMarkerOverlay(
                     title = "Line ${vm.lineNumber}"
                     snippet = "Vehicle: ${vm.vehicleRef}"
                     icon = createCircleDrawable(Color.parseColor("#E91E63"), 10, Color.WHITE, 2f)
+                    if (onVehicleTap != null) {
+                        // A dot you cannot act on is decoration; tapping one is how
+                        // "that is my bus" turns into tracking it.
+                        setInfoWindow(null)
+                        setOnMarkerClickListener { _, _ -> onVehicleTap(vm); true }
+                    }
                 }
                 map.overlays.add(marker)
             }

@@ -9,6 +9,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.automatelinux.pt.data.model.StopResult
+import com.automatelinux.pt.data.model.VehicleMarker
 import com.automatelinux.pt.map.LatLng
 
 /**
@@ -44,7 +45,8 @@ actual fun PtMap(
     onLongPress: ((LatLng) -> Unit)?,
     onUserPan: (() -> Unit)?,
     onCameraChanged: ((LatLng, Double) -> Unit)?,
-    onStopTap: ((StopResult) -> Unit)?
+    onStopTap: ((StopResult) -> Unit)?,
+    onVehicleTap: ((VehicleMarker) -> Unit)?
 ) {
     // Acknowledge camera commands even though nothing moves. Without this, every
     // animateTo/fitBounds would sit in pendingCommand forever, and the first real

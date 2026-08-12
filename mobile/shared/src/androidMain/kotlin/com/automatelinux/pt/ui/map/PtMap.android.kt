@@ -9,6 +9,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.automatelinux.pt.data.model.StopResult
+import com.automatelinux.pt.data.model.VehicleMarker
 import com.automatelinux.pt.map.LatLng
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
@@ -31,7 +32,8 @@ actual fun PtMap(
     onLongPress: ((LatLng) -> Unit)?,
     onUserPan: (() -> Unit)?,
     onCameraChanged: ((LatLng, Double) -> Unit)?,
-    onStopTap: ((StopResult) -> Unit)?
+    onStopTap: ((StopResult) -> Unit)?,
+    onVehicleTap: ((VehicleMarker) -> Unit)?
 ) {
     var map by remember { mutableStateOf<MapView?>(null) }
 
@@ -60,7 +62,7 @@ actual fun PtMap(
             // whenever the route redraws or the route's polylines would cover them.
             redrawKey = overlays.itinerary
         )
-        VehicleMarkerOverlay(mapView, overlays.vehicles, overlays.vehiclesVisible)
+        VehicleMarkerOverlay(mapView, overlays.vehicles, overlays.vehiclesVisible, onVehicleTap)
         StopMarkersOverlay(mapView, overlays.stops, onStopTap)
         // Always composed, empty when there is no shape: the overlay clears its
         // polylines at the start of its effect, so dropping it out of the composition

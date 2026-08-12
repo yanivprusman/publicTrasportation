@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.SatelliteAlt
+import androidx.compose.material.icons.filled.Sensors
 import androidx.compose.material.icons.filled.Work
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -142,6 +143,10 @@ fun MainScreen(
     var recentSearchesVersion by remember { mutableIntStateOf(0) }
 
     var followingLocation by remember { mutableStateOf(false) }
+    // "Show me the buses around me", independent of any planned route or chosen
+    // stop — the question people open a transit app with when they have not
+    // planned anything yet.
+    var liveBuses by remember { mutableStateOf(false) }
     var nearbyStops by remember { mutableStateOf<List<StopResult>>(emptyList()) }
     var currentMapZoom by remember { mutableStateOf(13.0) }
     var currentMapCenter by remember { mutableStateOf(PtMapState.DEFAULT_CENTER) }
@@ -318,6 +323,19 @@ fun MainScreen(
             kotlinx.coroutines.delay(300)
             nearbyStops = emptyList()
         }
+    }
+
+    LaunchedEffect(liveBuses, currentMapCenter) {
+        if (!liveBuses) {
+            arrivalsViewModel.stopNearbyVehicles()
+            return@LaunchedEffect
+        }
+        // Debounced so panning does not fire a burst of stop queries.
+        kotlinx.coroutines.delay(400)
+        arrivalsViewModel.startNearbyVehicles(
+            currentMapCenter.latitude,
+            currentMapCenter.longitude
+        )
     }
 
     val sheetState = rememberDismissibleSheetState(
@@ -783,8 +801,12 @@ fun MainScreen(
                         via = routingState.via?.let { LatLng(it.lat, it.lon) },
                         // Vehicles and line shapes belong to their own tabs; drawing them
                         // everywhere would clutter a map being used for something else.
-                        vehicles = if (activeTab == ActiveTab.ARRIVALS) arrivalsState.vehicleMarkers else emptyList(),
-                        vehiclesVisible = arrivalsState.showVehicleMarkers,
+                        vehicles = when {
+                            liveBuses -> arrivalsState.nearbyVehicles
+                            activeTab == ActiveTab.ARRIVALS -> arrivalsState.vehicleMarkers
+                            else -> emptyList()
+                        },
+                        vehiclesVisible = liveBuses || arrivalsState.showVehicleMarkers,
                         stops = nearbyStops,
                         // Tracking wins over the Lines tab: a bus can be reported far
                         // up the road, well off the stretch of the itinerary you ride,
@@ -827,6 +849,20 @@ fun MainScreen(
                         activeTab = ActiveTab.ARRIVALS
                         arrivalsViewModel.setStationCode(stop.stopCode, stop.stopName)
                         scope.launch { bottomSheetState.expand() }
+                    },
+                    // A bus on the map is the answer to "where is it" only once you
+                    // can ask it for more; tapping opens the same tracking screen.
+                    onVehicleTap = { marker ->
+                        val stopCode = marker.stopCode
+                        if (stopCode != null) {
+                            routingViewModel.trackBusAtStop(
+                                stationCode = stopCode,
+                                lineName = marker.lineNumber,
+                                destination = arrivalsViewModel.getDestinationName(marker.destinationRef),
+                                routeId = marker.lineRef,
+                                vehicleRef = marker.vehicleRef
+                            )
+                        }
                     }
                 )
 
@@ -851,6 +887,29 @@ fun MainScreen(
                     horizontalAlignment = Alignment.End,
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
+                    // Always here, whatever the sheet is doing and whether or not a
+                    // route is planned: the plainest form of "where are the buses".
+                    SmallFloatingActionButton(
+                        onClick = { liveBuses = !liveBuses },
+                        containerColor = if (liveBuses) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.surface
+                        },
+                        contentColor = if (liveBuses) {
+                            MaterialTheme.colorScheme.onPrimary
+                        } else {
+                            MaterialTheme.colorScheme.primary
+                        },
+                        elevation = FloatingActionButtonDefaults.elevation(4.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Sensors,
+                            contentDescription = strings.liveBusesNearby,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+
                     // Picking a route already says which bus you care about. Until
                     // now that intent went nowhere: the only Track control lived
                     // inside the itinerary's leg detail, so with the sheet closed —

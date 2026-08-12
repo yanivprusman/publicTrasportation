@@ -25,6 +25,10 @@ import kotlin.math.sqrt
 private const val TIMETABLE_TTL_MS = 5 * 60_000L
 private const val FAVORITE_SNAP_METERS = 150
 
+private const val NEARBY_VEHICLE_STOPS = 5
+private const val NEARBY_VEHICLE_RADIUS_M = 700
+private const val NEARBY_VEHICLE_INTERVAL_MS = 15_000L
+
 class ArrivalsViewModel(
     private val api: PtApi
 ) : ViewModel() {
@@ -184,6 +188,48 @@ class ArrivalsViewModel(
         } catch (_: Exception) {
             emptyList()
         }
+    }
+
+    private var nearbyVehiclesJob: Job? = null
+
+    /**
+     * Buses reporting around a point, for the map's live-buses mode.
+     *
+     * SIRI is monitored per stop, so "the buses around here" is the union of what
+     * the nearest few stops report. Bounded at [NEARBY_VEHICLE_STOPS] stops because
+     * each one is its own request and this runs on a timer — the answer people want
+     * is "what is near me", not a census.
+     */
+    fun startNearbyVehicles(lat: Double, lon: Double) {
+        nearbyVehiclesJob?.cancel()
+        nearbyVehiclesJob = viewModelScope.launch {
+            while (true) {
+                val stops = fetchNearbyStops(lat, lon, NEARBY_VEHICLE_RADIUS_M)
+                    .take(NEARBY_VEHICLE_STOPS)
+                val seen = mutableMapOf<String, VehicleMarker>()
+                for (stop in stops) {
+                    try {
+                        api.getTransport(station = stop.stopCode)
+                            .extractVehicleMarkers()
+                            // One bus is reported by every stop still ahead of it,
+                            // so it must be deduplicated or it draws several times.
+                            .forEach { marker -> seen.putIfAbsent(marker.vehicleRef, marker) }
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (_: Exception) {
+                        // One unreachable stop should not blank the others.
+                    }
+                }
+                _state.value = _state.value.copy(nearbyVehicles = seen.values.toList())
+                delay(NEARBY_VEHICLE_INTERVAL_MS)
+            }
+        }
+    }
+
+    fun stopNearbyVehicles() {
+        nearbyVehiclesJob?.cancel()
+        nearbyVehiclesJob = null
+        _state.value = _state.value.copy(nearbyVehicles = emptyList())
     }
 
     suspend fun fetchNearbyStops(lat: Double, lon: Double, radius: Int = 500): List<StopResult> {

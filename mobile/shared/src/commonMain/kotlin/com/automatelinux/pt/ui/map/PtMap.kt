@@ -68,5 +68,6 @@ expect fun PtMap(
     onLongPress: ((LatLng) -> Unit)? = null,
     onUserPan: (() -> Unit)? = null,
     onCameraChanged: ((LatLng, Double) -> Unit)? = null,
-    onStopTap: ((StopResult) -> Unit)? = null
+    onStopTap: ((StopResult) -> Unit)? = null,
+    onVehicleTap: ((VehicleMarker) -> Unit)? = null
 )

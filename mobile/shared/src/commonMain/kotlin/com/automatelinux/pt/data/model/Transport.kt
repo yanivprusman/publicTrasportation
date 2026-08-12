@@ -27,6 +27,8 @@ data class StopMonitoringDelivery(
 @Serializable
 data class MonitoredStopVisit(
     @SerialName("ItemIdentifier") val itemIdentifier: String? = null,
+    /** The stop this visit was reported for — the key to poll it again. */
+    @SerialName("MonitoringRef") val monitoringRef: String? = null,
     // When the operator last heard from the vehicle — NOT when we polled. A stalled feed
     // and a bus stuck in traffic look identical on the map; only this tells them apart.
     @SerialName("RecordedAtTime") val recordedAtTime: String? = null,
@@ -70,7 +72,13 @@ data class VehicleMarker(
     val expectedArrival: String,
     val distanceFromStop: Int,
     /** SIRI RecordedAtTime, ISO-8601 with offset. Null when the feed omits it. */
-    val recordedAt: String? = null
+    val recordedAt: String? = null,
+    /** The monitored stop this was reported by; lets a tapped marker be tracked. */
+    val stopCode: String? = null,
+    /** SIRI LineRef, i.e. the GTFS route_id — draws the correct line. */
+    val lineRef: String? = null,
+    /** SIRI DestinationRef; resolved to a name through the response's stop names. */
+    val destinationRef: String? = null
 )
 
 fun SiriResponse.extractVehicleMarkers(): List<VehicleMarker> {
@@ -90,7 +98,10 @@ fun SiriResponse.extractVehicleMarkers(): List<VehicleMarker> {
             lineNumber = journey.publishedLineName ?: "",
             expectedArrival = arrival,
             distanceFromStop = call.distanceFromStop ?: 0,
-            recordedAt = visit.recordedAtTime
+            recordedAt = visit.recordedAtTime,
+            stopCode = visit.monitoringRef,
+            lineRef = journey.lineRef,
+            destinationRef = journey.destinationRef
         )
     }
 }

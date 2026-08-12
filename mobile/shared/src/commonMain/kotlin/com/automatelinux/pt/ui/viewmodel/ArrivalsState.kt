@@ -22,6 +22,8 @@ data class ArrivalsState(
     val showVehicleMarkers: Boolean = true,
     val lineFilter: String = "",
     val lastUpdated: Long? = null,
+    /** Vehicles reported around the map's centre, independent of the selected stop. */
+    val nearbyVehicles: List<VehicleMarker> = emptyList(),
     val error: String? = null,
     val loading: Boolean = false,
     val timetable: List<StopTimeEntry> = emptyList(),
