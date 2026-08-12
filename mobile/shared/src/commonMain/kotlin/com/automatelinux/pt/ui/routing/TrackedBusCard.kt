@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Accessible
@@ -90,8 +91,19 @@ fun TrackedBusCard(
                 // two-direction line that is the difference between the right bus and
                 // an hour lost.
                 if (tracked.destination.isNotBlank()) {
+                    // An arrow, not "to $name": stop names are Hebrew and the label is
+                    // whatever language the app is in, so the wrapper renders as
+                    // "<hebrew name> to" once bidi reorders it. The icon auto-mirrors
+                    // and carries the same meaning without mixing directions in a string.
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowForward,
+                        contentDescription = null,
+                        modifier = Modifier.size(14.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.width(6.dp))
                     Text(
-                        text = strings.toDestination(tracked.destination),
+                        text = tracked.destination,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
