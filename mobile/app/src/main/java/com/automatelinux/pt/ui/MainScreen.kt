@@ -91,6 +91,7 @@ import com.automatelinux.pt.ui.map.PtUserLocationIcon
 import com.automatelinux.pt.ui.routing.DebugSettingsDialog
 import com.automatelinux.pt.ui.routing.JourneyNavigator
 import com.automatelinux.pt.ui.routing.RoutePlannerPanel
+import com.automatelinux.pt.ui.routing.TrackedBusCard
 import android.widget.Toast
 import com.automatelinux.pt.ui.viewmodel.ArrivalsViewModel
 import com.automatelinux.pt.ui.viewmodel.RoutingViewModel
@@ -760,6 +761,19 @@ fun MainScreen(
                         scope.launch { bottomSheetState.expand() }
                     }
                 )
+
+                // Tracking is a claim about the world right now, so it gets a card of its
+                // own rather than a bare dot on the map: which bus, how far off, how stale.
+                routingState.trackedBus?.let { tracked ->
+                    TrackedBusCard(
+                        tracked = tracked,
+                        onSelectVehicle = { routingViewModel.selectTrackedVehicle(it) },
+                        onClose = { routingViewModel.stopTracking() },
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .padding(top = 48.dp, start = 12.dp, end = 64.dp)
+                    )
+                }
 
                 Column(
                     modifier = Modifier

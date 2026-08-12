@@ -10,6 +10,7 @@ import com.automatelinux.pt.data.model.RouteSortMode
 import com.automatelinux.pt.data.model.VehicleMarker
 import com.automatelinux.pt.data.model.extractVehicleMarkers
 import com.automatelinux.pt.util.SettingsStore
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -39,6 +40,7 @@ class RoutingViewModel(
     ))
     val state: StateFlow<RoutingState> = _state.asStateFlow()
     private var trackingJob: Job? = null
+    private var trackSeq = 0
 
     fun toggleModeFilter(filter: TransitFilter) {
         val current = _state.value.enabledModes
@@ -318,35 +320,65 @@ class RoutingViewModel(
 
     fun trackBusOnLeg(legIndex: Int, lat: Double, lon: Double, lineName: String) {
         stopTracking()
+        val seq = ++trackSeq
         _state.value = _state.value.copy(
-            trackedBus = TrackedBus(legIndex = legIndex, lineName = lineName, marker = null)
+            trackedBus = TrackedBus(legIndex = legIndex, lineName = lineName)
         )
         trackingJob = viewModelScope.launch {
             val stops = try { api.nearbyStops(lat, lon, 300) } catch (_: Exception) { emptyList() }
             val stationCode = stops.firstOrNull()?.stopCode
             if (stationCode == null) {
-                // No SIRI-monitorable stop near the boarding point — clear the tracking
-                // state so the UI doesn't show "Tracking..." forever.
-                _state.value = _state.value.copy(trackedBus = null)
+                updateTracking(seq) { it.copy(status = TrackingStatus.NO_MONITORED_STOP) }
                 return@launch
             }
             while (true) {
                 try {
                     val response = api.getTransport(station = stationCode, line = lineName)
-                    val markers = response.extractVehicleMarkers()
-                    val best = markers.filter {
-                        it.lineNumber.equals(lineName, ignoreCase = true)
-                    }.minByOrNull { it.distanceFromStop }
-                    _state.value = _state.value.copy(
-                        trackedBus = _state.value.trackedBus?.copy(marker = best)
-                    )
-                } catch (_: Exception) {}
+                    val candidates = response.extractVehicleMarkers()
+                        .filter { it.lineNumber.equals(lineName, ignoreCase = true) }
+                        .sortedBy { it.distanceFromStop }
+                    updateTracking(seq) { tracked ->
+                        tracked.copy(
+                            status = if (candidates.isEmpty()) {
+                                TrackingStatus.NO_VEHICLE
+                            } else {
+                                TrackingStatus.LIVE
+                            },
+                            candidates = candidates,
+                            // Buses reorder as they move, so the chosen one is followed by
+                            // its ref. Following the index would silently swap the card onto
+                            // a different bus the moment two of them cross.
+                            selectedIndex = candidates
+                                .indexOfFirst { it.vehicleRef == tracked.marker?.vehicleRef }
+                                .takeIf { it >= 0 } ?: 0
+                        )
+                    }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (_: Exception) {
+                    updateTracking(seq) { it.copy(status = TrackingStatus.ERROR) }
+                }
                 delay(10_000)
             }
         }
     }
 
+    /** Follow a different one of the vehicles the feed reports for this line. */
+    fun selectTrackedVehicle(index: Int) {
+        updateTracking(trackSeq) { tracked ->
+            if (index in tracked.candidates.indices) tracked.copy(selectedIndex = index) else tracked
+        }
+    }
+
+    /** Applies [transform] only while [seq] is still the live tracking session. */
+    private fun updateTracking(seq: Int, transform: (TrackedBus) -> TrackedBus) {
+        if (seq != trackSeq) return
+        val tracked = _state.value.trackedBus ?: return
+        _state.value = _state.value.copy(trackedBus = transform(tracked))
+    }
+
     fun stopTracking() {
+        trackSeq++
         trackingJob?.cancel()
         trackingJob = null
         _state.value = _state.value.copy(trackedBus = null)

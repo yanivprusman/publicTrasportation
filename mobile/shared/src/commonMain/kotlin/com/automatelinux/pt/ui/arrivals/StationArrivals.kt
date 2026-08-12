@@ -71,7 +71,7 @@ private val lineColors = listOf(
     Color(0xFF3F51B5),
 )
 
-private val LiveGreen = Color(0xFF4CAF50)
+internal val LiveGreen = Color(0xFF4CAF50)
 
 fun lineColor(lineName: String?): Color {
     if (lineName.isNullOrBlank()) return Color(0xFF607D8B)

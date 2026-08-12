@@ -27,6 +27,9 @@ data class StopMonitoringDelivery(
 @Serializable
 data class MonitoredStopVisit(
     @SerialName("ItemIdentifier") val itemIdentifier: String? = null,
+    // When the operator last heard from the vehicle — NOT when we polled. A stalled feed
+    // and a bus stuck in traffic look identical on the map; only this tells them apart.
+    @SerialName("RecordedAtTime") val recordedAtTime: String? = null,
     @SerialName("MonitoredVehicleJourney") val monitoredVehicleJourney: MonitoredVehicleJourney? = null
 )
 
@@ -59,7 +62,9 @@ data class VehicleMarker(
     val vehicleRef: String,
     val lineNumber: String,
     val expectedArrival: String,
-    val distanceFromStop: Int
+    val distanceFromStop: Int,
+    /** SIRI RecordedAtTime, ISO-8601 with offset. Null when the feed omits it. */
+    val recordedAt: String? = null
 )
 
 fun SiriResponse.extractVehicleMarkers(): List<VehicleMarker> {
@@ -78,7 +83,8 @@ fun SiriResponse.extractVehicleMarkers(): List<VehicleMarker> {
             vehicleRef = journey.vehicleRef ?: "",
             lineNumber = journey.publishedLineName ?: "",
             expectedArrival = arrival,
-            distanceFromStop = call.distanceFromStop ?: 0
+            distanceFromStop = call.distanceFromStop ?: 0,
+            recordedAt = visit.recordedAtTime
         )
     }
 }

@@ -10,11 +10,42 @@ import com.automatelinux.pt.data.model.TransitMode
 import com.automatelinux.pt.data.model.VehicleMarker
 import kotlinx.datetime.Instant
 
+/**
+ * Why the tracking card is showing what it is showing.
+ *
+ * Tracking used to clear itself when it could not find anything, which left the button
+ * looking broken. Every outcome is now a state the card can name.
+ */
+enum class TrackingStatus {
+    /** Locating a monitorable stop, or the first poll has not come back yet. */
+    SEARCHING,
+
+    /** The feed is reporting at least one vehicle on this line. */
+    LIVE,
+
+    /** No SIRI-monitorable stop near the boarding point — tracking cannot work here. */
+    NO_MONITORED_STOP,
+
+    /** The stop is monitored, but no vehicle on this line is reporting right now. */
+    NO_VEHICLE,
+
+    /** The last poll failed. */
+    ERROR
+}
+
 data class TrackedBus(
     val legIndex: Int,
     val lineName: String,
+    val status: TrackingStatus = TrackingStatus.SEARCHING,
+    /** Every vehicle the feed reports for this line, nearest to the boarding stop first. */
+    val candidates: List<VehicleMarker> = emptyList(),
+    /** Which of [candidates] the card and the map are showing. */
+    val selectedIndex: Int = 0
+) {
+    /** The vehicle currently being followed — what the map draws. */
     val marker: VehicleMarker?
-)
+        get() = candidates.getOrNull(selectedIndex)
+}
 
 /** TRANSIT shows the itinerary list; BIKE/CAR show that direct street route. */
 enum class TravelMode {
