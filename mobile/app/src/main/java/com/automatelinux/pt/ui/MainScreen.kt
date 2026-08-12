@@ -77,6 +77,7 @@ import android.os.Build
 import androidx.core.content.ContextCompat
 import com.automatelinux.pt.data.model.RouteLeg
 import com.automatelinux.pt.data.model.StopResult
+import com.automatelinux.pt.data.model.TransitMode
 import com.automatelinux.pt.data.model.access
 import com.automatelinux.pt.reminder.ReminderScheduler
 import com.automatelinux.pt.ui.arrivals.ArrivalsPanel
@@ -850,6 +851,45 @@ fun MainScreen(
                     horizontalAlignment = Alignment.End,
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
+                    // Picking a route already says which bus you care about. Until
+                    // now that intent went nowhere: the only Track control lived
+                    // inside the itinerary's leg detail, so with the sheet closed —
+                    // the state you actually read the map in — there was no way to
+                    // ask where your bus was. This button is on the map, so it is
+                    // there whatever the sheet is doing.
+                    val trackableLeg = remember(routingState.displayedItinerary) {
+                        routingState.displayedItinerary?.legs
+                            ?.withIndex()
+                            ?.firstOrNull { (_, leg) ->
+                                leg.mode != TransitMode.WALK && leg.routeShortName != null
+                            }
+                    }
+                    if (routingState.trackedBus == null && trackableLeg != null) {
+                        val (legIndex, leg) = trackableLeg
+                        SmallFloatingActionButton(
+                            onClick = {
+                                routingViewModel.trackBusOnLeg(
+                                    legIndex = legIndex,
+                                    lat = leg.from.lat,
+                                    lon = leg.from.lon,
+                                    lineName = leg.routeShortName ?: return@SmallFloatingActionButton,
+                                    access = leg.access,
+                                    destination = leg.to.name,
+                                    tripId = leg.tripId
+                                )
+                            },
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary,
+                            elevation = FloatingActionButtonDefaults.elevation(4.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.DirectionsBus,
+                                contentDescription = strings.trackBus,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                    }
+
                     // Panning away from the bus is normal — you look ahead down the
                     // road — so getting back to it has to be one tap, not a re-track.
                     if (routingState.trackedBus?.marker != null) {
