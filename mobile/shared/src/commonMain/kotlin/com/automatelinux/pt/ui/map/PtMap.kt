@@ -30,8 +30,6 @@ data class PtMapOverlays(
     val stops: List<StopResult> = emptyList(),
     /** Per-direction shape geometry for a browsed line, keyed by direction id. */
     val lineShape: Map<String, List<List<Double>>>? = null,
-    /** Whether [lineShape] should fit the camera to itself; see LineShapeOverlay. */
-    val lineShapeFitsCamera: Boolean = true,
     val trackedBus: VehicleMarker? = null,
     /**
      * Whether to show the device's own position. The platform owns the location source,

@@ -62,7 +62,7 @@ actual fun PtMap(
         )
         VehicleMarkerOverlay(mapView, overlays.vehicles, overlays.vehiclesVisible)
         StopMarkersOverlay(mapView, overlays.stops, onStopTap)
-        overlays.lineShape?.let { LineShapeOverlay(mapView, it, overlays.lineShapeFitsCamera) }
+        overlays.lineShape?.let { LineShapeOverlay(mapView, it) }
         TrackedBusOverlay(mapView, overlays.trackedBus)
     }
 

@@ -745,16 +745,7 @@ fun MainScreen(
                         // Tracking wins over the Lines tab: a bus can be reported far
                         // up the road, well off the stretch of the itinerary you ride,
                         // so its own line is what makes the marker mean anything.
-                        lineShape = when {
-                            routingState.trackedBus?.shape?.isNotEmpty() == true ->
-                                routingState.trackedBus?.shape
-                            activeTab == ActiveTab.LINES -> lineShapeData.directions
-                            else -> null
-                        },
-                        // On the Lines tab the shape is the subject and should frame
-                        // itself; while tracking it is only context, and the framing
-                        // below belongs to the bus and your stop.
-                        lineShapeFitsCamera = routingState.trackedBus?.shape?.isEmpty() != false,
+                        lineShape = if (activeTab == ActiveTab.LINES) lineShapeData.directions else null,
                         trackedBus = routingState.trackedBus?.marker,
                         // The map never prompts; it only draws what permission already allows.
                         showUserLocation = LocationHelper.hasPermission(context),

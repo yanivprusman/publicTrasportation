@@ -338,12 +338,11 @@ class RoutingViewModel(
             )
         )
         trackingJob = viewModelScope.launch {
-            // The shape is static for the line, so it is fetched once beside the
-            // first poll rather than on every tick.
-            launch {
-                val shape = try { api.getLineShape(lineName) } catch (_: Exception) { emptyMap() }
-                if (shape.isNotEmpty()) updateTracking(seq) { it.copy(shape = shape) }
-            }
+            // No line shape is drawn here on purpose. /api/line-shape resolves a line
+            // by route_short_name alone, which is not unique nationwide — asking it
+            // for "60" while tracking the Negev's line 60 returns Tel Aviv's and
+            // Haifa's geometry (lat 32.0–32.9, ~200 km away). Identifying the right
+            // shape needs the leg's GTFS trip, not its number.
             val stops = try { api.nearbyStops(lat, lon, 300) } catch (_: Exception) { emptyList() }
             val stationCode = stops.firstOrNull()?.stopCode
             if (stationCode == null) {

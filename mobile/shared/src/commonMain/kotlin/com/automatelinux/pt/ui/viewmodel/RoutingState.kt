@@ -46,13 +46,7 @@ data class TrackedBus(
     val access: WheelchairAccess = WheelchairAccess.UNKNOWN,
     /** Where you board — the other half of the "where is it relative to me" question. */
     val stopLat: Double = 0.0,
-    val stopLon: Double = 0.0,
-    /**
-     * The line's own GTFS shape, by direction. The itinerary polyline only covers
-     * the part you ride; a bus still 30 km up the road sits nowhere near it, so
-     * without the full line the marker floats on empty map.
-     */
-    val shape: Map<String, List<List<Double>>> = emptyMap()
+    val stopLon: Double = 0.0
 ) {
     /** The vehicle currently being followed — what the map draws. */
     val marker: VehicleMarker?
