@@ -115,7 +115,7 @@ cp -f "$DATA_INPUT_DIR/israel-gtfs.zip" "$PT_BACKEND_GTFS_DIR/israel-gtfs.zip"
 # /api/trip-shape and /api/line-shape. All three must be re-extracted with
 # stops.txt: they had been left at the March-2025 copies while the importer moved
 # on, so a fresh trip's shape_id resolved to zero rows in the stale shapes.txt.
-unzip -o -q -d "$PT_BACKEND_GTFS_DIR/israel-public-transportation" "$PT_BACKEND_GTFS_DIR/israel-gtfs.zip" stops.txt trips.txt shapes.txt
-echo "GTFS copied + stops.txt/trips.txt/shapes.txt extracted to $PT_BACKEND_GTFS_DIR"
+unzip -o -q -d "$PT_BACKEND_GTFS_DIR/israel-public-transportation" "$PT_BACKEND_GTFS_DIR/israel-gtfs.zip" stops.txt trips.txt shapes.txt routes.txt
+echo "GTFS copied + stops.txt/trips.txt/shapes.txt/routes.txt extracted to $PT_BACKEND_GTFS_DIR"
 
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] MOTIS data update complete"

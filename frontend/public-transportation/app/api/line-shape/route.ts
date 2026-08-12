@@ -1,48 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
-import { execSync, execFileSync } from 'child_process';
+import { execFileSync } from 'child_process';
 
-const GTFS_DATA_DIR = path.join(process.cwd(), '../../backend/israel-public-transportation');
-const GTFS_URL = 'https://storage.googleapis.com/storage/v1/b/mdb-latest/o/il-ministry-of-transport-and-road-safety-gtfs-2519.zip?alt=media';
+// The one GTFS copy motis/update-data.sh maintains, and the same one MOTIS itself
+// imports. This route used to read its own copy under backend/, fetched from a
+// Google Storage mirror and refreshed only when the files were *missing* — so it
+// sat at a five-month-old snapshot of a different feed while every other route
+// moved on, and drew lines that no longer existed.
+const GTFS_DATA_DIR = path.join(process.cwd(), '../../gtfs/israel-public-transportation');
 const GTFS_REQUIRED_FILES = ['routes.txt', 'trips.txt', 'shapes.txt'];
 
-let gtfsDownloading: Promise<void> | null = null;
-
 async function ensureGtfsData() {
-  const allExist = GTFS_REQUIRED_FILES.every(f =>
-    fs.existsSync(path.join(GTFS_DATA_DIR, f))
+  const missing = GTFS_REQUIRED_FILES.filter(f =>
+    !fs.existsSync(path.join(GTFS_DATA_DIR, f))
   );
-  if (allExist) return;
+  if (missing.length === 0) return;
 
-  if (gtfsDownloading) return gtfsDownloading;
-
-  gtfsDownloading = (async () => {
-    try {
-      console.log('GTFS files missing, downloading from MOT...');
-      fs.mkdirSync(GTFS_DATA_DIR, { recursive: true });
-      const zipPath = path.join(GTFS_DATA_DIR, 'gtfs.zip');
-      execSync(`curl -fSL -o "${zipPath}" "${GTFS_URL}"`, {
-        timeout: 120000,
-        stdio: ['pipe', 'pipe', 'pipe'],
-      });
-      console.log('Extracting GTFS data...');
-      execSync(`unzip -o "${zipPath}" ${GTFS_REQUIRED_FILES.join(' ')} -d "${GTFS_DATA_DIR}"`, {
-        timeout: 60000,
-        stdio: ['pipe', 'pipe', 'pipe'],
-      });
-      fs.unlinkSync(zipPath);
-      console.log('GTFS data ready.');
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      console.error('Failed to download GTFS data:', message);
-      throw new Error('Failed to download GTFS data. Please manually place routes.txt, trips.txt, shapes.txt in backend/israel-public-transportation/');
-    } finally {
-      gtfsDownloading = null;
-    }
-  })();
-
-  return gtfsDownloading;
+  // Deliberately not downloading a replacement here. A second fetch path is how
+  // this route drifted onto its own stale feed in the first place: whoever ran it
+  // got data nobody else had, and nothing ever brought it forward again. There is
+  // one importer, and it is the one that must run.
+  throw new Error(
+    `GTFS files missing from ${GTFS_DATA_DIR}: ${missing.join(', ')}. ` +
+    `Run motis/update-data.sh — it is the only thing that refreshes this feed.`
+  );
 }
 
 interface LineShapeEntry {
