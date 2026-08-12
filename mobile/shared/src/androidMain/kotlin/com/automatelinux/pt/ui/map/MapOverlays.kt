@@ -223,9 +223,16 @@ fun StopMarkersOverlay(
 @Composable
 fun LineShapeOverlay(
     map: MapView,
-    directions: Map<String, List<List<Double>>>
+    directions: Map<String, List<List<Double>>>,
+    /**
+     * Whether the shape should claim the camera. True when the line is what the
+     * user asked to see (Lines tab). False when it is only context under a tracked
+     * bus: fitting a 60 km line then buries the bus in it, which is the opposite
+     * of what tracking is for.
+     */
+    fitCamera: Boolean = true
 ) {
-    LaunchedEffect(directions) {
+    LaunchedEffect(directions, fitCamera) {
         map.overlays.removeAll { (it as? Polyline)?.id == "line_shape" }
 
         if (directions.isNotEmpty()) {
@@ -254,7 +261,7 @@ fun LineShapeOverlay(
                 colorIdx++
             }
 
-            if (allPoints.isNotEmpty()) {
+            if (fitCamera && allPoints.isNotEmpty()) {
                 map.fitBounds(allPoints)
             }
         }

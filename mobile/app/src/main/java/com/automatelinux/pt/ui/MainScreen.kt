@@ -359,6 +359,19 @@ fun MainScreen(
         }
     }
 
+    // "Where is my bus" is a question about two points, so both are framed: the
+    // vehicle and the stop you are waiting at. Keyed on the vehicle rather than its
+    // position, so the camera settles once per bus instead of lurching every poll.
+    LaunchedEffect(routingState.trackedBus?.marker?.vehicleRef) {
+        val tracked = routingState.trackedBus ?: return@LaunchedEffect
+        val bus = tracked.marker ?: return@LaunchedEffect
+        if (tracked.stopLat == 0.0 && tracked.stopLon == 0.0) return@LaunchedEffect
+        mapState.fitBounds(
+            listOf(LatLng(bus.lat, bus.lon), LatLng(tracked.stopLat, tracked.stopLon)),
+            padding = 90
+        )
+    }
+
     LaunchedEffect(Unit) {
         // A trip arriving via a shared link supplies the origin — GPS must not overwrite it.
         if (routingState.origin == null && sharedTrip == null) {
@@ -738,6 +751,10 @@ fun MainScreen(
                             activeTab == ActiveTab.LINES -> lineShapeData.directions
                             else -> null
                         },
+                        // On the Lines tab the shape is the subject and should frame
+                        // itself; while tracking it is only context, and the framing
+                        // below belongs to the bus and your stop.
+                        lineShapeFitsCamera = routingState.trackedBus?.shape?.isEmpty() != false,
                         trackedBus = routingState.trackedBus?.marker,
                         // The map never prompts; it only draws what permission already allows.
                         showUserLocation = LocationHelper.hasPermission(context),

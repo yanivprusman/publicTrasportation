@@ -44,6 +44,9 @@ data class TrackedBus(
     val selectedIndex: Int = 0,
     /** Wheelchair access of the scheduled trip being boarded (from the itinerary leg). */
     val access: WheelchairAccess = WheelchairAccess.UNKNOWN,
+    /** Where you board — the other half of the "where is it relative to me" question. */
+    val stopLat: Double = 0.0,
+    val stopLon: Double = 0.0,
     /**
      * The line's own GTFS shape, by direction. The itinerary polyline only covers
      * the part you ride; a bus still 30 km up the road sits nowhere near it, so

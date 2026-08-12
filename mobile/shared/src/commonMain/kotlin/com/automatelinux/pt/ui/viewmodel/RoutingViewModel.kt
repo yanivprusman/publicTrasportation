@@ -329,7 +329,13 @@ class RoutingViewModel(
         stopTracking()
         val seq = ++trackSeq
         _state.value = _state.value.copy(
-            trackedBus = TrackedBus(legIndex = legIndex, lineName = lineName, access = access)
+            trackedBus = TrackedBus(
+                legIndex = legIndex,
+                lineName = lineName,
+                access = access,
+                stopLat = lat,
+                stopLon = lon
+            )
         )
         trackingJob = viewModelScope.launch {
             // The shape is static for the line, so it is fetched once beside the
