@@ -46,6 +46,8 @@ fun ArrivalsPanel(
     onShowVehicleMarkersChange: (Boolean) -> Unit,
     onSearchStops: suspend (String) -> List<StopResult>,
     onVehicleSelect: ((Double, Double) -> Unit)? = null,
+    /** (line, destination, routeId, vehicleRef) -> open live tracking for this arrival. */
+    onTrackVehicle: ((String, String, String?, String?) -> Unit)? = null,
     getDestinationName: (String?) -> String,
     nearbyStops: List<StopResult> = emptyList(),
     gpsNearbyStops: List<StopResult> = emptyList(),
@@ -166,6 +168,7 @@ fun ArrivalsPanel(
             loading = state.loading,
             getDestinationName = getDestinationName,
             onVehicleSelect = onVehicleSelect,
+            onTrackVehicle = onTrackVehicle,
             favoriteLines = favoriteLines,
             onToggleFavoriteLine = onToggleFavoriteLine,
             availableLines = state.availableLines,

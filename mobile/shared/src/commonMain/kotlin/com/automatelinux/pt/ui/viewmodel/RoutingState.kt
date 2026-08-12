@@ -48,6 +48,8 @@ data class TrackedBus(
     val destination: String = "",
     /** The SIRI-monitored stop the polling asks about; kept so a pause can resume. */
     val stationCode: String? = null,
+    /** The vehicle the user picked out of a stop's arrivals, followed on first poll. */
+    val preferredVehicleRef: String? = null,
     /** Where you board — the other half of the "where is it relative to me" question. */
     val stopLat: Double = 0.0,
     val stopLon: Double = 0.0,

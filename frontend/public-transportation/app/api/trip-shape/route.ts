@@ -2,15 +2,18 @@ import { NextRequest, NextResponse } from 'next/server';
 import { execFileSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
-import { tripShapeId } from '@/lib/gtfs-trips';
+import { routeShapeId, tripShapeId } from '@/lib/gtfs-trips';
 
 /**
- * The geometry of one specific trip.
+ * The geometry of one trip, or of one route in one direction.
  *
  * This exists because /api/line-shape resolves by `route_short_name`, which is
  * not unique in Israel — asking it for "60" while riding the Negev's line 60
- * returns Tel Aviv's and Haifa's, ~200 km away. A trip id identifies exactly one
- * run of one route, so it is the only correct key for "draw the line my bus is on".
+ * returns Tel Aviv's and Haifa's, ~200 km away.
+ *
+ * Two callers, two keys, both exact:
+ *   ?tripId=   a planned itinerary leg, which carries a MOTIS trip id
+ *   ?routeId=  a live SIRI arrival, whose LineRef is the route_id
  */
 
 const SHAPES_FILE = path.join(
@@ -62,9 +65,14 @@ function loadShape(shapeId: string): number[][] {
 }
 
 export async function GET(request: NextRequest) {
-  const tripId = request.nextUrl.searchParams.get('tripId');
-  if (!tripId) {
-    return NextResponse.json({ error: 'Missing required parameter: tripId' }, { status: 400 });
+  const params = request.nextUrl.searchParams;
+  const tripId = params.get('tripId');
+  const routeId = params.get('routeId');
+  if (!tripId && !routeId) {
+    return NextResponse.json(
+      { error: 'Missing required parameter: tripId or routeId' },
+      { status: 400 }
+    );
   }
 
   if (!fs.existsSync(SHAPES_FILE)) {
@@ -74,12 +82,10 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const shapeId = tripShapeId(tripId);
+  const shapeId = tripId ? tripShapeId(tripId) : routeShapeId(routeId!);
   if (!shapeId) {
-    return NextResponse.json(
-      { error: `No shape for trip ${tripId}` },
-      { status: 404 }
-    );
+    const what = tripId ? `trip ${tripId}` : `route ${routeId}`;
+    return NextResponse.json({ error: `No shape for ${what}` }, { status: 404 });
   }
 
   try {

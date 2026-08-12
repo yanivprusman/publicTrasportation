@@ -389,7 +389,10 @@ class RoutingViewModel(
                         // its ref. Following the index would silently swap the card onto
                         // a different bus the moment two of them cross.
                         selectedIndex = candidates
-                            .indexOfFirst { it.vehicleRef == tracked.marker?.vehicleRef }
+                            .indexOfFirst {
+                                it.vehicleRef == (tracked.marker?.vehicleRef
+                                    ?: tracked.preferredVehicleRef)
+                            }
                             .takeIf { it >= 0 } ?: 0
                     )
                 }
@@ -422,6 +425,64 @@ class RoutingViewModel(
         val seq = trackSeq
         trackingJob = viewModelScope.launch {
             pollTrackedBus(seq, stationCode, tracked.lineName)
+        }
+    }
+
+    /**
+     * Track a bus from a stop you are standing at, with no journey planned.
+     *
+     * The itinerary path exists because tracking grew out of the route planner,
+     * but "where is the bus coming to my stop" is the more common question and
+     * had no door of its own. Everything needed is already in the arrival:
+     * the monitored stop, the line, the route (SIRI LineRef = GTFS route_id) and
+     * the headsign.
+     */
+    fun trackBusAtStop(
+        stationCode: String,
+        lineName: String,
+        destination: String = "",
+        routeId: String? = null,
+        vehicleRef: String? = null
+    ) {
+        stopTracking()
+        val seq = ++trackSeq
+        _state.value = _state.value.copy(
+            trackedBus = TrackedBus(
+                // No leg to point back at; the itinerary list uses this to mark
+                // which leg is being tracked and -1 simply matches none of them.
+                legIndex = -1,
+                lineName = lineName,
+                destination = destination,
+                stationCode = stationCode
+            )
+        )
+        trackingJob = viewModelScope.launch {
+            if (routeId != null) {
+                launch {
+                    val points = try {
+                        api.getRouteShape(routeId).points
+                    } catch (_: Exception) {
+                        emptyList()
+                    }
+                    if (points.isNotEmpty()) updateTracking(seq) { it.copy(shape = points) }
+                }
+            }
+            // The stop's own coordinates, so the camera can frame it with the bus.
+            launch {
+                val stop = try {
+                    api.searchStops(stationCode).firstOrNull { it.stopCode == stationCode }
+                } catch (_: Exception) {
+                    null
+                }
+                if (stop != null) {
+                    updateTracking(seq) { it.copy(stopLat = stop.lat, stopLon = stop.lon) }
+                }
+            }
+            // Follow the vehicle the user actually tapped, not whichever is nearest.
+            if (vehicleRef != null) {
+                updateTracking(seq) { it.copy(preferredVehicleRef = vehicleRef) }
+            }
+            pollTrackedBus(seq, stationCode, lineName)
         }
     }
 

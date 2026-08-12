@@ -94,6 +94,13 @@ class PtApi(private val client: HttpClient) {
     suspend fun getTripShape(tripId: String): TripShapeResponse =
         fetch("/api/trip-shape", params = mapOf("tripId" to tripId))
 
+    /**
+     * Geometry for a route, for callers holding a live arrival rather than a
+     * planned leg: SIRI's LineRef is the GTFS route_id.
+     */
+    suspend fun getRouteShape(routeId: String): TripShapeResponse =
+        fetch("/api/trip-shape", params = mapOf("routeId" to routeId))
+
     suspend fun appPing(body: AppPingRequest): AppPingResponse =
         fetch("/api/app/ping", HttpMethod.Post, PtJson.encodeToString(body))
 

@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.GpsFixed
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.Button
@@ -242,6 +243,8 @@ fun StationArrivals(
     loading: Boolean,
     getDestinationName: (String?) -> String,
     onVehicleSelect: ((Double, Double) -> Unit)? = null,
+    /** (line, destination, routeId, vehicleRef) -> open live tracking for this arrival. */
+    onTrackVehicle: ((String, String, String?, String?) -> Unit)? = null,
     favoriteLines: Set<String> = emptySet(),
     onToggleFavoriteLine: ((String) -> Unit)? = null,
     availableLines: List<String> = emptyList(),
@@ -387,6 +390,7 @@ fun StationArrivals(
                     },
                     getDestinationName = getDestinationName,
                     onVehicleSelect = onVehicleSelect,
+                    onTrackVehicle = onTrackVehicle,
                     favoriteLines = favoriteLines,
                     onToggleFavoriteLine = onToggleFavoriteLine
                 )
@@ -418,6 +422,7 @@ private fun DepartureRow(
     onToggleExpand: () -> Unit,
     getDestinationName: (String?) -> String,
     onVehicleSelect: ((Double, Double) -> Unit)?,
+    onTrackVehicle: ((String, String, String?, String?) -> Unit)?,
     favoriteLines: Set<String>,
     onToggleFavoriteLine: ((String) -> Unit)?
 ) {
@@ -499,9 +504,32 @@ private fun DepartureRow(
                         Text(strings.fullArrival(it), style = MaterialTheme.typography.bodySmall)
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
+                        // The live position is what people open a transit app for, so
+                        // it leads: full tracking, not a pan to a dot. "Show on Map"
+                        // stays for a quick look without leaving the arrivals list.
+                        val trackLine = entry.line
+                        if (onTrackVehicle != null && trackLine != null) {
+                            Button(onClick = {
+                                onTrackVehicle(
+                                    trackLine,
+                                    display.destination,
+                                    journey.lineRef,
+                                    journey.vehicleRef
+                                )
+                            }) {
+                                Icon(
+                                    Icons.Default.GpsFixed,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(Modifier.width(6.dp))
+                                Text(strings.trackBus)
+                            }
+                            Spacer(Modifier.width(8.dp))
+                        }
                         val loc = journey.vehicleLocation
                         if (loc != null && onVehicleSelect != null) {
-                            Button(onClick = { onVehicleSelect(loc.latitude, loc.longitude) }) {
+                            TextButton(onClick = { onVehicleSelect(loc.latitude, loc.longitude) }) {
                                 Text(strings.showOnMap)
                             }
                             Spacer(Modifier.width(8.dp))

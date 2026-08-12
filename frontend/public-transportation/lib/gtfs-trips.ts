@@ -30,6 +30,17 @@ interface TripFacts {
 // wrong "accessible" is the one error that can strand somebody at a stop.
 let tripCache: Map<string, TripFacts> | null = null;
 
+// route_id -> shape_id, built in the same pass as tripCache.
+//
+// SIRI's LineRef *is* the GTFS route_id (LineRef 11057 = route 11057 = line 64
+// Beer Sheva <-> Mitzpe Ramon), so a live arrival identifies its route exactly —
+// no resolving by line number, which is ambiguous 20 ways for "60" alone.
+//
+// Not keyed by direction: in this feed direction is already encoded in the route
+// id (0 of 7246 route_ids carry more than one direction_id), so a direction key
+// only produces misses.
+let routeShapeCache: Map<string, string> | null = null;
+
 function parseFlag(raw: string | undefined): WheelchairAccess {
   switch (raw?.trim()) {
     case '1': return 'accessible';
@@ -47,6 +58,7 @@ function loadTrips(): Map<string, TripFacts> {
     // motis/update-data.sh did not extract trips.txt.
     console.error(`gtfs-trips: ${TRIPS_FILE} missing — every trip will report unknown`);
     tripCache = new Map();
+    routeShapeCache = new Map();
     return tripCache;
   }
 
@@ -56,11 +68,14 @@ function loadTrips(): Map<string, TripFacts> {
   const tripIdx = header.indexOf('trip_id');
   const accessIdx = header.indexOf('wheelchair_accessible');
   const shapeIdx = header.indexOf('shape_id');
+  const routeIdx = header.indexOf('route_id');
 
   const map = new Map<string, TripFacts>();
+  const routeShapes = new Map<string, string>();
   if (tripIdx === -1 || accessIdx === -1 || shapeIdx === -1) {
     console.error('gtfs-trips: trips.txt is missing trip_id / wheelchair_accessible / shape_id');
     tripCache = map;
+    routeShapeCache = routeShapes;
     return map;
   }
 
@@ -69,13 +84,21 @@ function loadTrips(): Map<string, TripFacts> {
     const cols = lines[i].split(',');
     const tripId = cols[tripIdx]?.trim();
     if (!tripId) continue;
+    const shapeId = cols[shapeIdx]?.trim() ?? '';
     map.set(tripId, {
       access: parseFlag(cols[accessIdx]),
-      shapeId: cols[shapeIdx]?.trim() ?? '',
+      shapeId,
     });
+    if (shapeId && routeIdx !== -1) {
+      const routeId = cols[routeIdx]?.trim();
+      // First shape wins: a route runs several variants over the day, and
+      // without a specific trip there is nothing to choose between them.
+      if (routeId && !routeShapes.has(routeId)) routeShapes.set(routeId, shapeId);
+    }
   }
 
   tripCache = map;
+  routeShapeCache = routeShapes;
   return map;
 }
 
@@ -103,6 +126,15 @@ export function tripWheelchairAccess(motisTripId: string | undefined): Wheelchai
  * unique nationwide — line 60 exists in Beer Sheva, Tel Aviv and Haifa — so
  * resolving geometry by number draws somebody else's route.
  */
+/**
+ * The shape a route runs, for callers that know the route but not the trip — a
+ * live SIRI arrival, whose LineRef is the GTFS route_id.
+ */
+export function routeShapeId(routeId: string): string | null {
+  loadTrips();
+  return routeShapeCache?.get(routeId) || null;
+}
+
 export function tripShapeId(motisTripId: string | undefined): string | null {
   if (!motisTripId) return null;
   const tripId = gtfsTripId(motisTripId);

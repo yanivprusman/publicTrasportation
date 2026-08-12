@@ -36,6 +36,12 @@ data class MonitoredStopVisit(
 @Serializable
 data class MonitoredVehicleJourney(
     @SerialName("PublishedLineName") val publishedLineName: String? = null,
+    /**
+     * The operator's internal line id, which is also the GTFS `route_id`
+     * (LineRef 11057 = route 11057 = line 64, Beer Sheva <-> Mitzpe Ramon).
+     * It identifies the route exactly, where the published name does not.
+     */
+    @SerialName("LineRef") val lineRef: String? = null,
     @SerialName("DirectionRef") val directionRef: String? = null,
     @SerialName("DestinationRef") val destinationRef: String? = null,
     @SerialName("VehicleRef") val vehicleRef: String? = null,

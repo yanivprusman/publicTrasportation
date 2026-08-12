@@ -695,6 +695,19 @@ fun MainScreen(
                                         mapState.animateTo(LatLng(lat, lon), 16.0)
                                         scope.launch { bottomSheetState.partialExpand() }
                                     },
+                                    // "Where is the bus coming to my stop" reaches the
+                                    // tracking screen straight from the arrivals list,
+                                    // without planning a journey to get there.
+                                    onTrackVehicle = { line, dest, routeId, vehicleRef ->
+                                        keyboardController?.hide()
+                                        routingViewModel.trackBusAtStop(
+                                            stationCode = arrivalsState.stationCode,
+                                            lineName = line,
+                                            destination = dest,
+                                            routeId = routeId,
+                                            vehicleRef = vehicleRef
+                                        )
+                                    },
                                     getDestinationName = { arrivalsViewModel.getDestinationName(it) },
                                     nearbyStops = nearbyStops,
                                     gpsNearbyStops = arrivalsState.gpsNearbyStops,
