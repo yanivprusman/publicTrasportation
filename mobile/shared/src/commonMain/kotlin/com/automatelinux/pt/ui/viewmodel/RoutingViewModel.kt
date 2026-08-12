@@ -360,39 +360,68 @@ class RoutingViewModel(
                 updateTracking(seq) { it.copy(status = TrackingStatus.NO_MONITORED_STOP) }
                 return@launch
             }
-            while (true) {
-                try {
-                    // Deliberately unfiltered: the API's LineRef is the operator's internal
-                    // id (line 64 is LineRef 11057), so passing the published name matched
-                    // nothing and tracking could never find a bus. PublishedLineName is
-                    // what riders call the line, and it is filtered for below.
-                    val response = api.getTransport(station = stationCode)
-                    val candidates = response.extractVehicleMarkers()
-                        .filter { it.lineNumber.equals(lineName, ignoreCase = true) }
-                        .sortedBy { it.distanceFromStop }
-                    updateTracking(seq) { tracked ->
-                        tracked.copy(
-                            status = if (candidates.isEmpty()) {
-                                TrackingStatus.NO_VEHICLE
-                            } else {
-                                TrackingStatus.LIVE
-                            },
-                            candidates = candidates,
-                            // Buses reorder as they move, so the chosen one is followed by
-                            // its ref. Following the index would silently swap the card onto
-                            // a different bus the moment two of them cross.
-                            selectedIndex = candidates
-                                .indexOfFirst { it.vehicleRef == tracked.marker?.vehicleRef }
-                                .takeIf { it >= 0 } ?: 0
-                        )
-                    }
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (_: Exception) {
-                    updateTracking(seq) { it.copy(status = TrackingStatus.ERROR) }
+            // Kept so polling can be resumed after a pause without re-resolving it.
+            updateTracking(seq) { it.copy(stationCode = stationCode) }
+            pollTrackedBus(seq, stationCode, lineName)
+        }
+    }
+
+    private suspend fun pollTrackedBus(seq: Int, stationCode: String, lineName: String) {
+        while (true) {
+            try {
+                // Deliberately unfiltered: the API's LineRef is the operator's internal
+                // id (line 64 is LineRef 11057), so passing the published name matched
+                // nothing and tracking could never find a bus. PublishedLineName is
+                // what riders call the line, and it is filtered for below.
+                val response = api.getTransport(station = stationCode)
+                val candidates = response.extractVehicleMarkers()
+                    .filter { it.lineNumber.equals(lineName, ignoreCase = true) }
+                    .sortedBy { it.distanceFromStop }
+                updateTracking(seq) { tracked ->
+                    tracked.copy(
+                        status = if (candidates.isEmpty()) {
+                            TrackingStatus.NO_VEHICLE
+                        } else {
+                            TrackingStatus.LIVE
+                        },
+                        candidates = candidates,
+                        // Buses reorder as they move, so the chosen one is followed by
+                        // its ref. Following the index would silently swap the card onto
+                        // a different bus the moment two of them cross.
+                        selectedIndex = candidates
+                            .indexOfFirst { it.vehicleRef == tracked.marker?.vehicleRef }
+                            .takeIf { it >= 0 } ?: 0
+                    )
                 }
-                delay(10_000)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                updateTracking(seq) { it.copy(status = TrackingStatus.ERROR) }
             }
+            delay(10_000)
+        }
+    }
+
+    /**
+     * Stops the network polling while keeping what is being tracked.
+     *
+     * A live position is only worth fetching while somebody can see it. Left
+     * running, this hit the operator's feed every 10 seconds with the screen off
+     * for as long as the app stayed in memory.
+     */
+    fun pauseTracking() {
+        trackingJob?.cancel()
+        trackingJob = null
+    }
+
+    /** Resumes polling for the bus already in [RoutingState.trackedBus]. */
+    fun resumeTracking() {
+        if (trackingJob != null) return
+        val tracked = _state.value.trackedBus ?: return
+        val stationCode = tracked.stationCode ?: return
+        val seq = trackSeq
+        trackingJob = viewModelScope.launch {
+            pollTrackedBus(seq, stationCode, tracked.lineName)
         }
     }
 

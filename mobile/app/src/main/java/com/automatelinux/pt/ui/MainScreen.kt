@@ -451,6 +451,20 @@ fun MainScreen(
         }
     }
 
+    // Tracking polls on the same terms, and for the same reason: a live vehicle
+    // position is only worth fetching while somebody can see it. What is being
+    // tracked survives the pause — only the requests stop.
+    LaunchedEffect(lifecycleOwner) {
+        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            routingViewModel.resumeTracking()
+            try {
+                awaitCancellation()
+            } finally {
+                routingViewModel.pauseTracking()
+            }
+        }
+    }
+
     com.automatelinux.feedbacklib.ui.FeedbackOverlay(
         modifier = Modifier.fillMaxSize(),
         showFab = BuildConfig.FEEDBACK_ENABLED,

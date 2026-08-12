@@ -46,6 +46,8 @@ data class TrackedBus(
     val access: WheelchairAccess = WheelchairAccess.UNKNOWN,
     /** Where this leg puts you down — the stop you are riding to, not the line's terminus. */
     val destination: String = "",
+    /** The SIRI-monitored stop the polling asks about; kept so a pause can resume. */
+    val stationCode: String? = null,
     /** Where you board — the other half of the "where is it relative to me" question. */
     val stopLat: Double = 0.0,
     val stopLon: Double = 0.0,
