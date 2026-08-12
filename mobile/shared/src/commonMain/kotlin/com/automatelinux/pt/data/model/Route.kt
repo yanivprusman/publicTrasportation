@@ -56,8 +56,25 @@ data class RouteLeg(
     val routeColor: String? = null,
     val agencyName: String? = null,
     val polyline: String = "",
-    val intermediateStops: List<Place>? = null
+    val intermediateStops: List<Place>? = null,
+    /**
+     * Wheelchair access for the scheduled service, from GTFS trips.txt via the
+     * backend: "accessible", "not_accessible" or "unknown". SIRI reports nothing
+     * about access, so this describes the timetabled trip, not the vehicle that
+     * actually arrives. Absent on walk legs.
+     */
+    val wheelchairAccess: String? = null
 )
+
+enum class WheelchairAccess { ACCESSIBLE, NOT_ACCESSIBLE, UNKNOWN }
+
+/** Typed view of [RouteLeg.wheelchairAccess]; anything unrecognised is UNKNOWN. */
+val RouteLeg.access: WheelchairAccess
+    get() = when (wheelchairAccess) {
+        "accessible" -> WheelchairAccess.ACCESSIBLE
+        "not_accessible" -> WheelchairAccess.NOT_ACCESSIBLE
+        else -> WheelchairAccess.UNKNOWN
+    }
 
 @Serializable
 data class Itinerary(

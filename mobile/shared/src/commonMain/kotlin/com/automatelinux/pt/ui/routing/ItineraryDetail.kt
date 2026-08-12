@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.DirectionsBike
 import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
+import androidx.compose.material.icons.filled.Accessible
 import androidx.compose.material.icons.filled.DirectionsBoat
 import androidx.compose.material.icons.filled.DirectionsBus
 import androidx.compose.material.icons.filled.DirectionsCar
@@ -59,6 +60,8 @@ import com.automatelinux.pt.data.model.Itinerary
 import com.automatelinux.pt.data.model.Place
 import com.automatelinux.pt.data.model.RouteLeg
 import com.automatelinux.pt.data.model.TransitMode
+import com.automatelinux.pt.data.model.WheelchairAccess
+import com.automatelinux.pt.data.model.access
 import com.automatelinux.pt.ui.map.getModeColorWithRoute
 import com.automatelinux.pt.util.LocalAppStrings
 import kotlinx.datetime.Instant
@@ -68,6 +71,7 @@ private val SpineWidth = 22.dp
 private val WalkSpineColor = Color(0xFF9E9E9E)
 private val DestinationDotColor = Color(0xFFE53935)
 private val WaitChipColor = Color(0xFFFFB300)
+private val AccessibleGreen = Color(0xFF4CAF50)
 
 private fun legSpineColor(leg: RouteLeg): Color =
     if (leg.mode == TransitMode.WALK) WalkSpineColor
@@ -389,6 +393,26 @@ private fun LegSegment(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    // Whether you can board at all outranks the agency's name, so it
+                    // sits on the headline row. UNKNOWN says nothing: for someone who
+                    // depends on this, a silent guess is worse than no answer.
+                    if (leg.access != WheelchairAccess.UNKNOWN) {
+                        Spacer(Modifier.width(8.dp))
+                        Icon(
+                            Icons.Default.Accessible,
+                            contentDescription = if (leg.access == WheelchairAccess.ACCESSIBLE) {
+                                strings.accessAccessible
+                            } else {
+                                strings.accessNotAccessible
+                            },
+                            modifier = Modifier.size(15.dp),
+                            tint = if (leg.access == WheelchairAccess.ACCESSIBLE) {
+                                AccessibleGreen
+                            } else {
+                                MaterialTheme.colorScheme.error
+                            }
+                        )
+                    }
                 }
 
                 leg.agencyName?.let { agency ->

@@ -76,6 +76,7 @@ import android.os.Build
 import androidx.core.content.ContextCompat
 import com.automatelinux.pt.data.model.RouteLeg
 import com.automatelinux.pt.data.model.StopResult
+import com.automatelinux.pt.data.model.access
 import com.automatelinux.pt.reminder.ReminderScheduler
 import com.automatelinux.pt.ui.arrivals.ArrivalsPanel
 import com.automatelinux.pt.ui.components.PreSuggestion
@@ -571,7 +572,8 @@ fun MainScreen(
                                                 legIndex = legIndex,
                                                 lat = leg.from.lat,
                                                 lon = leg.from.lon,
-                                                lineName = lineName
+                                                lineName = lineName,
+                                                access = leg.access
                                             )
                                         }
                                     },
@@ -727,7 +729,15 @@ fun MainScreen(
                         vehicles = if (activeTab == ActiveTab.ARRIVALS) arrivalsState.vehicleMarkers else emptyList(),
                         vehiclesVisible = arrivalsState.showVehicleMarkers,
                         stops = nearbyStops,
-                        lineShape = if (activeTab == ActiveTab.LINES) lineShapeData.directions else null,
+                        // Tracking wins over the Lines tab: a bus can be reported far
+                        // up the road, well off the stretch of the itinerary you ride,
+                        // so its own line is what makes the marker mean anything.
+                        lineShape = when {
+                            routingState.trackedBus?.shape?.isNotEmpty() == true ->
+                                routingState.trackedBus?.shape
+                            activeTab == ActiveTab.LINES -> lineShapeData.directions
+                            else -> null
+                        },
                         trackedBus = routingState.trackedBus?.marker,
                         // The map never prompts; it only draws what permission already allows.
                         showUserLocation = LocationHelper.hasPermission(context),

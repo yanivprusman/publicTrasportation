@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ensureMotis } from '@/lib/motis-manager';
 import { MODE_GROUPS, normalizeMode } from '@/lib/motis-modes';
+import { tripWheelchairAccess } from '@/lib/trip-accessibility';
 
 const MOTIS_PORT = process.env.MOTIS_PORT || '3504';
 const MOTIS_BASE = `http://localhost:${MOTIS_PORT}`;
@@ -49,6 +50,8 @@ interface MotisLeg {
   legGeometry?: { points?: string };
   polyline?: string;
   intermediateStops?: MotisPlace[];
+  // Carries the GTFS trip id, which is the only route to an accessibility flag.
+  tripId?: string;
 }
 
 interface MotisItinerary {
@@ -100,6 +103,10 @@ function transformItinerary(itin: MotisItinerary) {
       if (leg.routeShortName) transformed.routeShortName = leg.routeShortName;
       if (leg.routeColor) transformed.routeColor = leg.routeColor;
       if (leg.agencyName) transformed.agencyName = leg.agencyName;
+      // Only transit legs can be inaccessible; a walk leg has nothing to board.
+      if (leg.mode && leg.mode !== 'WALK') {
+        transformed.wheelchairAccess = tripWheelchairAccess(leg.tripId);
+      }
       if (leg.intermediateStops && leg.intermediateStops.length > 0) {
         transformed.intermediateStops = leg.intermediateStops.map(stop => ({
           name: stop.name || '',

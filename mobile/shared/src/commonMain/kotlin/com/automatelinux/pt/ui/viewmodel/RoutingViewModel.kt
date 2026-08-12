@@ -8,6 +8,7 @@ import com.automatelinux.pt.data.model.Itinerary
 import com.automatelinux.pt.data.model.RouteResult
 import com.automatelinux.pt.data.model.RouteSortMode
 import com.automatelinux.pt.data.model.VehicleMarker
+import com.automatelinux.pt.data.model.WheelchairAccess
 import com.automatelinux.pt.data.model.extractVehicleMarkers
 import com.automatelinux.pt.util.SettingsStore
 import kotlinx.coroutines.CancellationException
@@ -318,13 +319,25 @@ class RoutingViewModel(
             })
         })
 
-    fun trackBusOnLeg(legIndex: Int, lat: Double, lon: Double, lineName: String) {
+    fun trackBusOnLeg(
+        legIndex: Int,
+        lat: Double,
+        lon: Double,
+        lineName: String,
+        access: WheelchairAccess = WheelchairAccess.UNKNOWN
+    ) {
         stopTracking()
         val seq = ++trackSeq
         _state.value = _state.value.copy(
-            trackedBus = TrackedBus(legIndex = legIndex, lineName = lineName)
+            trackedBus = TrackedBus(legIndex = legIndex, lineName = lineName, access = access)
         )
         trackingJob = viewModelScope.launch {
+            // The shape is static for the line, so it is fetched once beside the
+            // first poll rather than on every tick.
+            launch {
+                val shape = try { api.getLineShape(lineName) } catch (_: Exception) { emptyMap() }
+                if (shape.isNotEmpty()) updateTracking(seq) { it.copy(shape = shape) }
+            }
             val stops = try { api.nearbyStops(lat, lon, 300) } catch (_: Exception) { emptyList() }
             val stationCode = stops.firstOrNull()?.stopCode
             if (stationCode == null) {

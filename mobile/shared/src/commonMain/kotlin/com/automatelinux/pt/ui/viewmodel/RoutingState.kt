@@ -8,6 +8,7 @@ import com.automatelinux.pt.data.model.RouteResult
 import com.automatelinux.pt.data.model.RouteSortMode
 import com.automatelinux.pt.data.model.TransitMode
 import com.automatelinux.pt.data.model.VehicleMarker
+import com.automatelinux.pt.data.model.WheelchairAccess
 import kotlinx.datetime.Instant
 
 /**
@@ -40,7 +41,15 @@ data class TrackedBus(
     /** Every vehicle the feed reports for this line, nearest to the boarding stop first. */
     val candidates: List<VehicleMarker> = emptyList(),
     /** Which of [candidates] the card and the map are showing. */
-    val selectedIndex: Int = 0
+    val selectedIndex: Int = 0,
+    /** Wheelchair access of the scheduled trip being boarded (from the itinerary leg). */
+    val access: WheelchairAccess = WheelchairAccess.UNKNOWN,
+    /**
+     * The line's own GTFS shape, by direction. The itinerary polyline only covers
+     * the part you ride; a bus still 30 km up the road sits nowhere near it, so
+     * without the full line the marker floats on empty map.
+     */
+    val shape: Map<String, List<List<Double>>> = emptyMap()
 ) {
     /** The vehicle currently being followed — what the map draws. */
     val marker: VehicleMarker?

@@ -12,6 +12,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Accessible
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -33,6 +34,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.automatelinux.pt.data.model.VehicleMarker
+import com.automatelinux.pt.data.model.WheelchairAccess
 import com.automatelinux.pt.ui.arrivals.LineBadge
 import com.automatelinux.pt.ui.arrivals.LiveGreen
 import com.automatelinux.pt.ui.viewmodel.TrackedBus
@@ -136,6 +138,45 @@ fun TrackedBusCard(
                 }
             }
 
+            // How far the bus still has to come. The feed reports metres to the
+            // stop; it does not report stops-away, and that is not guessed here.
+            tracked.marker?.takeIf { it.distanceFromStop > 0 }?.let { marker ->
+                Spacer(Modifier.size(2.dp))
+                Text(
+                    text = strings.trackingDistanceAway(formatDistance(marker.distanceFromStop, strings)),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            // Only stated when the timetable actually says; UNKNOWN shows nothing
+            // rather than implying a service is boardable.
+            if (tracked.access != WheelchairAccess.UNKNOWN) {
+                Spacer(Modifier.size(2.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Default.Accessible,
+                        contentDescription = null,
+                        modifier = Modifier.size(14.dp),
+                        tint = if (tracked.access == WheelchairAccess.ACCESSIBLE) {
+                            LiveGreen
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        }
+                    )
+                    Spacer(Modifier.width(5.dp))
+                    Text(
+                        text = if (tracked.access == WheelchairAccess.ACCESSIBLE) {
+                            strings.accessAccessible
+                        } else {
+                            strings.accessNotAccessible
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
             // Several buses run the same line. Picking the nearest one silently was a guess
             // the user could not see, let alone correct.
             if (tracked.candidates.size > 1) {
@@ -202,6 +243,15 @@ private fun agoText(seconds: Long, strings: AppStrings): String = when {
     seconds < 60 -> strings.secondsAgo(seconds)
     else -> strings.minutesAgo(seconds / 60)
 }
+
+/** Metres below a kilometre, one decimal of a kilometre above it. */
+private fun formatDistance(meters: Int, strings: AppStrings): String =
+    if (meters < 1000) {
+        strings.distanceM(meters)
+    } else {
+        val tenths = (meters + 50) / 100
+        strings.distanceKm("${tenths / 10}.${tenths % 10}")
+    }
 
 private fun freshnessColor(seconds: Long): Color = when {
     seconds < FRESH_SECONDS -> LiveGreen

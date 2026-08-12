@@ -110,7 +110,10 @@ done
 # the old [[ -d ]] guard silently skipped this and stops stayed empty forever.
 mkdir -p "$PT_BACKEND_GTFS_DIR/israel-public-transportation"
 cp -f "$DATA_INPUT_DIR/israel-gtfs.zip" "$PT_BACKEND_GTFS_DIR/israel-gtfs.zip"
-unzip -o -q -d "$PT_BACKEND_GTFS_DIR/israel-public-transportation" "$PT_BACKEND_GTFS_DIR/israel-gtfs.zip" stops.txt
-echo "GTFS copied + stops.txt extracted to $PT_BACKEND_GTFS_DIR"
+# trips.txt carries wheelchair_accessible, which SIRI does not report at all —
+# /api/route reads it to tag each transit leg. It must be re-extracted with
+# stops.txt or the flag goes stale against a freshly imported timetable.
+unzip -o -q -d "$PT_BACKEND_GTFS_DIR/israel-public-transportation" "$PT_BACKEND_GTFS_DIR/israel-gtfs.zip" stops.txt trips.txt
+echo "GTFS copied + stops.txt/trips.txt extracted to $PT_BACKEND_GTFS_DIR"
 
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] MOTIS data update complete"
