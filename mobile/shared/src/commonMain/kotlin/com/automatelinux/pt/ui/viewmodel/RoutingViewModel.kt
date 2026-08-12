@@ -333,7 +333,11 @@ class RoutingViewModel(
             }
             while (true) {
                 try {
-                    val response = api.getTransport(station = stationCode, line = lineName)
+                    // Deliberately unfiltered: the API's LineRef is the operator's internal
+                    // id (line 64 is LineRef 11057), so passing the published name matched
+                    // nothing and tracking could never find a bus. PublishedLineName is
+                    // what riders call the line, and it is filtered for below.
+                    val response = api.getTransport(station = stationCode)
                     val candidates = response.extractVehicleMarkers()
                         .filter { it.lineNumber.equals(lineName, ignoreCase = true) }
                         .sortedBy { it.distanceFromStop }
