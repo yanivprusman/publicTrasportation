@@ -24,6 +24,23 @@ import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.CopyrightOverlay
 import org.osmdroid.views.overlay.MapEventsOverlay
 
+/**
+ * Metres from the centre of the map to the nearest screen edge.
+ *
+ * osmdroid already holds the real projection, so this asks it rather than converting the
+ * zoom number by hand. The nearest edge (rather than the corner) makes it the largest
+ * circle wholly on screen, which is what a "what is around here" query should cover.
+ */
+private fun MapView.visibleRadiusMeters(): Double {
+    val box = boundingBox
+    val centerLat = box.centerLatitude
+    val centerLon = box.centerLongitude
+    val center = GeoPoint(centerLat, centerLon)
+    val halfHeight = center.distanceToAsDouble(GeoPoint(box.latNorth, centerLon))
+    val halfWidth = center.distanceToAsDouble(GeoPoint(centerLat, box.lonEast))
+    return minOf(halfHeight, halfWidth)
+}
+
 object MapZoomHandler {
     private var mapRef: WeakReference<MapView>? = null
 
@@ -44,7 +61,7 @@ fun OsmMapView(
     onLongPress: ((GeoPoint) -> Unit)? = null,
     onMapMoved: ((GeoPoint) -> Unit)? = null,
     onUserPan: (() -> Unit)? = null,
-    onMapChanged: ((center: GeoPoint, zoom: Double) -> Unit)? = null,
+    onMapChanged: ((center: GeoPoint, zoom: Double, visibleRadiusMeters: Double) -> Unit)? = null,
     overlayContent: @Composable (MapView) -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -95,14 +112,16 @@ fun OsmMapView(
                     override fun onScroll(event: ScrollEvent?): Boolean {
                         onMapChanged?.invoke(
                             GeoPoint(mapCenter.latitude, mapCenter.longitude),
-                            zoomLevelDouble
+                            zoomLevelDouble,
+                            visibleRadiusMeters()
                         )
                         return false
                     }
                     override fun onZoom(event: ZoomEvent?): Boolean {
                         onMapChanged?.invoke(
                             GeoPoint(mapCenter.latitude, mapCenter.longitude),
-                            zoomLevelDouble
+                            zoomLevelDouble,
+                            visibleRadiusMeters()
                         )
                         return false
                     }

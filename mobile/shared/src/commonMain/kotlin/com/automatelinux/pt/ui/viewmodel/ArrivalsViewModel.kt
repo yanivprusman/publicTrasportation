@@ -26,8 +26,24 @@ private const val TIMETABLE_TTL_MS = 5 * 60_000L
 private const val FAVORITE_SNAP_METERS = 150
 
 private const val NEARBY_VEHICLE_STOPS = 5
-private const val NEARBY_VEHICLE_RADIUS_M = 700
 private const val NEARBY_VEHICLE_INTERVAL_MS = 15_000L
+
+/**
+ * The floor on the live-buses search radius, and deliberately the same 500 m the stop-pin
+ * layer and [PtApi.nearbyStops] already call "nearby" — zoomed all the way in the viewport
+ * covers a street, and shrinking the search to match would hide the bus you can see
+ * through the window.
+ */
+private const val NEARBY_VEHICLE_MIN_RADIUS_M = 500
+
+/**
+ * The ceiling. Not a performance limit — the cost is [NEARBY_VEHICLE_STOPS] requests
+ * whatever the radius — but a truthfulness one: past a couple of kilometres the nearest
+ * five stops describe the point at the centre rather than the area, so widening further
+ * buys no coverage. Beyond this the honest answer is the UI's "zoom in" hint, not a bigger
+ * query returning the same five stops.
+ */
+private const val NEARBY_VEHICLE_MAX_RADIUS_M = 2_000
 
 class ArrivalsViewModel(
     private val api: PtApi
@@ -199,12 +215,32 @@ class ArrivalsViewModel(
      * the nearest few stops report. Bounded at [NEARBY_VEHICLE_STOPS] stops because
      * each one is its own request and this runs on a timer — the answer people want
      * is "what is near me", not a census.
+     *
+     * [viewportRadiusMeters] is how much ground the map is actually showing, so the
+     * search matches what the user is looking at instead of a fixed guess. It was a
+     * fixed 700 m, which is why the feature drew nothing on a zoomed-out map: a circle
+     * far smaller than the screen, centred wherever the screen happened to be.
+     *
+     * Note what is deliberately NOT bounded: the number of vehicles. A cap there would
+     * cost a poll's worth of dedup ordering — [seen] is insertion-ordered by whichever
+     * stop answered first, so a truncated list would drop a different bus each cycle and
+     * make markers blink — while saving nothing, since the work per cycle is the requests
+     * below and each marker is two canvas circles.
      */
-    fun startNearbyVehicles(lat: Double, lon: Double) {
+    fun startNearbyVehicles(lat: Double, lon: Double, viewportRadiusMeters: Double) {
         nearbyVehiclesJob?.cancel()
+        val radius = viewportRadiusMeters
+            .toInt()
+            .coerceIn(NEARBY_VEHICLE_MIN_RADIUS_M, NEARBY_VEHICLE_MAX_RADIUS_M)
+        // Publish the radius before the first request, so the UI can say what it is
+        // searching while the answer is still in flight.
+        _state.value = _state.value.copy(
+            nearbyVehiclesRadiusMeters = radius,
+            nearbyVehiclesLoaded = false
+        )
         nearbyVehiclesJob = viewModelScope.launch {
             while (true) {
-                val stops = fetchNearbyStops(lat, lon, NEARBY_VEHICLE_RADIUS_M)
+                val stops = fetchNearbyStops(lat, lon, radius)
                     .take(NEARBY_VEHICLE_STOPS)
                 val seen = mutableMapOf<String, VehicleMarker>()
                 for (stop in stops) {
@@ -220,7 +256,10 @@ class ArrivalsViewModel(
                         // One unreachable stop should not blank the others.
                     }
                 }
-                _state.value = _state.value.copy(nearbyVehicles = seen.values.toList())
+                _state.value = _state.value.copy(
+                    nearbyVehicles = seen.values.toList(),
+                    nearbyVehiclesLoaded = true
+                )
                 delay(NEARBY_VEHICLE_INTERVAL_MS)
             }
         }
@@ -229,7 +268,11 @@ class ArrivalsViewModel(
     fun stopNearbyVehicles() {
         nearbyVehiclesJob?.cancel()
         nearbyVehiclesJob = null
-        _state.value = _state.value.copy(nearbyVehicles = emptyList())
+        _state.value = _state.value.copy(
+            nearbyVehicles = emptyList(),
+            nearbyVehiclesLoaded = false,
+            nearbyVehiclesRadiusMeters = 0
+        )
     }
 
     suspend fun fetchNearbyStops(lat: Double, lon: Double, radius: Int = 500): List<StopResult> {

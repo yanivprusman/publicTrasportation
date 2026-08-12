@@ -43,6 +43,26 @@ data class PtMapOverlays(
 )
 
 /**
+ * Where the camera is, and how much ground it actually covers.
+ *
+ * Centre and zoom alone cannot answer "what is on screen" — the same zoom covers a very
+ * different area on a phone and on a tablet, and converting zoom to metres in shared code
+ * means reimplementing each engine's projection and getting it subtly wrong. The platform
+ * already knows its own viewport, so it reports the distance rather than the caller
+ * guessing it from the zoom number.
+ */
+data class PtMapViewport(
+    val center: LatLng,
+    val zoom: Double,
+    /**
+     * Metres from [center] to the nearest edge of the screen — the inscribed circle, not
+     * the circumscribed one, so a radius taken from it never claims ground the user
+     * cannot see.
+     */
+    val visibleRadiusMeters: Double
+)
+
+/**
  * The two location markers the app offers.
  *
  * DOT is the app's own blue dot; PLATFORM_DEFAULT is whatever the map engine ships with
@@ -67,7 +87,7 @@ expect fun PtMap(
     style: PtMapStyle = PtMapStyle.DARK,
     onLongPress: ((LatLng) -> Unit)? = null,
     onUserPan: (() -> Unit)? = null,
-    onCameraChanged: ((LatLng, Double) -> Unit)? = null,
+    onCameraChanged: ((PtMapViewport) -> Unit)? = null,
     onStopTap: ((StopResult) -> Unit)? = null,
     onVehicleTap: ((VehicleMarker) -> Unit)? = null
 )

@@ -24,6 +24,19 @@ data class ArrivalsState(
     val lastUpdated: Long? = null,
     /** Vehicles reported around the map's centre, independent of the selected stop. */
     val nearbyVehicles: List<VehicleMarker> = emptyList(),
+    /**
+     * Whether a live-buses poll has completed since the mode was switched on. An empty
+     * [nearbyVehicles] means "none reporting" only once this is true — before it, the
+     * same emptiness means "not asked yet", and telling the user there are no buses at
+     * that moment would be a guess.
+     */
+    val nearbyVehiclesLoaded: Boolean = false,
+    /**
+     * The radius [nearbyVehicles] actually covers, so the UI can name it. Without this
+     * an empty map is unexplainable: the user cannot tell a quiet area from a search
+     * far smaller than the screen they are looking at.
+     */
+    val nearbyVehiclesRadiusMeters: Int = 0,
     val error: String? = null,
     val loading: Boolean = false,
     val timetable: List<StopTimeEntry> = emptyList(),

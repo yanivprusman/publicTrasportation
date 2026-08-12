@@ -42,6 +42,7 @@ import com.automatelinux.pt.ui.viewmodel.TrackedBus
 import com.automatelinux.pt.ui.viewmodel.TrackingStatus
 import com.automatelinux.pt.util.AppStrings
 import com.automatelinux.pt.util.LocalAppStrings
+import com.automatelinux.pt.util.formatDistance
 import kotlinx.coroutines.delay
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
@@ -272,15 +273,6 @@ private fun agoText(seconds: Long, strings: AppStrings): String = when {
     seconds < 60 -> strings.secondsAgo(seconds)
     else -> strings.minutesAgo(seconds / 60)
 }
-
-/** Metres below a kilometre, one decimal of a kilometre above it. */
-private fun formatDistance(meters: Int, strings: AppStrings): String =
-    if (meters < 1000) {
-        strings.distanceM(meters)
-    } else {
-        val tenths = (meters + 50) / 100
-        strings.distanceKm("${tenths / 10}.${tenths % 10}")
-    }
 
 private fun freshnessColor(seconds: Long): Color = when {
     seconds < FRESH_SECONDS -> LiveGreen

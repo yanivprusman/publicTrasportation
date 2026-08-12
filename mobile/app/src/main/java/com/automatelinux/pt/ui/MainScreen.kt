@@ -42,6 +42,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.SmallFloatingActionButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -102,6 +103,7 @@ import com.automatelinux.pt.ui.viewmodel.RoutingViewModel
 import com.automatelinux.pt.widget.DeparturesWidgetProvider
 import com.automatelinux.pt.util.LocalAppStrings
 import com.automatelinux.pt.util.PolylineDecoder
+import com.automatelinux.pt.util.formatDistance
 import com.automatelinux.pt.util.SettingsStore
 import com.automatelinux.pt.util.TripLink
 import kotlinx.coroutines.awaitCancellation
@@ -150,6 +152,10 @@ fun MainScreen(
     var nearbyStops by remember { mutableStateOf<List<StopResult>>(emptyList()) }
     var currentMapZoom by remember { mutableStateOf(13.0) }
     var currentMapCenter by remember { mutableStateOf(PtMapState.DEFAULT_CENTER) }
+    // How much ground the map is showing, reported by the map itself. 0 until the first
+    // camera callback, which is why the live-buses effect waits for a real value rather
+    // than searching a radius nobody measured.
+    var currentMapRadiusMeters by remember { mutableStateOf(0.0) }
     var favoriteLines by remember { mutableStateOf(settingsStore.getFavoriteLines()) }
     var favoriteStations by remember { mutableStateOf(settingsStore.getFavoriteStations()) }
     var reminderLegIndex by remember { mutableStateOf<Int?>(null) }
@@ -325,16 +331,18 @@ fun MainScreen(
         }
     }
 
-    LaunchedEffect(liveBuses, currentMapCenter) {
+    LaunchedEffect(liveBuses, currentMapCenter, currentMapRadiusMeters) {
         if (!liveBuses) {
             arrivalsViewModel.stopNearbyVehicles()
             return@LaunchedEffect
         }
-        // Debounced so panning does not fire a burst of stop queries.
+        // Zooming changes the radius, so this now restarts on zoom too — debounced so a
+        // pinch or a pan does not fire a burst of stop queries on the way.
         kotlinx.coroutines.delay(400)
         arrivalsViewModel.startNearbyVehicles(
             currentMapCenter.latitude,
-            currentMapCenter.longitude
+            currentMapCenter.longitude,
+            currentMapRadiusMeters
         )
     }
 
@@ -841,9 +849,10 @@ fun MainScreen(
                         }
                     },
                     onUserPan = { followingLocation = false },
-                    onCameraChanged = { center, zoom ->
-                        currentMapCenter = center
-                        currentMapZoom = zoom
+                    onCameraChanged = { viewport ->
+                        currentMapCenter = viewport.center
+                        currentMapZoom = viewport.zoom
+                        currentMapRadiusMeters = viewport.visibleRadiusMeters
                     },
                     onStopTap = { stop ->
                         activeTab = ActiveTab.ARRIVALS
@@ -878,6 +887,45 @@ fun MainScreen(
                             .align(Alignment.BottomCenter)
                             .padding(start = 12.dp, end = 12.dp, bottom = 24.dp)
                     )
+                }
+
+                // An empty map is not an answer. Live buses can legitimately report
+                // nothing, but nothing-because-the-area-is-quiet and
+                // nothing-because-the-search-is-a-dot-in-your-view are different facts
+                // and the user cannot tell them apart by looking. Two causes, two
+                // sentences — and silence while the first poll is still in flight,
+                // because "no buses" before asking would be a guess.
+                if (liveBuses) {
+                    val searchedMeters = arrivalsState.nearbyVehiclesRadiusMeters
+                    val liveBusesHint = when {
+                        !arrivalsState.nearbyVehiclesLoaded -> strings.liveBusesSearching
+                        arrivalsState.nearbyVehicles.isNotEmpty() -> null
+                        // The view covers half again more ground than was searched, so
+                        // the emptiness says nothing about most of what is on screen.
+                        currentMapRadiusMeters > searchedMeters * 1.5 ->
+                            strings.liveBusesZoomIn(formatDistance(searchedMeters, strings))
+                        else -> strings.liveBusesNone(formatDistance(searchedMeters, strings))
+                    }
+                    liveBusesHint?.let { hint ->
+                        Surface(
+                            // Start-aligned against the end-aligned button column, so the
+                            // two swap sides together under RTL and never collide; the end
+                            // padding keeps a long sentence off the buttons.
+                            modifier = Modifier
+                                .align(Alignment.TopStart)
+                                .padding(top = 48.dp, start = 12.dp, end = 76.dp),
+                            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
+                            shape = RoundedCornerShape(20.dp),
+                            shadowElevation = 4.dp
+                        ) {
+                            Text(
+                                text = hint,
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                            )
+                        }
+                    }
                 }
 
                 Column(
