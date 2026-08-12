@@ -896,15 +896,24 @@ fun MainScreen(
                 // sentences — and silence while the first poll is still in flight,
                 // because "no buses" before asking would be a guess.
                 if (liveBuses) {
-                    val searchedMeters = arrivalsState.nearbyVehiclesRadiusMeters
+                    val reachedMeters = arrivalsState.nearbyVehiclesReachedMeters
+                    val nearestMeters = arrivalsState.nearbyVehiclesNearestMeters
                     val liveBusesHint = when {
                         !arrivalsState.nearbyVehiclesLoaded -> strings.liveBusesSearching
-                        arrivalsState.nearbyVehicles.isNotEmpty() -> null
+                        // Found buses, all of them off the screen — which looks exactly
+                        // like finding none. The whole point of walking outward is that
+                        // in a village the answer legitimately lies outside the view.
+                        arrivalsState.nearbyVehicles.isNotEmpty() ->
+                            if (nearestMeters > currentMapRadiusMeters) {
+                                strings.liveBusesOffscreen(formatDistance(nearestMeters, strings))
+                            } else {
+                                null
+                            }
                         // The view covers half again more ground than was searched, so
                         // the emptiness says nothing about most of what is on screen.
-                        currentMapRadiusMeters > searchedMeters * 1.5 ->
-                            strings.liveBusesZoomIn(formatDistance(searchedMeters, strings))
-                        else -> strings.liveBusesNone(formatDistance(searchedMeters, strings))
+                        currentMapRadiusMeters > reachedMeters * 1.5 ->
+                            strings.liveBusesZoomIn(formatDistance(reachedMeters, strings))
+                        else -> strings.liveBusesNone(formatDistance(reachedMeters, strings))
                     }
                     liveBusesHint?.let { hint ->
                         Surface(

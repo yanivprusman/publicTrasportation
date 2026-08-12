@@ -32,11 +32,17 @@ data class ArrivalsState(
      */
     val nearbyVehiclesLoaded: Boolean = false,
     /**
-     * The radius [nearbyVehicles] actually covers, so the UI can name it. Without this
-     * an empty map is unexplainable: the user cannot tell a quiet area from a search
-     * far smaller than the screen they are looking at.
+     * How far out the search actually walked before it stopped, so the UI can name it.
+     * Without this an empty map is unexplainable: the user cannot tell a quiet area from
+     * a search far smaller than the screen they are looking at.
      */
-    val nearbyVehiclesRadiusMeters: Int = 0,
+    val nearbyVehiclesReachedMeters: Int = 0,
+    /**
+     * Distance from the search centre to the nearest bus found. In a village the walk can
+     * end well outside the screen, and buses drawn off-screen look identical to no buses
+     * at all — this is what lets the map say "nearest one is 12 km away" instead.
+     */
+    val nearbyVehiclesNearestMeters: Int = 0,
     val error: String? = null,
     val loading: Boolean = false,
     val timetable: List<StopTimeEntry> = emptyList(),

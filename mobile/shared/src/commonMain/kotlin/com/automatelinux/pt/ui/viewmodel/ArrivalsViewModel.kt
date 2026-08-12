@@ -10,6 +10,9 @@ import com.automatelinux.pt.data.model.VehicleMarker
 import com.automatelinux.pt.data.model.extractVehicleMarkers
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -25,25 +28,38 @@ import kotlin.math.sqrt
 private const val TIMETABLE_TTL_MS = 5 * 60_000L
 private const val FAVORITE_SNAP_METERS = 150
 
-private const val NEARBY_VEHICLE_STOPS = 5
 private const val NEARBY_VEHICLE_INTERVAL_MS = 15_000L
 
 /**
- * The floor on the live-buses search radius, and deliberately the same 500 m the stop-pin
- * layer and [PtApi.nearbyStops] already call "nearby" — zoomed all the way in the viewport
- * covers a street, and shrinking the search to match would hide the bus you can see
- * through the window.
+ * How many buses the search walks outward to find.
+ *
+ * A radius is the wrong unit for this question. In a city any radius finds buses; in a
+ * village — Midreshet Ben Gurion, where this was reported — the nearest reporting bus can
+ * be tens of kilometres away, and *every* fixed radius is either too small there or
+ * absurd downtown. A count is the same promise in both: the nearest few buses, however
+ * far out that turns out to be.
  */
-private const val NEARBY_VEHICLE_MIN_RADIUS_M = 500
+private const val NEARBY_VEHICLE_TARGET_BUSES = 5
+
+/** Stops queried concurrently per round; also the width of the parallel fan-out. */
+private const val NEARBY_VEHICLE_ROUND_STOPS = 5
 
 /**
- * The ceiling. Not a performance limit — the cost is [NEARBY_VEHICLE_STOPS] requests
- * whatever the radius — but a truthfulness one: past a couple of kilometres the nearest
- * five stops describe the point at the centre rather than the area, so widening further
- * buys no coverage. Beyond this the honest answer is the UI's "zoom in" hint, not a bigger
- * query returning the same five stops.
+ * The request budget for one poll, and the real bound on this search — four rounds of
+ * [NEARBY_VEHICLE_ROUND_STOPS]. Walking outward has to stop somewhere, and it should stop
+ * on work done rather than on distance: 20 SIRI requests is the cost, whether they cover
+ * a block or half the Negev.
  */
-private const val NEARBY_VEHICLE_MAX_RADIUS_M = 2_000
+private const val NEARBY_VEHICLE_MAX_STOPS = 20
+
+/**
+ * How far the stop *list* may reach. Nearly free, which is why it is generous: it is one
+ * request whatever the radius, the server returns at most 100 stops and sorts them
+ * nearest-first, and the walk above stops at the request budget long before distance
+ * matters. Set to cover a rural area rather than a city block — the previous 2 km
+ * ceiling was the whole bug.
+ */
+private const val NEARBY_VEHICLE_SEARCH_CEILING_M = 50_000
 
 class ArrivalsViewModel(
     private val api: PtApi
@@ -211,54 +227,83 @@ class ArrivalsViewModel(
     /**
      * Buses reporting around a point, for the map's live-buses mode.
      *
-     * SIRI is monitored per stop, so "the buses around here" is the union of what
-     * the nearest few stops report. Bounded at [NEARBY_VEHICLE_STOPS] stops because
-     * each one is its own request and this runs on a timer — the answer people want
-     * is "what is near me", not a census.
+     * SIRI is monitored per stop, so "the buses around here" is the union of what the
+     * stops report. The server returns them sorted nearest-first, which is what lets this
+     * *walk outward*: a round of [NEARBY_VEHICLE_ROUND_STOPS] stops at a time, stopping
+     * once it holds [NEARBY_VEHICLE_TARGET_BUSES] buses and has covered the screen, and
+     * in any case once [NEARBY_VEHICLE_MAX_STOPS] requests are spent.
      *
-     * [viewportRadiusMeters] is how much ground the map is actually showing, so the
-     * search matches what the user is looking at instead of a fixed guess. It was a
-     * fixed 700 m, which is why the feature drew nothing on a zoomed-out map: a circle
-     * far smaller than the screen, centred wherever the screen happened to be.
+     * That walk is the whole point. A fixed radius cannot serve both a city and a
+     * village: 700 m, then 2 km, both drew an empty map in Midreshet Ben Gurion while
+     * buses ran on the road outside. Asking for a number of buses instead of a distance
+     * makes the promise identical in both places, and lets the sparse case pay for its
+     * own extra rounds while the dense case still stops after one.
      *
-     * Note what is deliberately NOT bounded: the number of vehicles. A cap there would
-     * cost a poll's worth of dedup ordering — [seen] is insertion-ordered by whichever
-     * stop answered first, so a truncated list would drop a different bus each cycle and
-     * make markers blink — while saving nothing, since the work per cycle is the requests
-     * below and each marker is two canvas circles.
+     * [viewportRadiusMeters] no longer bounds the search, only its floor: the walk does
+     * not stop early while the screen still shows ground it has not asked about.
+     *
+     * Two things are deliberately NOT bounded. The number of vehicles — [seen] is ordered
+     * by whichever stop answered first, so truncating it would drop a different bus each
+     * poll and make markers blink, and each marker is two canvas circles anyway. And the
+     * search radius, which is now free: one stop-list request covers 50 km whether or not
+     * the walk ever reaches that far.
      */
     fun startNearbyVehicles(lat: Double, lon: Double, viewportRadiusMeters: Double) {
         nearbyVehiclesJob?.cancel()
-        val radius = viewportRadiusMeters
-            .toInt()
-            .coerceIn(NEARBY_VEHICLE_MIN_RADIUS_M, NEARBY_VEHICLE_MAX_RADIUS_M)
-        // Publish the radius before the first request, so the UI can say what it is
-        // searching while the answer is still in flight.
+        val viewportRadius = viewportRadiusMeters.toInt()
         _state.value = _state.value.copy(
-            nearbyVehiclesRadiusMeters = radius,
-            nearbyVehiclesLoaded = false
+            nearbyVehiclesLoaded = false,
+            nearbyVehiclesReachedMeters = 0,
+            nearbyVehiclesNearestMeters = 0
         )
         nearbyVehiclesJob = viewModelScope.launch {
             while (true) {
-                val stops = fetchNearbyStops(lat, lon, radius)
-                    .take(NEARBY_VEHICLE_STOPS)
+                // One request, nearest-first, capped server-side. Everything below walks
+                // this list rather than re-querying at a wider radius, so widening the
+                // search costs SIRI requests only where it actually needs them.
+                val stops = fetchNearbyStops(lat, lon, NEARBY_VEHICLE_SEARCH_CEILING_M)
                 val seen = mutableMapOf<String, VehicleMarker>()
-                for (stop in stops) {
-                    try {
-                        api.getTransport(station = stop.stopCode)
-                            .extractVehicleMarkers()
-                            // One bus is reported by every stop still ahead of it,
-                            // so it must be deduplicated or it draws several times.
-                            .forEach { marker -> seen.putIfAbsent(marker.vehicleRef, marker) }
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (_: Exception) {
-                        // One unreachable stop should not blank the others.
+                // With no stops at all, the ceiling IS the answer: the search can honestly
+                // say it looked 50 km out and found nowhere to ask.
+                var reachedMeters = if (stops.isEmpty()) NEARBY_VEHICLE_SEARCH_CEILING_M else 0
+                var queried = 0
+
+                for (round in stops.chunked(NEARBY_VEHICLE_ROUND_STOPS)) {
+                    if (queried >= NEARBY_VEHICLE_MAX_STOPS) break
+                    // A round is issued concurrently: walking outward multiplies the
+                    // requests, and sequentially they would outlast the poll interval.
+                    val found = coroutineScope {
+                        round.map { stop ->
+                            async {
+                                try {
+                                    api.getTransport(station = stop.stopCode)
+                                        .extractVehicleMarkers()
+                                } catch (e: CancellationException) {
+                                    throw e
+                                } catch (_: Exception) {
+                                    // One unreachable stop should not blank the others.
+                                    emptyList()
+                                }
+                            }
+                        }.awaitAll()
                     }
+                    // One bus is reported by every stop still ahead of it, so it must be
+                    // deduplicated or it draws several times.
+                    found.flatten().forEach { marker -> seen.putIfAbsent(marker.vehicleRef, marker) }
+
+                    queried += round.size
+                    reachedMeters = round.last().distanceMeters
+                    if (seen.size >= NEARBY_VEHICLE_TARGET_BUSES && reachedMeters >= viewportRadius) break
                 }
+
+                val vehicles = seen.values.toList()
                 _state.value = _state.value.copy(
-                    nearbyVehicles = seen.values.toList(),
-                    nearbyVehiclesLoaded = true
+                    nearbyVehicles = vehicles,
+                    nearbyVehiclesLoaded = true,
+                    nearbyVehiclesReachedMeters = reachedMeters,
+                    nearbyVehiclesNearestMeters = vehicles.minOfOrNull {
+                        distanceMeters(it.lat, it.lon, lat, lon).toInt()
+                    } ?: 0
                 )
                 delay(NEARBY_VEHICLE_INTERVAL_MS)
             }
@@ -271,7 +316,8 @@ class ArrivalsViewModel(
         _state.value = _state.value.copy(
             nearbyVehicles = emptyList(),
             nearbyVehiclesLoaded = false,
-            nearbyVehiclesRadiusMeters = 0
+            nearbyVehiclesReachedMeters = 0,
+            nearbyVehiclesNearestMeters = 0
         )
     }
 
