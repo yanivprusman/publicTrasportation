@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 
 /**
- * Wheelchair accessibility for a scheduled trip, from GTFS `trips.txt`.
+ * Per-trip facts read out of GTFS `trips.txt`: wheelchair access and shape id.
  *
  * The SIRI feed carries no accessibility field of any kind — not on the vehicle,
  * not on the call — so the timetable is the only source there is. This describes
@@ -17,12 +17,18 @@ const TRIPS_FILE = path.join(
   '../../gtfs/israel-public-transportation/trips.txt'
 );
 
+interface TripFacts {
+  access: WheelchairAccess;
+  /** GTFS shape_id — the only correct way to draw the line this trip runs on. */
+  shapeId: string;
+}
+
 // ~318k trips in the Israeli feed. Held for the life of the process: the map is
 // built once (~0.5s) and every lookup after that is free. Deliberately complete
 // rather than storing only the inaccessible ones — "absent means accessible"
 // would turn a trip missing from the feed into a promise we cannot keep, and a
 // wrong "accessible" is the one error that can strand somebody at a stop.
-let accessCache: Map<string, WheelchairAccess> | null = null;
+let tripCache: Map<string, TripFacts> | null = null;
 
 function parseFlag(raw: string | undefined): WheelchairAccess {
   switch (raw?.trim()) {
@@ -32,16 +38,16 @@ function parseFlag(raw: string | undefined): WheelchairAccess {
   }
 }
 
-function loadTripAccess(): Map<string, WheelchairAccess> {
-  if (accessCache) return accessCache;
+function loadTrips(): Map<string, TripFacts> {
+  if (tripCache) return tripCache;
 
   if (!fs.existsSync(TRIPS_FILE)) {
     // Not a fallback: with no timetable there is no accessibility answer, and
     // every trip legitimately reports "unknown". Loud, because it means
     // motis/update-data.sh did not extract trips.txt.
-    console.error(`trip-accessibility: ${TRIPS_FILE} missing — every trip will report unknown`);
-    accessCache = new Map();
-    return accessCache;
+    console.error(`gtfs-trips: ${TRIPS_FILE} missing — every trip will report unknown`);
+    tripCache = new Map();
+    return tripCache;
   }
 
   const content = fs.readFileSync(TRIPS_FILE, 'utf8');
@@ -49,11 +55,12 @@ function loadTripAccess(): Map<string, WheelchairAccess> {
   const header = lines[0].replace(/﻿/g, '').split(',').map(c => c.trim().toLowerCase());
   const tripIdx = header.indexOf('trip_id');
   const accessIdx = header.indexOf('wheelchair_accessible');
+  const shapeIdx = header.indexOf('shape_id');
 
-  const map = new Map<string, WheelchairAccess>();
-  if (tripIdx === -1 || accessIdx === -1) {
-    console.error('trip-accessibility: trips.txt has no trip_id / wheelchair_accessible column');
-    accessCache = map;
+  const map = new Map<string, TripFacts>();
+  if (tripIdx === -1 || accessIdx === -1 || shapeIdx === -1) {
+    console.error('gtfs-trips: trips.txt is missing trip_id / wheelchair_accessible / shape_id');
+    tripCache = map;
     return map;
   }
 
@@ -61,10 +68,14 @@ function loadTripAccess(): Map<string, WheelchairAccess> {
     if (!lines[i].trim()) continue;
     const cols = lines[i].split(',');
     const tripId = cols[tripIdx]?.trim();
-    if (tripId) map.set(tripId, parseFlag(cols[accessIdx]));
+    if (!tripId) continue;
+    map.set(tripId, {
+      access: parseFlag(cols[accessIdx]),
+      shapeId: cols[shapeIdx]?.trim() ?? '',
+    });
   }
 
-  accessCache = map;
+  tripCache = map;
   return map;
 }
 
@@ -82,5 +93,19 @@ export function tripWheelchairAccess(motisTripId: string | undefined): Wheelchai
   if (!motisTripId) return 'unknown';
   const tripId = gtfsTripId(motisTripId);
   if (!tripId) return 'unknown';
-  return loadTripAccess().get(tripId) ?? 'unknown';
+  return loadTrips().get(tripId)?.access ?? 'unknown';
+}
+
+/**
+ * The shape this trip runs on, or null when the trip is not in the feed.
+ *
+ * This is the whole point of going through the trip: a line *number* is not
+ * unique nationwide — line 60 exists in Beer Sheva, Tel Aviv and Haifa — so
+ * resolving geometry by number draws somebody else's route.
+ */
+export function tripShapeId(motisTripId: string | undefined): string | null {
+  if (!motisTripId) return null;
+  const tripId = gtfsTripId(motisTripId);
+  if (!tripId) return null;
+  return loadTrips().get(tripId)?.shapeId || null;
 }

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ensureMotis } from '@/lib/motis-manager';
 import { MODE_GROUPS, normalizeMode } from '@/lib/motis-modes';
-import { tripWheelchairAccess } from '@/lib/trip-accessibility';
+import { tripWheelchairAccess } from '@/lib/gtfs-trips';
 
 const MOTIS_PORT = process.env.MOTIS_PORT || '3504';
 const MOTIS_BASE = `http://localhost:${MOTIS_PORT}`;
@@ -106,6 +106,10 @@ function transformItinerary(itin: MotisItinerary) {
       // Only transit legs can be inaccessible; a walk leg has nothing to board.
       if (leg.mode && leg.mode !== 'WALK') {
         transformed.wheelchairAccess = tripWheelchairAccess(leg.tripId);
+        // Passed through so the client can ask /api/trip-shape for this exact
+        // trip's geometry. Resolving by line number instead draws another city's
+        // line of the same number.
+        if (leg.tripId) transformed.tripId = leg.tripId;
       }
       if (leg.intermediateStops && leg.intermediateStops.length > 0) {
         transformed.intermediateStops = leg.intermediateStops.map(stop => ({

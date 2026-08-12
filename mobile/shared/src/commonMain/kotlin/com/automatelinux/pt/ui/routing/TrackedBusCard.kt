@@ -81,31 +81,24 @@ fun TrackedBusCard(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
     ) {
-        Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
+        Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 LineBadge(tracked.lineName)
                 Spacer(Modifier.width(10.dp))
 
-                val marker = tracked.marker
-                if (tracked.status == TrackingStatus.LIVE && marker != null) {
+                // The line badge alone does not say which way it is going, and on a
+                // two-direction line that is the difference between the right bus and
+                // an hour lost.
+                if (tracked.destination.isNotBlank()) {
                     Text(
-                        text = etaText(marker, now, strings),
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                } else {
-                    Text(
-                        text = statusText(tracked.status, strings),
+                        text = strings.toDestination(tracked.destination),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 2,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f)
                     )
-                }
-
-                if (tracked.status == TrackingStatus.LIVE && marker != null) {
+                } else {
                     Spacer(Modifier.weight(1f))
                 }
 
@@ -116,6 +109,26 @@ fun TrackedBusCard(
                         modifier = Modifier.size(18.dp)
                     )
                 }
+            }
+
+            Spacer(Modifier.size(6.dp))
+
+            val marker = tracked.marker
+            if (tracked.status == TrackingStatus.LIVE && marker != null) {
+                Text(
+                    text = etaText(marker, now, strings),
+                    fontSize = 32.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            } else {
+                Text(
+                    text = statusText(tracked.status, strings),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
 
             tracked.marker?.recordedAt?.let { recordedAt ->

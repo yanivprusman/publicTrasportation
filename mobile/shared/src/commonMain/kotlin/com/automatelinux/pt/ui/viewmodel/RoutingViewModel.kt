@@ -324,7 +324,9 @@ class RoutingViewModel(
         lat: Double,
         lon: Double,
         lineName: String,
-        access: WheelchairAccess = WheelchairAccess.UNKNOWN
+        access: WheelchairAccess = WheelchairAccess.UNKNOWN,
+        destination: String = "",
+        tripId: String? = null
     ) {
         stopTracking()
         val seq = ++trackSeq
@@ -333,16 +335,25 @@ class RoutingViewModel(
                 legIndex = legIndex,
                 lineName = lineName,
                 access = access,
+                destination = destination,
                 stopLat = lat,
                 stopLon = lon
             )
         )
         trackingJob = viewModelScope.launch {
-            // No line shape is drawn here on purpose. /api/line-shape resolves a line
-            // by route_short_name alone, which is not unique nationwide — asking it
-            // for "60" while tracking the Negev's line 60 returns Tel Aviv's and
-            // Haifa's geometry (lat 32.0–32.9, ~200 km away). Identifying the right
-            // shape needs the leg's GTFS trip, not its number.
+            // Geometry comes from the trip, never the line number: /api/line-shape
+            // resolves "60" to Tel Aviv's and Haifa's line 60 as readily as the
+            // Negev's. Static for the trip, so fetched once alongside the polling.
+            if (tripId != null) {
+                launch {
+                    val points = try {
+                        api.getTripShape(tripId).points
+                    } catch (_: Exception) {
+                        emptyList()
+                    }
+                    if (points.isNotEmpty()) updateTracking(seq) { it.copy(shape = points) }
+                }
+            }
             val stops = try { api.nearbyStops(lat, lon, 300) } catch (_: Exception) { emptyList() }
             val stationCode = stops.firstOrNull()?.stopCode
             if (stationCode == null) {

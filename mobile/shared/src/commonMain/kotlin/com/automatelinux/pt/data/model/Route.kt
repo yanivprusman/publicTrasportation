@@ -63,7 +63,16 @@ data class RouteLeg(
      * about access, so this describes the timetabled trip, not the vehicle that
      * actually arrives. Absent on walk legs.
      */
-    val wheelchairAccess: String? = null
+    val wheelchairAccess: String? = null,
+    /** MOTIS trip id; the key /api/trip-shape needs to draw this leg's real line. */
+    val tripId: String? = null
+)
+
+@Serializable
+data class TripShapeResponse(
+    val shapeId: String = "",
+    /** [lat, lon] pairs in shape_pt_sequence order. */
+    val points: List<List<Double>> = emptyList()
 )
 
 enum class WheelchairAccess { ACCESSIBLE, NOT_ACCESSIBLE, UNKNOWN }

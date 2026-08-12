@@ -111,9 +111,11 @@ done
 mkdir -p "$PT_BACKEND_GTFS_DIR/israel-public-transportation"
 cp -f "$DATA_INPUT_DIR/israel-gtfs.zip" "$PT_BACKEND_GTFS_DIR/israel-gtfs.zip"
 # trips.txt carries wheelchair_accessible, which SIRI does not report at all —
-# /api/route reads it to tag each transit leg. It must be re-extracted with
-# stops.txt or the flag goes stale against a freshly imported timetable.
-unzip -o -q -d "$PT_BACKEND_GTFS_DIR/israel-public-transportation" "$PT_BACKEND_GTFS_DIR/israel-gtfs.zip" stops.txt trips.txt
-echo "GTFS copied + stops.txt/trips.txt extracted to $PT_BACKEND_GTFS_DIR"
+# /api/route reads it to tag each transit leg. trips.txt + shapes.txt also back
+# /api/trip-shape and /api/line-shape. All three must be re-extracted with
+# stops.txt: they had been left at the March-2025 copies while the importer moved
+# on, so a fresh trip's shape_id resolved to zero rows in the stale shapes.txt.
+unzip -o -q -d "$PT_BACKEND_GTFS_DIR/israel-public-transportation" "$PT_BACKEND_GTFS_DIR/israel-gtfs.zip" stops.txt trips.txt shapes.txt
+echo "GTFS copied + stops.txt/trips.txt/shapes.txt extracted to $PT_BACKEND_GTFS_DIR"
 
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] MOTIS data update complete"

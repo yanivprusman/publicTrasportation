@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.DirectionsBus
 import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.MyLocation
@@ -362,14 +363,27 @@ fun MainScreen(
     // "Where is my bus" is a question about two points, so both are framed: the
     // vehicle and the stop you are waiting at. Keyed on the vehicle rather than its
     // position, so the camera settles once per bus instead of lurching every poll.
-    LaunchedEffect(routingState.trackedBus?.marker?.vehicleRef) {
-        val tracked = routingState.trackedBus ?: return@LaunchedEffect
-        val bus = tracked.marker ?: return@LaunchedEffect
-        if (tracked.stopLat == 0.0 && tracked.stopLon == 0.0) return@LaunchedEffect
-        mapState.fitBounds(
-            listOf(LatLng(bus.lat, bus.lon), LatLng(tracked.stopLat, tracked.stopLon)),
-            padding = 90
-        )
+    val frameTrackedBus: () -> Unit = {
+        val tracked = routingState.trackedBus
+        val bus = tracked?.marker
+        if (bus != null && (tracked.stopLat != 0.0 || tracked.stopLon != 0.0)) {
+            mapState.fitBounds(
+                listOf(LatLng(bus.lat, bus.lon), LatLng(tracked.stopLat, tracked.stopLon)),
+                padding = 90
+            )
+        }
+    }
+    LaunchedEffect(routingState.trackedBus?.marker?.vehicleRef) { frameTrackedBus() }
+
+    // Tracking is a screen, not a badge: the sheet goes away so the map is the whole
+    // view, and comes back exactly as it was when tracking ends.
+    val isTracking = routingState.trackedBus != null
+    LaunchedEffect(isTracking) {
+        if (isTracking) {
+            bottomSheetState.hide()
+        } else if (bottomSheetState.currentValue == SheetValue.Hidden) {
+            bottomSheetState.partialExpand()
+        }
     }
 
     LaunchedEffect(Unit) {
@@ -586,7 +600,9 @@ fun MainScreen(
                                                 lat = leg.from.lat,
                                                 lon = leg.from.lon,
                                                 lineName = lineName,
-                                                access = leg.access
+                                                access = leg.access,
+                                                destination = leg.to.name,
+                                                tripId = leg.tripId
                                             )
                                         }
                                     },
@@ -745,7 +761,13 @@ fun MainScreen(
                         // Tracking wins over the Lines tab: a bus can be reported far
                         // up the road, well off the stretch of the itinerary you ride,
                         // so its own line is what makes the marker mean anything.
-                        lineShape = if (activeTab == ActiveTab.LINES) lineShapeData.directions else null,
+                        // While tracking, the line is this trip's real geometry, keyed
+                        // by trip id — not the line number, which repeats nationwide.
+                        lineShape = routingState.trackedBus?.shape
+                            ?.takeIf { it.isNotEmpty() }
+                            ?.let { mapOf("trip" to it) }
+                            ?: if (activeTab == ActiveTab.LINES) lineShapeData.directions else null,
+                        lineShapeFitsCamera = routingState.trackedBus?.shape?.isEmpty() != false,
                         trackedBus = routingState.trackedBus?.marker,
                         // The map never prompts; it only draws what permission already allows.
                         showUserLocation = LocationHelper.hasPermission(context),
@@ -780,16 +802,17 @@ fun MainScreen(
                     }
                 )
 
-                // Tracking is a claim about the world right now, so it gets a card of its
-                // own rather than a bare dot on the map: which bus, how far off, how stale.
+                // Tracking takes the screen rather than perching on it: the sheet steps
+                // aside (below), the map is the whole view, and the card sits at the
+                // bottom where a thumb already is.
                 routingState.trackedBus?.let { tracked ->
                     TrackedBusCard(
                         tracked = tracked,
                         onSelectVehicle = { routingViewModel.selectTrackedVehicle(it) },
                         onClose = { routingViewModel.stopTracking() },
                         modifier = Modifier
-                            .align(Alignment.TopStart)
-                            .padding(top = 48.dp, start = 12.dp, end = 64.dp)
+                            .align(Alignment.BottomCenter)
+                            .padding(start = 12.dp, end = 12.dp, bottom = 24.dp)
                     )
                 }
 
@@ -800,6 +823,23 @@ fun MainScreen(
                     horizontalAlignment = Alignment.End,
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
+                    // Panning away from the bus is normal — you look ahead down the
+                    // road — so getting back to it has to be one tap, not a re-track.
+                    if (routingState.trackedBus?.marker != null) {
+                        SmallFloatingActionButton(
+                            onClick = frameTrackedBus,
+                            containerColor = MaterialTheme.colorScheme.surface,
+                            contentColor = MaterialTheme.colorScheme.primary,
+                            elevation = FloatingActionButtonDefaults.elevation(4.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.DirectionsBus,
+                                contentDescription = strings.trackingFrameBus,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                    }
+
                     SmallFloatingActionButton(
                         onClick = {
                             if (LocationHelper.hasPermission(context)) {

@@ -44,9 +44,16 @@ data class TrackedBus(
     val selectedIndex: Int = 0,
     /** Wheelchair access of the scheduled trip being boarded (from the itinerary leg). */
     val access: WheelchairAccess = WheelchairAccess.UNKNOWN,
+    /** Where this leg puts you down — the stop you are riding to, not the line's terminus. */
+    val destination: String = "",
     /** Where you board — the other half of the "where is it relative to me" question. */
     val stopLat: Double = 0.0,
-    val stopLon: Double = 0.0
+    val stopLon: Double = 0.0,
+    /**
+     * The route this trip actually runs, as [lat, lon] pairs from GTFS shapes.txt.
+     * Resolved through the trip id, never the line number — see /api/trip-shape.
+     */
+    val shape: List<List<Double>> = emptyList()
 ) {
     /** The vehicle currently being followed — what the map draws. */
     val marker: VehicleMarker?

@@ -12,6 +12,7 @@ import com.automatelinux.pt.data.model.RouteResult
 import com.automatelinux.pt.data.model.SiriResponse
 import com.automatelinux.pt.data.model.StopResult
 import com.automatelinux.pt.data.model.StoptimesResponse
+import com.automatelinux.pt.data.model.TripShapeResponse
 import com.automatelinux.pt.util.ServerConfig
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -85,6 +86,13 @@ class PtApi(private val client: HttpClient) {
 
     suspend fun getLineShape(line: String): Map<String, List<List<Double>>> =
         fetch("/api/line-shape", params = mapOf("line" to line))
+
+    /**
+     * Geometry of one specific trip. Preferred over [getLineShape] wherever the
+     * trip is known: line numbers repeat across the country, trip ids do not.
+     */
+    suspend fun getTripShape(tripId: String): TripShapeResponse =
+        fetch("/api/trip-shape", params = mapOf("tripId" to tripId))
 
     suspend fun appPing(body: AppPingRequest): AppPingResponse =
         fetch("/api/app/ping", HttpMethod.Post, PtJson.encodeToString(body))
