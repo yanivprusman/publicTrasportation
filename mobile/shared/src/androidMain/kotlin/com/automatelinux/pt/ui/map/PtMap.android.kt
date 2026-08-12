@@ -45,12 +45,12 @@ actual fun PtMap(
         onMapReady = { map = it },
         onLongPress = onLongPress?.let { cb -> { point -> cb(point.toLatLng()) } },
         onUserPan = onUserPan,
-        onMapChanged = { center, zoom, visibleRadiusMeters ->
+        onMapChanged = { center, zoom, visibleRadiusMeters, visibleCornerMeters ->
             // Keep the hoisted camera in step with the user's gestures, so shared code
             // can read where the map is without touching the map view.
             state.camera = PtMapCamera(center.toLatLng(), zoom)
             onCameraChanged?.invoke(
-                PtMapViewport(center.toLatLng(), zoom, visibleRadiusMeters)
+                PtMapViewport(center.toLatLng(), zoom, visibleRadiusMeters, visibleCornerMeters)
             )
         }
     ) { mapView ->

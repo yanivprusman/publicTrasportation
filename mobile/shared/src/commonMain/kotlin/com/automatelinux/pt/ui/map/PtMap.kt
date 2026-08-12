@@ -59,7 +59,17 @@ data class PtMapViewport(
      * the circumscribed one, so a radius taken from it never claims ground the user
      * cannot see.
      */
-    val visibleRadiusMeters: Double
+    val visibleRadiusMeters: Double,
+    /**
+     * Metres from [center] to the screen's corner — the circumscribed circle.
+     *
+     * The pair is not redundant: on a portrait phone the inscribed circle is half the
+     * screen's *width*, so most of what the user can see lies outside it. Asking "is this
+     * bus off-screen?" with the inscribed radius answers yes for a bus plainly visible
+     * near the top of the map. Size searches by [visibleRadiusMeters]; judge visibility
+     * by this.
+     */
+    val visibleCornerMeters: Double
 )
 
 /**

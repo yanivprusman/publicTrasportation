@@ -35,9 +35,10 @@ import com.automatelinux.pt.map.LatLng
  *  4. Point it at the same MAPNIK raster tiles Android uses, so the two look alike.
  *  5. Honour [PtMapState.pendingCommand] and call [PtMapState.consume] — see the Android
  *     actual for the serial-acknowledgement pattern.
- *  6. Report a real [PtMapViewport.visibleRadiusMeters] from `MLNMapView.visibleCoordinateBounds`
- *     — the live-buses layer sizes its search from it, so returning a made-up number would
- *     make the feature query the wrong ground rather than fail visibly.
+ *  6. Report real [PtMapViewport.visibleRadiusMeters] and [PtMapViewport.visibleCornerMeters]
+ *     from `MLNMapView.visibleCoordinateBounds` — the live-buses layer sizes its search from
+ *     the first and judges whether a bus is off-screen with the second, so returning made-up
+ *     numbers would make the feature query the wrong ground rather than fail visibly.
  */
 @Composable
 actual fun PtMap(

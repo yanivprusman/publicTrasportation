@@ -156,6 +156,10 @@ fun MainScreen(
     // camera callback, which is why the live-buses effect waits for a real value rather
     // than searching a radius nobody measured.
     var currentMapRadiusMeters by remember { mutableStateOf(0.0) }
+    // Distance to the screen's corner. Kept apart from the radius above because the
+    // radius is half the screen's WIDTH in portrait, so using it to judge whether a bus
+    // is off-screen calls a bus near the top of the map invisible.
+    var currentMapCornerMeters by remember { mutableStateOf(0.0) }
     var favoriteLines by remember { mutableStateOf(settingsStore.getFavoriteLines()) }
     var favoriteStations by remember { mutableStateOf(settingsStore.getFavoriteStations()) }
     var reminderLegIndex by remember { mutableStateOf<Int?>(null) }
@@ -853,6 +857,7 @@ fun MainScreen(
                         currentMapCenter = viewport.center
                         currentMapZoom = viewport.zoom
                         currentMapRadiusMeters = viewport.visibleRadiusMeters
+                        currentMapCornerMeters = viewport.visibleCornerMeters
                     },
                     onStopTap = { stop ->
                         activeTab = ActiveTab.ARRIVALS
@@ -904,7 +909,10 @@ fun MainScreen(
                         // like finding none. The whole point of walking outward is that
                         // in a village the answer legitimately lies outside the view.
                         arrivalsState.nearbyVehicles.isNotEmpty() ->
-                            if (nearestMeters > currentMapRadiusMeters) {
+                            // Beyond the CORNER, not the radius: anything closer than the
+                            // corner may well be on screen, and telling someone to zoom out
+                            // to find a bus they can already see is worse than staying quiet.
+                            if (nearestMeters > currentMapCornerMeters) {
                                 strings.liveBusesOffscreen(formatDistance(nearestMeters, strings))
                             } else {
                                 null

@@ -183,7 +183,11 @@ fun VehicleMarkerOverlay(
                     setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
                     title = "Line ${vm.lineNumber}"
                     snippet = "Vehicle: ${vm.vehicleRef}"
-                    icon = createCircleDrawable(Color.parseColor("#E91E63"), 10, Color.WHITE, 2f)
+                    icon = createBusMarkerDrawable(
+                        Color.parseColor("#E91E63"),
+                        vm.lineNumber,
+                        map.resources.displayMetrics.density
+                    )
                     if (onVehicleTap != null) {
                         // A dot you cannot act on is decoration; tapping one is how
                         // "that is my bus" turns into tracking it.
@@ -299,7 +303,13 @@ fun TrackedBusOverlay(
                 setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
                 title = "Line ${marker.lineNumber}"
                 snippet = "Tracking"
-                icon = createCircleDrawable(Color.parseColor("#FF6D00"), 14, Color.WHITE, 3f)
+                // Same marker, the tracked colour. Keeping the shape identical is the point:
+                // it is the same bus you tapped, and only its state changed.
+                icon = createBusMarkerDrawable(
+                    Color.parseColor("#FF6D00"),
+                    marker.lineNumber,
+                    map.resources.displayMetrics.density
+                )
                 setInfoWindow(null)
             }
             map.overlays.add(m)

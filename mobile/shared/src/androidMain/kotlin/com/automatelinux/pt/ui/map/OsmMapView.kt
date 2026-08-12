@@ -23,22 +23,25 @@ import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.CopyrightOverlay
 import org.osmdroid.views.overlay.MapEventsOverlay
+import kotlin.math.sqrt
 
 /**
- * Metres from the centre of the map to the nearest screen edge.
+ * Metres from the centre of the map to the nearest screen edge, and to its corner.
  *
  * osmdroid already holds the real projection, so this asks it rather than converting the
- * zoom number by hand. The nearest edge (rather than the corner) makes it the largest
- * circle wholly on screen, which is what a "what is around here" query should cover.
+ * zoom number by hand. Both are returned because they answer different questions: the
+ * nearest edge is the largest circle wholly on screen (what a "what is around here" query
+ * should cover), the corner is the smallest circle containing the screen (what "is this
+ * off-screen?" has to beat).
  */
-private fun MapView.visibleRadiusMeters(): Double {
+private fun MapView.visibleSpanMeters(): Pair<Double, Double> {
     val box = boundingBox
     val centerLat = box.centerLatitude
     val centerLon = box.centerLongitude
     val center = GeoPoint(centerLat, centerLon)
     val halfHeight = center.distanceToAsDouble(GeoPoint(box.latNorth, centerLon))
     val halfWidth = center.distanceToAsDouble(GeoPoint(centerLat, box.lonEast))
-    return minOf(halfHeight, halfWidth)
+    return minOf(halfHeight, halfWidth) to sqrt(halfWidth * halfWidth + halfHeight * halfHeight)
 }
 
 object MapZoomHandler {
@@ -61,7 +64,7 @@ fun OsmMapView(
     onLongPress: ((GeoPoint) -> Unit)? = null,
     onMapMoved: ((GeoPoint) -> Unit)? = null,
     onUserPan: (() -> Unit)? = null,
-    onMapChanged: ((center: GeoPoint, zoom: Double, visibleRadiusMeters: Double) -> Unit)? = null,
+    onMapChanged: ((center: GeoPoint, zoom: Double, visibleRadiusMeters: Double, visibleCornerMeters: Double) -> Unit)? = null,
     overlayContent: @Composable (MapView) -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -110,18 +113,22 @@ fun OsmMapView(
 
                 addMapListener(object : MapListener {
                     override fun onScroll(event: ScrollEvent?): Boolean {
+                        val (radius, corner) = visibleSpanMeters()
                         onMapChanged?.invoke(
                             GeoPoint(mapCenter.latitude, mapCenter.longitude),
                             zoomLevelDouble,
-                            visibleRadiusMeters()
+                            radius,
+                            corner
                         )
                         return false
                     }
                     override fun onZoom(event: ZoomEvent?): Boolean {
+                        val (radius, corner) = visibleSpanMeters()
                         onMapChanged?.invoke(
                             GeoPoint(mapCenter.latitude, mapCenter.longitude),
                             zoomLevelDouble,
-                            visibleRadiusMeters()
+                            radius,
+                            corner
                         )
                         return false
                     }
