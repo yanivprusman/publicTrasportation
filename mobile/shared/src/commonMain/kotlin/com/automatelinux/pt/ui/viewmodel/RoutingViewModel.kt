@@ -374,9 +374,20 @@ class RoutingViewModel(
                 // nothing and tracking could never find a bus. PublishedLineName is
                 // what riders call the line, and it is filtered for below.
                 val response = api.getTransport(station = stationCode)
+                // Soonest to arrive first, because index 0 is the bus the card follows by
+                // default and "my bus" is the next one in.
+                //
+                // This sorted by DistanceFromStop, which sounds like "nearest first" and
+                // is not: the field counts UP as a vehicle drives, so it is trip progress,
+                // and the smallest value belongs to whichever bus set off most recently —
+                // on a long line, the one furthest away. Tracking could open on a bus an
+                // hour behind the one the user was waiting for.
                 val candidates = response.extractVehicleMarkers()
                     .filter { it.lineNumber.equals(lineName, ignoreCase = true) }
-                    .sortedBy { it.distanceFromStop }
+                    .sortedBy { marker ->
+                        runCatching { Instant.parse(marker.expectedArrival) }.getOrNull()
+                            ?: Instant.DISTANT_FUTURE
+                    }
                 updateTracking(seq) { tracked ->
                     tracked.copy(
                         status = if (candidates.isEmpty()) {

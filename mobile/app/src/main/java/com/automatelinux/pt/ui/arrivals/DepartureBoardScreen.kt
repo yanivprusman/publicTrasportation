@@ -342,13 +342,15 @@ private fun BoardRow(
                 overflow = TextOverflow.Ellipsis
             )
             if (entry.isLive) {
-                call?.distanceFromStop?.let { meters ->
-                    Text(
-                        text = strings.distanceMeters(meters),
-                        color = BoardAmberDim,
-                        fontSize = 12.sp
-                    )
-                }
+                // Was DistanceFromStop, which is trip progress rather than a distance to
+                // here — on a glanceable board a five-digit metre count reads as "how far
+                // my bus is", and it never was. The board's job is the countdown to its
+                // right; this line just says which rows are real-time.
+                Text(
+                    text = strings.liveTag,
+                    color = BoardAmberDim,
+                    fontSize = 12.sp
+                )
             } else {
                 Text(
                     text = strings.scheduledTag,

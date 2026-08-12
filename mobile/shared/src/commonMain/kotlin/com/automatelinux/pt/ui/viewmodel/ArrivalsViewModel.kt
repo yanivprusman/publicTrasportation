@@ -18,10 +18,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import com.automatelinux.pt.util.metersBetween
 import kotlinx.datetime.Clock
-import kotlin.math.PI
-import kotlin.math.cos
-import kotlin.math.sqrt
 
 // ArrivalsState now lives in commonMain (ui/viewmodel/ArrivalsState.kt).
 
@@ -194,11 +192,8 @@ class ArrivalsViewModel(
         }
     }
 
-    private fun distanceMeters(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
-        val dLat = (lat1 - lat2) * 111_320.0
-        val dLon = (lon1 - lon2) * 111_320.0 * cos(lat2 * PI / 180.0)
-        return sqrt(dLat * dLat + dLon * dLon)
-    }
+    private fun distanceMeters(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double =
+        metersBetween(lat1, lon1, lat2, lon2)
 
     fun startPolling() {
         stopPolling()

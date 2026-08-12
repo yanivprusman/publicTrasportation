@@ -63,7 +63,14 @@ fun TrackedBusCard(
     tracked: TrackedBus,
     onSelectVehicle: (Int) -> Unit,
     onClose: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    /**
+     * Straight-line metres from the user to this bus, or null when there is no location
+     * fix. Passed in rather than derived here because only the platform layer knows where
+     * the user is — and null must stay null: the card shows no distance at all rather
+     * than substituting a number that measures something else.
+     */
+    distanceFromUserMeters: Int? = null
 ) {
     val strings = LocalAppStrings.current
     var now by remember { mutableStateOf(Clock.System.now()) }
@@ -168,12 +175,18 @@ fun TrackedBusCard(
                 }
             }
 
-            // How far the bus still has to come. The feed reports metres to the
-            // stop; it does not report stops-away, and that is not guessed here.
-            tracked.marker?.takeIf { it.distanceFromStop > 0 }?.let { marker ->
+            // How far away the bus is, measured from the user to the bus.
+            //
+            // This used to print SIRI's DistanceFromStop, which is not a distance to
+            // anything: sampled 80s apart it INCREASES at road speed, so it is how far
+            // the vehicle has driven on its trip. That put "41.8 km away" under "now" —
+            // both facts true, the word "away" the only lie. Nothing in the feed answers
+            // "how far is it from me", so the app computes it from the two positions it
+            // already has, and shows nothing when it has no fix on the user.
+            distanceFromUserMeters?.let { meters ->
                 Spacer(Modifier.size(2.dp))
                 Text(
-                    text = strings.trackingDistanceAway(formatDistance(marker.distanceFromStop, strings)),
+                    text = strings.trackingDistanceAway(formatDistance(meters, strings)),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

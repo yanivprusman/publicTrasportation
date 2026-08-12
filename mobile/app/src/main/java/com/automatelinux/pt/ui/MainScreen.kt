@@ -104,6 +104,7 @@ import com.automatelinux.pt.widget.DeparturesWidgetProvider
 import com.automatelinux.pt.util.LocalAppStrings
 import com.automatelinux.pt.util.PolylineDecoder
 import com.automatelinux.pt.util.formatDistance
+import com.automatelinux.pt.util.metersBetween
 import com.automatelinux.pt.util.SettingsStore
 import com.automatelinux.pt.util.TripLink
 import kotlinx.coroutines.awaitCancellation
@@ -227,6 +228,26 @@ fun MainScreen(
                 onFailure = { gpsLoadingDestination = false }
             )
         }
+    }
+
+    // Where the user is, for the tracked card's "X away". Taken once when tracking
+    // starts rather than subscribed to: the bus moves, the person waiting for it mostly
+    // does not, and holding GPS open for a whole ride would spend battery on a number
+    // that barely changes. Null means no fix, and the card then shows no distance.
+    var userLocation by remember { mutableStateOf<LatLng?>(null) }
+
+    LaunchedEffect(routingState.trackedBus != null) {
+        if (routingState.trackedBus == null) {
+            userLocation = null
+            return@LaunchedEffect
+        }
+        if (!LocationHelper.hasPermission(context)) return@LaunchedEffect
+        LocationHelper.fetchLocation(
+            fusedLocationClient = fusedLocationClient,
+            onStart = {},
+            onLocation = { loc -> userLocation = LatLng(loc.latitude, loc.longitude) },
+            onFailure = {}
+        )
     }
 
     val centerMapOnCurrentLocation = {
@@ -888,6 +909,11 @@ fun MainScreen(
                         tracked = tracked,
                         onSelectVehicle = { routingViewModel.selectTrackedVehicle(it) },
                         onClose = { routingViewModel.stopTracking() },
+                        distanceFromUserMeters = userLocation?.let { user ->
+                            tracked.marker?.let { bus ->
+                                metersBetween(user.latitude, user.longitude, bus.lat, bus.lon).toInt()
+                            }
+                        },
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
                             .padding(start = 12.dp, end = 12.dp, bottom = 24.dp)

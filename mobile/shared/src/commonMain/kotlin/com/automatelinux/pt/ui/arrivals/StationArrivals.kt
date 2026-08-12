@@ -53,6 +53,7 @@ import com.automatelinux.pt.ui.viewmodel.DepartureEntry
 import com.automatelinux.pt.ui.viewmodel.buildDepartures
 import com.automatelinux.pt.util.AppStrings
 import com.automatelinux.pt.util.LocalAppStrings
+import com.automatelinux.pt.util.formatDistance
 import kotlinx.coroutines.delay
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
@@ -522,8 +523,16 @@ private fun DepartureRow(
                         strings.vehicleRef(journey.vehicleRef ?: strings.notAvailable),
                         style = MaterialTheme.typography.bodySmall
                     )
-                    call?.distanceFromStop?.let {
-                        Text(strings.distanceMeters(it), style = MaterialTheme.typography.bodySmall)
+                    // SIRI's DistanceFromStop, named for what it measures. It is not the
+                    // distance to this stop — sampled over time it grows at road speed,
+                    // so it is the vehicle's progress along its trip. Labelled as
+                    // "distance" it read as "the bus is 41 km from you", under a row
+                    // saying the bus arrives in two minutes.
+                    call?.distanceFromStop?.takeIf { it > 0 }?.let {
+                        Text(
+                            strings.tripDistanceTravelled(formatDistance(it, strings)),
+                            style = MaterialTheme.typography.bodySmall
+                        )
                     }
                     call?.expectedArrivalTime?.let {
                         Text(strings.fullArrival(it), style = MaterialTheme.typography.bodySmall)
