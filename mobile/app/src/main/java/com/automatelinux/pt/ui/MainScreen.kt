@@ -893,7 +893,7 @@ fun MainScreen(
                             routingViewModel.trackBusAtStop(
                                 stationCode = stopCode,
                                 lineName = marker.lineNumber,
-                                destination = arrivalsViewModel.getDestinationName(marker.destinationRef),
+                                destination = marker.destinationName,
                                 routeId = marker.lineRef,
                                 vehicleRef = marker.vehicleRef
                             )

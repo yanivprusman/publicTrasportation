@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import http from 'http';
 import fs from 'fs';
 import path from 'path';
+import { normaliseVehicles } from '../../../lib/siri-vehicles';
 
 function httpGet(url: string, headers: Record<string, string>, timeoutMs: number): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -103,6 +104,10 @@ export async function GET(request: NextRequest) {
     const data = JSON.parse(body);
 
     data._stopNames = resolveStopNames(data);
+    // The raw SIRI tree stays in the payload — the arrivals board still reads visits from
+    // it — but every client reads vehicles from here, so none of them has to decide what
+    // a SIRI field means. See lib/siri-vehicles.ts for why that was worth centralising.
+    data._vehicles = normaliseVehicles(data, data._stopNames);
 
     return NextResponse.json(data);
   } catch (error) {

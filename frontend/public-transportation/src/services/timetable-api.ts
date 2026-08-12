@@ -1,5 +1,6 @@
 import { searchStops } from './transport-api'
 import { geocodeSearch } from './routing-api'
+import { metersBetween } from '../../lib/geo'
 
 /** One scheduled departure from the GTFS timetable, as MOTIS reports it. */
 export interface StopTimeEntry {
@@ -17,18 +18,12 @@ interface StoptimesResponse {
 }
 
 /** How far a geocoded schedule stop may sit from the GTFS stop before we reject the match. */
+
 const MAX_MATCH_METERS = 250
 
 /** Rail routes often carry no short name; fall back so the badge never reads "?". */
 export function lineLabel(entry: StopTimeEntry): string {
   return entry.routeShortName || entry.displayName || entry.mode
-}
-
-/** Equirectangular approximation — accurate enough at the scale of one stop. */
-function distanceMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const dLat = (lat1 - lat2) * 111_320
-  const dLon = (lon1 - lon2) * 111_320 * Math.cos((lat2 * Math.PI) / 180)
-  return Math.sqrt(dLat * dLat + dLon * dLon)
 }
 
 /** Departure instant of an entry, or null when neither timestamp parses. */
@@ -57,7 +52,7 @@ export async function fetchStationTimetable(stopCode: string, n = 30): Promise<S
 
   const candidates = (await geocodeSearch(stop.stopName))
     .filter(g => g.type === 'STOP' && !!g.id)
-    .map(g => ({ g, d: distanceMeters(g.lat, g.lon, stop.lat, stop.lon) }))
+    .map(g => ({ g, d: metersBetween(g.lat, g.lon, stop.lat, stop.lon) }))
     .sort((a, b) => a.d - b.d)
 
   const best = candidates[0]

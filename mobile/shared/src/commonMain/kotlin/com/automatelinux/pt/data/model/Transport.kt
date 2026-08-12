@@ -6,7 +6,15 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class SiriResponse(
     @SerialName("Siri") val siri: SiriWrapper? = null,
-    @SerialName("_stopNames") val stopNames: Map<String, String>? = null
+    @SerialName("_stopNames") val stopNames: Map<String, String>? = null,
+    /**
+     * Vehicles, already interpreted by the server (lib/siri-vehicles.ts).
+     *
+     * The raw [siri] tree is still here because the arrivals board reads visits from it,
+     * but nothing on this side walks it looking for vehicles any more. Both clients used
+     * to, separately, and both concluded that DistanceFromStop was a distance to the stop.
+     */
+    @SerialName("_vehicles") val vehicles: List<VehicleMarker>? = null
 )
 
 @Serializable
@@ -60,48 +68,45 @@ data class VehicleLocation(
 @Serializable
 data class MonitoredCall(
     @SerialName("ExpectedArrivalTime") val expectedArrivalTime: String? = null,
-    @SerialName("DistanceFromStop") val distanceFromStop: Int? = null
+    /**
+     * Metres this vehicle has driven on its trip. The wire name is SIRI's
+     * `DistanceFromStop`, which is why it kept being read as a distance TO the stop —
+     * sampled over time it counts up at road speed. The property is named for what it
+     * measures so the next reader cannot make that mistake from the call site.
+     */
+    @SerialName("DistanceFromStop") val tripTravelledMeters: Int? = null
 )
 
-// Domain type built from the SIRI response (not deserialized directly).
+/**
+ * A vehicle, exactly as the server hands it over.
+ *
+ * Deserialized straight from `_vehicles` rather than assembled here: the shape and the
+ * field names are the server's (lib/siri-vehicles.ts), so Android, iOS and the web all
+ * read the same interpretation of the feed instead of each inventing one.
+ */
+@Serializable
 data class VehicleMarker(
     val lat: Double,
     val lon: Double,
-    val vehicleRef: String,
-    val lineNumber: String,
-    val expectedArrival: String,
-    val distanceFromStop: Int,
+    val vehicleRef: String = "",
+    val lineNumber: String = "",
+    val expectedArrival: String = "",
+    /**
+     * Metres driven on this trip — NOT a distance to the stop, to the user, or to
+     * anything else on screen. Anything phrased "X away" is computed from two positions;
+     * see MainScreen's tracked-card distance.
+     */
+    val tripTravelledMeters: Int = 0,
     /** SIRI RecordedAtTime, ISO-8601 with offset. Null when the feed omits it. */
     val recordedAt: String? = null,
     /** The monitored stop this was reported by; lets a tapped marker be tracked. */
     val stopCode: String? = null,
     /** SIRI LineRef, i.e. the GTFS route_id — draws the correct line. */
     val lineRef: String? = null,
-    /** SIRI DestinationRef; resolved to a name through the response's stop names. */
-    val destinationRef: String? = null
+    val destinationRef: String? = null,
+    /** Resolved from GTFS by the server. Empty when unknown — never the raw stop code. */
+    val destinationName: String = ""
 )
 
-fun SiriResponse.extractVehicleMarkers(): List<VehicleMarker> {
-    val visits = siri?.serviceDelivery?.stopMonitoringDelivery
-        ?.flatMap { it.monitoredStopVisit ?: emptyList() } ?: emptyList()
-
-    return visits.mapNotNull { visit ->
-        val journey = visit.monitoredVehicleJourney ?: return@mapNotNull null
-        val loc = journey.vehicleLocation ?: return@mapNotNull null
-        val call = journey.monitoredCall ?: return@mapNotNull null
-        val arrival = call.expectedArrivalTime ?: return@mapNotNull null
-
-        VehicleMarker(
-            lat = loc.latitude,
-            lon = loc.longitude,
-            vehicleRef = journey.vehicleRef ?: "",
-            lineNumber = journey.publishedLineName ?: "",
-            expectedArrival = arrival,
-            distanceFromStop = call.distanceFromStop ?: 0,
-            recordedAt = visit.recordedAtTime,
-            stopCode = visit.monitoringRef,
-            lineRef = journey.lineRef,
-            destinationRef = journey.destinationRef
-        )
-    }
-}
+/** Vehicles the server already extracted; see [SiriResponse.vehicles]. */
+fun SiriResponse.extractVehicleMarkers(): List<VehicleMarker> = vehicles ?: emptyList()

@@ -49,32 +49,18 @@ export const fetchStationArrivals = async (stationCode: string, detailLevel = 'c
   }
 }
 
-export const extractVehicleMarkers = (siriData: SiriData): VehicleMarker[] => {
-  if (!siriData?.Siri?.ServiceDelivery?.StopMonitoringDelivery?.[0]?.MonitoredStopVisit) {
-    return []
-  }
-
-  const monitoredStopVisits = siriData.Siri.ServiceDelivery.StopMonitoringDelivery[0].MonitoredStopVisit
-
-  return monitoredStopVisits.map(visit => {
-    const journey = visit.MonitoredVehicleJourney
-    const vehicleLocation = journey.VehicleLocation
-
-    if (vehicleLocation?.Latitude && vehicleLocation?.Longitude) {
-      return {
-        position: [vehicleLocation.Latitude, vehicleLocation.Longitude] as [number, number],
-        vehicleRef: journey.VehicleRef,
-        // SIRI can omit PublishedLineName; default to '' so the string contract
-        // holds and consumers like the map's line filter (m.lineNumber.toLowerCase())
-        // don't crash on undefined.
-        lineNumber: journey.PublishedLineName ?? '',
-        expectedArrival: journey.MonitoredCall?.ExpectedArrivalTime ?? '',
-        distanceFromStop: journey.MonitoredCall?.DistanceFromStop ?? 0
-      }
-    }
-    return null
-  }).filter((m): m is VehicleMarker => m !== null)
-}
+/**
+ * Vehicles for the map, taken from the server's normalised list.
+ *
+ * This used to walk the SIRI tree here, in parallel with the Kotlin client doing the same
+ * walk — which is how both ended up believing DistanceFromStop was a distance to the stop.
+ * The interpretation now lives once, in lib/siri-vehicles.ts.
+ */
+export const extractVehicleMarkers = (siriData: SiriData): VehicleMarker[] =>
+  (siriData?._vehicles ?? []).map(({ lat, lon, ...vehicle }) => ({
+    ...vehicle,
+    position: [lat, lon] as Coordinates,
+  }))
 
 export const fetchLineShape = async (lineNumber: string): Promise<LineShapeData> => {
   const response = await fetch(`/api/line-shape?line=${encodeURIComponent(lineNumber)}&meta=full`, {

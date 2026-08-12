@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
+import { metersBetween } from '../../../lib/geo';
 
 interface Stop {
   stopCode: string;
@@ -122,9 +123,7 @@ export async function GET(request: NextRequest) {
         Math.abs(stop.lat - lat) <= latDelta &&
         Math.abs(stop.lon - lon) <= lonDelta
       ) {
-        const dlat = (stop.lat - lat) * 111320;
-        const dlon = (stop.lon - lon) * 111320 * Math.cos(lat * Math.PI / 180);
-        const dist = Math.round(Math.sqrt(dlat * dlat + dlon * dlon));
+        const dist = Math.round(metersBetween(stop.lat, stop.lon, lat, lon));
         // The box test above is a cheap pre-filter; enforce the true radius so
         // "within N meters" means the circle, not the bounding square's corners.
         if (dist <= radius) nearby.push({ ...stop, distanceMeters: dist });

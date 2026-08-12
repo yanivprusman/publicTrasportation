@@ -1,3 +1,5 @@
+import type { NormalisedVehicle } from '../lib/siri-vehicles'
+
 export interface LatLng {
   lat: number
   lng: number
@@ -5,12 +7,15 @@ export interface LatLng {
 
 export type Coordinates = [number, number]
 
-export interface VehicleMarker {
+/**
+ * A vehicle as the server hands it over, plus the map position the UI draws with.
+ *
+ * Shape and field names come from lib/siri-vehicles.ts — the client no longer decides
+ * what SIRI means. Note `tripTravelledMeters`: it is NOT a distance to the stop or to
+ * you, and anything phrased "X away" must be computed from two positions.
+ */
+export interface VehicleMarker extends Omit<NormalisedVehicle, 'lat' | 'lon'> {
   position: Coordinates
-  vehicleRef: string
-  lineNumber: string
-  expectedArrival: string
-  distanceFromStop: number
 }
 
 export interface StopInfo {
@@ -29,6 +34,7 @@ export interface SiriData {
     }
   }
   _stopNames?: Record<string, string>
+  _vehicles?: NormalisedVehicle[]
 }
 
 export interface MonitoredStopVisit {

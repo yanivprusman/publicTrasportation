@@ -113,13 +113,6 @@ export default function DepartureBoard({
               </div>
               <div className={styles.destCell}>
                 <span className={styles.destName}>{destination || '—'}</span>
-                {call?.DistanceFromStop != null && (
-                  <span className={styles.destMeta}>
-                    {call.DistanceFromStop >= 1000
-                      ? t('dist.km', { n: (call.DistanceFromStop / 1000).toFixed(1) })
-                      : t('dist.m', { n: call.DistanceFromStop })}
-                  </span>
-                )}
               </div>
               <div className={styles.etaCell}>
                 {!hasTime ? (

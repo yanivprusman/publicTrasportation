@@ -528,7 +528,7 @@ private fun DepartureRow(
                     // so it is the vehicle's progress along its trip. Labelled as
                     // "distance" it read as "the bus is 41 km from you", under a row
                     // saying the bus arrives in two minutes.
-                    call?.distanceFromStop?.takeIf { it > 0 }?.let {
+                    call?.tripTravelledMeters?.takeIf { it > 0 }?.let {
                         Text(
                             strings.tripDistanceTravelled(formatDistance(it, strings)),
                             style = MaterialTheme.typography.bodySmall

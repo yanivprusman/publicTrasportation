@@ -76,7 +76,7 @@ export default function LiveBusStatus({ state, onShowOnMap }: LiveBusStatusProps
           {state.phase === 'live' && state.vehicle
             ? t('liveBus.distanceFrom', {
                 line: state.lineNumber,
-                distance: formatStopDistance(state.vehicle.distanceFromStopMeters),
+                distance: formatStopDistance(state.vehicle.metersFromStop),
                 stop: state.stopName,
               })
             : t('liveBus.onWay', { line: state.lineNumber, stop: state.stopName })}

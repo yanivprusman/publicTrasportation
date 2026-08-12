@@ -1,10 +1,20 @@
 import { useEffect, useRef, useState } from 'react'
 import { fetchNearbyStops, fetchStationArrivals } from '../services/transport-api'
 import type { Coordinates, Itinerary, MonitoredStopVisit, RouteLeg } from '../types'
+import { metersBetween } from '../../lib/geo'
 
 export interface LiveBusVehicle {
   position: Coordinates
-  distanceFromStopMeters: number
+  /**
+   * Straight-line metres from the vehicle to the boarding stop, computed here from the
+   * two positions.
+   *
+   * This was SIRI's DistanceFromStop, which is how far the bus has driven on its trip and
+   * not a distance to anything — so "Bus 64 is 2.7 km from מדרשת בן גוריון" was a
+   * sentence naming the user's own stop and measuring something else. It looked plausible
+   * whenever the bus happened to be early in its route, which is why it survived.
+   */
+  metersFromStop: number
   vehicleRef: string
 }
 
@@ -103,7 +113,7 @@ export function useLiveBus(itinerary: Itinerary | null, active: boolean): LiveBu
       setState({ phase: 'error', lineNumber, stopName, vehicle: null, expectedArrival: null, error: message })
     }
 
-    const poll = async (stopCode: string, stopName: string) => {
+    const poll = async (stopCode: string, stopName: string, stopLat: number, stopLon: number) => {
       try {
         const data = await fetchStationArrivals(stopCode)
         if (seq !== seqRef.current) return
@@ -126,7 +136,9 @@ export function useLiveBus(itinerary: Itinerary | null, active: boolean): LiveBu
             stopName,
             vehicle: {
               position: [location.Latitude, location.Longitude],
-              distanceFromStopMeters: journey.MonitoredCall?.DistanceFromStop ?? 0,
+              metersFromStop: Math.round(
+                metersBetween(location.Latitude, location.Longitude, stopLat, stopLon)
+              ),
               vehicleRef: journey.VehicleRef,
             },
             expectedArrival,
@@ -152,9 +164,9 @@ export function useLiveBus(itinerary: Itinerary | null, active: boolean): LiveBu
           fail('liveBus.noStation', currentLeg.from.name)
           return
         }
-        await poll(stop.stopCode, stop.stopName)
+        await poll(stop.stopCode, stop.stopName, stop.lat, stop.lon)
         if (seq !== seqRef.current) return
-        timer = window.setInterval(() => poll(stop.stopCode, stop.stopName), POLL_MS)
+        timer = window.setInterval(() => poll(stop.stopCode, stop.stopName, stop.lat, stop.lon), POLL_MS)
       } catch (err) {
         fail(err instanceof Error ? err.message : String(err), currentLeg.from.name)
       }

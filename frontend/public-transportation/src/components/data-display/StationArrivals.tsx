@@ -1,6 +1,7 @@
 import { Fragment, useState, useEffect } from 'react'
 import type { SiriData, MonitoredStopVisit } from '../../types'
 import { useI18n } from '../../i18n'
+import { formatStopDistance } from '../../utils/distance'
 
 interface StationArrivalsProps {
   siriData: SiriData | null
@@ -97,11 +98,10 @@ function StationArrivals({ siriData, error, stationCode, lineFilter, onVehicleSe
                 }
               }
 
-              let distance = 'N/A'
-              const exactMeters = monitoredCall?.DistanceFromStop
-              if (exactMeters != null) {
-                distance = exactMeters >= 1000 ? `${(exactMeters / 1000).toFixed(1)} km` : `${exactMeters} m`
-              }
+              // SIRI's DistanceFromStop is how far the vehicle has driven on this trip,
+              // not how far it is from this stop — the column is named accordingly.
+              const travelledMeters = monitoredCall?.DistanceFromStop
+              const travelled = travelledMeters != null ? formatStopDistance(travelledMeters) : '—'
 
               const vehicleLocation = journey.VehicleLocation
 
@@ -114,14 +114,14 @@ function StationArrivals({ siriData, error, stationCode, lineFilter, onVehicleSe
                   >
                     <td>{journey.PublishedLineName || 'N/A'}</td>
                     <td>{journey.DirectionRef || 'N/A'}</td>
-                    <td>{stopNames[journey.DestinationRef] || journey.DestinationRef || 'N/A'}</td>
+                    <td>{stopNames[journey.DestinationRef] || '—'}</td>
                     <td>
                       {arrivalDisplay.primary}
                       {arrivalDisplay.secondary && (
                         <span style={{ marginLeft: 4, fontSize: '0.8em', color: '#888' }}>{arrivalDisplay.secondary}</span>
                       )}
                     </td>
-                    <td>{distance}</td>
+                    <td>{travelled}</td>
                   </tr>
                   {isExpanded && (
                     <tr className="expanded-detail-row">
@@ -131,7 +131,7 @@ function StationArrivals({ siriData, error, stationCode, lineFilter, onVehicleSe
                             <span className="detail-label">{t('arrivals.vehicleId')}</span> {journey.VehicleRef || 'N/A'}
                           </div>
                           <div className="detail-item">
-                            <span className="detail-label">{t('arrivals.exactDistance')}</span> {exactMeters != null ? t('dist.m', { n: exactMeters }) : 'N/A'}
+                            <span className="detail-label">{t('arrivals.exactDistance')}</span> {travelledMeters != null ? t('dist.m', { n: travelledMeters }) : '—'}
                           </div>
                           <div className="detail-item">
                             <span className="detail-label">{t('arrivals.fullArrival')}</span> {fullArrivalTime}

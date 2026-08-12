@@ -43,7 +43,7 @@ const LiveBusLayer = ({ bus }: { bus: LiveBusMarkerData | null }) => {
     <Marker position={bus.vehicle.position} icon={icon} zIndexOffset={1500}>
       <Popup>
         <strong>{t('liveBus.marker', { line: bus.lineNumber })}</strong><br />
-        {t('liveBus.markerFrom', { distance: formatStopDistance(bus.vehicle.distanceFromStopMeters) })} <span dir="auto">{bus.stopName}</span>
+        {t('liveBus.markerFrom', { distance: formatStopDistance(bus.vehicle.metersFromStop) })} <span dir="auto">{bus.stopName}</span>
         {bus.expectedArrival && (
           <>
             <br />

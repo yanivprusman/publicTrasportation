@@ -87,7 +87,7 @@ const MarkersLayer = ({
               <strong>{t('popup.line')}</strong> {vehicle.lineNumber}<br/>
               <strong>{t('popup.vehicle')}</strong> {vehicle.vehicleRef}<br/>
               <strong>{t('popup.expectedArrival')}</strong> {formatArrival(vehicle.expectedArrival)}<br/>
-              <strong>{t('popup.distanceFromStop')}</strong> {formatStopDistance(vehicle.distanceFromStop)}
+              <strong>{t('popup.tripTravelled')}</strong> {formatStopDistance(vehicle.tripTravelledMeters)}
             </div>
           </Popup>
         </Marker>
