@@ -54,6 +54,10 @@ fun RouteOverlay(
                 if (isWalk) {
                     outlinePaint.pathEffect = DashPathEffect(floatArrayOf(24f, 14f), 0f)
                 }
+                // Same reason every marker in this file does it, and easier to miss here:
+                // Polyline(MapView) attaches osmdroid's default bubble by itself, so a tap
+                // anywhere along the route popped an empty grey balloon.
+                setInfoWindow(null)
             }
             map.overlays.add(polyline)
 
@@ -263,6 +267,9 @@ fun LineShapeOverlay(
                     outlinePaint.strokeWidth = 6f
                     outlinePaint.isAntiAlias = true
                     outlinePaint.strokeCap = Paint.Cap.ROUND
+                    // As above: suppress osmdroid's automatic empty bubble. This one is
+                    // the line a tracked bus is driving, so it is the easiest to hit.
+                    setInfoWindow(null)
                 }
                 map.overlays.add(polyline)
                 colorIdx++
