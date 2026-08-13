@@ -61,7 +61,10 @@ fun <T> AutocompleteField(
     debounceMs: Long = 300,
     suppressSearch: Boolean = false,
     preSuggestions: List<PreSuggestion> = emptyList(),
-    onLongPressSuggestion: ((GeocodeSuggestion) -> Unit)? = null
+    onLongPressSuggestion: ((GeocodeSuggestion) -> Unit)? = null,
+    // Shown when a finished search matched nothing. Null keeps the old silence —
+    // but silence looks exactly like "still typing", so callers should pass it.
+    emptyText: String? = null
 ) {
     val strings = LocalAppStrings.current
     var suggestions by remember { mutableStateOf<List<T>>(emptyList()) }
@@ -69,6 +72,7 @@ fun <T> AutocompleteField(
     var showPreSuggestions by remember { mutableStateOf(false) }
     var hasFocus by remember { mutableStateOf(false) }
     var justSelected by remember { mutableStateOf(false) }
+    var searchedEmpty by remember { mutableStateOf(false) }
 
     LaunchedEffect(value) {
         if (justSelected || suppressSearch) {
@@ -85,6 +89,7 @@ fun <T> AutocompleteField(
         if (value.length < 2) {
             suggestions = emptyList()
             showDropdown = false
+            searchedEmpty = false
             if (value.isEmpty() && hasFocus && preSuggestions.isNotEmpty()) {
                 showPreSuggestions = true
             }
@@ -95,6 +100,7 @@ fun <T> AutocompleteField(
         val results = onSearch(value)
         suggestions = results
         showDropdown = results.isNotEmpty() && hasFocus
+        searchedEmpty = results.isEmpty()
     }
 
     Column(modifier = modifier) {
@@ -203,6 +209,24 @@ fun <T> AutocompleteField(
             }
         }
 
+        if (emptyText != null && searchedEmpty && hasFocus &&
+            !showDropdown && !showPreSuggestions && value.length >= 2
+        ) {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shadowElevation = 4.dp,
+                color = MaterialTheme.colorScheme.surface,
+                shape = MaterialTheme.shapes.small
+            ) {
+                Text(
+                    text = emptyText,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                )
+            }
+        }
+
         if (showDropdown && suggestions.isNotEmpty()) {
             Surface(
                 modifier = Modifier.fillMaxWidth(),
@@ -223,6 +247,7 @@ fun <T> AutocompleteField(
                                         onSelect(item)
                                         showDropdown = false
                                         suggestions = emptyList()
+                                        searchedEmpty = false
                                     },
                                     onLongClick = {
                                         val geo = item as? GeocodeSuggestion

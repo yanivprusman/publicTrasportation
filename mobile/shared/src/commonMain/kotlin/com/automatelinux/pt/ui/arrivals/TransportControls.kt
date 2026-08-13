@@ -80,6 +80,7 @@ fun TransportControls(
                 onStationSelect(stop.stopCode, stop.stopName)
             },
             onClear = { stationText = "" },
+            emptyText = strings.nothingFound,
             itemContent = { stop ->
                 Column {
                     Text(

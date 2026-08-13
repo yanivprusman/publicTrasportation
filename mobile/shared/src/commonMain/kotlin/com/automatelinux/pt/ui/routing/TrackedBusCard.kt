@@ -46,6 +46,8 @@ import com.automatelinux.pt.util.formatDistance
 import kotlinx.coroutines.delay
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 
 // A position the operator last saw a minute ago is not the same claim as one from five
 // seconds ago, and a bus stuck in traffic looks exactly like a dead feed. The dot's colour
@@ -147,7 +149,7 @@ fun TrackedBusCard(
                 )
             } else {
                 Text(
-                    text = statusText(tracked.status, strings),
+                    text = statusText(tracked, strings),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 2,
@@ -293,10 +295,22 @@ private fun freshnessColor(seconds: Long): Color = when {
     else -> Color(0xFFE53935)
 }
 
-private fun statusText(status: TrackingStatus, strings: AppStrings): String = when (status) {
+private fun statusText(tracked: TrackedBus, strings: AppStrings): String = when (tracked.status) {
     TrackingStatus.SEARCHING -> strings.trackingSearching
     TrackingStatus.NO_MONITORED_STOP -> strings.trackingNoMonitoredStop
-    TrackingStatus.NO_VEHICLE -> strings.trackingNoVehicle
+    // Silence before the run's scheduled start is expected, not alarming — say so.
+    TrackingStatus.NO_VEHICLE -> notStartedText(tracked, strings) ?: strings.trackingNoVehicle
     TrackingStatus.ERROR -> strings.trackingError
     TrackingStatus.LIVE -> strings.trackingBus
+}
+
+private fun notStartedText(tracked: TrackedBus, strings: AppStrings): String? {
+    val iso = tracked.scheduledStart ?: return null
+    return try {
+        val start = Instant.parse(iso)
+        if (Clock.System.now() < start) {
+            val hm = start.toLocalDateTime(TimeZone.currentSystemDefault()).time.toString().take(5)
+            strings.trackingNotStartedYet(hm)
+        } else null
+    } catch (_: Exception) { null }
 }

@@ -44,6 +44,9 @@ data class TrackedBus(
     val selectedIndex: Int = 0,
     /** Wheelchair access of the scheduled trip being boarded (from the itinerary leg). */
     val access: WheelchairAccess = WheelchairAccess.UNKNOWN,
+    /** Scheduled departure (ISO) of the tracked leg, when known. Lets the card say
+     *  "hasn't started its run yet" instead of the alarming "nothing is reporting". */
+    val scheduledStart: String? = null,
     /** Where this leg puts you down — the stop you are riding to, not the line's terminus. */
     val destination: String = "",
     /** The SIRI-monitored stop the polling asks about; kept so a pause can resume. */

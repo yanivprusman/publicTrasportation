@@ -111,6 +111,8 @@ private fun visitKey(visit: MonitoredStopVisit): String {
         ?: "${journey?.publishedLineName}|${journey?.destinationRef}|${journey?.monitoredCall?.expectedArrivalTime}"
 }
 
+private const val INITIAL_DEPARTURE_ROWS = 8
+
 // Presentation of one board entry. Live rows lead with the countdown (that is
 // the realtime information); scheduled rows lead with the timetable clock time.
 private data class EntryDisplay(
@@ -256,6 +258,9 @@ fun StationArrivals(
 ) {
     val strings = LocalAppStrings.current
     var expandedKey by remember { mutableStateOf<String?>(null) }
+    // The live list can run 30+ minutes deep and buries the scheduled timetable and
+    // nearby stops below a wall of rows. Show the next few; one tap opens the rest.
+    var showAllDepartures by remember { mutableStateOf(false) }
     var tick by remember { mutableLongStateOf(0L) }
 
     LaunchedEffect(Unit) {
@@ -378,7 +383,9 @@ fun StationArrivals(
         }
 
         Column {
-            departures.forEach { entry ->
+            val visibleDepartures =
+                if (showAllDepartures) departures else departures.take(INITIAL_DEPARTURE_ROWS)
+            visibleDepartures.forEach { entry ->
                 val key = entry.visit?.let { visitKey(it) }
                 DepartureRow(
                     entry = entry,
@@ -395,6 +402,14 @@ fun StationArrivals(
                     favoriteLines = favoriteLines,
                     onToggleFavoriteLine = onToggleFavoriteLine
                 )
+            }
+            if (!showAllDepartures && departures.size > INITIAL_DEPARTURE_ROWS) {
+                TextButton(
+                    onClick = { showAllDepartures = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(strings.showAllDepartures(departures.size))
+                }
             }
         }
 

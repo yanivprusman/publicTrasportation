@@ -187,18 +187,16 @@ fun LinesBrowserPanel(
                                 )
                                 Spacer(Modifier.width(4.dp))
                                 Text(
-                                    text = strings.direction(direction),
+                                    // GTFS numbers directions from 0; people don't.
+                                    text = strings.direction(
+                                        direction.toIntOrNull()?.plus(1)?.toString() ?: direction
+                                    ),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            text = "${lineShapeData.directions.values.sumOf { it.size }} points",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        // (The polyline point count was developer telemetry, not information.)
                     } else {
                         Text(
                             text = strings.noShapeData,
