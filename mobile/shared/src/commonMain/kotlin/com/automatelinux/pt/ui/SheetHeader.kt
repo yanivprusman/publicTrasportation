@@ -39,39 +39,23 @@ import com.automatelinux.pt.util.AppStrings
 fun SheetDragHandleRow(
     strings: AppStrings,
     loading: Boolean,
-    sheetOpacity: Float,
-    onSheetOpacityChange: (Float) -> Unit,
-    onSheetOpacityFinished: () -> Unit,
     onDebugFill: () -> Unit,
     onDebugLongClick: () -> Unit,
     showDebugFill: Boolean = true
 ) {
-    Row(
+    // The handle row exists to say "drag me" — one prominent, centered handle and
+    // nothing competing with it. (The opacity slider that used to live here is a
+    // settings concern; the gear menu opens the full opacity controls.)
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .padding(horizontal = 12.dp)
     ) {
-        // Inline sheet-opacity slider, modeled after the ImmersiveRDP keyboard slider.
-        // Subtle, theme-aware colors so it stays unobtrusive over the translucent sheet.
-        Slider(
-            value = sheetOpacity,
-            onValueChange = onSheetOpacityChange,
-            onValueChangeFinished = onSheetOpacityFinished,
-            valueRange = 0.05f..1f,
-            modifier = Modifier
-                .width(120.dp)
-                .height(28.dp),
-            colors = SliderDefaults.colors(
-                thumbColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                activeTrackColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                inactiveTrackColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.15f),
-            )
+        BottomSheetDefaults.DragHandle(
+            width = 56.dp,
+            height = 5.dp,
+            modifier = Modifier.align(Alignment.Center)
         )
-        // Drag handle centered in the remaining space.
-        Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-            BottomSheetDefaults.DragHandle()
-        }
         if (showDebugFill) {
             Icon(
                 Icons.Default.BugReport,
@@ -79,6 +63,7 @@ fun SheetDragHandleRow(
                 tint = if (loading) MaterialTheme.colorScheme.tertiary.copy(alpha = 0.38f)
                        else MaterialTheme.colorScheme.tertiary,
                 modifier = Modifier
+                    .align(Alignment.CenterEnd)
                     .size(36.dp)
                     .combinedClickable(
                         enabled = !loading,

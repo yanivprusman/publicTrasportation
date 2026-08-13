@@ -50,7 +50,6 @@ fun ItineraryCard(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 8.dp, vertical = 4.dp)
-            .alpha(if (selected) 1f else cardOpacity)
             .then(
                 if (selected) Modifier.border(
                     2.dp,
@@ -60,8 +59,12 @@ fun ItineraryCard(
             )
             .clickable(onClick = onClick),
         colors = CardDefaults.cardColors(
+            // The user's opacity setting thins the card's GROUND, not its ink:
+            // a whole-card alpha() faded times and line pills into the map and
+            // made every unselected route unreadable. The map still shows
+            // through the surface; the content stays at full contrast.
             containerColor = if (selected) Color(0xFF1A1A1A)
-            else MaterialTheme.colorScheme.surface
+            else MaterialTheme.colorScheme.surface.copy(alpha = cardOpacity)
         )
     ) {
         val textColor = if (selected) Color.White else Color.Unspecified

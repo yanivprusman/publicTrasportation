@@ -568,9 +568,6 @@ fun MainScreen(
                     SheetDragHandleRow(
                         strings = strings,
                         loading = routingState.loading,
-                        sheetOpacity = sheetOpacity,
-                        onSheetOpacityChange = { sheetOpacity = it },
-                        onSheetOpacityFinished = { settingsStore.sheetOpacity = sheetOpacity },
                         onDebugFill = {
                             routingViewModel.debugFill(
                                 autoSearch = settingsStore.debugAutoSearch,
@@ -655,7 +652,7 @@ fun MainScreen(
                                     onStopClick = { stop ->
                                         mapState.animateTo(LatLng(stop.lat, stop.lon), 17.0)
                                     },
-                                    onGeocode = { routingViewModel.geocode(it) },
+                                    onGeocode = { routingViewModel.geocode(it, "${currentMapCenter.latitude},${currentMapCenter.longitude}") },
                                     onGpsClick = onGpsClick,
                                     gpsLoading = gpsLoading,
                                     onGpsClickDestination = onGpsClickDestination,
@@ -701,7 +698,8 @@ fun MainScreen(
                                                 lineName = lineName,
                                                 access = leg.access,
                                                 destination = leg.to.name,
-                                                tripId = leg.tripId
+                                                tripId = leg.tripId,
+                                                scheduledStart = leg.startTime
                                             )
                                         }
                                     },
@@ -1218,7 +1216,7 @@ fun MainScreen(
 
         if (showSetHomeDialog) {
             com.automatelinux.pt.ui.SetHomeDialog(
-                onGeocode = { routingViewModel.geocode(it) },
+                onGeocode = { routingViewModel.geocode(it, "${currentMapCenter.latitude},${currentMapCenter.longitude}") },
                 onSave = { place ->
                     settingsStore.homePlace = place
                     recentSearchesVersion++
@@ -1261,7 +1259,7 @@ fun MainScreen(
                     showDebugSettings = false
                 },
                 onDismiss = { showDebugSettings = false },
-                onGeocode = { routingViewModel.geocode(it) }
+                onGeocode = { routingViewModel.geocode(it, "${currentMapCenter.latitude},${currentMapCenter.longitude}") }
             )
         }
     }
