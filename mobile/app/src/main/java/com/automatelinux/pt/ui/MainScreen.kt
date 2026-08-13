@@ -10,15 +10,21 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.isImeVisible
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsBottomHeight
+import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -460,11 +466,12 @@ fun MainScreen(
     LaunchedEffect(sharedTrip) {
         if (sharedTrip != null) {
             activeTab = ActiveTab.ROUTE
-            routingViewModel.setOrigin(sharedTrip.origin)
-            routingViewModel.setDestination(sharedTrip.destination)
+            // Time and direction first: filling the second endpoint auto-searches,
+            // and that search must already carry the shared trip's departure time.
             routingViewModel.setDepartureTime(sharedTrip.departureTime)
             routingViewModel.setArriveBy(sharedTrip.arriveBy)
-            routingViewModel.search()
+            routingViewModel.setOrigin(sharedTrip.origin)
+            routingViewModel.setDestination(sharedTrip.destination)
             bottomSheetState.expand()
             onSharedTripConsumed()
         }
@@ -517,13 +524,33 @@ fun MainScreen(
         }
     }
 
+    // The window is edge-to-edge, so the navigation bar overlays the sheet's bottom
+    // strip. The peek height grows by exactly that overlay and the content gets a
+    // matching bottom spacer — otherwise the To field and every bottom action row
+    // render underneath the system bar (3-button navigation made them untappable).
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val navBarHeight = with(density) {
+        WindowInsets.navigationBars.getBottom(this).toDp()
+    }
+
+    // Auto-search means results can arrive while the sheet is peeking (the keyboard
+    // closed when the endpoint was picked). Surface them — that is the moment the
+    // user wants the list, and at peek height it is below the fold.
+    LaunchedEffect(routingState.results) {
+        val itineraries = routingState.results?.itineraries
+        if (!itineraries.isNullOrEmpty()) {
+            bottomSheetState.expand()
+        }
+    }
+
     com.automatelinux.feedbacklib.ui.FeedbackOverlay(
         modifier = Modifier.fillMaxSize(),
         showFab = BuildConfig.FEEDBACK_ENABLED,
     ) {
         DismissibleSheet(
             state = sheetState,
-            peekHeight = 280.dp,
+            peekHeight = 280.dp + navBarHeight,
+            swipeRightStartZone = 96.dp,
             sheetOpacity = sheetOpacity,
             sheetContent = {
                 Column(
@@ -532,6 +559,12 @@ fun MainScreen(
                         .onGloballyPositioned { sheetContentHeightPx = it.size.height },
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
+                    // Fully expanded, the sheet reaches the top of the window and its
+                    // handle row would sit behind the clock. Reserve the status bar
+                    // only in that state — at peek this space is better spent on content.
+                    if (bottomSheetState.targetValue == SheetValue.Expanded) {
+                        Spacer(Modifier.windowInsetsTopHeight(WindowInsets.statusBars))
+                    }
                     SheetDragHandleRow(
                         strings = strings,
                         loading = routingState.loading,
@@ -641,16 +674,16 @@ fun MainScreen(
                                     onLater = { routingViewModel.searchLater() },
                                     homePlace = settingsStore.homePlace,
                                     workPlace = settingsStore.workPlace,
+                                    // Both quick paths ride the endpoint auto-search;
+                                    // an explicit search() here would double-fire it.
                                     onQuickRoute = { home, work ->
                                         routingViewModel.setOrigin(home)
                                         routingViewModel.setDestination(work)
-                                        routingViewModel.search()
                                         scope.launch { bottomSheetState.expand() }
                                     },
                                     onQuickDestination = { place ->
                                         routingViewModel.setDestination(place)
                                         if (routingState.origin != null) {
-                                            routingViewModel.search()
                                             scope.launch { bottomSheetState.expand() }
                                         }
                                     },
@@ -804,6 +837,7 @@ fun MainScreen(
                                 )
                             }
                         }
+                        Spacer(Modifier.windowInsetsBottomHeight(WindowInsets.navigationBars))
                     }
                     Box(
                         modifier = Modifier
@@ -916,6 +950,7 @@ fun MainScreen(
                         },
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
+                            .navigationBarsPadding()
                             .padding(start = 12.dp, end = 12.dp, bottom = 24.dp)
                     )
                 }
