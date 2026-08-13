@@ -60,8 +60,12 @@ class PtApi(private val client: HttpClient) {
         params = mapOf("from" to from, "to" to to, "start" to start, "end" to end)
     )
 
-    suspend fun geocode(text: String): List<GeocodeSuggestion> =
-        fetch("/api/geocode", params = mapOf("text" to text))
+    suspend fun geocode(text: String, near: String? = null): List<GeocodeSuggestion> =
+        fetch(
+            "/api/geocode",
+            params = if (near != null) mapOf("text" to text, "near" to near)
+                     else mapOf("text" to text)
+        )
 
     suspend fun reverseGeocode(lat: Double, lon: Double): List<GeocodeSuggestion> =
         fetch("/api/reverse-geocode", params = mapOf("lat" to lat, "lon" to lon))

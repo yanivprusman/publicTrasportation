@@ -346,13 +346,15 @@ class RoutingViewModel(
         lineName: String,
         access: WheelchairAccess = WheelchairAccess.UNKNOWN,
         destination: String = "",
-        tripId: String? = null
+        tripId: String? = null,
+        scheduledStart: String? = null
     ) {
         stopTracking()
         val seq = ++trackSeq
         _state.value = _state.value.copy(
             trackedBus = TrackedBus(
                 legIndex = legIndex,
+                scheduledStart = scheduledStart,
                 lineName = lineName,
                 access = access,
                 destination = destination,
@@ -549,9 +551,10 @@ class RoutingViewModel(
         return api.getLineShape(line)
     }
 
-    suspend fun geocode(text: String): List<GeocodeSuggestion> {
+    // near = "lat,lon" viewport bias: the same words mean the nearer place.
+    suspend fun geocode(text: String, near: String? = null): List<GeocodeSuggestion> {
         return try {
-            api.geocode(text)
+            api.geocode(text, near)
         } catch (_: Exception) {
             emptyList()
         }

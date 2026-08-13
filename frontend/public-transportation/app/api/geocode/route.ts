@@ -44,8 +44,13 @@ function formatNominatimName(r: NominatimResult): string {
 }
 
 async function nominatimSearch(text: string): Promise<unknown[]> {
+  // Answer in the script the user typed. A fixed accept-language=he returned
+  // Hebrew display names for English queries, which the relevance sort below
+  // scored as zero word-hits — burying exactly the places Nominatim was added
+  // to contribute ("dizengoff center" never surfaced דיזנגוף סנטר).
+  const lang = /[֐-׿]/.test(text) ? 'he' : 'en';
   const results = await nominatim<NominatimResult[]>(
-    `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(text)}&format=json&accept-language=he&countrycodes=il&limit=10&addressdetails=1`
+    `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(text)}&format=json&accept-language=${lang}&countrycodes=il&limit=10&addressdetails=1`
   );
   return results.map(r => ({
     type: 'ADDRESS',
