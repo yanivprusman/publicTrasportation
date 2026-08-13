@@ -65,13 +65,29 @@ class RoutingViewModel(
     }
 
     fun setOrigin(suggestion: GeocodeSuggestion?) {
+        val previous = _state.value.origin
         _state.value = _state.value.copy(origin = suggestion, results = null, error = null)
         clearDayOverview()
+        if (!sameCoords(previous, suggestion)) autoSearchIfReady()
     }
 
     fun setDestination(suggestion: GeocodeSuggestion?) {
+        val previous = _state.value.destination
         _state.value = _state.value.copy(destination = suggestion, results = null, error = null)
         clearDayOverview()
+        if (!sameCoords(previous, suggestion)) autoSearchIfReady()
+    }
+
+    // Picking the second endpoint IS the request — nobody fills From and To and then
+    // wants a blank screen. The button stays for re-running after time/filter edits.
+    // Address resolution replaces a placeholder name at identical coords; that must
+    // not re-fire the search, hence the sameCoords gate at each entry point.
+    private fun sameCoords(a: GeocodeSuggestion?, b: GeocodeSuggestion?): Boolean =
+        a != null && b != null && a.lat == b.lat && a.lon == b.lon
+
+    private fun autoSearchIfReady() {
+        val s = _state.value
+        if (s.origin != null && s.destination != null) search()
     }
 
     fun showViaField() {
@@ -79,8 +95,10 @@ class RoutingViewModel(
     }
 
     fun setVia(suggestion: GeocodeSuggestion?) {
+        val previous = _state.value.via
         _state.value = _state.value.copy(via = suggestion, results = null, error = null)
         clearDayOverview()
+        if (!sameCoords(previous, suggestion)) autoSearchIfReady()
     }
 
     fun removeVia() {
@@ -92,6 +110,7 @@ class RoutingViewModel(
         }
         _state.value = s.copy(via = null, viaFieldVisible = false, results = null, error = null)
         clearDayOverview()
+        autoSearchIfReady()
     }
 
     fun setDepartureTime(time: Instant?) {
@@ -155,6 +174,7 @@ class RoutingViewModel(
             error = null
         )
         clearDayOverview()
+        autoSearchIfReady()
     }
 
     private fun clearDayOverview() {
