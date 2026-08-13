@@ -75,6 +75,24 @@ class ArrivalsViewModel(
 
     private fun applyStation(code: String, name: String, explicit: Boolean) {
         timetableJob?.cancel()
+        // Widget taps and other by-code entries arrive nameless; the code alone then
+        // labels the field, the board header and the widget. Resolve the human name.
+        if (name.isBlank() && code.isNotBlank()) {
+            viewModelScope.launch {
+                try {
+                    val resolved = api.searchStops(code)
+                        .firstOrNull { it.stopCode == code }?.stopName
+                    if (resolved != null &&
+                        _state.value.stationCode == code &&
+                        _state.value.stationName.isBlank()
+                    ) {
+                        _state.value = _state.value.copy(stationName = resolved)
+                    }
+                } catch (_: Exception) {
+                    // The code keeps labeling the station until a named selection.
+                }
+            }
+        }
         _state.value = _state.value.copy(
             stationCode = code,
             stationName = name,

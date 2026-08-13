@@ -137,8 +137,15 @@ fun ItineraryCard(
                                 modifier = Modifier.size(14.dp)
                             )
                         } else {
+                            // Rail "short names" in the Israeli GTFS are whole route
+                            // strings ("באר שבע<->תל אביב..."); a summary pill names the
+                            // MODE and leaves the full route to the detail timeline.
+                            // Bus/tram numbers are short and stay.
+                            val pillLabel = leg.routeShortName
+                                ?.takeIf { it.length <= 10 }
+                                ?: getModeLabel(leg.mode, strings)
                             Text(
-                                text = leg.routeShortName ?: getModeLabel(leg.mode, strings),
+                                text = pillLabel,
                                 color = Color.White,
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
