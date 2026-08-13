@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.AddHome
 import androidx.compose.material.icons.filled.AddLocationAlt
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.BookmarkAdd
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.RemoveCircleOutline
 import androidx.compose.material.icons.filled.Search
@@ -34,10 +35,16 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.automatelinux.pt.data.model.GeocodeSuggestion
 import com.automatelinux.pt.data.model.Place
@@ -49,6 +56,8 @@ import com.automatelinux.pt.ui.viewmodel.TransitFilter
 import com.automatelinux.pt.ui.viewmodel.TravelMode
 import com.automatelinux.pt.util.LocalAppStrings
 import kotlinx.datetime.Instant
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 
 @Composable
 fun RoutePlannerPanel(
@@ -101,7 +110,24 @@ fun RoutePlannerPanel(
 ) {
     val strings = LocalAppStrings.current
 
+    // Results-first: once a search succeeds, the tall form folds into a one-line
+    // summary so the itineraries — the thing the user asked for — sit at the top
+    // of the sheet instead of a screen below it. Any successful search re-folds;
+    // clearing an endpoint (results become null) unfolds automatically.
+    var formCollapsed by remember { mutableStateOf(false) }
+    LaunchedEffect(state.results) {
+        formCollapsed = state.results?.itineraries?.isNotEmpty() == true
+    }
+
     Column(modifier = modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+        if (formCollapsed && state.origin != null && state.destination != null) {
+            CollapsedSearchSummary(
+                state = state,
+                onExpand = { formCollapsed = false },
+                onSwap = onSwap
+            )
+            Spacer(Modifier.height(8.dp))
+        } else {
         if (homePlace != null && workPlace != null && onQuickRoute != null && state.results == null) {
             FrequentRouteCard(
                 homePlace = homePlace,
@@ -285,6 +311,7 @@ fun RoutePlannerPanel(
                 )
             }
         }
+        } // end expanded form
 
         Spacer(Modifier.height(8.dp))
 
@@ -333,6 +360,87 @@ fun RoutePlannerPanel(
                     onCancelReminder = onCancelReminder,
                     onStartJourney = onStartJourney,
                     onShareTrip = onShareTrip
+                )
+            }
+        }
+    }
+}
+
+/**
+ * The folded form: origin → destination on one line, the time mode (and via stop)
+ * under it. The whole card expands the form again; swap works without unfolding
+ * because reversing a trip is the one edit people make mid-results.
+ */
+@Composable
+private fun CollapsedSearchSummary(
+    state: RoutingState,
+    onExpand: () -> Unit,
+    onSwap: () -> Unit,
+) {
+    val strings = LocalAppStrings.current
+    val timeText = state.departureTime?.let { t ->
+        val hm = t.toLocalDateTime(TimeZone.currentSystemDefault()).time.toString().take(5)
+        if (state.arriveBy) "${strings.arriveBy} $hm" else "${strings.departAt} $hm"
+    } ?: strings.now
+    Card(
+        onClick = onExpand,
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f)
+        ),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(start = 12.dp, end = 4.dp, top = 8.dp, bottom = 8.dp)
+        ) {
+            Column(Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        state.origin?.name.orEmpty(),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowForward,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 6.dp).size(14.dp)
+                    )
+                    Text(
+                        state.destination?.name.orEmpty(),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+                }
+                val via = state.via
+                Text(
+                    if (via != null) "$timeText · ${strings.stopAlongTheWay}: ${via.name}" else timeText,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            IconButton(onClick = onSwap) {
+                Icon(
+                    Icons.Default.SwapVert,
+                    contentDescription = strings.swapOriginDestination,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
+            IconButton(onClick = onExpand) {
+                Icon(
+                    Icons.Default.Edit,
+                    contentDescription = strings.editSearch,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(18.dp)
                 )
             }
         }
