@@ -1,5 +1,5 @@
 import type { Itinerary } from '../types'
-import { formatTime } from './time-format'
+import { formatTime, nextDayOffset } from './time-format'
 
 /**
  * The next departures of the SAME line from the SAME stop, taken from the other
@@ -21,5 +21,20 @@ export function laterDeparturesOf(target: Itinerary, all: Itinerary[], limit = 2
     .filter(l => (l.fromStopCode || l.from.name) === stop)
     .filter(l => l.startTime > ride.startTime)
     .map(l => l.startTime)
-  return [...new Set(times)].sort().slice(0, limit).map(formatTime)
+  // "then 23:00 · 06:40⁺¹" — after the card's day badge, this list is the last
+  // place a day can hide: the next departure of the same line is very often the
+  // first one of the following morning, and read bare it looks like a bus leaving
+  // in eight hours today. The mark is glued to the digits, with no space for bidi
+  // to break at.
+  return [...new Set(times)]
+    .sort()
+    .slice(0, limit)
+    .map(iso => formatTime(iso) + nextDayMark(nextDayOffset(ride.startTime, iso)))
+}
+
+const SUPERSCRIPT_DIGITS = ['⁰', '¹', '²', '³', '⁴', '⁵', '⁶', '⁷', '⁸', '⁹']
+
+function nextDayMark(days: number): string {
+  if (days <= 0) return ''
+  return '⁺' + String(days).split('').map(d => SUPERSCRIPT_DIGITS[Number(d)] ?? d).join('')
 }

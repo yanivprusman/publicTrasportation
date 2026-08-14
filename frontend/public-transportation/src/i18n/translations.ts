@@ -114,6 +114,8 @@ const en = {
   'card.departureLive': 'Live — a vehicle is reporting',
   'card.boardingFrom': 'from {stop}',
   'card.thenDepartures': 'then {times}',
+  'card.dayTomorrow': 'Tomorrow',
+  'card.dayYesterday': 'Yesterday',
 
   // Itinerary detail
   'detail.wait': 'Wait {d}',
@@ -504,6 +506,8 @@ const he: Record<keyof typeof en, string> = {
   'card.departureLive': 'בזמן אמת — הרכב מדווח',
   'card.boardingFrom': 'מתחנת {stop}',
   'card.thenDepartures': 'אח״כ {times}',
+  'card.dayTomorrow': 'מחר',
+  'card.dayYesterday': 'אתמול',
 
   'detail.wait': 'המתנה {d}',
   'detail.walk': 'הליכה {d}',

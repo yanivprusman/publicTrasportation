@@ -35,6 +35,27 @@
   flex-wrap: wrap;
 }
 
+/* The day this trip leaves on — drawn only when that is not today. Its own line
+   above the header, because the header already wraps under a fare badge and the
+   day is the one thing on this card that must never be the part that gets cut. */
+.dayBadge {
+  display: inline-block;
+  margin-bottom: 6px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent-text, #b39ddb);
+  background: var(--accent-soft, rgba(69, 39, 160, 0.35));
+}
+
+.nextDay {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--accent-text, #b39ddb);
+  margin-inline-start: 1px;
+}
+
 .duration {
   font-weight: 700;
   font-size: 16px;

@@ -2,7 +2,7 @@ import { Fragment, useState } from 'react'
 import type { Coordinates, Itinerary, RouteLeg, TransitMode } from '../../types'
 import type { LiveBusState } from '../../hooks/useLiveBus'
 import { useDepartureReminder } from '../../hooks/useDepartureReminder'
-import { formatDuration, formatTime } from '../../utils/time-format'
+import { departureDayLabel, formatDuration, formatTime, nextDayOffset } from '../../utils/time-format'
 import { getModeStyle, getModeLabel } from '../../utils/mode-colors'
 import { buildTripLink, type SharedTrip } from '../../utils/trip-link'
 import DepartureCountdown from './DepartureCountdown'
@@ -43,13 +43,21 @@ export default function ItineraryDetail({ itinerary, trip, liveBus, onShowLiveBu
   const { t } = useI18n()
   const legs = itinerary.legs
   const [navigating, setNavigating] = useState(false)
+  const dayLabel = departureDayLabel(itinerary.startTime, Date.now())
+  const overnightDays = nextDayOffset(itinerary.startTime, itinerary.endTime)
   return (
     <div className={styles.wrapper}>
       <DepartureCountdown itinerary={itinerary} />
       <LiveBusStatus state={liveBus} onShowOnMap={onShowLiveBusOnMap} />
+      {/* The same day marker the card carries: opening a result must not lose the
+          one fact "HH:mm" cannot express — which day this is. */}
+      {dayLabel && <div className={styles.dayBadge} data-id="detail-day">{dayLabel}</div>}
       <div className={styles.summaryRow}>
         <div className={styles.summary}>
           {formatTime(itinerary.startTime)} - {formatTime(itinerary.endTime)}
+          {overnightDays > 0 && (
+            <sup className={styles.nextDay} data-id="detail-next-day">+{overnightDays}</sup>
+          )}
           {' · '}
           {formatDuration(itinerary.duration)}
           {' · '}

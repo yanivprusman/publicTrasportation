@@ -1,5 +1,5 @@
 import type { Itinerary } from '../../types'
-import { formatDuration, formatTime } from '../../utils/time-format'
+import { departureDayLabel, formatDuration, formatTime, nextDayOffset } from '../../utils/time-format'
 import { getModeStyle, getModeLabel, onColorFor } from '../../utils/mode-colors'
 import { itineraryFare, formatFare } from '../../utils/fare'
 import { useI18n } from '../../i18n'
@@ -44,6 +44,9 @@ export default function ItineraryCard({ itinerary, selected, onClick, now, later
   // out — and the bus is the part you can miss. A walk-only itinerary has no ride
   // to board, and an unparsable timestamp gets no line at all: a boarding time the
   // app is not sure of is worse than none.
+  const dayLabel = departureDayLabel(itinerary.startTime, now)
+  const overnightDays = nextDayOffset(itinerary.startTime, itinerary.endTime)
+
   const boardingLeg = itinerary.legs.find(leg => leg.mode !== 'WALK')
   const boardingMs = boardingLeg ? new Date(boardingLeg.startTime).getTime() : NaN
   const remainingMs = boardingMs - now
@@ -75,6 +78,13 @@ export default function ItineraryCard({ itinerary, selected, onClick, now, later
         }
       }}
     >
+      {/* A day of its own line, above everything else, whenever this trip does not
+          leave today. It gets a line rather than a corner of the crowded header so
+          it cannot be the thing that gets squeezed out on the card that needed it —
+          the Fastest sort interleaves days, and "06:35" alone reads as this morning. */}
+      {dayLabel && (
+        <div className={styles.dayBadge} data-id="itinerary-day">{dayLabel}</div>
+      )}
       <div className={styles.header}>
         <span className={styles.duration}>{formatDuration(itinerary.duration)}</span>
         {fare !== null && fare > 0 && (
@@ -91,6 +101,11 @@ export default function ItineraryCard({ itinerary, selected, onClick, now, later
         </span>
         <span className={styles.times}>
           {formatTime(itinerary.startTime)} - {formatTime(itinerary.endTime)}
+          {/* An arrival past midnight, marked in its own element so Hebrew bidi
+              cannot strand the digits away from the time they belong to. */}
+          {overnightDays > 0 && (
+            <sup className={styles.nextDay} data-id="itinerary-next-day">+{overnightDays}</sup>
+          )}
         </span>
       </div>
       {/* Leg widths are proportional to each leg's share of travel time, so the

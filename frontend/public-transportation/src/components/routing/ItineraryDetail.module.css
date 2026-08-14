@@ -370,3 +370,23 @@
   border: 2px solid var(--leg-color);
   z-index: 1;
 }
+
+/* Which day this trip leaves on — drawn only when that is not today, so the
+   detail keeps the fact the card's badge carried into it. */
+.dayBadge {
+  display: inline-block;
+  margin-bottom: 6px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent-text, #b39ddb);
+  background: var(--accent-soft, rgba(69, 39, 160, 0.35));
+}
+
+.nextDay {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--accent-text, #b39ddb);
+  margin-inline-start: 1px;
+}
