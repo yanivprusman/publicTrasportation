@@ -81,6 +81,7 @@ fun TransportControls(
             },
             onClear = { stationText = "" },
             emptyText = strings.nothingFound,
+            errorText = strings.searchUnavailable,
             itemContent = { stop ->
                 Column {
                     Text(

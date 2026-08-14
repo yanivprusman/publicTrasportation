@@ -552,11 +552,11 @@ class RoutingViewModel(
     }
 
     // near = "lat,lon" viewport bias: the same words mean the nearer place.
-    suspend fun geocode(text: String, near: String? = null): List<GeocodeSuggestion> {
-        return try {
-            api.geocode(text, near)
-        } catch (_: Exception) {
-            emptyList()
-        }
-    }
+    //
+    // Deliberately does NOT catch: an unreachable server (or one answering with a
+    // sign-in page instead of JSON) used to arrive at the user as "Nothing found —
+    // try a different spelling", which blames them for an outage. The field that
+    // ran the search decides what to show; this reports what happened.
+    suspend fun geocode(text: String, near: String? = null): List<GeocodeSuggestion> =
+        api.geocode(text, near)
 }

@@ -64,7 +64,12 @@ fun <T> AutocompleteField(
     onLongPressSuggestion: ((GeocodeSuggestion) -> Unit)? = null,
     // Shown when a finished search matched nothing. Null keeps the old silence —
     // but silence looks exactly like "still typing", so callers should pass it.
-    emptyText: String? = null
+    emptyText: String? = null,
+    // Shown when the search could not be run at all (server unreachable, or an
+    // answer that isn't a result list). Distinct from [emptyText] on purpose: an
+    // unreachable backend rendered as "nothing found" tells the user their
+    // spelling is wrong when the truth is that nothing was ever searched.
+    errorText: String? = null
 ) {
     val strings = LocalAppStrings.current
     var suggestions by remember { mutableStateOf<List<T>>(emptyList()) }
@@ -73,6 +78,7 @@ fun <T> AutocompleteField(
     var hasFocus by remember { mutableStateOf(false) }
     var justSelected by remember { mutableStateOf(false) }
     var searchedEmpty by remember { mutableStateOf(false) }
+    var searchFailed by remember { mutableStateOf(false) }
 
     LaunchedEffect(value) {
         if (justSelected || suppressSearch) {
@@ -90,6 +96,7 @@ fun <T> AutocompleteField(
             suggestions = emptyList()
             showDropdown = false
             searchedEmpty = false
+            searchFailed = false
             if (value.isEmpty() && hasFocus && preSuggestions.isNotEmpty()) {
                 showPreSuggestions = true
             }
@@ -97,7 +104,20 @@ fun <T> AutocompleteField(
         }
         showPreSuggestions = false
         delay(debounceMs)
-        val results = onSearch(value)
+        // The supplier is allowed to throw — that is how it says "I could not ask
+        // the server", which is a different answer from "the server said none".
+        // Caught here rather than swallowed at the source so the field can say
+        // which of the two happened.
+        val results = try {
+            searchFailed = false
+            onSearch(value)
+        } catch (_: Exception) {
+            searchFailed = true
+            suggestions = emptyList()
+            showDropdown = false
+            searchedEmpty = false
+            return@LaunchedEffect
+        }
         suggestions = results
         showDropdown = results.isNotEmpty() && hasFocus
         searchedEmpty = results.isEmpty()
@@ -206,6 +226,24 @@ fun <T> AutocompleteField(
                         }
                     }
                 }
+            }
+        }
+
+        if (errorText != null && searchFailed && hasFocus &&
+            !showDropdown && !showPreSuggestions && value.length >= 2
+        ) {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shadowElevation = 4.dp,
+                color = MaterialTheme.colorScheme.surface,
+                shape = MaterialTheme.shapes.small
+            ) {
+                Text(
+                    text = errorText,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                )
             }
         }
 

@@ -74,6 +74,7 @@ fun LocationInput(
         preSuggestions = preSuggestions,
         onLongPressSuggestion = onLongPressSuggestion,
         emptyText = LocalAppStrings.current.nothingFound,
+        errorText = LocalAppStrings.current.searchUnavailable,
         leadingIcon = if (showGpsButton && onGpsClick != null) {
             {
                 IconButton(onClick = onGpsClick, enabled = !gpsLoading) {

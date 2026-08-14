@@ -227,13 +227,9 @@ class ArrivalsViewModel(
         pollingJob = null
     }
 
-    suspend fun searchStops(query: String): List<StopResult> {
-        return try {
-            api.searchStops(query)
-        } catch (_: Exception) {
-            emptyList()
-        }
-    }
+    // Not caught, for the same reason as RoutingViewModel.geocode: "no stop by that
+    // name" and "could not ask" are different answers and the field says which.
+    suspend fun searchStops(query: String): List<StopResult> = api.searchStops(query)
 
     private var nearbyVehiclesJob: Job? = null
 

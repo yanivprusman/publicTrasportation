@@ -33,6 +33,8 @@ fun SetHomeDialog(
                     onValueChange = { query = it },
                     label = strings.home,
                     onSearch = onGeocode,
+                    emptyText = strings.nothingFound,
+                    errorText = strings.searchUnavailable,
                     onSelect = { suggestion ->
                         onSave(suggestion)
                         onDismiss()
