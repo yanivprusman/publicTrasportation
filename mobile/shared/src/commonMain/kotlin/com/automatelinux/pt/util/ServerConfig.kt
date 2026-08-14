@@ -59,7 +59,7 @@ object ServerConfig {
     /**
      * @param port the backend port for this flavour (dev 3003 / prod 3002).
      * @param publicServer the public HTTPS origin for this flavour.
-     * @param peerServersEnabled whether to probe the private WireGuard peers first.
+     * @param peerServersEnabled whether to probe the USB tunnel and private WireGuard peers first.
      *   These are a developer convenience and must never ship: on a real user's phone
      *   every one is unreachable, so probing them would stall startup behind connect
      *   timeouts before the public URL is tried, and would advertise the internal
@@ -67,6 +67,12 @@ object ServerConfig {
      */
     fun configure(port: Int, publicServer: String, peerServersEnabled: Boolean) {
         val peerServers = if (peerServersEnabled) listOf(
+            // A phone plugged into a dev machine reaches its server through
+            // `adb reverse tcp:<port> tcp:<port>` — no VPN, no WiFi, no public
+            // host. It is first because a test phone that HAS the tunnel should
+            // use it, and one that has not is refused instantly by its own
+            // loopback rather than waiting out a connect timeout.
+            "http://127.0.0.1:$port",
             "http://10.7.0.2:$port",
             "http://10.7.0.1:$port",
             "http://10.7.0.4:$port",
@@ -75,6 +81,7 @@ object ServerConfig {
 
         _servers = peerServers + publicServer
         _serverLabels = mapOf(
+            "http://127.0.0.1:$port" to "USB (adb reverse)",
             "http://10.7.0.2:$port" to "Desktop",
             "http://10.7.0.1:$port" to "NUC (Leader)",
             "http://10.7.0.4:$port" to "Ubuntu Levtov",

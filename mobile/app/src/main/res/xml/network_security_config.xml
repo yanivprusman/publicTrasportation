@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
     <domain-config cleartextTrafficPermitted="true">
+        <!-- The far end of `adb reverse tcp:3003 tcp:3003`: a phone tethered to a
+             dev machine talks to its server over the USB tunnel, which terminates
+             on this device's own loopback. -->
+        <domain includeSubdomains="false">127.0.0.1</domain>
         <domain includeSubdomains="false">10.7.0.1</domain>
         <domain includeSubdomains="false">10.7.0.2</domain>
         <domain includeSubdomains="false">10.7.0.3</domain>
