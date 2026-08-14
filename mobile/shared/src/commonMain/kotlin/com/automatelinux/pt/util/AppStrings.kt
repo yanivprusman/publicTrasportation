@@ -73,6 +73,14 @@ data class AppStrings(
     val showOnMap: String,
     val arrivalNow: String,
     val arrivalInMin: (Long) -> String,
+    /** Boarding time of the first ride on a route card: "departs 11:09". */
+    val departsAt: (String) -> String,
+    /** Live countdown to that boarding time: "in 7 min", "in 1h 20min". */
+    val departsIn: (String) -> String,
+    /** The first ride is leaving this minute. */
+    val departsNow: String,
+    /** The card's first ride is already gone — the result is stale, say so. */
+    val departureGone: String,
     val connectingToServer: String,
     val connectionFailed: String,
     val serversTried: (String) -> String,
@@ -328,6 +336,10 @@ val EnStrings = AppStrings(
     showOnMap = "Show on map",
     arrivalNow = "now",
     arrivalInMin = { m -> "in ${m}min" },
+    departsAt = { t -> "departs $t" },
+    departsIn = { d -> "in $d" },
+    departsNow = "departing now",
+    departureGone = "already left",
     connectingToServer = "Connecting to PT server...",
     connectionFailed = "Connection failed",
     serversTried = { s -> "Servers tried: $s" },
@@ -588,6 +600,10 @@ val HeStrings = AppStrings(
     showOnMap = "הצג במפה",
     arrivalNow = "עכשיו",
     arrivalInMin = { m -> "בעוד $m דק׳" },
+    departsAt = { t -> "יוצא ב-$t" },
+    departsIn = { d -> "בעוד $d" },
+    departsNow = "יוצא עכשיו",
+    departureGone = "כבר יצא",
     connectingToServer = "...מתחבר לשרת PT",
     connectionFailed = "החיבור נכשל",
     serversTried = { s -> "שרתים שנוסו: $s" },

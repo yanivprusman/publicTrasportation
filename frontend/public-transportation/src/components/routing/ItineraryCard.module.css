@@ -119,3 +119,47 @@
 .barSegWalk .barLabel {
   text-shadow: none;
 }
+
+.boarding {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 12.5px;
+}
+
+.boardingLine {
+  color: #fff;
+  font-weight: 700;
+  font-size: 11px;
+  line-height: 1.5;
+  padding: 0 5px;
+  border-radius: 4px;
+  white-space: nowrap;
+  max-width: 40%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.boardingTime {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.boardingDot {
+  color: var(--text-secondary);
+}
+
+.boardingCountdown {
+  color: var(--text-secondary);
+}
+
+.boardingUrgent {
+  color: var(--warn-text);
+  font-weight: 700;
+}
+
+.boardingGone {
+  color: var(--danger-text);
+  font-weight: 700;
+}

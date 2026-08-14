@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { RouteResult } from '../../types'
 import ItineraryCard from './ItineraryCard'
 import { ROUTE_SORT_MODES, sortItineraries, type RouteSortMode } from '../../utils/route-sort'
@@ -32,6 +32,14 @@ export default function RouteResults({
 }: RouteResultsProps) {
   const { t, tm } = useI18n()
   const [sortMode, setSortMode] = useState<RouteSortMode>('fastest')
+
+  // One clock for the whole list: every card's "departs in …" counts down off it,
+  // so a results list left open never shows a boarding time that has quietly passed.
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 10_000)
+    return () => clearInterval(id)
+  }, [])
 
   // Sorted entries keep their original index, so selecting a card still refers
   // to the same itinerary the map and detail panel are working from.
@@ -102,6 +110,7 @@ export default function RouteResults({
           itinerary={itinerary}
           selected={index === selectedIndex}
           onClick={() => onSelect(index)}
+          now={now}
         />
       ))}
       {results.nextPageCursor && onLoadLater && (

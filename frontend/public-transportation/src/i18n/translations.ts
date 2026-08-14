@@ -105,6 +105,11 @@ const en = {
   'card.direct': 'Direct',
   'card.transfersOne': '1 transfer',
   'card.transfersMany': '{n} transfers',
+  'card.departsAt': 'departs {t}',
+  'card.departsIn': 'in {d}',
+  'card.departsNow': 'departing now',
+  'card.departureGone': 'already left',
+  'card.boardingAria': '{line} departs at {t}',
 
   // Itinerary detail
   'detail.wait': 'Wait {d}',
@@ -486,6 +491,11 @@ const he: Record<keyof typeof en, string> = {
   'card.direct': 'ישיר',
   'card.transfersOne': 'החלפה אחת',
   'card.transfersMany': '{n} החלפות',
+  'card.departsAt': 'יוצא ב-{t}',
+  'card.departsIn': 'בעוד {d}',
+  'card.departsNow': 'יוצא עכשיו',
+  'card.departureGone': 'כבר יצא',
+  'card.boardingAria': 'קו {line} יוצא בשעה {t}',
 
   'detail.wait': 'המתנה {d}',
   'detail.walk': 'הליכה {d}',

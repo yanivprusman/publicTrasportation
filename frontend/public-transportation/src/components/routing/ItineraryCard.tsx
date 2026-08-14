@@ -9,9 +9,20 @@ interface ItineraryCardProps {
   itinerary: Itinerary
   selected: boolean
   onClick: () => void
+  /**
+   * The wall clock in ms, ticked by the list. Passed in rather than read here so
+   * every card counts down off one timer — and so a card that is never given a
+   * clock cannot silently show a countdown frozen at render time.
+   */
+  now: number
 }
 
-export default function ItineraryCard({ itinerary, selected, onClick }: ItineraryCardProps) {
+/** Under five minutes you are running for it — the countdown says so in colour. */
+const URGENT_MS = 5 * 60 * 1000
+/** Past a few hours the countdown says less than the clock time already does. */
+const COUNTDOWN_HORIZON_MS = 3 * 60 * 60 * 1000
+
+export default function ItineraryCard({ itinerary, selected, onClick, now }: ItineraryCardProps) {
   const { t } = useI18n()
   const totalLegSeconds = itinerary.legs.reduce((sum, leg) => sum + (leg.duration || 0), 0)
   // Walk-only itineraries cost nothing — no badge rather than a "~₪0".
@@ -22,6 +33,23 @@ export default function ItineraryCard({ itinerary, selected, onClick }: Itinerar
       return `${what} ${formatDuration(leg.duration)}`
     })
     .join(', ')
+
+  // The card's time range starts when you leave the house, not when the bus pulls
+  // out — and the bus is the part you can miss. A walk-only itinerary has no ride
+  // to board, and an unparsable timestamp gets no line at all: a boarding time the
+  // app is not sure of is worse than none.
+  const boardingLeg = itinerary.legs.find(leg => leg.mode !== 'WALK')
+  const boardingMs = boardingLeg ? new Date(boardingLeg.startTime).getTime() : NaN
+  const remainingMs = boardingMs - now
+  const countdown = !Number.isFinite(boardingMs)
+    ? null
+    : remainingMs < -60_000
+      ? t('card.departureGone')
+      : remainingMs < 60_000
+        ? t('card.departsNow')
+        : remainingMs <= COUNTDOWN_HORIZON_MS
+          ? t('card.departsIn', { d: formatDuration(remainingMs / 1000) })
+          : null
 
   return (
     <div
@@ -91,6 +119,44 @@ export default function ItineraryCard({ itinerary, selected, onClick }: Itinerar
           )
         })}
       </div>
+      {boardingLeg && Number.isFinite(boardingMs) && (
+        <div
+          className={styles.boarding}
+          data-id="itinerary-boarding"
+          aria-label={t('card.boardingAria', {
+            line: boardingLeg.routeShortName || getModeLabel(boardingLeg.mode),
+            t: formatTime(boardingLeg.startTime),
+          })}
+        >
+          <span
+            className={styles.boardingLine}
+            style={{ background: getModeStyle(boardingLeg.mode, boardingLeg.routeColor).color }}
+          >
+            {boardingLeg.routeShortName && boardingLeg.routeShortName.length <= 8
+              ? boardingLeg.routeShortName
+              : getModeLabel(boardingLeg.mode)}
+          </span>
+          <span className={styles.boardingTime}>
+            {t('card.departsAt', { t: formatTime(boardingLeg.startTime) })}
+          </span>
+          {countdown && (
+            <>
+              <span className={styles.boardingDot}>·</span>
+              <span
+                className={`${styles.boardingCountdown} ${
+                  remainingMs < -60_000
+                    ? styles.boardingGone
+                    : remainingMs <= URGENT_MS
+                      ? styles.boardingUrgent
+                      : ''
+                }`}
+              >
+                {countdown}
+              </span>
+            </>
+          )}
+        </div>
+      )}
     </div>
   )
 }

@@ -18,12 +18,19 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.automatelinux.pt.data.model.Itinerary
 import com.automatelinux.pt.data.model.RouteSortMode
 import com.automatelinux.pt.util.LocalAppStrings
+import kotlinx.coroutines.delay
+import kotlinx.datetime.Clock
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -43,6 +50,16 @@ fun RouteResults(
     modifier: Modifier = Modifier
 ) {
     val strings = LocalAppStrings.current
+
+    // One clock for the whole list: every card's "departs in ..." counts down off it,
+    // so a list left open on screen never shows a boarding time that has quietly passed.
+    var now by remember { mutableStateOf(Clock.System.now()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(10_000)
+            now = Clock.System.now()
+        }
+    }
 
     Column(modifier = modifier) {
         when {
@@ -135,6 +152,7 @@ fun RouteResults(
                             itinerary = itinerary,
                             selected = index == selectedIndex,
                             onClick = { onSelect(index) },
+                            now = now,
                             cardOpacity = cardOpacity
                         )
                     }
