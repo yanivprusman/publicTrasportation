@@ -63,6 +63,7 @@ import com.automatelinux.pt.data.model.TransitMode
 import com.automatelinux.pt.data.model.WheelchairAccess
 import com.automatelinux.pt.data.model.access
 import com.automatelinux.pt.ui.map.getModeColorWithRoute
+import com.automatelinux.pt.ui.map.onColorFor
 import com.automatelinux.pt.util.LocalAppStrings
 import kotlinx.datetime.Instant
 
@@ -374,14 +375,14 @@ private fun LegSegment(
                         Icon(
                             modeIcon(leg.mode),
                             contentDescription = getModeLabel(leg.mode, strings),
-                            tint = Color.White,
+                            tint = onColorFor(color),
                             modifier = Modifier.size(14.dp)
                         )
                         leg.routeShortName?.let { route ->
                             Spacer(Modifier.width(4.dp))
                             Text(
                                 text = route,
-                                color = Color.White,
+                                color = onColorFor(color),
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold
                             )

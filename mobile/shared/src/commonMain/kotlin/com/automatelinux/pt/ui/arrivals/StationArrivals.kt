@@ -59,6 +59,7 @@ import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import com.automatelinux.pt.ui.map.onColorFor
 
 private val lineColors = listOf(
     Color(0xFF4CAF50),
@@ -95,7 +96,7 @@ fun LineBadge(lineName: String?, modifier: Modifier = Modifier) {
     ) {
         Text(
             text = name,
-            color = Color.White,
+            color = onColorFor(color),
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center

@@ -1,6 +1,7 @@
 package com.automatelinux.pt.ui.map
 
 import androidx.compose.ui.graphics.Color
+import kotlin.math.pow
 import com.automatelinux.pt.data.model.TransitMode
 
 /**
@@ -52,4 +53,29 @@ private fun parseHexColor(raw: String): Color? {
     // A six-digit value carries no alpha; GTFS colours are always fully opaque.
     val argb = if (hex.length == 6) value or 0xFF000000uL else value
     return Color(argb.toLong())
+}
+
+/**
+ * The text colour to print ON [background] — whichever of near-black and white the
+ * eye can actually read there.
+ *
+ * Line badges used to be white on the mode colour unconditionally, which is 2.78:1
+ * against this suite's bus green and fails WCAG AA outright; the same mistake is in
+ * Moovit's competitors and in Google Maps (2.4:1 white on their orange). Route
+ * colours also come from the operator's own GTFS feed, so no fixed pair can be
+ * right for all of them — the choice has to follow the background's luminance.
+ *
+ * Uses the WCAG relative-luminance formula rather than a naive average: mid greens
+ * and oranges are far brighter to the eye than their RGB mean suggests, which is
+ * exactly why they defeat white text.
+ */
+fun onColorFor(background: Color): Color =
+    if (relativeLuminance(background) > 0.35) Color(0xFF10130F) else Color.White
+
+private fun relativeLuminance(c: Color): Double {
+    fun channel(v: Float): Double {
+        val d = v.toDouble()
+        return if (d <= 0.03928) d / 12.92 else ((d + 0.055) / 1.055).pow(2.4)
+    }
+    return 0.2126 * channel(c.red) + 0.7152 * channel(c.green) + 0.0722 * channel(c.blue)
 }

@@ -38,6 +38,7 @@ import com.automatelinux.pt.data.model.Itinerary
 import com.automatelinux.pt.data.model.RouteLeg
 import com.automatelinux.pt.data.model.TransitMode
 import com.automatelinux.pt.ui.map.getModeColorWithRoute
+import com.automatelinux.pt.ui.map.onColorFor
 import com.automatelinux.pt.util.AppStrings
 import com.automatelinux.pt.util.LocalAppStrings
 
@@ -153,7 +154,7 @@ fun ItineraryCard(
                         } else {
                             Text(
                                 text = legPillLabel(leg, strings),
-                                color = Color.White,
+                                color = onColorFor(color),
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
                                 maxLines = 1,
@@ -203,18 +204,16 @@ private fun BoardingLine(
             .fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        val badgeColor = getModeColorWithRoute(leg.mode, leg.routeColor)
         Box(
             modifier = Modifier
-                .background(
-                    getModeColorWithRoute(leg.mode, leg.routeColor),
-                    RoundedCornerShape(4.dp)
-                )
-                .padding(horizontal = 5.dp, vertical = 1.dp)
+                .background(badgeColor, RoundedCornerShape(4.dp))
+                .padding(horizontal = 6.dp, vertical = 1.dp)
         ) {
             Text(
                 text = legPillLabel(leg, strings),
-                color = Color.White,
-                fontSize = 10.sp,
+                color = onColorFor(badgeColor),
+                fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
                 softWrap = false
@@ -223,7 +222,7 @@ private fun BoardingLine(
         Spacer(Modifier.width(6.dp))
         Text(
             text = strings.departsAt(formatTime(leg.startTime)),
-            style = MaterialTheme.typography.bodySmall,
+            style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.SemiBold,
             color = textColor
         )
@@ -241,13 +240,13 @@ private fun BoardingLine(
             Spacer(Modifier.width(6.dp))
             Text(
                 text = "·",
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.bodyMedium,
                 color = secondaryTextColor
             )
             Spacer(Modifier.width(6.dp))
             Text(
                 text = countdown,
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.bodyMedium,
                 fontWeight = if (remaining <= URGENT_SECONDS) FontWeight.Bold else FontWeight.Normal,
                 color = when {
                     remaining < -60 -> Color(0xFFEF9A9A)
