@@ -147,24 +147,29 @@ fun ItineraryCard(
                     style = MaterialTheme.typography.bodySmall,
                     color = secondaryTextColor
                 )
-                Text(
-                    text = "${formatTime(itinerary.startTime)} - ${formatTime(itinerary.endTime)}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = secondaryTextColor
-                )
-                // "+1" for an arrival after midnight — its own Text, not a suffix inside
-                // the range above: a Latin-digit suffix glued into that string sits in a
-                // bidi run and Hebrew layout is free to move it away from the time it
-                // belongs to.
-                val overnight = nextDayMarker(itinerary.startTime, itinerary.endTime)
-                if (overnight != null) {
+                // The range and its "+1" are ONE item of this SpaceBetween row: added as
+                // siblings they were spaced apart like everything else, and a marker
+                // floating a thumb's width from its time is not attached to anything.
+                Row(verticalAlignment = Alignment.Top) {
                     Text(
-                        text = overnight,
-                        modifier = Modifier.padding(start = 2.dp),
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFFB39DDB)
+                        text = "${formatTime(itinerary.startTime)} - ${formatTime(itinerary.endTime)}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = secondaryTextColor
                     )
+                    // "+1" for an arrival after midnight — its own Text, not a suffix
+                    // inside the range: a Latin-digit suffix glued into that string sits
+                    // in a bidi run and Hebrew layout is free to move it away from the
+                    // time it belongs to.
+                    val overnight = nextDayMarker(itinerary.startTime, itinerary.endTime)
+                    if (overnight != null) {
+                        Text(
+                            text = overnight,
+                            modifier = Modifier.padding(start = 1.dp),
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFB39DDB)
+                        )
+                    }
                 }
             }
 
