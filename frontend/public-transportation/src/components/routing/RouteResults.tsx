@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { RouteResult } from '../../types'
 import ItineraryCard from './ItineraryCard'
 import { ROUTE_SORT_MODES, sortItineraries, type RouteSortMode } from '../../utils/route-sort'
+import { laterDeparturesOf } from '../../utils/departures'
 import { useI18n } from '../../i18n'
 import type { TranslationKey } from '../../i18n/translations'
 import styles from './RouteResults.module.css'
@@ -111,6 +112,7 @@ export default function RouteResults({
           selected={index === selectedIndex}
           onClick={() => onSelect(index)}
           now={now}
+          laterDepartures={laterDeparturesOf(itinerary, ordered.map(o => o.itinerary))}
         />
       ))}
       {results.nextPageCursor && onLoadLater && (

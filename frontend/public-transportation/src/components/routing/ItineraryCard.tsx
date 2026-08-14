@@ -1,7 +1,7 @@
 import type { Itinerary } from '../../types'
 import { formatDuration, formatTime } from '../../utils/time-format'
-import { getModeStyle, getModeLabel } from '../../utils/mode-colors'
-import { estimateFare } from '../../utils/fare'
+import { getModeStyle, getModeLabel, onColorFor } from '../../utils/mode-colors'
+import { itineraryFare, formatFare } from '../../utils/fare'
 import { useI18n } from '../../i18n'
 import styles from './ItineraryCard.module.css'
 
@@ -15,6 +15,11 @@ interface ItineraryCardProps {
    * clock cannot silently show a countdown frozen at render time.
    */
   now: number
+  /**
+   * Departure times of this card's line from the same stop, after this one —
+   * computed by the list, which is the only place that can see the siblings.
+   */
+  laterDepartures: string[]
 }
 
 /** Under five minutes you are running for it — the countdown says so in colour. */
@@ -22,11 +27,12 @@ const URGENT_MS = 5 * 60 * 1000
 /** Past a few hours the countdown says less than the clock time already does. */
 const COUNTDOWN_HORIZON_MS = 3 * 60 * 60 * 1000
 
-export default function ItineraryCard({ itinerary, selected, onClick, now }: ItineraryCardProps) {
+export default function ItineraryCard({ itinerary, selected, onClick, now, laterDepartures }: ItineraryCardProps) {
   const { t } = useI18n()
   const totalLegSeconds = itinerary.legs.reduce((sum, leg) => sum + (leg.duration || 0), 0)
-  // Walk-only itineraries cost nothing — no badge rather than a "~₪0".
-  const fare = estimateFare(itinerary)
+  // Null when the server could not price a ride on this journey; no badge then,
+  // rather than a number that is wrong.
+  const fare = itineraryFare(itinerary)
   const barDescription = itinerary.legs
     .map(leg => {
       const what = `${getModeLabel(leg.mode)}${leg.routeShortName ? ` ${leg.routeShortName}` : ''}`
@@ -71,9 +77,9 @@ export default function ItineraryCard({ itinerary, selected, onClick, now }: Iti
     >
       <div className={styles.header}>
         <span className={styles.duration}>{formatDuration(itinerary.duration)}</span>
-        {fare > 0 && (
+        {fare !== null && fare > 0 && (
           <span className={styles.fare} title={t('fare.title')} data-id="itinerary-fare">
-            {t('fare.estimate', { n: Math.round(fare) })}
+            {t('fare.estimate', { n: formatFare(fare) })}
           </span>
         )}
         <span className={styles.transfers}>
@@ -114,7 +120,12 @@ export default function ItineraryCard({ itinerary, selected, onClick, now }: Iti
               }}
               title={`${what} · ${formatDuration(leg.duration)}`}
             >
-              <span className={styles.barLabel}>{label}</span>
+              <span
+                className={styles.barLabel}
+                style={isWalk ? undefined : { color: onColorFor(style.color) }}
+              >
+                {label}
+              </span>
             </div>
           )
         })}
@@ -130,11 +141,24 @@ export default function ItineraryCard({ itinerary, selected, onClick, now }: Iti
         >
           <span
             className={styles.boardingLine}
-            style={{ background: getModeStyle(boardingLeg.mode, boardingLeg.routeColor).color }}
+            style={{
+              background: getModeStyle(boardingLeg.mode, boardingLeg.routeColor).color,
+              color: onColorFor(getModeStyle(boardingLeg.mode, boardingLeg.routeColor).color),
+            }}
           >
             {boardingLeg.routeShortName && boardingLeg.routeShortName.length <= 8
               ? boardingLeg.routeShortName
               : getModeLabel(boardingLeg.mode)}
+          </span>
+          {/* Where the number came from. Every competitor marks this — in colour,
+              in words, or with a glyph — and until we did, the countdown implied a
+              confidence the timetable cannot give. */}
+          <span
+            className={boardingLeg.realTime ? styles.provenanceLive : styles.provenance}
+            title={boardingLeg.realTime ? t('card.departureLive') : t('card.departureTimetable')}
+            aria-label={boardingLeg.realTime ? t('card.departureLive') : t('card.departureTimetable')}
+          >
+            {boardingLeg.realTime ? '◉' : '◷'}
           </span>
           <span className={styles.boardingTime}>
             {t('card.departsAt', { t: formatTime(boardingLeg.startTime) })}
@@ -155,6 +179,18 @@ export default function ItineraryCard({ itinerary, selected, onClick, now }: Iti
               </span>
             </>
           )}
+        </div>
+      )}
+      {boardingLeg && (boardingLeg.from.name || laterDepartures.length > 0) && (
+        <div className={styles.boardingMeta} data-id="itinerary-boarding-meta">
+          {[
+            boardingLeg.from.name ? t('card.boardingFrom', { stop: boardingLeg.from.name }) : '',
+            laterDepartures.length > 0
+              ? t('card.thenDepartures', { times: laterDepartures.join(' · ') })
+              : '',
+          ]
+            .filter(Boolean)
+            .join(' · ')}
         </div>
       )}
     </div>

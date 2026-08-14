@@ -41,3 +41,28 @@ export function getModeLabel(mode: TransitMode): string {
   const key = `modes.${mode}`
   return isTranslationKey(key) ? translate(getLanguage(), key) : mode
 }
+
+/**
+ * The text colour to print ON a line colour — whichever of near-black and white
+ * the eye can actually read there.
+ *
+ * Line badges were white on the mode colour unconditionally, which is 2.78:1 on
+ * this suite's bus green and fails WCAG AA. Route colours also arrive from the
+ * operator's own GTFS feed, so no fixed pair can be right for all of them; the
+ * choice has to follow the background's luminance. Uses WCAG relative luminance,
+ * not an RGB mean — mid greens and oranges are far brighter to the eye than their
+ * mean suggests, which is exactly why they defeat white text.
+ */
+export function onColorFor(background: string): string {
+  const hex = background.replace('#', '')
+  if (hex.length !== 6) return '#ffffff'
+  const channel = (v: number) => {
+    const c = v / 255
+    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)
+  }
+  const r = channel(parseInt(hex.slice(0, 2), 16))
+  const g = channel(parseInt(hex.slice(2, 4), 16))
+  const b = channel(parseInt(hex.slice(4, 6), 16))
+  const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b
+  return luminance > 0.35 ? '#10130f' : '#ffffff'
+}

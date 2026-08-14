@@ -1,18 +1,19 @@
 import type { Itinerary } from '../types'
 
-// Per-boarding fares in shekels. These mirror the Android app's
-// Itinerary.estimateFare() so the same trip quotes the same price on both
-// platforms. Israeli fares are distance-banded in reality; this is a
-// deliberately simple per-leg estimate, which is why the UI labels it "~".
-const FARE_BY_MODE: Record<string, number> = {
-  BUS: 5.5,
-  TRAM: 5.5,
-  SUBWAY: 5.5,
-  RAIL: 15,
-  FERRY: 25,
+/**
+ * What the journey costs, as the server computed it from the operators' fare table
+ * (`fare_attributes.txt` + `fare_rules.txt` in the Israeli feed).
+ *
+ * This used to be a flat ₪5.50 per boarding, mirrored in the Android app. That put
+ * Midreshet Ben-Gurion → Be'er Sheva at about ₪11 where both Moovit and Bus Nearby
+ * quote ₪19. Returning null when the server could not price a leg is deliberate:
+ * a wrong price is worse than no price, and the UI shows no badge at all.
+ */
+export function itineraryFare(itinerary: Itinerary): number | null {
+  return typeof itinerary.fareTotal === 'number' ? itinerary.fareTotal : null
 }
 
-/** Estimated cost of an itinerary in shekels. Walking/bike/car legs are free. */
-export function estimateFare(itinerary: Itinerary): number {
-  return itinerary.legs.reduce((sum, leg) => sum + (FARE_BY_MODE[leg.mode] || 0), 0)
+/** ₪17 keeps no agorot; ₪12.50 keeps both — 12.5 is a real price in this tariff. */
+export function formatFare(amount: number): string {
+  return amount % 1 === 0 ? `₪${amount.toFixed(0)}` : `₪${amount.toFixed(2)}`
 }

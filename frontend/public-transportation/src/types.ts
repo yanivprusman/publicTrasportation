@@ -80,6 +80,18 @@ export interface RouteLeg {
   agencyName?: string
   polyline: string
   intermediateStops?: Place[]
+  /** What the service is signed for — which of a line's two directions this is. */
+  headsign?: string
+  /** Street length in meters; the router sets it on walk/bike legs only. */
+  distanceMeters?: number
+  /** True when the times came from a realtime feed rather than the timetable. */
+  realTime?: boolean
+  scheduledStartTime?: string
+  /** Stop code as printed on the pole — the number signs and other apps use. */
+  fromStopCode?: string
+  toStopCode?: string
+  /** Single-ride price for this leg from the operators' fare table, in ILS. */
+  fare?: number
 }
 
 export interface Itinerary {
@@ -88,6 +100,12 @@ export interface Itinerary {
   endTime: string
   transfers: number
   legs: RouteLeg[]
+  /**
+   * The journey's price from the operators' own fare table, absent when any ride
+   * on it has no rule there. A missing total is shown as no price at all — the
+   * flat per-leg estimate this replaced quoted ~₪11 for a trip that costs ₪19.
+   */
+  fareTotal?: number
 }
 
 // A direct street route (no transit) offered next to the transit results so

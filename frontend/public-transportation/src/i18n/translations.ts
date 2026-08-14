@@ -110,6 +110,10 @@ const en = {
   'card.departsNow': 'departing now',
   'card.departureGone': 'already left',
   'card.boardingAria': '{line} departs at {t}',
+  'card.departureTimetable': 'From the timetable',
+  'card.departureLive': 'Live — a vehicle is reporting',
+  'card.boardingFrom': 'from {stop}',
+  'card.thenDepartures': 'then {times}',
 
   // Itinerary detail
   'detail.wait': 'Wait {d}',
@@ -306,7 +310,7 @@ const en = {
   'sort.lessWalking': 'Less walking',
 
   // Fare estimate
-  'fare.estimate': '~₪{n}',
+  'fare.estimate': '~{n}',
   'fare.title': 'Estimated fare for this trip',
 
   // Service alerts
@@ -496,6 +500,10 @@ const he: Record<keyof typeof en, string> = {
   'card.departsNow': 'יוצא עכשיו',
   'card.departureGone': 'כבר יצא',
   'card.boardingAria': 'קו {line} יוצא בשעה {t}',
+  'card.departureTimetable': 'לפי לוח זמנים',
+  'card.departureLive': 'בזמן אמת — הרכב מדווח',
+  'card.boardingFrom': 'מתחנת {stop}',
+  'card.thenDepartures': 'אח״כ {times}',
 
   'detail.wait': 'המתנה {d}',
   'detail.walk': 'הליכה {d}',
@@ -680,7 +688,7 @@ const he: Record<keyof typeof en, string> = {
   'sort.fewerTransfers': 'פחות החלפות',
   'sort.lessWalking': 'פחות הליכה',
 
-  'fare.estimate': '~{n} ₪',
+  'fare.estimate': '~{n}',
   'fare.title': 'עלות משוערת לנסיעה זו',
 
   'alerts.title': 'התראות שירות',
