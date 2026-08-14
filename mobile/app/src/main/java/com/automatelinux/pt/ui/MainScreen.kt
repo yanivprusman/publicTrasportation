@@ -741,7 +741,15 @@ fun MainScreen(
                                     },
                                     onSelectDayDeparture = { routingViewModel.selectDayDeparture(it) },
                                     onPickDayDeparture = { routingViewModel.pickDayDeparture(it) },
-                                    onRetryDayOverview = { routingViewModel.loadDayOverview() }
+                                    onRetryDayOverview = { routingViewModel.loadDayOverview() },
+                                    // The card shows the next few; the board it opens
+                                    // holds the rest, and is where filtering and
+                                    // tracking already live.
+                                    onOpenStopBoard = { code, name ->
+                                        activeTab = ActiveTab.ARRIVALS
+                                        arrivalsViewModel.setStationCode(code, name)
+                                        scope.launch { bottomSheetState.expand() }
+                                    }
                                 )
                             }
 

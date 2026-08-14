@@ -8,6 +8,14 @@ interface Stop {
   stopName: string;
   lat: number;
   lon: number;
+  /**
+   * The timetable id, feed-prefixed as MOTIS wants it ("israel_26635").
+   *
+   * `/api/stoptimes` keys on this, NOT on the stop code — asking it for 13868 answers
+   * 404 "could not find timetable location". Carried here so a caller that already has
+   * the stop does not have to geocode its name back into an id.
+   */
+  id: string;
 }
 
 let stopsCache: Stop[] | null = null;
@@ -27,6 +35,7 @@ function loadStops(): Stop[] {
   const content = fs.readFileSync(stopsFile, 'utf8');
   const lines = content.split('\n');
   const header = lines[0].replace(/\uFEFF/g, '').split(',').map(c => c.trim().toLowerCase());
+  const idIdx = header.indexOf('stop_id');
   const codeIdx = header.indexOf('stop_code');
   const nameIdx = header.indexOf('stop_name');
   const latIdx = header.indexOf('stop_lat');
@@ -48,8 +57,9 @@ function loadStops(): Stop[] {
     const lat = parseFloat(cols[latIdx]?.trim());
     const lon = parseFloat(cols[lonIdx]?.trim());
 
-    if (code && name && !isNaN(lat) && !isNaN(lon)) {
-      stops.push({ stopCode: code, stopName: name, lat, lon });
+    const id = idIdx === -1 ? '' : cols[idIdx]?.trim();
+    if (code && name && id && !isNaN(lat) && !isNaN(lon)) {
+      stops.push({ stopCode: code, stopName: name, lat, lon, id: `israel_${id}` });
     }
   }
 

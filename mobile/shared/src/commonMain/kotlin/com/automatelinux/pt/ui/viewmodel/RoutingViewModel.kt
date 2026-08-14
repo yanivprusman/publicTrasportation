@@ -69,6 +69,7 @@ class RoutingViewModel(
         _state.value = _state.value.copy(origin = suggestion, results = null, error = null)
         clearDayOverview()
         if (!sameCoords(previous, suggestion)) autoSearchIfReady()
+        syncNearbyBoard()
     }
 
     fun setDestination(suggestion: GeocodeSuggestion?) {
@@ -76,7 +77,30 @@ class RoutingViewModel(
         _state.value = _state.value.copy(destination = suggestion, results = null, error = null)
         clearDayOverview()
         if (!sameCoords(previous, suggestion)) autoSearchIfReady()
+        syncNearbyBoard()
     }
+
+    /**
+     * The nearby board exists exactly while there is a place to stand and nowhere to go.
+     * Both endpoints drive it, so it appears on the first GPS fix and gets out of the
+     * way the moment a destination is chosen — without either caller knowing it exists.
+     */
+    private fun syncNearbyBoard() {
+        val s = _state.value
+        val origin = s.origin
+        if (s.destination != null || origin == null) {
+            clearNearbyBoard()
+            return
+        }
+        // Same stop as last time means the board already running is the right one;
+        // restarting it would blank a card the user is reading.
+        val current = s.nearbyBoard
+        if (current != null && nearbyBoardOrigin == origin.lat to origin.lon) return
+        nearbyBoardOrigin = origin.lat to origin.lon
+        refreshNearbyBoard(origin.lat, origin.lon)
+    }
+
+    private var nearbyBoardOrigin: Pair<Double, Double>? = null
 
     // Picking the second endpoint IS the request — nobody fills From and To and then
     // wants a blank screen. The button stays for re-running after time/filter edits.
@@ -280,6 +304,14 @@ class RoutingViewModel(
         /** The feed updates about every 30s; a minute keeps the card fresh cheaply. */
         private const val LIVE_REFRESH_MS = 60_000L
 
+        /** Far enough to find a pole across the road, near enough to be YOUR stop. */
+        private const val NEARBY_BOARD_RADIUS_M = 400
+
+        /** Six rows fit above the fold; the arrivals board holds the long tail. */
+        private const val NEARBY_BOARD_ROWS = 12
+
+        private const val NEARBY_BOARD_REFRESH_MS = 45_000L
+
         private fun restoreModes(store: SettingsStore): Set<TransitFilter> {
             val saved = store.routeModes
             val restored = TransitFilter.entries.filter { it.apiKey in saved }.toSet()
@@ -298,6 +330,88 @@ class RoutingViewModel(
         val line: String,
         val scheduled: String
     )
+
+    private var nearbyBoardJob: Job? = null
+
+    /**
+     * Fill the zero-input board: what is leaving the nearest stop, right now.
+     *
+     * Runs only while there is nothing else to show — the moment a destination is
+     * chosen, the planner's own results are the answer and this stops. Live sightings
+     * and the timetable are merged by the same [buildDepartures] the arrivals board
+     * uses, so a stop shows one list rather than two competing ones.
+     */
+    fun refreshNearbyBoard(lat: Double, lon: Double) {
+        nearbyBoardJob?.cancel()
+        nearbyBoardJob = viewModelScope.launch {
+            val stop = try {
+                api.nearbyStops(lat, lon, NEARBY_BOARD_RADIUS_M).firstOrNull()
+            } catch (e: Exception) {
+                _state.value = _state.value.copy(
+                    nearbyBoard = NearbyBoard(
+                        stopCode = "", stopName = "", distanceMeters = 0,
+                        loading = false, error = e.message ?: "nearby stops failed"
+                    )
+                )
+                return@launch
+            }
+            if (stop == null) {
+                // No monitorable stop within range is an answer, not a failure.
+                _state.value = _state.value.copy(nearbyBoard = null)
+                return@launch
+            }
+
+            _state.value = _state.value.copy(
+                nearbyBoard = NearbyBoard(
+                    stopCode = stop.stopCode,
+                    stopName = stop.stopName,
+                    distanceMeters = stop.distanceMeters,
+                    loading = true
+                )
+            )
+
+            while (true) {
+                val siri = try {
+                    api.getTransport(station = stop.stopCode)
+                } catch (_: Exception) {
+                    null
+                }
+                val visits = siri?.siri?.serviceDelivery?.stopMonitoringDelivery
+                    ?.flatMap { it.monitoredStopVisit ?: emptyList() }
+                    ?: emptyList()
+                // The timetable is keyed by MOTIS's stop id, not the code on the pole;
+                // passing the code answers 404 and the board silently loses every
+                // scheduled row, leaving only whatever happens to be reporting live.
+                val timetable = if (stop.id.isBlank()) emptyList() else try {
+                    api.getStoptimes(stop.id, NEARBY_BOARD_ROWS).stopTimes
+                } catch (_: Exception) {
+                    emptyList()
+                }
+
+                val departures = buildDepartures(visits, timetable, "", Clock.System.now())
+                _state.value = _state.value.copy(
+                    // An empty board is not an error: at 3am the stop really has
+                    // nothing, and the card says that in words rather than blaming
+                    // the network for it.
+                    nearbyBoard = _state.value.nearbyBoard?.copy(
+                        departures = departures,
+                        stopNames = siri?.stopNames ?: _state.value.nearbyBoard?.stopNames.orEmpty(),
+                        loading = false,
+                        error = null
+                    )
+                )
+                delay(NEARBY_BOARD_REFRESH_MS)
+            }
+        }
+    }
+
+    fun clearNearbyBoard() {
+        nearbyBoardJob?.cancel()
+        nearbyBoardJob = null
+        if (_state.value.nearbyBoard != null) {
+            _state.value = _state.value.copy(nearbyBoard = null)
+        }
+    }
 
     private var liveBoardingJob: Job? = null
 

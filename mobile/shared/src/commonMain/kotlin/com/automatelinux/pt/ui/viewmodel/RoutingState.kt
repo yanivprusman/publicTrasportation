@@ -50,6 +50,32 @@ data class LiveBoarding(
     val vehicleRef: String? = null
 )
 
+/**
+ * What is leaving the stop you are standing at, before you have asked anything.
+ *
+ * Bus Nearby opens straight onto this and it is the strongest idea in the category:
+ * most journeys start with "what's coming", not "plan me a route". We already had
+ * every piece — nearby stops, the SIRI feed, the timetable — behind a tab nobody
+ * lands on.
+ */
+data class NearbyBoard(
+    val stopCode: String,
+    val stopName: String,
+    val distanceMeters: Int,
+    val departures: List<DepartureEntry> = emptyList(),
+    /**
+     * SIRI's stop-code → name map from the same response.
+     *
+     * A live visit names its destination by code (`DestinationRef`); without this the
+     * row would show a bare number, and showing the line's own name in its place would
+     * be inventing a destination.
+     */
+    val stopNames: Map<String, String> = emptyMap(),
+    val loading: Boolean = true,
+    /** Set when the board could not be built; the card says so rather than sitting empty. */
+    val error: String? = null
+)
+
 data class TrackedBus(
     val legIndex: Int,
     val lineName: String,
@@ -109,6 +135,8 @@ data class RoutingState(
      * never as a live time we do not have.
      */
     val liveBoardings: Map<String, LiveBoarding> = emptyMap(),
+    /** The zero-input answer: departures from the nearest stop, while no trip is planned. */
+    val nearbyBoard: NearbyBoard? = null,
     val selectedIndex: Int = 0,
     val loading: Boolean = false,
     val error: String? = null,

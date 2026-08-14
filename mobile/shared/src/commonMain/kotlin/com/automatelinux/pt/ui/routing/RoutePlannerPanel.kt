@@ -106,6 +106,8 @@ fun RoutePlannerPanel(
     onSelectDayDeparture: ((Int?) -> Unit)? = null,
     onPickDayDeparture: ((String) -> Unit)? = null,
     onRetryDayOverview: (() -> Unit)? = null,
+    /** Open the full arrivals board for a stop — where the nearby card's long tail lives. */
+    onOpenStopBoard: ((String, String) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val strings = LocalAppStrings.current
@@ -314,6 +316,19 @@ fun RoutePlannerPanel(
         } // end expanded form
 
         Spacer(Modifier.height(8.dp))
+
+        // Before a destination exists, the useful answer is not an empty results list —
+        // it is what is leaving the stop you are standing at. Bus Nearby opens onto
+        // exactly this; we had the data behind a tab nobody lands on.
+        val board = state.nearbyBoard
+        if (board != null && state.destination == null && state.results == null && !state.loading) {
+            NearbyDeparturesCard(
+                board = board,
+                onOpenBoard = { code, name -> onOpenStopBoard?.invoke(code, name) },
+                cardOpacity = cardOpacity
+            )
+            Spacer(Modifier.height(8.dp))
+        }
 
         val results = state.results
         if (onTravelModeChange != null && state.via == null && results != null && !state.loading && state.error == null &&
