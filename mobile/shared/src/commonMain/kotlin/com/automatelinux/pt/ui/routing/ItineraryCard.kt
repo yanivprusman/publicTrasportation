@@ -95,6 +95,24 @@ fun ItineraryCard(
         val secondaryTextColor = if (selected) Color(0xFFBBBBBB)
             else MaterialTheme.colorScheme.onSurfaceVariant
         Column(modifier = Modifier.padding(12.dp)) {
+            // A day of its own line, above everything else, whenever this trip does not
+            // leave today. It gets a line rather than a corner of the header row because
+            // the Fastest sort interleaves days: tomorrow's 06:35 can sit between two
+            // departures tonight, and a badge that has to compete for width is a badge
+            // that gets ellipsized on exactly the card that needed it.
+            val dayLabel = departureDayLabel(itinerary.startTime, now, strings)
+            if (dayLabel != null) {
+                Text(
+                    text = dayLabel,
+                    modifier = Modifier
+                        .padding(bottom = 6.dp)
+                        .background(Color(0xFF4527A0).copy(alpha = 0.35f), RoundedCornerShape(4.dp))
+                        .padding(horizontal = 8.dp, vertical = 2.dp),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFFB39DDB)
+                )
+            }
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -134,6 +152,20 @@ fun ItineraryCard(
                     style = MaterialTheme.typography.bodySmall,
                     color = secondaryTextColor
                 )
+                // "+1" for an arrival after midnight — its own Text, not a suffix inside
+                // the range above: a Latin-digit suffix glued into that string sits in a
+                // bidi run and Hebrew layout is free to move it away from the time it
+                // belongs to.
+                val overnight = nextDayMarker(itinerary.startTime, itinerary.endTime)
+                if (overnight != null) {
+                    Text(
+                        text = overnight,
+                        modifier = Modifier.padding(start = 2.dp),
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFB39DDB)
+                    )
+                }
             }
 
             // Leg widths are proportional to each leg's share of travel time, so the
@@ -348,9 +380,23 @@ fun laterDeparturesOf(target: Itinerary, all: List<Itinerary>, limit: Int = 2): 
         .distinct()
         .sorted()
         .take(limit)
-        .map { formatTime(it) }
+        // "then 23:00 · 06:40⁺¹" — this list is the one place a day can still hide
+        // after the card is badged: the next departure of the same line is very often
+        // the first one of the following morning, and read bare it looks like a bus
+        // leaving in eight hours' time today. The mark is glued to the digits with no
+        // space so bidi cannot strand it at the other end of the line.
+        .map { iso ->
+            val days = dayOffsetBetween(ride.startTime, iso) ?: 0
+            formatTime(iso) + if (days > 0) nextDayMark(days) else ""
+        }
         .toList()
 }
+
+/** Superscript "+1" / "+2": the compact form of "the next day", inside a one-line list. */
+private fun nextDayMark(days: Int): String =
+    "⁺" + days.toString().map { d -> SUPERSCRIPT_DIGITS.getOrElse(d - '0') { d } }.joinToString("")
+
+private val SUPERSCRIPT_DIGITS = listOf('⁰', '¹', '²', '³', '⁴', '⁵', '⁶', '⁷', '⁸', '⁹')
 
 /** Under five minutes you are running for it — the countdown says so in colour. */
 private const val URGENT_SECONDS = 5 * 60L

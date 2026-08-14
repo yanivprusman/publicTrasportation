@@ -55,6 +55,7 @@ import com.automatelinux.pt.ui.viewmodel.RoutingState
 import com.automatelinux.pt.ui.viewmodel.TransitFilter
 import com.automatelinux.pt.ui.viewmodel.TravelMode
 import com.automatelinux.pt.util.LocalAppStrings
+import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
@@ -396,7 +397,16 @@ private fun CollapsedSearchSummary(
     val strings = LocalAppStrings.current
     val timeText = state.departureTime?.let { t ->
         val hm = t.toLocalDateTime(TimeZone.currentSystemDefault()).time.toString().take(5)
-        if (state.arriveBy) "${strings.arriveBy} $hm" else "${strings.departAt} $hm"
+        // The folded form is the only thing on screen that says WHEN the results are
+        // for. "depart at 06:35" with the day stripped off is how a search made at
+        // night for tomorrow morning reads as a search for this morning.
+        val day = departureDayLabel(
+            t.toString(),
+            remember(t) { Clock.System.now() },
+            strings
+        )
+        val when_ = if (day != null) "$day $hm" else hm
+        if (state.arriveBy) "${strings.arriveBy} $when_" else "${strings.departAt} $when_"
     } ?: strings.now
     Card(
         onClick = onExpand,

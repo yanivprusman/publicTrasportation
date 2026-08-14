@@ -103,6 +103,15 @@ interface AppStrings {
     val runningEarly: (String, String) -> String
     /** "then 14:39 · 15:09" — the departures after the one on this card. */
     val thenDepartures: (String) -> String
+    /**
+     * Which day a result leaves on. Only ever drawn when it is NOT today: an
+     * "HH:mm" with no date is read as today by everyone, and the Fastest sort
+     * puts tomorrow's trips among tonight's.
+     */
+    val dayTomorrow: String
+    val dayYesterday: String
+    /** Past tomorrow, name the date: (day of month, month 1-12, ISO weekday 1=Mon). */
+    val formatShortDate: (Int, Int, Int) -> String
     /** The number printed on the pole, which is what other apps and signs use. */
     val stopCodeLabel: (String) -> String
     /** A walk leg's length, which "4 min" does not tell you. */
@@ -371,6 +380,17 @@ val EnStrings: AppStrings = object : AppStrings {
     override val departureLive: String = "live"
     override val boardingFrom: (String) -> String = { stop -> "from $stop" }
     override val thenDepartures: (String) -> String = { times -> "then $times" }
+    override val dayTomorrow: String = "Tomorrow"
+    override val dayYesterday: String = "Yesterday"
+    override val formatShortDate: (Int, Int, Int) -> String = { day, month, isoWeekday ->
+        val weekday = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+            .getOrNull(isoWeekday - 1)
+        val monthName = listOf(
+            "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+            "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+        ).getOrNull(month - 1)
+        if (weekday != null && monthName != null) "$weekday $day $monthName" else "$day/$month"
+    }
     override val runningLate: (String, String) -> String = { late, scheduled -> "$late late · timetabled $scheduled" }
     override val runningEarly: (String, String) -> String = { early, scheduled -> "$early early · timetabled $scheduled" }
     override val stopCodeLabel: (String) -> String = { code -> "stop $code" }
@@ -644,6 +664,14 @@ val HeStrings: AppStrings = object : AppStrings {
     override val departureLive: String = "בזמן אמת"
     override val boardingFrom: (String) -> String = { stop -> "מתחנת $stop" }
     override val thenDepartures: (String) -> String = { times -> "אח״כ $times" }
+    override val dayTomorrow: String = "מחר"
+    override val dayYesterday: String = "אתמול"
+    override val formatShortDate: (Int, Int, Int) -> String = { day, month, isoWeekday ->
+        // ISO 1=שני … 7=ראשון
+        val weekday = listOf("ב׳", "ג׳", "ד׳", "ה׳", "ו׳", "שבת", "א׳")
+            .getOrNull(isoWeekday - 1)
+        if (weekday != null) "יום $weekday $day.$month" else "$day.$month"
+    }
     override val runningLate: (String, String) -> String = { late, scheduled -> "$late באיחור · בלוח $scheduled" }
     override val runningEarly: (String, String) -> String = { early, scheduled -> "$early מוקדם · בלוח $scheduled" }
     override val stopCodeLabel: (String) -> String = { code -> "תחנה $code" }

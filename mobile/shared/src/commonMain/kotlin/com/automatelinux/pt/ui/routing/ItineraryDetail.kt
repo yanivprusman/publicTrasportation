@@ -66,6 +66,7 @@ import com.automatelinux.pt.ui.map.getModeColorWithRoute
 import com.automatelinux.pt.ui.map.onColorFor
 import com.automatelinux.pt.util.toFixed
 import com.automatelinux.pt.util.LocalAppStrings
+import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 
 private val TimeGutterWidth = 46.dp
@@ -117,11 +118,42 @@ fun ItineraryDetail(
     val legs = itinerary.legs
 
     Column(modifier = modifier.padding(8.dp)) {
-        Text(
-            text = "${formatTime(itinerary.startTime)} - ${formatTime(itinerary.endTime)} · ${strings.formatDuration(itinerary.duration)} · $transferText",
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Bold
+        // The same day marker the card carries. Opening a result must not lose the one
+        // fact the summary row cannot express in "HH:mm" — which day this is.
+        val dayLabel = departureDayLabel(
+            itinerary.startTime,
+            remember(itinerary.startTime) { Clock.System.now() },
+            strings
         )
+        if (dayLabel != null) {
+            Text(
+                text = dayLabel,
+                modifier = Modifier
+                    .padding(bottom = 4.dp)
+                    .background(Color(0xFF4527A0).copy(alpha = 0.35f), RoundedCornerShape(4.dp))
+                    .padding(horizontal = 8.dp, vertical = 2.dp),
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFFB39DDB)
+            )
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = "${formatTime(itinerary.startTime)} - ${formatTime(itinerary.endTime)} · ${strings.formatDuration(itinerary.duration)} · $transferText",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold
+            )
+            val overnight = nextDayMarker(itinerary.startTime, itinerary.endTime)
+            if (overnight != null) {
+                Text(
+                    text = overnight,
+                    modifier = Modifier.padding(start = 3.dp),
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFFB39DDB)
+                )
+            }
+        }
 
         if (onStartJourney != null || onShareTrip != null) {
             Spacer(Modifier.height(8.dp))
