@@ -57,6 +57,9 @@ interface MotisLeg {
   intermediateStops?: MotisPlace[];
   // Carries the GTFS trip id, which is the only route to an accessibility flag.
   tripId?: string;
+  // GTFS route_id. SIRI's LineRef is the same number, so this is what makes a live
+  // sighting match THIS direction of the line rather than the opposite one.
+  routeId?: string;
   // Where this service is signed for — the only thing that tells a passenger which
   // of a line's two directions they are looking at.
   headsign?: string;
@@ -126,6 +129,7 @@ function transformItinerary(itin: MotisItinerary) {
         // trip's geometry. Resolving by line number instead draws another city's
         // line of the same number.
         if (leg.tripId) transformed.tripId = leg.tripId;
+        if (leg.routeId) transformed.routeId = leg.routeId;
 
         // The stop code is what is printed on the pole and what every other app
         // shows, so it is the only stop identifier a passenger can act on.

@@ -67,6 +67,14 @@ data class RouteLeg(
     /** MOTIS trip id; the key /api/trip-shape needs to draw this leg's real line. */
     val tripId: String? = null,
     /**
+     * GTFS route_id — and SIRI's LineRef is the same number.
+     *
+     * The published name is not enough to match a live sighting: "64" leaves this
+     * stop in both directions under two different route ids, so a name match would
+     * cheerfully attach the bus going the other way.
+     */
+    val routeId: String? = null,
+    /**
      * What the service is signed for. A line number alone does not say which of its
      * two directions this is, and on a two-direction line that is the difference
      * between the right bus and an hour lost.

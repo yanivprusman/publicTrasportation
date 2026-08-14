@@ -344,6 +344,7 @@ fun RoutePlannerPanel(
                 onSortChange = if (state.results?.itineraries?.isNotEmpty() == true) onSortChange else null,
                 onEarlier = if (state.results?.itineraries?.isNotEmpty() == true) onEarlier else null,
                 onLater = if (state.results?.itineraries?.isNotEmpty() == true) onLater else null,
+                liveBoardings = state.liveBoardings,
                 cardOpacity = cardOpacity
             )
 

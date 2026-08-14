@@ -42,6 +42,8 @@ import com.automatelinux.pt.data.model.RouteLeg
 import com.automatelinux.pt.data.model.TransitMode
 import com.automatelinux.pt.ui.map.getModeColorWithRoute
 import com.automatelinux.pt.ui.map.onColorFor
+import com.automatelinux.pt.ui.viewmodel.LiveBoarding
+import com.automatelinux.pt.ui.viewmodel.liveBoardingKey
 import com.automatelinux.pt.util.AppStrings
 import com.automatelinux.pt.util.LocalAppStrings
 
@@ -61,6 +63,8 @@ fun ItineraryCard(
      * computed by the list, which is the only place that can see the siblings.
      */
     laterDepartures: List<String> = emptyList(),
+    /** What the operator feed says about this ride, when it says anything. */
+    live: LiveBoarding? = null,
     cardOpacity: Float = 0.6f,
     modifier: Modifier = Modifier
 ) {
@@ -183,6 +187,7 @@ fun ItineraryCard(
             BoardingLine(
                 itinerary = itinerary,
                 laterDepartures = laterDepartures,
+                live = live,
                 now = now,
                 secondaryTextColor = secondaryTextColor,
                 textColor = textColor
@@ -200,17 +205,22 @@ fun ItineraryCard(
 private fun BoardingLine(
     itinerary: Itinerary,
     laterDepartures: List<String>,
+    live: LiveBoarding?,
     now: Instant,
     secondaryTextColor: Color,
     textColor: Color
 ) {
     val strings = LocalAppStrings.current
     val leg = itinerary.firstRide ?: return
+    // The road wins over the timetable: when the operator says a vehicle is coming at
+    // a different minute, that is the minute you have to be at the stop for.
+    val timeIso = live?.expected ?: leg.startTime
     val departure = try {
-        Instant.parse(leg.startTime)
+        Instant.parse(timeIso)
     } catch (_: Exception) {
         return
     }
+    val isLive = live != null || leg.realTime
 
     Column(modifier = Modifier.padding(top = 6.dp)) {
         Row(
@@ -238,18 +248,18 @@ private fun BoardingLine(
             // where a mark is scanned. Green wave = a vehicle is reporting;
             // clock = the timetable, which is all MOTIS has without a GTFS-RT feed.
             Icon(
-                imageVector = if (leg.realTime) Icons.Default.Sensors else Icons.Default.Schedule,
-                contentDescription = if (leg.realTime) strings.departureLive
+                imageVector = if (isLive) Icons.Default.Sensors else Icons.Default.Schedule,
+                contentDescription = if (isLive) strings.departureLive
                     else strings.departureTimetable,
-                tint = if (leg.realTime) Color(0xFF66BB6A) else secondaryTextColor,
+                tint = if (isLive) Color(0xFF66BB6A) else secondaryTextColor,
                 modifier = Modifier.size(14.dp)
             )
             Spacer(Modifier.width(4.dp))
             Text(
-                text = strings.departsAt(formatTime(leg.startTime)),
+                text = strings.departsAt(formatTime(timeIso)),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
-                color = textColor
+                color = if (isLive) Color(0xFF66BB6A) else textColor
             )
 
             val remaining = (departure - now).inWholeSeconds
@@ -287,6 +297,11 @@ private fun BoardingLine(
         // the following departures, which is what turns "can I make it" into "and
         // if I can't".
         val boarding = buildList {
+            if (live != null && live.deltaSeconds >= 60) {
+                add(strings.runningLate(strings.formatDuration(live.deltaSeconds), formatTime(leg.startTime)))
+            } else if (live != null && live.deltaSeconds <= -60) {
+                add(strings.runningEarly(strings.formatDuration(-live.deltaSeconds), formatTime(leg.startTime)))
+            }
             if (leg.from.name.isNotBlank()) add(strings.boardingFrom(leg.from.name))
             if (laterDepartures.isNotEmpty()) {
                 add(strings.thenDepartures(laterDepartures.joinToString(" · ")))
@@ -314,6 +329,13 @@ private fun BoardingLine(
  * departures count, and only from the identical boarding stop — the same line number
  * leaves two different poles in this country.
  */
+fun liveBoardingFor(itinerary: Itinerary, live: Map<String, LiveBoarding>): LiveBoarding? {
+    val ride = itinerary.firstRide ?: return null
+    val stop = ride.fromStopCode ?: return null
+    val line = ride.routeShortName ?: return null
+    return live[liveBoardingKey(stop, line, ride.startTime)]
+}
+
 fun laterDeparturesOf(target: Itinerary, all: List<Itinerary>, limit: Int = 2): List<String> {
     val ride = target.firstRide ?: return emptyList()
     val stop = ride.fromStopCode ?: ride.from.name

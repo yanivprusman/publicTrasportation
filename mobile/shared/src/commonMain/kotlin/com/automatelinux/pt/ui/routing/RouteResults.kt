@@ -28,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.automatelinux.pt.data.model.Itinerary
 import com.automatelinux.pt.data.model.RouteSortMode
+import com.automatelinux.pt.ui.viewmodel.LiveBoarding
 import com.automatelinux.pt.util.LocalAppStrings
 import kotlinx.coroutines.delay
 import kotlinx.datetime.Clock
@@ -46,6 +47,8 @@ fun RouteResults(
     onSortChange: ((RouteSortMode) -> Unit)? = null,
     onEarlier: (() -> Unit)? = null,
     onLater: (() -> Unit)? = null,
+    /** What the operator feed says about the rides on screen, keyed by [liveBoardingKey]. */
+    liveBoardings: Map<String, LiveBoarding> = emptyMap(),
     cardOpacity: Float = 0.6f,
     modifier: Modifier = Modifier
 ) {
@@ -154,6 +157,7 @@ fun RouteResults(
                             onClick = { onSelect(index) },
                             now = now,
                             laterDepartures = laterDeparturesOf(itinerary, sortedItineraries),
+                            live = liveBoardingFor(itinerary, liveBoardings),
                             cardOpacity = cardOpacity
                         )
                     }

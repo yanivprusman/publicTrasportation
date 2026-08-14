@@ -268,6 +268,18 @@ class RoutingViewModel(
     companion object {
         private const val MAP_LOCATION_LABEL = "Selected location"
 
+        /**
+         * How far from the timetable a sighting may be and still be THIS run.
+         *
+         * An hour is generous for a late bus and still tight enough that the next
+         * scheduled run of the same line — rarely under an hour apart on the routes
+         * this app plans — cannot be mistaken for it.
+         */
+        private val LIVE_MATCH_WINDOW = 60.minutes
+
+        /** The feed updates about every 30s; a minute keeps the card fresh cheaply. */
+        private const val LIVE_REFRESH_MS = 60_000L
+
         private fun restoreModes(store: SettingsStore): Set<TransitFilter> {
             val saved = store.routeModes
             val restored = TransitFilter.entries.filter { it.apiKey in saved }.toSet()
@@ -278,6 +290,102 @@ class RoutingViewModel(
     // Filter chips can re-fire search while one is in flight; only the newest
     // request may write results, or a slow stale response would overwrite them.
     private var searchSeq = 0
+
+    /** One ride to look up live: which pole, which direction, which timetabled minute. */
+    private data class LiveRideKey(
+        val stopCode: String,
+        val routeId: String,
+        val line: String,
+        val scheduled: String
+    )
+
+    private var liveBoardingJob: Job? = null
+
+    /**
+     * Ask the operator feed what is actually coming, for the rides on screen.
+     *
+     * One request per boarding stop, not per card: a result set for one journey almost
+     * always boards at the same pole, so this is normally a single call refreshed on a
+     * minute. Only the FIRST ride of each itinerary is matched — that is the one the
+     * countdown is about and the one you can miss; a connection an hour out has no
+     * useful live answer yet.
+     */
+    private fun startLiveBoardingPolling(seq: Int, itineraries: List<Itinerary>) {
+        liveBoardingJob?.cancel()
+
+        // routeId, not the line name: SIRI reports LineRef, which is the GTFS route
+        // id, and "64" leaves this stop under two of them — one per direction. A ride
+        // without a route id gets no live mark rather than a possibly opposite bus.
+        val rides = itineraries.mapNotNull { itinerary ->
+            val ride = itinerary.firstRide ?: return@mapNotNull null
+            val stop = ride.fromStopCode ?: return@mapNotNull null
+            val route = ride.routeId ?: return@mapNotNull null
+            val line = ride.routeShortName ?: return@mapNotNull null
+            LiveRideKey(stop, route, line, ride.startTime)
+        }
+        if (rides.isEmpty()) return
+
+        // More than a handful of distinct poles means a result set spread over a city;
+        // asking about all of them would cost more than the answer is worth.
+        val stops = rides.map { it.stopCode }.distinct().take(3)
+
+        liveBoardingJob = viewModelScope.launch {
+            while (true) {
+                val found = mutableMapOf<String, LiveBoarding>()
+                for (stop in stops) {
+                    val visits = try {
+                        api.getTransport(station = stop)
+                            .siri?.serviceDelivery?.stopMonitoringDelivery
+                            ?.flatMap { it.monitoredStopVisit ?: emptyList() }
+                            ?: emptyList()
+                    } catch (_: Exception) {
+                        // A feed that is down says nothing; the cards keep their
+                        // timetable mark, which is the honest thing to show.
+                        continue
+                    }
+
+                    for ((rideStop, route, line, scheduled) in rides.filter { it.stopCode == stop }) {
+                        val scheduledAt = try {
+                            Instant.parse(scheduled)
+                        } catch (_: Exception) {
+                            continue
+                        }
+                        val best = visits.asSequence()
+                            .filter { it.monitoredVehicleJourney?.lineRef == route }
+                            .mapNotNull { visit ->
+                                val journey = visit.monitoredVehicleJourney
+                                val expectedRaw = journey?.monitoredCall?.expectedArrivalTime
+                                    ?: return@mapNotNull null
+                                val expected = try {
+                                    Instant.parse(expectedRaw)
+                                } catch (_: Exception) {
+                                    return@mapNotNull null
+                                }
+                                Triple(expectedRaw, expected, journey.vehicleRef)
+                            }
+                            // A vehicle reporting an hour either side of the timetable is
+                            // a different run of the same line, not this one running late.
+                            .filter {
+                                (it.second - scheduledAt).absoluteValue <= LIVE_MATCH_WINDOW
+                            }
+                            .minByOrNull { (it.second - scheduledAt).absoluteValue }
+
+                        if (best != null) {
+                            found[liveBoardingKey(rideStop, line, scheduled)] = LiveBoarding(
+                                expected = best.first,
+                                deltaSeconds = (best.second - scheduledAt).inWholeSeconds,
+                                vehicleRef = best.third
+                            )
+                        }
+                    }
+                }
+
+                if (seq != searchSeq) return@launch
+                _state.value = _state.value.copy(liveBoardings = found)
+                delay(LIVE_REFRESH_MS)
+            }
+        }
+    }
 
     fun search() {
         val s = _state.value
@@ -311,10 +419,12 @@ class RoutingViewModel(
                 if (seq != searchSeq) return@launch
                 _state.value = _state.value.copy(
                     results = result,
+                    liveBoardings = emptyMap(),
                     selectedIndex = 0,
                     travelMode = TravelMode.TRANSIT,
                     loading = false
                 )
+                startLiveBoardingPolling(seq, result.itineraries)
             } catch (e: Exception) {
                 if (seq != searchSeq) return@launch
                 _state.value = _state.value.copy(

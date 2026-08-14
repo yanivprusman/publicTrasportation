@@ -34,6 +34,22 @@ enum class TrackingStatus {
     ERROR
 }
 
+/**
+ * A live sighting of the ride a result card is offering: the operator says a vehicle
+ * on that line will call at that stop at [expected].
+ *
+ * Every competitor marks a live time apart from a timetabled one — Bus Nearby in green,
+ * Moovit as "arrival time is accurate", Maps as "(delayed)" against "(scheduled)". The
+ * timetable is what MOTIS plans on; this is what the road is actually doing.
+ */
+data class LiveBoarding(
+    /** ISO time the vehicle is expected at the boarding stop. */
+    val expected: String,
+    /** Seconds later than the timetable; negative means running early. */
+    val deltaSeconds: Long,
+    val vehicleRef: String? = null
+)
+
 data class TrackedBus(
     val legIndex: Int,
     val lineName: String,
@@ -85,6 +101,14 @@ data class RoutingState(
     val departureTime: Instant? = null,
     val arriveBy: Boolean = false,
     val results: RouteResult? = null,
+    /**
+     * Live boardings for the results on screen, keyed by [liveBoardingKey].
+     *
+     * Absent means "the feed says nothing about this ride", which is the normal case
+     * outside the next hour and is shown as a timetable mark rather than a live one —
+     * never as a live time we do not have.
+     */
+    val liveBoardings: Map<String, LiveBoarding> = emptyMap(),
     val selectedIndex: Int = 0,
     val loading: Boolean = false,
     val error: String? = null,
@@ -123,3 +147,15 @@ data class RoutingState(
     val displayedItinerary: Itinerary?
         get() = selectedAlternative?.itinerary ?: selectedItinerary
 }
+
+
+/**
+ * How a result card and a live sighting find each other: the stop it leaves from, the
+ * line, and the timetabled minute.
+ *
+ * The scheduled time is part of the key on purpose — a stop can have the same line
+ * three times in one result set, and without it the 15:39 and the 16:39 would share a
+ * sighting and one of them would lie.
+ */
+fun liveBoardingKey(stopCode: String, line: String, scheduledStart: String): String =
+    "$stopCode|$line|$scheduledStart"
