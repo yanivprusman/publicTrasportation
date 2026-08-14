@@ -64,6 +64,7 @@ import com.automatelinux.pt.data.model.WheelchairAccess
 import com.automatelinux.pt.data.model.access
 import com.automatelinux.pt.ui.map.getModeColorWithRoute
 import com.automatelinux.pt.ui.map.onColorFor
+import com.automatelinux.pt.util.toFixed
 import com.automatelinux.pt.util.LocalAppStrings
 import kotlinx.datetime.Instant
 
@@ -360,7 +361,11 @@ private fun LegSegment(
                     )
                     Spacer(Modifier.width(4.dp))
                     Text(
-                        text = "${strings.walkMode} ${strings.formatDuration(leg.duration)}",
+                        // "Walk 6 min" does not say whether that is around the corner
+                        // or across a junction; both Moovit and Maps print the metres.
+                        text = leg.distanceMeters
+                            ?.let { "${strings.walkMode} ${strings.walkDistance(it)} · ${strings.formatDuration(leg.duration)}" }
+                            ?: "${strings.walkMode} ${strings.formatDuration(leg.duration)}",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -394,6 +399,16 @@ private fun LegSegment(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    // What this ride costs on its own, so the journey total on the
+                    // card is explicable rather than asserted.
+                    leg.fare?.let { fare ->
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = if (fare % 1.0 == 0.0) "₪${fare.toFixed(0)}" else "₪${fare.toFixed(2)}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFF81C784)
+                        )
+                    }
                     // Whether you can board at all outranks the agency's name, so it
                     // sits on the headline row. UNKNOWN says nothing: for someone who
                     // depends on this, a silent guess is worse than no answer.

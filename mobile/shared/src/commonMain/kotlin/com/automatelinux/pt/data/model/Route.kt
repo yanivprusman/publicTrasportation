@@ -65,7 +65,28 @@ data class RouteLeg(
      */
     val wheelchairAccess: String? = null,
     /** MOTIS trip id; the key /api/trip-shape needs to draw this leg's real line. */
-    val tripId: String? = null
+    val tripId: String? = null,
+    /**
+     * What the service is signed for. A line number alone does not say which of its
+     * two directions this is, and on a two-direction line that is the difference
+     * between the right bus and an hour lost.
+     */
+    val headsign: String? = null,
+    /** Street length in metres; MOTIS sets it on walk/bike legs only. */
+    val distanceMeters: Int? = null,
+    /**
+     * True when the times came from a realtime feed rather than the timetable.
+     * Every competitor marks this — in colour, or in words — and until we did, our
+     * countdown implied a confidence the timetable cannot give.
+     */
+    val realTime: Boolean = false,
+    /** The timetabled time, when realtime has moved [startTime] away from it. */
+    val scheduledStartTime: String? = null,
+    /** Stop code as printed on the pole; the number other apps and SIRI use. */
+    val fromStopCode: String? = null,
+    val toStopCode: String? = null,
+    /** Single-ride price for this leg from the operators' fare table, in ILS. */
+    val fare: Double? = null
 )
 
 @Serializable
@@ -91,25 +112,24 @@ data class Itinerary(
     val startTime: String,
     val endTime: String,
     val transfers: Int,
-    val legs: List<RouteLeg>
+    val legs: List<RouteLeg>,
+    /**
+     * The journey's price from the operators' own fare table, or null when any ride
+     * on it has no rule in that table.
+     *
+     * This replaced a flat ₪5.50-per-bus estimate that priced Midreshet Ben-Gurion →
+     * Be'er Sheva at ~₪11 where both Moovit and Bus Nearby say ₪19. Null is shown as
+     * no price at all: a wrong number is worse than an absent one, and the server
+     * only omits this when it genuinely cannot price a leg.
+     */
+    val fareTotal: Double? = null
 ) {
     val walkDuration: Long
         get() = legs.filter { it.mode == TransitMode.WALK }.sumOf { it.duration }
 
-    fun estimateFare(): Double {
-        var fare = 0.0
-        for (leg in legs) {
-            when (leg.mode) {
-                TransitMode.BUS -> fare += 5.50
-                TransitMode.TRAM -> fare += 5.50
-                TransitMode.SUBWAY -> fare += 5.50
-                TransitMode.RAIL -> fare += 15.0
-                TransitMode.FERRY -> fare += 25.0
-                TransitMode.WALK, TransitMode.BIKE, TransitMode.CAR -> {}
-            }
-        }
-        return fare
-    }
+    /** The first ride of the journey — the one you can miss. */
+    val firstRide: RouteLeg?
+        get() = legs.firstOrNull { it.mode != TransitMode.WALK }
 }
 
 enum class RouteSortMode {

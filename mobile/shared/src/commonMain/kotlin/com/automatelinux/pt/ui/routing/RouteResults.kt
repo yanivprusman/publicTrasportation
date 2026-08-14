@@ -153,6 +153,7 @@ fun RouteResults(
                             selected = index == selectedIndex,
                             onClick = { onSelect(index) },
                             now = now,
+                            laterDepartures = laterDeparturesOf(itinerary, sortedItineraries),
                             cardOpacity = cardOpacity
                         )
                     }

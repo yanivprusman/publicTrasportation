@@ -19,6 +19,8 @@ import kotlin.time.Duration.Companion.hours
 import kotlinx.datetime.Instant
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Sensors
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -32,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.automatelinux.pt.data.model.Itinerary
@@ -53,6 +56,11 @@ fun ItineraryCard(
      * is never given a clock cannot silently show a frozen countdown.
      */
     now: Instant,
+    /**
+     * Departure times of this card's line from the same stop, after this one —
+     * computed by the list, which is the only place that can see the siblings.
+     */
+    laterDepartures: List<String> = emptyList(),
     cardOpacity: Float = 0.6f,
     modifier: Modifier = Modifier
 ) {
@@ -94,10 +102,14 @@ fun ItineraryCard(
                     fontWeight = FontWeight.Bold,
                     color = textColor
                 )
-                val fare = itinerary.estimateFare()
-                if (fare > 0) {
+                val fare = itinerary.fareTotal
+                if (fare != null && fare > 0) {
                     Text(
-                        text = strings.fareEstimate("₪${fare.toFixed(0)}"),
+                        // 12.5 is a real price in this tariff, not a rounding artefact —
+                        // print the agorot when they exist and not when they don't.
+                        text = strings.fareEstimate(
+                            if (fare % 1.0 == 0.0) "₪${fare.toFixed(0)}" else "₪${fare.toFixed(2)}"
+                        ),
                         modifier = Modifier
                             .background(Color(0xFF1B5E20).copy(alpha = 0.3f), RoundedCornerShape(4.dp))
                             .padding(horizontal = 6.dp, vertical = 2.dp),
@@ -170,6 +182,7 @@ fun ItineraryCard(
             // when it goes, with a countdown that keeps ticking while the list sits open.
             BoardingLine(
                 itinerary = itinerary,
+                laterDepartures = laterDepartures,
                 now = now,
                 secondaryTextColor = secondaryTextColor,
                 textColor = textColor
@@ -186,76 +199,135 @@ fun ItineraryCard(
 @Composable
 private fun BoardingLine(
     itinerary: Itinerary,
+    laterDepartures: List<String>,
     now: Instant,
     secondaryTextColor: Color,
     textColor: Color
 ) {
     val strings = LocalAppStrings.current
-    val leg = itinerary.legs.firstOrNull { it.mode != TransitMode.WALK } ?: return
+    val leg = itinerary.firstRide ?: return
     val departure = try {
         Instant.parse(leg.startTime)
     } catch (_: Exception) {
         return
     }
 
-    Row(
-        modifier = Modifier
-            .padding(top = 6.dp)
-            .fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        val badgeColor = getModeColorWithRoute(leg.mode, leg.routeColor)
-        Box(
-            modifier = Modifier
-                .background(badgeColor, RoundedCornerShape(4.dp))
-                .padding(horizontal = 6.dp, vertical = 1.dp)
+    Column(modifier = Modifier.padding(top = 6.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = legPillLabel(leg, strings),
-                color = onColorFor(badgeColor),
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1,
-                softWrap = false
+            val badgeColor = getModeColorWithRoute(leg.mode, leg.routeColor)
+            Box(
+                modifier = Modifier
+                    .background(badgeColor, RoundedCornerShape(4.dp))
+                    .padding(horizontal = 6.dp, vertical = 1.dp)
+            ) {
+                Text(
+                    text = legPillLabel(leg, strings),
+                    color = onColorFor(badgeColor),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    softWrap = false
+                )
+            }
+            Spacer(Modifier.width(6.dp))
+            // Where the number came from, as a glyph rather than a word: every
+            // competitor marks this, and a word repeated on every card is noise
+            // where a mark is scanned. Green wave = a vehicle is reporting;
+            // clock = the timetable, which is all MOTIS has without a GTFS-RT feed.
+            Icon(
+                imageVector = if (leg.realTime) Icons.Default.Sensors else Icons.Default.Schedule,
+                contentDescription = if (leg.realTime) strings.departureLive
+                    else strings.departureTimetable,
+                tint = if (leg.realTime) Color(0xFF66BB6A) else secondaryTextColor,
+                modifier = Modifier.size(14.dp)
             )
-        }
-        Spacer(Modifier.width(6.dp))
-        Text(
-            text = strings.departsAt(formatTime(leg.startTime)),
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = textColor
-        )
+            Spacer(Modifier.width(4.dp))
+            Text(
+                text = strings.departsAt(formatTime(leg.startTime)),
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = textColor
+            )
 
-        val remaining = (departure - now).inWholeSeconds
-        val countdown = when {
-            remaining < -60 -> strings.departureGone
-            remaining < 60 -> strings.departsNow
-            // Past a few hours the countdown says less than the clock time already
-            // does — and on a search for another day it would be noise.
-            remaining <= 3.hours.inWholeSeconds -> strings.departsIn(strings.formatDuration(remaining))
-            else -> null
+            val remaining = (departure - now).inWholeSeconds
+            val countdown = when {
+                remaining < -60 -> strings.departureGone
+                remaining < 60 -> strings.departsNow
+                // Past a few hours the countdown says less than the clock time already
+                // does — and on a search for another day it would be noise.
+                remaining <= 3.hours.inWholeSeconds -> strings.departsIn(strings.formatDuration(remaining))
+                else -> null
+            }
+            if (countdown != null) {
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    text = "·",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = secondaryTextColor
+                )
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    text = countdown,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = if (remaining <= URGENT_SECONDS) FontWeight.Bold else FontWeight.Normal,
+                    color = when {
+                        remaining < -60 -> Color(0xFFEF9A9A)
+                        remaining <= URGENT_SECONDS -> Color(0xFFFFB74D)
+                        else -> secondaryTextColor
+                    }
+                )
+            }
         }
-        if (countdown != null) {
-            Spacer(Modifier.width(6.dp))
+
+        // Which pole it leaves from, and when the next ones go. All three
+        // competitors name the boarding stop on the results row; two of them print
+        // the following departures, which is what turns "can I make it" into "and
+        // if I can't".
+        val boarding = buildList {
+            if (leg.from.name.isNotBlank()) add(strings.boardingFrom(leg.from.name))
+            if (laterDepartures.isNotEmpty()) {
+                add(strings.thenDepartures(laterDepartures.joinToString(" · ")))
+            }
+        }
+        if (boarding.isNotEmpty()) {
             Text(
-                text = "·",
-                style = MaterialTheme.typography.bodyMedium,
-                color = secondaryTextColor
-            )
-            Spacer(Modifier.width(6.dp))
-            Text(
-                text = countdown,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = if (remaining <= URGENT_SECONDS) FontWeight.Bold else FontWeight.Normal,
-                color = when {
-                    remaining < -60 -> Color(0xFFEF9A9A)
-                    remaining <= URGENT_SECONDS -> Color(0xFFFFB74D)
-                    else -> secondaryTextColor
-                }
+                text = boarding.joinToString(" · "),
+                style = MaterialTheme.typography.bodySmall,
+                color = secondaryTextColor,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(top = 2.dp)
             )
         }
     }
+}
+
+/**
+ * The next departures of the SAME line from the SAME stop, taken from the other
+ * itineraries already on screen.
+ *
+ * No extra request: a result set for one journey almost always contains the same
+ * line several times, so the timetable for that stop is already in hand. Only later
+ * departures count, and only from the identical boarding stop — the same line number
+ * leaves two different poles in this country.
+ */
+fun laterDeparturesOf(target: Itinerary, all: List<Itinerary>, limit: Int = 2): List<String> {
+    val ride = target.firstRide ?: return emptyList()
+    val stop = ride.fromStopCode ?: ride.from.name
+    return all.asSequence()
+        .mapNotNull { it.firstRide }
+        .filter { it.routeShortName == ride.routeShortName }
+        .filter { (it.fromStopCode ?: it.from.name) == stop }
+        .filter { it.startTime > ride.startTime }
+        .map { it.startTime }
+        .distinct()
+        .sorted()
+        .take(limit)
+        .map { formatTime(it) }
+        .toList()
 }
 
 /** Under five minutes you are running for it — the countdown says so in colour. */

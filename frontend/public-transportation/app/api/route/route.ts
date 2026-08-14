@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ensureMotis } from '@/lib/motis-manager';
 import { MODE_GROUPS, normalizeMode } from '@/lib/motis-modes';
 import { tripWheelchairAccess } from '@/lib/gtfs-trips';
+import { stopIdentity } from '@/lib/gtfs-stops';
+import { fareBetween } from '@/lib/gtfs-fares';
 
 const MOTIS_PORT = process.env.MOTIS_PORT || '3504';
 const MOTIS_BASE = `http://localhost:${MOTIS_PORT}`;
@@ -33,6 +35,9 @@ interface MotisPlace {
   name?: string;
   lat?: number;
   lon?: number;
+  // GTFS stop id, feed-prefixed ("israel_26635"). Present on transit endpoints only —
+  // a walk leg's START/END are coordinates, not stops.
+  stopId?: string;
 }
 
 interface MotisLeg {
@@ -52,6 +57,15 @@ interface MotisLeg {
   intermediateStops?: MotisPlace[];
   // Carries the GTFS trip id, which is the only route to an accessibility flag.
   tripId?: string;
+  // Where this service is signed for — the only thing that tells a passenger which
+  // of a line's two directions they are looking at.
+  headsign?: string;
+  // True when the times came from a realtime feed rather than the timetable. MOTIS
+  // sets it per leg; with no GTFS-RT source wired it is false for everything, which
+  // is itself the honest answer and is what the card now says.
+  realTime?: boolean;
+  scheduledStartTime?: string;
+  scheduledEndTime?: string;
 }
 
 interface MotisItinerary {
@@ -77,12 +91,7 @@ function itineraryFingerprint(itin: MotisItinerary): string {
 }
 
 function transformItinerary(itin: MotisItinerary) {
-  return {
-    duration: itin.duration || 0,
-    startTime: itin.startTime || '',
-    endTime: itin.endTime || '',
-    transfers: itin.transfers || 0,
-    legs: (itin.legs || []).map(leg => {
+  const legs = (itin.legs || []).map(leg => {
       const transformed: Record<string, unknown> = {
         mode: normalizeMode(leg.mode),
         from: {
@@ -103,6 +112,13 @@ function transformItinerary(itin: MotisItinerary) {
       if (leg.routeShortName) transformed.routeShortName = leg.routeShortName;
       if (leg.routeColor) transformed.routeColor = leg.routeColor;
       if (leg.agencyName) transformed.agencyName = leg.agencyName;
+      if (leg.headsign) transformed.headsign = leg.headsign;
+      // Street legs carry their length; Moovit and Maps both print it, and "walk
+      // 370 m" answers a question "walk 4 min" does not.
+      if (typeof leg.distance === 'number') transformed.distanceMeters = Math.round(leg.distance);
+      // Say where the times came from rather than implying certainty we lack.
+      transformed.realTime = leg.realTime === true;
+      if (leg.scheduledStartTime) transformed.scheduledStartTime = leg.scheduledStartTime;
       // Only transit legs can be inaccessible; a walk leg has nothing to board.
       if (leg.mode && leg.mode !== 'WALK') {
         transformed.wheelchairAccess = tripWheelchairAccess(leg.tripId);
@@ -110,6 +126,18 @@ function transformItinerary(itin: MotisItinerary) {
         // trip's geometry. Resolving by line number instead draws another city's
         // line of the same number.
         if (leg.tripId) transformed.tripId = leg.tripId;
+
+        // The stop code is what is printed on the pole and what every other app
+        // shows, so it is the only stop identifier a passenger can act on.
+        const boarding = stopIdentity(leg.from?.stopId);
+        const alighting = stopIdentity(leg.to?.stopId);
+        if (boarding?.stopCode) transformed.fromStopCode = boarding.stopCode;
+        if (alighting?.stopCode) transformed.toStopCode = alighting.stopCode;
+
+        // Null when the fare table has no rule for this pair; the itinerary then
+        // reports no total rather than a partial one.
+        const fare = fareBetween(boarding?.zoneId, alighting?.zoneId);
+        if (fare !== null) transformed.fare = fare;
       }
       if (leg.intermediateStops && leg.intermediateStops.length > 0) {
         transformed.intermediateStops = leg.intermediateStops.map(stop => ({
@@ -119,7 +147,24 @@ function transformItinerary(itin: MotisItinerary) {
         }));
       }
       return transformed;
-    }),
+  });
+
+  // One unpriced ride makes the whole journey unpriced. Summing the legs we can
+  // price and calling it the total would understate the fare, which is the same
+  // failure the flat-rate estimate made and the reason it was replaced.
+  const rides = legs.filter(l => l.mode !== 'WALK');
+  const priced = rides.filter(l => typeof l.fare === 'number');
+  const fareTotal = rides.length > 0 && priced.length === rides.length
+    ? Number(priced.reduce((sum, l) => sum + (l.fare as number), 0).toFixed(2))
+    : null;
+
+  return {
+    duration: itin.duration || 0,
+    startTime: itin.startTime || '',
+    endTime: itin.endTime || '',
+    transfers: itin.transfers || 0,
+    ...(fareTotal !== null ? { fareTotal } : {}),
+    legs,
   };
 }
 

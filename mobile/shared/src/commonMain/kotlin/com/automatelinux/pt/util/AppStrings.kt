@@ -83,6 +83,17 @@ data class AppStrings(
     val departsNow: String,
     /** The card's first ride is already gone — the result is stale, say so. */
     val departureGone: String,
+    /** Where the boarding time came from: the timetable, or a live feed. */
+    val departureTimetable: String,
+    val departureLive: String,
+    /** "from Midreshet Ben-Gurion" — the stop this ride is caught at. */
+    val boardingFrom: (String) -> String,
+    /** "then 14:39 · 15:09" — the departures after the one on this card. */
+    val thenDepartures: (String) -> String,
+    /** The number printed on the pole, which is what other apps and signs use. */
+    val stopCodeLabel: (String) -> String,
+    /** A walk leg's length, which "4 min" does not tell you. */
+    val walkDistance: (Int) -> String,
     val connectingToServer: String,
     val connectionFailed: String,
     val serversTried: (String) -> String,
@@ -343,6 +354,12 @@ val EnStrings = AppStrings(
     departsIn = { d -> "in $d" },
     departsNow = "departing now",
     departureGone = "already left",
+    departureTimetable = "timetable",
+    departureLive = "live",
+    boardingFrom = { stop -> "from $stop" },
+    thenDepartures = { times -> "then $times" },
+    stopCodeLabel = { code -> "stop $code" },
+    walkDistance = { m -> if (m >= 1000) "${m / 1000}.${(m % 1000) / 100} km" else "$m m" },
     connectingToServer = "Connecting to PT server...",
     connectionFailed = "Connection failed",
     serversTried = { s -> "Servers tried: $s" },
@@ -608,6 +625,12 @@ val HeStrings = AppStrings(
     departsIn = { d -> "בעוד $d" },
     departsNow = "יוצא עכשיו",
     departureGone = "כבר יצא",
+    departureTimetable = "לפי לוח זמנים",
+    departureLive = "בזמן אמת",
+    boardingFrom = { stop -> "מתחנת $stop" },
+    thenDepartures = { times -> "אח״כ $times" },
+    stopCodeLabel = { code -> "תחנה $code" },
+    walkDistance = { m -> if (m >= 1000) "${m / 1000}.${(m % 1000) / 100} ק\"מ" else "$m מ׳" },
     connectingToServer = "...מתחבר לשרת PT",
     connectionFailed = "החיבור נכשל",
     serversTried = { s -> "שרתים שנוסו: $s" },
