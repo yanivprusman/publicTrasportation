@@ -229,6 +229,24 @@ interface AppStrings {
     val journeyLeave: String
     val journeyDeparts: String
     val journeyScheduled: (String) -> String
+    // Live journey: what a rider is told while actually travelling.
+    val journeyStarting: String
+    val journeyStopsToGo: (Int) -> String
+    val journeyGetOffNext: String
+    val journeyNextStop: String
+    val journeyStayOn: (String) -> String
+    val journeyLeavesIn: (String, String) -> String
+    val journeyBoardNow: (String) -> String
+    val journeyScheduleOnly: String
+    val journeyLocating: String
+    val journeyEnd: String
+    val journeyEndTitle: String
+    val journeyEndConfirm: String
+    val journeyChannelOngoing: String
+    val journeyChannelAlerts: String
+    val journeyLiveNeedsLocation: String
+    val journeyAllSteps: String
+    val journeyEtaAt: (String) -> String
     val dayOverview: String
     val dayLoading: String
     val dayFailed: String
@@ -510,6 +528,26 @@ val EnStrings: AppStrings = object : AppStrings {
     override val journeyLeave: String = "Leave"
     override val journeyDeparts: String = "Departs"
     override val journeyScheduled: (String) -> String = { time -> "Scheduled $time" }
+    override val journeyStarting: String = "Starting journey…"
+    override val journeyStopsToGo: (Int) -> String = { n ->
+        if (n <= 1) "Next stop is yours" else "$n stops to go"
+    }
+    override val journeyGetOffNext: String = "Get off at the next stop"
+    override val journeyNextStop: String = "next:"
+    override val journeyStayOn: (String) -> String = { line -> "Stay on $line" }
+    override val journeyLeavesIn: (String, String) -> String = { line, d -> "$line leaves in $d" }
+    override val journeyBoardNow: (String) -> String = { line -> "Board $line now" }
+    override val journeyScheduleOnly: String = "Following the timetable — no location"
+    override val journeyLocating: String = "Finding you…"
+    override val journeyEnd: String = "End"
+    override val journeyEndTitle: String = "End this journey?"
+    override val journeyEndConfirm: String = "End journey"
+    override val journeyChannelOngoing: String = "Journey in progress"
+    override val journeyChannelAlerts: String = "Journey alerts"
+    override val journeyLiveNeedsLocation: String =
+        "Location is off, so stops can't be counted — the journey will follow the timetable."
+    override val journeyAllSteps: String = "All steps"
+    override val journeyEtaAt: (String) -> String = { time -> "Arrive $time" }
     override val dayOverview: String = "Day overview"
     override val dayLoading: String = "Scanning the whole day..."
     override val dayFailed: String = "Day overview failed"
@@ -793,6 +831,26 @@ val HeStrings: AppStrings = object : AppStrings {
     override val journeyLeave: String = "צא"
     override val journeyDeparts: String = "יציאה"
     override val journeyScheduled: (String) -> String = { time -> "מתוכנן ל-$time" }
+    override val journeyStarting: String = "מתחילים…"
+    override val journeyStopsToGo: (Int) -> String = { n ->
+        if (n <= 1) "התחנה הבאה שלך" else "עוד $n תחנות"
+    }
+    override val journeyGetOffNext: String = "לרדת בתחנה הבאה"
+    override val journeyNextStop: String = "הבאה:"
+    override val journeyStayOn: (String) -> String = { line -> "להישאר על $line" }
+    override val journeyLeavesIn: (String, String) -> String = { line, d -> "$line יוצא בעוד $d" }
+    override val journeyBoardNow: (String) -> String = { line -> "לעלות על $line עכשיו" }
+    override val journeyScheduleOnly: String = "לפי לוח הזמנים — בלי מיקום"
+    override val journeyLocating: String = "מאתר אותך…"
+    override val journeyEnd: String = "סיום"
+    override val journeyEndTitle: String = "לסיים את הנסיעה?"
+    override val journeyEndConfirm: String = "סיים נסיעה"
+    override val journeyChannelOngoing: String = "נסיעה פעילה"
+    override val journeyChannelAlerts: String = "התראות נסיעה"
+    override val journeyLiveNeedsLocation: String =
+        "המיקום כבוי, אז אי אפשר לספור תחנות — הנסיעה תעקוב אחרי לוח הזמנים."
+    override val journeyAllSteps: String = "כל השלבים"
+    override val journeyEtaAt: (String) -> String = { time -> "הגעה $time" }
     override val dayOverview: String = "סקירת יום"
     override val dayLoading: String = "סורק את כל היום..."
     override val dayFailed: String = "סקירת היום נכשלה"

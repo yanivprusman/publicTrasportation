@@ -60,6 +60,11 @@ kotlin {
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)
         }
+        // The journey engine decides when a rider is told to get off a bus. That rule
+        // cannot be checked by hand on a bus, so it is checked here.
+        commonTest.dependencies {
+            implementation(kotlin("test"))
+        }
     }
 }
 

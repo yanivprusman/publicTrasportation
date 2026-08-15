@@ -7,6 +7,11 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Auto-granted exact-alarm permission: departure reminders must fire on time. -->
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <!-- A live journey keeps counting stops with the phone in a pocket, which is a
+         foreground service holding a location subscription. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <uses-permission android:name="android.permission.VIBRATE" />
 
     <application
         android:name=".PTApp"
@@ -38,6 +43,13 @@
                 <data android:scheme="https" android:host="pt.prod.ya-niv.com" />
             </intent-filter>
         </activity>
+
+        <!-- Started only after ACCESS_FINE_LOCATION was granted: on API 34+ a
+             location-typed foreground service without it is a SecurityException. -->
+        <service
+            android:name=".journey.JourneyService"
+            android:exported="false"
+            android:foregroundServiceType="location" />
 
         <receiver
             android:name=".reminder.ReminderReceiver"

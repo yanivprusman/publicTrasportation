@@ -83,6 +83,7 @@ import com.automatelinux.feedbacklib.ui.rememberDismissibleSheetState
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.content.ContextCompat
+import com.automatelinux.pt.data.model.Itinerary
 import com.automatelinux.pt.data.model.RouteLeg
 import com.automatelinux.pt.data.model.StopResult
 import com.automatelinux.pt.data.model.TransitMode
@@ -99,8 +100,9 @@ import com.automatelinux.pt.ui.map.PtMapOverlays
 import com.automatelinux.pt.ui.map.PtMapState
 import com.automatelinux.pt.ui.map.PtMapStyle
 import com.automatelinux.pt.ui.map.PtUserLocationIcon
+import com.automatelinux.pt.journey.JourneySession
+import com.automatelinux.pt.ui.journey.JourneyPanel
 import com.automatelinux.pt.ui.routing.DebugSettingsDialog
-import com.automatelinux.pt.ui.routing.JourneyNavigator
 import com.automatelinux.pt.ui.routing.RoutePlannerPanel
 import com.automatelinux.pt.ui.routing.TrackedBusCard
 import android.widget.Toast
@@ -173,7 +175,11 @@ fun MainScreen(
     var reminderJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
     var selectedLine by remember { mutableStateOf<String?>(null) }
     var lineShapeData by remember { mutableStateOf(LineShapeData()) }
-    var journeyMode by remember { mutableStateOf(false) }
+    // A journey outlives this screen — it is owned by JourneySession and, while it is
+    // live, by a foreground service. The UI only observes it, so leaving the app (or
+    // searching for something else mid-ride) no longer ends the trip.
+    val journeyItinerary by JourneySession.itinerary.collectAsState()
+    val journeyProgress by JourneySession.progress.collectAsState()
     var boardMode by remember { mutableStateOf(false) }
     var shareTripLink by remember { mutableStateOf<String?>(null) }
     var mapStyle by remember { mutableStateOf(settingsStore.mapStyle) }
@@ -382,6 +388,56 @@ fun MainScreen(
         skipHiddenState = false,
     )
     val bottomSheetState = sheetState.bottomSheetState
+
+    // Starting a journey: notifications first (they are what reaches a pocketed
+    // phone), then location (what counts the stops). Each answer is acted on
+    // explicitly — a refusal starts the journey on the timetable and the panel says
+    // so, rather than silently pretending to follow the rider.
+    var pendingJourney by remember { mutableStateOf<Itinerary?>(null) }
+
+    val beginJourney: (Itinerary, Boolean) -> Unit = { trip, live ->
+        JourneySession.start(context, trip, strings, live)
+        // The sheet gets out of the way, and the map starts following the rider —
+        // the panel answers "which stop", the map answers "where am I on the line".
+        if (live) followingLocation = true
+        scope.launch { bottomSheetState.hide() }
+    }
+
+    val journeyLocationLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        pendingJourney?.let { beginJourney(it, granted) }
+        pendingJourney = null
+    }
+
+    val askLocationThenStart: (Itinerary) -> Unit = { trip ->
+        if (LocationHelper.hasPermission(context)) {
+            beginJourney(trip, true)
+        } else {
+            pendingJourney = trip
+            journeyLocationLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+        }
+    }
+
+    val journeyNotificationLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { _ ->
+        // Whatever the answer, the journey still runs — notifications only decide
+        // whether it can also speak from the lock screen.
+        pendingJourney?.let { askLocationThenStart(it) }
+    }
+
+    val startJourney: (Itinerary) -> Unit = { trip ->
+        if (Build.VERSION.SDK_INT >= 33 &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS)
+                != PackageManager.PERMISSION_GRANTED
+        ) {
+            pendingJourney = trip
+            journeyNotificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            askLocationThenStart(trip)
+        }
+    }
 
     val imeVisible = WindowInsets.isImeVisible
     var expandedByIme by remember { mutableStateOf(false) }
@@ -714,7 +770,7 @@ fun MainScreen(
                                     },
                                     onStartJourney = {
                                         keyboardController?.hide()
-                                        journeyMode = true
+                                        routingState.selectedItinerary?.let { startJourney(it) }
                                     },
                                     onShareTrip = {
                                         val origin = routingState.origin
@@ -1190,15 +1246,30 @@ fun MainScreen(
             }
         )
 
-        val journeyItinerary = routingState.selectedItinerary
+        // The journey docks over the map instead of replacing it: while travelling,
+        // "where am I on this line" is half the answer, and the old full-screen
+        // stepper covered exactly that.
+        // A journey can also end from the notification's End action, with the app in
+        // the background. Bring the sheet back whichever way it ended, or the user
+        // returns to a screen with no controls on it.
         LaunchedEffect(journeyItinerary) {
-            if (journeyItinerary == null) journeyMode = false
+            if (journeyItinerary == null && bottomSheetState.currentValue == SheetValue.Hidden) {
+                bottomSheetState.partialExpand()
+            }
         }
-        if (journeyMode && journeyItinerary != null) {
-            JourneyNavigator(
-                itinerary = journeyItinerary,
-                onClose = { journeyMode = false }
-            )
+
+        journeyItinerary?.let { trip ->
+            Box(modifier = Modifier.fillMaxSize()) {
+                JourneyPanel(
+                    itinerary = trip,
+                    progress = journeyProgress,
+                    onEnd = {
+                        JourneySession.stop(context)
+                        scope.launch { bottomSheetState.partialExpand() }
+                    },
+                    modifier = Modifier.align(Alignment.BottomCenter)
+                )
+            }
         }
 
         if (boardMode) {
