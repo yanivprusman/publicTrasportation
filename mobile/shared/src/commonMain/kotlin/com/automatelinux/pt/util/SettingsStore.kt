@@ -64,8 +64,16 @@ class SettingsStore(private val prefs: Settings) {
         get() = prefs.getString("map_style", "dark")
         set(value) { prefs.putString("map_style", value) }
 
+    /**
+     * "he" or "en", defaulting to whatever the device is set to.
+     *
+     * It defaulted to English, so a phone held in Hebrew opened an English app over a
+     * Hebrew map — with a complete Hebrew translation sitting unused behind a toggle
+     * two taps deep in a sheet. An explicit choice still wins: once the user picks a
+     * language the pick is stored, and the device stops being consulted.
+     */
     var language: String
-        get() = prefs.getString("language", "en")
+        get() = prefs.getString("language", deviceLanguage())
         set(value) { prefs.putString("language", value) }
 
     /** Persisted route-options mode filter as backend api keys ("bus,train,tram"). */

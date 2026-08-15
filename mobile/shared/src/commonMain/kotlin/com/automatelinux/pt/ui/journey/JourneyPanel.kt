@@ -3,12 +3,14 @@ package com.automatelinux.pt.ui.journey
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -33,11 +35,13 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -47,13 +51,18 @@ import com.automatelinux.pt.data.model.Itinerary
 import com.automatelinux.pt.data.model.TransitMode
 import com.automatelinux.pt.journey.JourneyPhase
 import com.automatelinux.pt.journey.JourneyProgress
+import com.automatelinux.pt.journey.legFraction
 import com.automatelinux.pt.journey.JourneyText
 import com.automatelinux.pt.ui.map.getModeColorWithRoute
 import com.automatelinux.pt.ui.routing.formatTime
 import com.automatelinux.pt.util.LocalAppStrings
+import kotlinx.coroutines.delay
 
 /** The colour of "get ready, this is you" — the same amber the cards use for urgency. */
 private val URGENT = Color(0xFFFFB74D)
+
+/** How long the end-journey button stays armed before it goes back to being an ✕. */
+private const val CONFIRM_END_TIMEOUT_MS = 4_000L
 
 /**
  * The live journey, docked at the bottom over the map.
@@ -72,6 +81,22 @@ fun JourneyPanel(
 ) {
     val strings = LocalAppStrings.current
     var expanded by remember { mutableStateOf(false) }
+    // One leg means the step list can only repeat the headline word for word, so
+    // there is nothing to expand into.
+    val hasSteps = itinerary.legs.size > 1
+    // Ending a live journey is one tap from the arrival time, and the tap that ends
+    // it cannot be taken back — the trip has to be started again from the results.
+    // So the first tap arms and the second ends, and it disarms itself rather than
+    // sitting there armed for the rest of the ride. (journeyEndTitle/journeyEndConfirm
+    // were written for a dialog that never shipped; a modal over a live journey is
+    // heavier than this, so only the confirm label is used.)
+    var confirmEnd by remember { mutableStateOf(false) }
+    LaunchedEffect(confirmEnd) {
+        if (confirmEnd) {
+            delay(CONFIRM_END_TIMEOUT_MS)
+            confirmEnd = false
+        }
+    }
     val urgent = progress?.alightImminent == true
     val accent by animateColorAsState(
         targetValue = if (urgent) URGENT else MaterialTheme.colorScheme.primary,
@@ -120,13 +145,31 @@ fun JourneyPanel(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                IconButton(onClick = onEnd, modifier = Modifier.size(32.dp)) {
-                    Icon(
-                        Icons.Default.Close,
-                        contentDescription = strings.journeyEnd,
-                        modifier = Modifier.size(20.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                if (confirmEnd) {
+                    Text(
+                        text = strings.journeyEndConfirm,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(URGENT.copy(alpha = 0.18f))
+                            .clickable(onClick = onEnd)
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = URGENT,
+                        maxLines = 1
                     )
+                } else {
+                    IconButton(
+                        onClick = { confirmEnd = true },
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Close,
+                            contentDescription = strings.journeyEnd,
+                            modifier = Modifier.size(20.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
 
@@ -149,19 +192,21 @@ fun JourneyPanel(
                         )
                     }
                 }
-                IconButton(onClick = { expanded = !expanded }) {
-                    Icon(
-                        imageVector = if (expanded) Icons.Default.ExpandMore else Icons.Default.ExpandLess,
-                        contentDescription = strings.journeyAllSteps,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                if (hasSteps) {
+                    IconButton(onClick = { expanded = !expanded }) {
+                        Icon(
+                            imageVector = if (expanded) Icons.Default.ExpandMore else Icons.Default.ExpandLess,
+                            contentDescription = strings.journeyAllSteps,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
 
             Spacer(Modifier.height(10.dp))
             LegPips(itinerary = itinerary, progress = progress, accent = accent)
 
-            AnimatedVisibility(visible = expanded) {
+            AnimatedVisibility(visible = expanded && hasSteps) {
                 Column(
                     modifier = Modifier
                         .heightIn(max = 260.dp)
@@ -194,7 +239,12 @@ fun JourneyPanel(
                             )
                             Spacer(Modifier.width(10.dp))
                             Text(
-                                text = formatTime(leg.startTime),
+                                // Every row shows the next instant it is about. For a
+                                // leg not yet begun that is when it begins; for the one
+                                // underway it is when it ends, because its start time is
+                                // already in the past and reads, next to a live headline,
+                                // as if it were now.
+                                text = formatTime(if (current) leg.endTime else leg.startTime),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -260,7 +310,16 @@ private fun TrackingChip(positionKnown: Boolean) {
     }
 }
 
-/** One pip per leg, filled up to where the rider has got to. */
+/**
+ * One pip per leg, filled up to where the rider has got to — including *inside* the
+ * leg being travelled.
+ *
+ * A whole-pip fill said nothing on the trip that needs it most: a walk-only journey
+ * has exactly one pip, painted the dim grey every walk leg gets, so the single
+ * affordance for "how far along am I" looked identical at the first step and the
+ * last. The leg underway now fills by measured progress and wears the accent, so the
+ * bar moves while the rider walks.
+ */
 @Composable
 private fun LegPips(itinerary: Itinerary, progress: JourneyProgress?, accent: Color) {
     val reachedIndex = progress?.legIndex ?: 0
@@ -269,21 +328,35 @@ private fun LegPips(itinerary: Itinerary, progress: JourneyProgress?, accent: Co
         horizontalArrangement = Arrangement.spacedBy(3.dp)
     ) {
         itinerary.legs.forEachIndexed { index, leg ->
-            val reached = index <= reachedIndex
+            val current = index == reachedIndex
             val base = if (leg.mode == TransitMode.WALK) {
                 MaterialTheme.colorScheme.onSurfaceVariant
             } else {
                 getModeColorWithRoute(leg.mode, leg.routeColor)
             }
+            val fill = when {
+                index < reachedIndex -> 1f
+                current -> progress?.legFraction() ?: 0f
+                else -> 0f
+            }
             Box(
                 modifier = Modifier
                     .weight(leg.duration.coerceAtLeast(1).toFloat())
                     .height(6.dp)
-                    .background(
-                        if (reached) base else base.copy(alpha = 0.25f),
-                        RoundedCornerShape(3.dp)
+                    .background(base.copy(alpha = 0.25f), RoundedCornerShape(3.dp))
+            ) {
+                if (fill > 0f) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .fillMaxWidth(fill)
+                            .background(
+                                if (current) accent else base,
+                                RoundedCornerShape(3.dp)
+                            )
                     )
-            )
+                }
+            }
         }
         Box(
             modifier = Modifier

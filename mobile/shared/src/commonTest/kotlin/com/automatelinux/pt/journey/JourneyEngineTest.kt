@@ -179,6 +179,40 @@ class JourneyEngineTest {
     }
 
     @Test
+    fun `the bar for a leg fills by what was actually travelled`() {
+        // Measured against the leg's own straight line: nothing at the doorstep,
+        // four fifths of the way along four fifths of the walk. (Standing *at* the
+        // stop is not tested here — by then the engine has moved on to the bus.)
+        val start = stepJourney(trip, JourneyCursor(), fixAt(0, 1), t0 + 60_000)
+        assertEquals(0f, start.progress.legFraction(), 0.05f)
+
+        val nearlyThere = GeoFix(at(0) + 0.8 * 0.0054, lon, 8.0, atMs = t0 + 6 * 60_000)
+        val most = stepJourney(trip, JourneyCursor(), nearlyThere, t0 + 6 * 60_000)
+        assertEquals(0.8f, most.progress.legFraction(), 0.05f)
+    }
+
+    @Test
+    fun `waiting for a bus is no progress through the ride`() {
+        val waiting = stepJourney(trip, JourneyCursor(legIndex = 1), fixAt(1, 9), t0 + 9 * 60_000)
+        assertEquals(JourneyPhase.WAITING, waiting.progress.phase)
+        assertEquals(0f, waiting.progress.legFraction())
+    }
+
+    @Test
+    fun `a ride fills by stops called at, not by the clock`() {
+        // Two of the four stops passed, but running seven minutes behind: the bar
+        // follows the bus, not the timetable it is failing to keep.
+        val late = stepJourney(trip, JourneyCursor(legIndex = 1, stopIndex = 2), fixAt(3, 32), t0 + 32 * 60_000)
+        assertEquals(0.5f, late.progress.legFraction(), 0.01f)
+    }
+
+    @Test
+    fun `a journey with no fix claims no ground`() {
+        val blind = stepJourney(trip, JourneyCursor(), fix = null, nowMs = t0)
+        assertEquals(0f, blind.progress.legFraction())
+    }
+
+    @Test
     fun `haversine matches a known distance`() {
         val meters = haversineMeters(at(0), lon, at(1), lon)
         assertTrue(meters in 580.0..620.0, "expected ~600 m, got $meters")

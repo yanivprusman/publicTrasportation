@@ -93,6 +93,40 @@ data class JourneyProgress(
     val positionKnown: Boolean
 )
 
+/**
+ * How far through the leg being travelled the rider is, 0..1.
+ *
+ * Measured, in the order the measurements deserve to be trusted: metres left of a
+ * walk, then stops left of a ride, and only then the clock — which is the one that
+ * lies when a bus runs late. A leg still being waited for is at zero however close
+ * its departure is: nothing has been travelled yet.
+ *
+ * Returns 0 rather than guessing when nothing measures it, so a bar drawn from this
+ * never claims ground the rider has not covered.
+ */
+fun JourneyProgress.legFraction(): Float {
+    if (phase == JourneyPhase.ARRIVED) return 1f
+    if (phase == JourneyPhase.WAITING) return 0f
+    val leg = leg ?: return 0f
+
+    // Measured against the leg's own straight line, not the length of the path walked:
+    // metersToTarget is a straight line too, and dividing one by the other would start
+    // the bar a third of the way along a leg with any bend in it.
+    val byMeters = metersToTarget?.let { left ->
+        haversineMeters(leg.from.lat, leg.from.lon, leg.to.lat, leg.to.lon)
+            .takeIf { it > 1.0 }
+            ?.let { span -> 1f - (left / span).toFloat() }
+    }
+    val byStops = stopsRemaining?.let { left ->
+        leg.rideStops().lastIndex.takeIf { it > 0 }?.let { total -> 1f - left.toFloat() / total }
+    }
+    val byClock = secondsToTarget?.let { left ->
+        leg.duration.takeIf { it > 0 }?.let { total -> 1f - left.toFloat() / total }
+    }
+
+    return (byMeters ?: byStops ?: byClock ?: 0f).coerceIn(0f, 1f)
+}
+
 data class JourneyUpdate(
     val cursor: JourneyCursor,
     val progress: JourneyProgress,
