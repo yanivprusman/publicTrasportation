@@ -93,17 +93,33 @@ function itineraryFingerprint(itin: MotisItinerary): string {
     .join('|');
 }
 
+/**
+ * MOTIS names the two ends of the query "START" and "END". Those are the pins the
+ * rider dropped, not places with names, and passing the words through puts them on
+ * screen verbatim — "Walk to END" in the live navigator, "END" as the last node of
+ * the itinerary timeline. They are cleared here, at the one door every client comes
+ * through, so no client has to know MOTIS's vocabulary; each words a nameless end
+ * in its own language ("Walk to your destination").
+ *
+ * A named place always carries a stopId, so a real stop called END keeps its name.
+ */
+function placeName(p?: MotisPlace): string {
+  const name = (p?.name || '').trim();
+  if (!p?.stopId && (name === 'START' || name === 'END')) return '';
+  return name;
+}
+
 function transformItinerary(itin: MotisItinerary) {
   const legs = (itin.legs || []).map(leg => {
       const transformed: Record<string, unknown> = {
         mode: normalizeMode(leg.mode),
         from: {
-          name: leg.from?.name || '',
+          name: placeName(leg.from),
           lat: leg.from?.lat || 0,
           lon: leg.from?.lon || 0,
         },
         to: {
-          name: leg.to?.name || '',
+          name: placeName(leg.to),
           lat: leg.to?.lat || 0,
           lon: leg.to?.lon || 0,
         },

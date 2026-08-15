@@ -32,10 +32,11 @@ object JourneyText {
                     p.leg?.let { rideName(it.routeShortName, it.mode, strings) } ?: ""
                 )
             }
-            JourneyPhase.WALKING -> {
-                val target = p.targetName ?: strings.journeyWalkToDest
-                strings.journeyWalkTo(target)
-            }
+            // A named target goes in the sentence; a nameless one gets its own
+            // sentence. Putting "your destination" through the {place} slot is how
+            // you get "Walk to Walk to your destination".
+            JourneyPhase.WALKING ->
+                p.targetName?.let { strings.journeyWalkTo(it) } ?: strings.journeyWalkToDest
         }
     }
 

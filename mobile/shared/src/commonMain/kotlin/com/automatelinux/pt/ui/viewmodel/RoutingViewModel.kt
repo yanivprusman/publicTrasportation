@@ -527,8 +527,9 @@ class RoutingViewModel(
                     from = from, to = to, via = via, time = time, arriveBy = arriveBy,
                     modes = modes, maxWalk = s.maxWalkMinutes
                 )
-                // Stitched via trips carry MOTIS's literal "END"/"START" place names at
-                // the seam between the two halves; show the chosen stop's name instead.
+                // A stitched via trip has no name at the seam between its two halves —
+                // the server clears MOTIS's "START"/"END" sentinels there. Only this
+                // side knows what the rider picked, so it fills the name back in.
                 val result = if (viaPlace != null) renameViaBoundaries(raw, viaPlace.name) else raw
                 if (seq != searchSeq) return@launch
                 _state.value = _state.value.copy(
@@ -553,10 +554,12 @@ class RoutingViewModel(
         result.copy(itineraries = result.itineraries.map { itin ->
             itin.copy(legs = itin.legs.mapIndexed { i, leg ->
                 var renamed = leg
-                if (i > 0 && renamed.from.name == "START") {
+                // The trip's own two ends stay nameless: they are the rider's pins,
+                // and only the seam in the middle is the via place.
+                if (i > 0 && renamed.from.name.isBlank()) {
                     renamed = renamed.copy(from = renamed.from.copy(name = viaName))
                 }
-                if (i < itin.legs.lastIndex && renamed.to.name == "END") {
+                if (i < itin.legs.lastIndex && renamed.to.name.isBlank()) {
                     renamed = renamed.copy(to = renamed.to.copy(name = viaName))
                 }
                 renamed

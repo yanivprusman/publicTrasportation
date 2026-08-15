@@ -209,6 +209,13 @@ interface TimelineNodeProps {
 
 function TimelineNode({ kind, time, name, waitSeconds = 0 }: TimelineNodeProps) {
   const { t } = useI18n()
+  // The trip's two ends are the rider's own pins and arrive nameless. Say whose they
+  // are rather than leaving the line where a stop name would be blank.
+  const label = name || (
+    kind === 'origin' ? t('place.yourLocation') :
+    kind === 'destination' ? t('place.yourDestination') :
+    ''
+  )
   const dotClass =
     kind === 'origin' ? styles.dotOrigin :
     kind === 'destination' ? styles.dotDestination :
@@ -220,7 +227,7 @@ function TimelineNode({ kind, time, name, waitSeconds = 0 }: TimelineNodeProps) 
         <div className={`${styles.nodeDot} ${dotClass}`} />
       </div>
       <div className={styles.nodeContent}>
-        <span className={styles.nodeName}>{name}</span>
+        <span className={styles.nodeName}>{label}</span>
         {waitSeconds > 0 && (
           <span className={styles.waitChip}>{t('detail.wait', { d: formatDuration(waitSeconds) })}</span>
         )}

@@ -207,6 +207,10 @@ interface AppStrings {
     val work: String
     val setHome: String
     val selectedLocation: String
+    // The rider's own two pins have no names — the server sends them nameless rather
+    // than inventing one. These are what stands where a stop name would.
+    val placeYourLocation: String
+    val placeYourDestination: String
     val startJourney: String
     val journeyLabel: String
     val journeyExit: String
@@ -509,6 +513,8 @@ val EnStrings: AppStrings = object : AppStrings {
     override val work: String = "Work"
     override val setHome: String = "Set home"
     override val selectedLocation: String = "Selected location"
+    override val placeYourLocation: String = "Your location"
+    override val placeYourDestination: String = "Your destination"
     override val startJourney: String = "Start Journey"
     override val journeyLabel: String = "Journey"
     override val journeyExit: String = "Exit journey"
@@ -814,6 +820,8 @@ val HeStrings: AppStrings = object : AppStrings {
     override val work: String = "עבודה"
     override val setHome: String = "הגדר בית"
     override val selectedLocation: String = "מיקום נבחר"
+    override val placeYourLocation: String = "המיקום שלך"
+    override val placeYourDestination: String = "היעד שלך"
     override val startJourney: String = "צא לדרך"
     override val journeyLabel: String = "מסע"
     override val journeyExit: String = "יציאה מהמסע"

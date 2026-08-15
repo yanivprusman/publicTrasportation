@@ -271,6 +271,16 @@ private fun TimelineNode(
     waitText: String? = null,
     onClick: (() -> Unit)? = null
 ) {
+    val strings = LocalAppStrings.current
+    // The trip's two ends are the rider's own pins and arrive nameless. Say whose
+    // they are rather than printing an empty line where a stop name would be.
+    val label = name.ifBlank {
+        when (kind) {
+            NodeKind.ORIGIN -> strings.placeYourLocation
+            NodeKind.DESTINATION -> strings.placeYourDestination
+            NodeKind.TRANSFER -> ""
+        }
+    }
     val surfaceColor = MaterialTheme.colorScheme.surface
     val ringColor = MaterialTheme.colorScheme.onSurface
     val dotColor = when (kind) {
@@ -320,7 +330,7 @@ private fun TimelineNode(
         )
         Spacer(Modifier.width(10.dp))
         Text(
-            text = name,
+            text = label,
             modifier = Modifier
                 .weight(1f, fill = false)
                 .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),

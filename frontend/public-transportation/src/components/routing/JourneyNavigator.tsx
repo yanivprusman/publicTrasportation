@@ -43,11 +43,25 @@ interface StepInstruction {
 
 type Translate = (key: TranslationKey, params?: TranslateParams) => string
 
+/**
+ * Where a walk ends, said in words a rider can act on.
+ *
+ * Two of the three cases have no place to name: the final walk ends at the pin the
+ * rider dropped, and the seam of a via trip is a coordinate too. The server sends
+ * both nameless — printing what MOTIS calls them put the literal word END on the
+ * step card — so only a walk that genuinely ends somewhere gets a name.
+ */
+function walkHeadline(leg: RouteLeg, isLast: boolean, t: Translate): string {
+  if (isLast) return t('journey.walkToDest')
+  if (!leg.to.name) return t('journey.walkOn')
+  return t('journey.walkTo', { place: leg.to.name })
+}
+
 /** Turn one leg into the human instruction shown big on the step card. */
 function instructionFor(leg: RouteLeg, isLast: boolean, t: Translate): StepInstruction {
   if (leg.mode === 'WALK') {
     return {
-      headline: isLast ? t('journey.walkToDest') : t('journey.walkTo', { place: leg.to.name }),
+      headline: walkHeadline(leg, isLast, t),
       detail: t('journey.onFoot', { d: formatDuration(leg.duration) }),
       getOff: null,
     }
@@ -142,7 +156,7 @@ export default function JourneyNavigator({ itinerary, onClose }: JourneyNavigato
             <span className={styles.upNextIcon} aria-hidden="true">{MODE_ICONS[nextLeg.mode]}</span>
             <span className={styles.upNextText}>
               {nextLeg.mode === 'WALK'
-                ? t('journey.walkTo', { place: nextLeg.to.name })
+                ? walkHeadline(nextLeg, stepIndex + 1 === legs.length - 1, t)
                 : `${getModeLabel(nextLeg.mode)}${nextLeg.routeShortName ? ` ${nextLeg.routeShortName}` : ''} → ${nextLeg.to.name}`}
             </span>
           </div>

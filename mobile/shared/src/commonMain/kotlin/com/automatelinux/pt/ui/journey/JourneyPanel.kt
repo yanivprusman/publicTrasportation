@@ -227,7 +227,8 @@ private fun legLine(
     destination: String,
     strings: com.automatelinux.pt.util.AppStrings
 ): String = if (mode == TransitMode.WALK) {
-    strings.journeyWalkTo(destination)
+    // The walk that ends the trip ends at the rider's own pin, which has no name.
+    if (destination.isBlank()) strings.journeyWalkToDest else strings.journeyWalkTo(destination)
 } else {
     "${JourneyText.rideName(routeShortName, mode, strings)} → $destination"
 }
