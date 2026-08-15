@@ -251,7 +251,7 @@ private fun TrackingChip(positionKnown: Boolean) {
         )
         Spacer(Modifier.width(4.dp))
         Text(
-            text = if (positionKnown) strings.journeyLabel else strings.journeyScheduleOnly,
+            text = if (positionKnown) strings.journeyFollowing else strings.journeyNoLocation,
             style = MaterialTheme.typography.labelSmall,
             color = color,
             maxLines = 1

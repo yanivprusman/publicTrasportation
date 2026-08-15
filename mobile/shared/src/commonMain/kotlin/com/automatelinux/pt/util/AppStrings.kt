@@ -238,6 +238,9 @@ interface AppStrings {
     val journeyLeavesIn: (String, String) -> String
     val journeyBoardNow: (String) -> String
     val journeyScheduleOnly: String
+    /** Chip-sized versions of the same two states: it fits where a sentence cannot. */
+    val journeyFollowing: String
+    val journeyNoLocation: String
     val journeyLocating: String
     val journeyEnd: String
     val journeyEndTitle: String
@@ -538,6 +541,8 @@ val EnStrings: AppStrings = object : AppStrings {
     override val journeyLeavesIn: (String, String) -> String = { line, d -> "$line leaves in $d" }
     override val journeyBoardNow: (String) -> String = { line -> "Board $line now" }
     override val journeyScheduleOnly: String = "Following the timetable — no location"
+    override val journeyFollowing: String = "Live"
+    override val journeyNoLocation: String = "Timetable"
     override val journeyLocating: String = "Finding you…"
     override val journeyEnd: String = "End"
     override val journeyEndTitle: String = "End this journey?"
@@ -841,6 +846,8 @@ val HeStrings: AppStrings = object : AppStrings {
     override val journeyLeavesIn: (String, String) -> String = { line, d -> "$line יוצא בעוד $d" }
     override val journeyBoardNow: (String) -> String = { line -> "לעלות על $line עכשיו" }
     override val journeyScheduleOnly: String = "לפי לוח הזמנים — בלי מיקום"
+    override val journeyFollowing: String = "עוקב"
+    override val journeyNoLocation: String = "לוח זמנים"
     override val journeyLocating: String = "מאתר אותך…"
     override val journeyEnd: String = "סיום"
     override val journeyEndTitle: String = "לסיים את הנסיעה?"
