@@ -47,6 +47,8 @@ interface AppStrings {
     val transitDescription: (mode: String, route: String, destination: String, duration: String) -> String
     val showStops: (Int) -> String
     val hideStops: (Int) -> String
+    val showDetails: String
+    val hideDetails: String
     val waitFor: (String) -> String
     val walkMode: String
     val busMode: String
@@ -327,6 +329,8 @@ val EnStrings: AppStrings = object : AppStrings {
     override val transitDescription: (mode: String, route: String, destination: String, duration: String) -> String = { mode, route, dest, dur -> "$mode$route toward $dest — $dur" }
     override val showStops: (Int) -> String = { n -> "Show $n stops" }
     override val hideStops: (Int) -> String = { n -> "Hide $n stops" }
+    override val showDetails: String = "Show details"
+    override val hideDetails: String = "Hide details"
     override val waitFor: (String) -> String = { d -> "Wait $d" }
     override val walkMode: String = "Walk"
     override val busMode: String = "Bus"
@@ -611,6 +615,8 @@ val HeStrings: AppStrings = object : AppStrings {
     override val transitDescription: (mode: String, route: String, destination: String, duration: String) -> String = { mode, route, dest, dur -> "$mode$route לכיוון $dest — $dur" }
     override val showStops: (Int) -> String = { n -> "הצג $n תחנות" }
     override val hideStops: (Int) -> String = { n -> "הסתר $n תחנות" }
+    override val showDetails: String = "הצג פרטים"
+    override val hideDetails: String = "הסתר פרטים"
     override val waitFor: (String) -> String = { d -> "המתנה $d" }
     override val walkMode: String = "הליכה"
     override val busMode: String = "אוטובוס"

@@ -19,6 +19,8 @@ import kotlin.time.Duration.Companion.hours
 import kotlinx.datetime.Instant
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Sensors
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
@@ -53,6 +55,13 @@ fun ItineraryCard(
     selected: Boolean,
     onClick: () -> Unit,
     /**
+     * Whether this card's full timeline is open beneath it. Tapping a result used to
+     * change nothing a thumb could see: the detail was rendered at the very bottom of
+     * the sheet, a screen or two below the card, and "selected" was a 2dp #222222
+     * border on a #1A1A1A card. The card now says out loud whether it is open.
+     */
+    expanded: Boolean = false,
+    /**
      * The wall clock, ticked by the caller. Passed in rather than read here so every
      * card on screen counts down off one clock and one coroutine — and so a card that
      * is never given a clock cannot silently show a frozen countdown.
@@ -75,11 +84,22 @@ fun ItineraryCard(
             .fillMaxWidth()
             .padding(horizontal = 8.dp, vertical = 4.dp)
             .then(
-                if (selected) Modifier.border(
-                    2.dp,
-                    Color(0xFF222222),
-                    RoundedCornerShape(12.dp)
-                ) else Modifier
+                // Open card: a full-strength accent ring. Merely selected (the route
+                // the map is drawing behind the sheet): the same colour, halved, so the
+                // two states are one language read at two volumes.
+                when {
+                    expanded -> Modifier.border(
+                        2.dp,
+                        MaterialTheme.colorScheme.primary,
+                        RoundedCornerShape(12.dp)
+                    )
+                    selected -> Modifier.border(
+                        1.dp,
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.45f),
+                        RoundedCornerShape(12.dp)
+                    )
+                    else -> Modifier
+                }
             )
             .clickable(onClick = onClick),
         colors = CardDefaults.cardColors(
@@ -87,14 +107,18 @@ fun ItineraryCard(
             // a whole-card alpha() faded times and line pills into the map and
             // made every unselected route unreadable. The map still shows
             // through the surface; the content stays at full contrast.
-            containerColor = if (selected) Color(0xFF1A1A1A)
+            containerColor = if (selected || expanded) Color(0xFF1A1A1A)
             else MaterialTheme.colorScheme.surface.copy(alpha = cardOpacity)
         )
     ) {
         val textColor = if (selected) Color.White else Color.Unspecified
         val secondaryTextColor = if (selected) Color(0xFFBBBBBB)
             else MaterialTheme.colorScheme.onSurfaceVariant
-        Column(modifier = Modifier.padding(12.dp)) {
+        Row(
+            modifier = Modifier.padding(start = 12.dp, top = 12.dp, end = 6.dp, bottom = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+        Column(modifier = Modifier.weight(1f)) {
             // A day of its own line, above everything else, whenever this trip does not
             // leave today. It gets a line rather than a corner of the header row because
             // the Fastest sort interleaves days: tomorrow's 06:35 can sit between two
@@ -228,6 +252,16 @@ fun ItineraryCard(
                 now = now,
                 secondaryTextColor = secondaryTextColor,
                 textColor = textColor
+            )
+        }
+            // The one mark that says a result is a door and not a poster. It lives
+            // outside the content Column so a walk-only itinerary — which prints no
+            // boarding line — still carries it.
+            Icon(
+                imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                contentDescription = if (expanded) strings.hideDetails else strings.showDetails,
+                tint = if (expanded) MaterialTheme.colorScheme.primary else secondaryTextColor,
+                modifier = Modifier.size(22.dp)
             )
         }
     }

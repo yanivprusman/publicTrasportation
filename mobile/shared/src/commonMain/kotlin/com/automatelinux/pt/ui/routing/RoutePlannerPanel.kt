@@ -361,24 +361,25 @@ fun RoutePlannerPanel(
                 onEarlier = if (state.results?.itineraries?.isNotEmpty() == true) onEarlier else null,
                 onLater = if (state.results?.itineraries?.isNotEmpty() == true) onLater else null,
                 liveBoardings = state.liveBoardings,
-                cardOpacity = cardOpacity
+                cardOpacity = cardOpacity,
+                // Opened in place, under its own card — the itinerary comes from the
+                // list rather than from state.selectedItinerary so the timeline can
+                // never be one frame behind the card it is hanging from.
+                detailContent = { itinerary ->
+                    ItineraryDetail(
+                        itinerary = itinerary,
+                        onLegClick = onLegClick,
+                        onStopClick = onStopClick,
+                        onTrackBus = onTrackBus,
+                        trackedLegIndex = trackedLegIndex,
+                        onSetReminder = onSetReminder,
+                        activeReminderLegIndex = activeReminderLegIndex,
+                        onCancelReminder = onCancelReminder,
+                        onStartJourney = onStartJourney,
+                        onShareTrip = onShareTrip
+                    )
+                }
             )
-
-            state.selectedItinerary?.let { itinerary ->
-                Spacer(Modifier.height(8.dp))
-                ItineraryDetail(
-                    itinerary = itinerary,
-                    onLegClick = onLegClick,
-                    onStopClick = onStopClick,
-                    onTrackBus = onTrackBus,
-                    trackedLegIndex = trackedLegIndex,
-                    onSetReminder = onSetReminder,
-                    activeReminderLegIndex = activeReminderLegIndex,
-                    onCancelReminder = onCancelReminder,
-                    onStartJourney = onStartJourney,
-                    onShareTrip = onShareTrip
-                )
-            }
         }
     }
 }
