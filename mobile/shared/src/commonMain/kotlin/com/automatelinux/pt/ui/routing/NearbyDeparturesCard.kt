@@ -42,6 +42,7 @@ import com.automatelinux.pt.ui.map.getModeColor
 import com.automatelinux.pt.ui.map.onColorFor
 import com.automatelinux.pt.ui.viewmodel.DepartureEntry
 import com.automatelinux.pt.ui.viewmodel.NearbyBoard
+import com.automatelinux.pt.util.formatTime
 import com.automatelinux.pt.util.LocalAppStrings
 import kotlinx.coroutines.delay
 import kotlinx.datetime.Clock

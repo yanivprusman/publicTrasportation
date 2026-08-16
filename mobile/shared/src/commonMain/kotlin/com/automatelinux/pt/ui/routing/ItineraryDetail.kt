@@ -64,6 +64,7 @@ import com.automatelinux.pt.data.model.WheelchairAccess
 import com.automatelinux.pt.data.model.access
 import com.automatelinux.pt.ui.map.getModeColorWithRoute
 import com.automatelinux.pt.ui.map.onColorFor
+import com.automatelinux.pt.util.formatTime
 import com.automatelinux.pt.util.toFixed
 import com.automatelinux.pt.util.LocalAppStrings
 import kotlinx.datetime.Clock

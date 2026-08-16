@@ -54,7 +54,7 @@ import com.automatelinux.pt.journey.JourneyProgress
 import com.automatelinux.pt.journey.legFraction
 import com.automatelinux.pt.journey.JourneyText
 import com.automatelinux.pt.ui.map.getModeColorWithRoute
-import com.automatelinux.pt.ui.routing.formatTime
+import com.automatelinux.pt.util.formatTime
 import com.automatelinux.pt.util.LocalAppStrings
 import kotlinx.coroutines.delay
 

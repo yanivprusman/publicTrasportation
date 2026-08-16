@@ -30,6 +30,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import com.automatelinux.pt.util.formatTime
 import com.automatelinux.pt.util.toFixed
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -447,19 +448,6 @@ private const val URGENT_SECONDS = 5 * 60L
  */
 fun legPillLabel(leg: RouteLeg, strings: AppStrings): String =
     leg.routeShortName?.takeIf { it.length <= 10 } ?: getModeLabel(leg.mode, strings)
-
-fun formatTime(isoString: String): String {
-    return try {
-        // Instant.parse accepts ISO-8601 with offset (both ZonedDateTime and OffsetDateTime forms).
-        val local = kotlinx.datetime.Instant.parse(isoString)
-            .toLocalDateTime(kotlinx.datetime.TimeZone.currentSystemDefault())
-        val h = local.hour.toString().padStart(2, '0')
-        val m = local.minute.toString().padStart(2, '0')
-        "$h:$m"
-    } catch (_: Exception) {
-        isoString.substringAfter("T").take(5)
-    }
-}
 
 fun getModeLabel(mode: TransitMode, strings: AppStrings): String = when (mode) {
     TransitMode.WALK -> strings.walkMode

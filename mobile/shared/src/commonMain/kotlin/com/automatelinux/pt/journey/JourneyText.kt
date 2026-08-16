@@ -3,6 +3,7 @@ package com.automatelinux.pt.journey
 import com.automatelinux.pt.data.model.TransitMode
 import com.automatelinux.pt.util.AppStrings
 import com.automatelinux.pt.util.formatDistance
+import com.automatelinux.pt.util.formatTime
 
 /**
  * One voice for the journey.
@@ -40,44 +41,89 @@ object JourneyText {
         }
     }
 
-    /** The line under it: where this leg ends, and how far off that is. */
+    /**
+     * The line under it: where this leg ends, and when.
+     *
+     * Every phase names a clock time now. The panel used to hold exactly one — the
+     * trip's final ETA, in the header — so a rider mid-journey could see they were
+     * getting off at ת.מרכזית באר שבע without the panel ever saying when, and had to
+     * open the step list to find a number the card had room for.
+     */
     fun detail(progress: JourneyProgress?, strings: AppStrings): String? {
         val p = progress ?: return null
         return when (p.phase) {
             JourneyPhase.ARRIVED -> null
             JourneyPhase.RIDING -> buildList {
-                p.targetName?.let { add("${strings.journeyGetOffAt} $it") }
+                // The alight time rides with the stop name rather than trailing the
+                // line, so the one number here cannot be read as belonging to the
+                // next stop mentioned after it.
+                p.targetName?.let { add("${strings.journeyGetOffAt} $it${legEndAt(p, strings)}") }
                 p.nextStopName?.takeIf { !p.alightImminent }
                     ?.let { add("${strings.journeyNextStop} $it") }
             }.joinToString(" · ").ifBlank { null }
             JourneyPhase.WAITING -> p.leg?.from?.name?.takeIf { it.isNotBlank() }
-                ?.let { "${strings.journeyBoardAt} $it" }
+                ?.let { "${strings.journeyBoardAt} $it${legStartAt(p, strings)}" }
             JourneyPhase.WALKING -> buildList {
-                p.metersToTarget?.let { add(formatDistance(it.toInt(), strings)) }
-                p.leg?.distanceMeters?.takeIf { p.metersToTarget == null }
-                    ?.let { add(formatDistance(it, strings)) }
+                walkDistance(p, strings)?.let { add(it) }
                 walkTiming(p, strings)?.let { add(it) }
+                walkDeadline(p, strings)?.let { add(it) }
             }.joinToString(" · ").ifBlank { null }
         }
     }
 
+    /** " · 12:20" — the leg's scheduled end, or nothing when it has no readable one. */
+    private fun legEndAt(p: JourneyProgress, strings: AppStrings): String =
+        p.leg?.endTime?.takeIf { it.isNotBlank() }?.let { " · ${formatTime(it)}" } ?: ""
+
+    /** " · 11:35" — the leg's scheduled start, or nothing when it has no readable one. */
+    private fun legStartAt(p: JourneyProgress, strings: AppStrings): String =
+        p.leg?.startTime?.takeIf { it.isNotBlank() }?.let { " · ${formatTime(it)}" } ?: ""
+
     /**
-     * The half of a walk that metres cannot say: how long it takes.
-     *
-     * Every other phase of the panel carries a clock — a ride being waited for leaves
-     * in so many minutes, a ride underway has so many stops left — and the walk card
-     * carried none, so "378 m" was the whole answer to the one question a rider on
-     * foot is actually asking.
-     *
-     * It is the leg's OWN length, deliberately, and not the countdown to its end. A
-     * walk to a stop is timetabled to end when the bus leaves, so a rider who starts
-     * the journey early is not late for anything — but `secondsToTarget` there is the
-     * wait, not the walk, and reading it out loud produced "151 m · 1h 10min on foot"
-     * for a two-minute stroll. The wait is the WAITING phase's line to say, once the
-     * rider is standing at the pole.
+     * Metres still to walk — measured when a fix says so, and the leg's own length
+     * when nothing does.
      */
-    private fun walkTiming(p: JourneyProgress, strings: AppStrings): String? =
-        p.leg?.duration?.takeIf { it > 0 }?.let { strings.journeyOnFoot(strings.formatDuration(it)) }
+    private fun walkDistance(p: JourneyProgress, strings: AppStrings): String? {
+        p.metersToTarget?.let { return formatDistance(it.toInt(), strings) }
+        return p.leg?.distanceMeters?.let { formatDistance(it, strings) }
+    }
+
+    /**
+     * How much walk is left — the same walk the metres beside it are measuring.
+     *
+     * The two halves of this line have to describe one thing, and twice now they have
+     * not. Reading the countdown to the leg's scheduled end gave "151 m · 1h 10min on
+     * foot", because a walk to a stop is timetabled to end when the bus leaves and
+     * that gap is the wait, not the walk. Reading the leg's whole duration instead
+     * gave "150 m · 7 min on foot" — true of the 385 m leg, absurd of the 150 m still
+     * to go, and a rider does not read one number as live and the next as planned.
+     *
+     * So the duration is scaled by the same measured fraction the progress bar fills
+     * by: metres against metres while a fix is coming in, the clock only when nothing
+     * better exists. A walk with any distance left takes at least a minute to say, so
+     * the tail of one reads "1 min" rather than "0 min".
+     */
+    private fun walkTiming(p: JourneyProgress, strings: AppStrings): String? {
+        val total = p.leg?.duration?.takeIf { it > 0 } ?: return null
+        val left = (total * (1.0 - p.legFraction())).toLong().coerceIn(60L, total)
+        return strings.journeyOnFoot(strings.formatDuration(left))
+    }
+
+    /**
+     * The instant the walk is FOR: when the ride at the end of it leaves.
+     *
+     * This is the deadline "3 min on foot" is measured against, and the only reason a
+     * rider looks at a walk card twice. It names the RIDE's departure rather than the
+     * walk's own scheduled end, because a router that grants slack ends the walk
+     * before the bus goes and the earlier of the two is not the one you can miss.
+     *
+     * The last walk of a trip gets none: it ends at the rider's own pin, at the time
+     * the header has been showing as the ETA all along.
+     */
+    private fun walkDeadline(p: JourneyProgress, strings: AppStrings): String? {
+        val next = p.nextLeg?.takeIf { it.isRide } ?: return null
+        return next.startTime.takeIf { it.isNotBlank() }?.let { strings.journeyBy(formatTime(it)) }
+    }
 
     fun notificationTitle(progress: JourneyProgress?, strings: AppStrings): String =
         headline(progress, strings)

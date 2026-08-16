@@ -256,6 +256,8 @@ interface AppStrings {
     val journeyLiveNeedsLocation: String
     val journeyAllSteps: String
     val journeyEtaAt: (String) -> String
+    /** The deadline a walk is measured against: the ride at the end of it. */
+    val journeyBy: (String) -> String
     val dayOverview: String
     val dayLoading: String
     val dayFailed: String
@@ -565,6 +567,7 @@ val EnStrings: AppStrings = object : AppStrings {
         "Location is off, so stops can't be counted — the journey will follow the timetable."
     override val journeyAllSteps: String = "All steps"
     override val journeyEtaAt: (String) -> String = { time -> "Arrive $time" }
+    override val journeyBy: (String) -> String = { time -> "by $time" }
     override val dayOverview: String = "Day overview"
     override val dayLoading: String = "Scanning the whole day..."
     override val dayFailed: String = "Day overview failed"
@@ -874,6 +877,7 @@ val HeStrings: AppStrings = object : AppStrings {
         "המיקום כבוי, אז אי אפשר לספור תחנות — הנסיעה תעקוב אחרי לוח הזמנים."
     override val journeyAllSteps: String = "כל השלבים"
     override val journeyEtaAt: (String) -> String = { time -> "הגעה $time" }
+    override val journeyBy: (String) -> String = { time -> "עד $time" }
     override val dayOverview: String = "סקירת יום"
     override val dayLoading: String = "סורק את כל היום..."
     override val dayFailed: String = "סקירת היום נכשלה"

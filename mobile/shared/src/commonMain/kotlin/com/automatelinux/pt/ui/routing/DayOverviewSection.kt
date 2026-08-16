@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.sp
 import com.automatelinux.pt.data.model.DayDeparture
 import com.automatelinux.pt.data.model.DayOverviewResult
 import com.automatelinux.pt.ui.map.getModeColor
+import com.automatelinux.pt.util.formatTime
 import com.automatelinux.pt.util.LocalAppStrings
 import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone

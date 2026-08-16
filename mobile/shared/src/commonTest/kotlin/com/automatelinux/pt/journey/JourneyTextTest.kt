@@ -5,6 +5,7 @@ import com.automatelinux.pt.data.model.Place
 import com.automatelinux.pt.data.model.RouteLeg
 import com.automatelinux.pt.data.model.TransitMode
 import com.automatelinux.pt.util.EnStrings
+import com.automatelinux.pt.util.formatTime
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -100,6 +101,112 @@ class JourneyTextTest {
             EnStrings
         )
         assertEquals("286 m · 5 min on foot", detail)
+    }
+
+    @Test
+    fun `the metres and the minutes describe the same walk`() {
+        // The one the rider caught: "150 m · 7 min on foot". The metres were what was
+        // left to walk; the minutes were the whole 385 m leg. Standing halfway along,
+        // both halves have to have halved — a line whose two numbers are measured
+        // from different points is worse than a line with one number.
+        val halfway = GeoFix(lat = 30.8549, lon = 34.7820, atMs = t0)
+        val detail = JourneyText.detail(
+            stepJourney(walkTo("stop A"), JourneyCursor(), fix = halfway, nowMs = t0).progress,
+            EnStrings
+        )!!
+        assertTrue(
+            detail.endsWith("2 min on foot"),
+            "half the walk left should read as half the time, got: $detail"
+        )
+        val meters = detail.substringBefore(" m").toInt()
+        assertTrue(meters in 100..190, "expected roughly half of 286 m, got $meters in: $detail")
+    }
+
+    /** Walk to a pole, then a bus off it — the shape almost every real trip starts with. */
+    private fun walkThenRide() = Itinerary(
+        duration = 1800,
+        startTime = iso(0),
+        endTime = iso(30),
+        transfers = 0,
+        legs = listOf(
+            RouteLeg(
+                mode = TransitMode.WALK,
+                from = Place("", 30.8536, 34.7822),
+                to = Place("stop A", 30.8562, 34.7818),
+                startTime = iso(0),
+                endTime = iso(5),
+                duration = 300,
+                distanceMeters = 286
+            ),
+            RouteLeg(
+                mode = TransitMode.BUS,
+                from = Place("stop A", 30.8562, 34.7818),
+                to = Place("stop B", 31.2500, 34.7900),
+                startTime = iso(7),
+                endTime = iso(30),
+                duration = 1380,
+                routeShortName = "60"
+            )
+        )
+    )
+
+    @Test
+    fun `a walk to a stop says when the bus it is for leaves`() {
+        // The deadline the minutes are measured against. It names the RIDE's
+        // departure, not the walk's scheduled end: a router that grants slack ends
+        // the walk first, and the earlier of the two is not the one you can miss.
+        val detail = JourneyText.detail(
+            stepJourney(walkThenRide(), JourneyCursor(), fix = null, nowMs = t0).progress,
+            EnStrings
+        )!!
+        assertEquals("286 m · 5 min on foot · by ${formatTime(iso(7))}", detail)
+    }
+
+    @Test
+    fun `the last walk of a trip has no deadline to give`() {
+        // It ends at the rider's own pin, at the time the header already calls the ETA.
+        assertEquals("286 m · 5 min on foot", walkDetailAt(0))
+    }
+
+    /** Standing at the pole, then rolling: one ride, looked at twice. */
+    private fun rideOnly() = Itinerary(
+        duration = 1500,
+        startTime = iso(5),
+        endTime = iso(30),
+        transfers = 0,
+        legs = listOf(
+            RouteLeg(
+                mode = TransitMode.BUS,
+                from = Place("stop A", 30.8562, 34.7818),
+                to = Place("stop B", 31.2500, 34.7900),
+                startTime = iso(5),
+                endTime = iso(30),
+                duration = 1500,
+                routeShortName = "60"
+            )
+        )
+    )
+
+    @Test
+    fun `waiting at the pole says when the ride leaves, not only how soon`() {
+        // The headline counts down ("60 leaves in 5 min"); a countdown alone cannot be
+        // checked against a timetable, a screenshot, or the sign on the pole.
+        val detail = JourneyText.detail(
+            stepJourney(rideOnly(), JourneyCursor(), fix = null, nowMs = t0).progress,
+            EnStrings
+        )
+        assertEquals("Board at stop A · ${formatTime(iso(5))}", detail)
+    }
+
+    @Test
+    fun `riding says when you get off, next to where`() {
+        // "Get off at stop B" and no clock was the panel's largest silence: the rider
+        // had to open the step list to learn when their own stop comes.
+        val detail = JourneyText.detail(
+            stepJourney(rideOnly(), JourneyCursor(), fix = null, nowMs = t0 + 10 * 60_000L).progress,
+            EnStrings
+        )
+        assertEquals("Get off at stop B · ${formatTime(iso(30))}", detail)
     }
 
     @Test
