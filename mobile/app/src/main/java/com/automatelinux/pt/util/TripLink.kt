@@ -23,6 +23,9 @@ object TripLink {
     private val baseUrl =
         if (BuildConfig.FEEDBACK_ENABLED) "https://pt.dev.ya-niv.com" else "https://pt.prod.ya-niv.com"
 
+    /** The page a live-journey share opens: the rider's position, watched live. */
+    fun liveJourneyUrl(token: String): String = "$baseUrl/journey/$token"
+
     fun build(
         origin: GeocodeSuggestion,
         destination: GeocodeSuggestion,

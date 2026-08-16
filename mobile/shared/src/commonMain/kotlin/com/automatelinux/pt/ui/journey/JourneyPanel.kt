@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.LocationOff
 import androidx.compose.material.icons.filled.MyLocation
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -88,7 +89,10 @@ fun JourneyPanel(
     /** Frame this leg on the map — every step row and the headline answer a tap. */
     onFocusLeg: ((Int) -> Unit)? = null,
     /** Fly the map to the live bus itself; wired to a tap on the live banner. */
-    onFocusVehicle: ((Double, Double) -> Unit)? = null
+    onFocusVehicle: ((Double, Double) -> Unit)? = null,
+    /** Hand out a link that shows this journey live. Green while somebody can watch. */
+    onShare: (() -> Unit)? = null,
+    sharing: Boolean = false
 ) {
     val strings = LocalAppStrings.current
     var expanded by remember { mutableStateOf(false) }
@@ -179,6 +183,20 @@ fun JourneyPanel(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
+                    if (onShare != null) {
+                        IconButton(
+                            onClick = onShare,
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Share,
+                                contentDescription = strings.journeyShareLive,
+                                modifier = Modifier.size(18.dp),
+                                tint = if (sharing) LIVE_GREEN
+                                else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
                     IconButton(
                         // A finished trip has nothing left to protect — once the
                         // rider has arrived, the ✕ just closes the panel.

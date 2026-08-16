@@ -62,8 +62,11 @@ object JourneyText {
                 p.nextStopName?.takeIf { !p.alightImminent }
                     ?.let { add("${strings.journeyNextStop} $it") }
             }.joinToString(" · ").ifBlank { null }
+            // The pole's printed code rides along — it is how a rider standing
+            // between two stops confirms which one the app means, and what every
+            // other app shows for the same reason.
             JourneyPhase.WAITING -> p.leg?.from?.name?.takeIf { it.isNotBlank() }
-                ?.let { "${strings.journeyBoardAt} $it${legStartAt(p, strings)}" }
+                ?.let { "${strings.journeyBoardAt} $it${legStartAt(p, strings)}${stopCodeAt(p, strings)}" }
             JourneyPhase.WALKING -> buildList {
                 walkDistance(p, strings)?.let { add(it) }
                 walkTiming(p, strings)?.let { add(it) }
@@ -79,6 +82,11 @@ object JourneyText {
     /** " · 11:35" — the leg's scheduled start, or nothing when it has no readable one. */
     private fun legStartAt(p: JourneyProgress, strings: AppStrings): String =
         p.leg?.startTime?.takeIf { it.isNotBlank() }?.let { " · ${formatTime(it)}" } ?: ""
+
+    /** " · stop 13868" — the boarding pole's printed code, when the feed carries one. */
+    private fun stopCodeAt(p: JourneyProgress, strings: AppStrings): String =
+        p.leg?.fromStopCode?.takeIf { it.isNotBlank() }
+            ?.let { " · ${strings.journeyStopCode(it)}" } ?: ""
 
     /**
      * Metres still to WALK — pavement, not the crow's flight.

@@ -247,6 +247,9 @@ interface AppStrings {
     val journeyBusDueNow: (String) -> String
     val journeyThenIn: (String) -> String
     val journeyLiveTag: String
+    val journeyShareLive: String
+    /** " · stop 13868" — the code printed on the pole, to confirm it is the right one. */
+    val journeyStopCode: (String) -> String
     /** Chip-sized versions of the same two states: it fits where a sentence cannot. */
     val journeyFollowing: String
     val journeyNoLocation: String
@@ -560,6 +563,8 @@ val EnStrings: AppStrings = object : AppStrings {
     override val journeyBusDueNow: (String) -> String = { line -> "$line is arriving" }
     override val journeyThenIn: (String) -> String = { d -> "then $d" }
     override val journeyLiveTag: String = "Live"
+    override val journeyShareLive: String = "Share live journey"
+    override val journeyStopCode: (String) -> String = { code -> "stop $code" }
     override val journeyFollowing: String = "Live"
     override val journeyNoLocation: String = "Timetable"
     override val journeyLocating: String = "Finding you…"
@@ -876,6 +881,8 @@ val HeStrings: AppStrings = object : AppStrings {
     override val journeyBusDueNow: (String) -> String = { line -> "$line מגיע עכשיו" }
     override val journeyThenIn: (String) -> String = { d -> "אחריו בעוד $d" }
     override val journeyLiveTag: String = "בזמן אמת"
+    override val journeyShareLive: String = "שיתוף מסע חי"
+    override val journeyStopCode: (String) -> String = { code -> "תחנה $code" }
     override val journeyFollowing: String = "עוקב"
     override val journeyNoLocation: String = "לוח זמנים"
     override val journeyLocating: String = "מאתר אותך…"

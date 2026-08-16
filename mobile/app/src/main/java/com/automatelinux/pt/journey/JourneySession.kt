@@ -5,9 +5,13 @@ import android.content.Intent
 import androidx.core.content.ContextCompat
 import com.automatelinux.pt.data.api.PtApi
 import com.automatelinux.pt.data.model.Itinerary
+import com.automatelinux.pt.data.model.JourneyLiveUpdateRequest
+import com.automatelinux.pt.data.model.ShareLeg
+import com.automatelinux.pt.data.model.SharePosition
 import com.automatelinux.pt.data.model.extractVehicleMarkers
 import com.automatelinux.pt.util.AppStrings
 import com.automatelinux.pt.util.EnStrings
+import com.automatelinux.pt.util.TripLink
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -40,6 +44,11 @@ object JourneySession {
     private var tick: Job? = null
     private var linger: Job? = null
     private var livePoll: Job? = null
+    private var shareJob: Job? = null
+
+    /** Set while this journey is being shared; the panel tints its share icon by it. */
+    private val _shareToken = MutableStateFlow<String?>(null)
+    val shareToken: StateFlow<String?> = _shareToken.asStateFlow()
 
     private val _itinerary = MutableStateFlow<Itinerary?>(null)
     val itinerary: StateFlow<Itinerary?> = _itinerary.asStateFlow()
@@ -120,12 +129,87 @@ object JourneySession {
         linger = null
         livePoll?.cancel()
         livePoll = null
+        shareJob?.cancel()
+        shareJob = null
+        // Tell watchers the trip is over rather than letting the page go dark.
+        // Captured before the state is wiped; fired from the session scope, which
+        // outlives this call.
+        val endToken = _shareToken.value
+        val endTrip = _itinerary.value
+        if (endToken != null && endTrip != null) {
+            scope.launch {
+                try {
+                    GlobalContext.get().get<PtApi>()
+                        .journeyLivePost(shareRequest(endTrip, endToken, withLegs = false, ended = true))
+                } catch (_: Exception) {
+                    // The share ages out on the server on its own.
+                }
+            }
+        }
+        _shareToken.value = null
         _itinerary.value = null
         _progress.value = null
         _live.value = null
         lastFix = null
         cursor = JourneyCursor()
         liveTracking = false
+    }
+
+    /**
+     * Starts sharing this journey (idempotent) and returns the link to hand out,
+     * or null when there is no journey or the server cannot be reached.
+     *
+     * The link is the public web app's `/journey/<token>` page; the token exists
+     * only on the server that minted it, so updates keep flowing to the same
+     * backend the page reads from.
+     */
+    suspend fun shareLive(): String? {
+        val trip = _itinerary.value ?: return null
+        _shareToken.value?.let { return TripLink.liveJourneyUrl(it) }
+        val api = GlobalContext.get().get<PtApi>()
+        val token = try {
+            api.journeyLivePost(shareRequest(trip, token = null, withLegs = true)).token
+        } catch (_: Exception) {
+            return null
+        }
+        _shareToken.value = token
+        shareJob?.cancel()
+        shareJob = scope.launch {
+            while (true) {
+                delay(SHARE_POST_MS)
+                val current = _itinerary.value ?: break
+                val t = _shareToken.value ?: break
+                try {
+                    api.journeyLivePost(shareRequest(current, t, withLegs = false))
+                } catch (_: Exception) {
+                    // A missed update leaves the page one beat stale; the next
+                    // round carries the same truth.
+                }
+            }
+        }
+        return TripLink.liveJourneyUrl(token)
+    }
+
+    private fun shareRequest(
+        trip: Itinerary,
+        token: String?,
+        withLegs: Boolean,
+        ended: Boolean = false
+    ): JourneyLiveUpdateRequest {
+        val p = _progress.value
+        return JourneyLiveUpdateRequest(
+            token = token,
+            headline = JourneyText.headline(p, strings),
+            detail = JourneyText.detail(p, strings),
+            etaIso = trip.endTime,
+            destinationName = trip.legs.lastOrNull()?.to?.name ?: "",
+            position = lastFix?.let { SharePosition(it.lat, it.lon) },
+            legs = if (withLegs) {
+                trip.legs.map { ShareLeg(it.mode.name, it.polyline, it.routeColor) }
+            } else null,
+            progressLegIndex = p?.legIndex ?: 0,
+            ended = if (ended) true else null
+        )
     }
 
     /** A fresh position from the service. Recomputes immediately: it is news. */
@@ -205,4 +289,5 @@ object JourneySession {
     private const val TICK_MS = 1_000L
     private const val ARRIVED_LINGER_MS = 20_000L
     private const val LIVE_POLL_MS = 20_000L
+    private const val SHARE_POST_MS = 10_000L
 }

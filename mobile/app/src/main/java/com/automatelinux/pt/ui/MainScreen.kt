@@ -80,6 +80,7 @@ import androidx.compose.ui.unit.dp
 import org.koin.compose.viewmodel.koinViewModel
 import com.automatelinux.feedbacklib.ui.DismissibleSheet
 import com.automatelinux.feedbacklib.ui.rememberDismissibleSheetState
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.content.ContextCompat
@@ -181,6 +182,7 @@ fun MainScreen(
     val journeyItinerary by JourneySession.itinerary.collectAsState()
     val journeyProgress by JourneySession.progress.collectAsState()
     val journeyLive by JourneySession.live.collectAsState()
+    val journeyShareToken by JourneySession.shareToken.collectAsState()
     var boardMode by remember { mutableStateOf(false) }
     var shareTripLink by remember { mutableStateOf<String?>(null) }
     var mapStyle by remember { mutableStateOf(settingsStore.mapStyle) }
@@ -1300,7 +1302,19 @@ fun MainScreen(
                     onFocusVehicle = { lat, lon ->
                         followingLocation = false
                         mapState.animateTo(LatLng(lat, lon), 15.0)
-                    }
+                    },
+                    onShare = {
+                        scope.launch {
+                            val url = JourneySession.shareLive()
+                            if (url != null) {
+                                val send = Intent(Intent.ACTION_SEND)
+                                    .setType("text/plain")
+                                    .putExtra(Intent.EXTRA_TEXT, url)
+                                context.startActivity(Intent.createChooser(send, null))
+                            }
+                        }
+                    },
+                    sharing = journeyShareToken != null
                 )
             }
         }

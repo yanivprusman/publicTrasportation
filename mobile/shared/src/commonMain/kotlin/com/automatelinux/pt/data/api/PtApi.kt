@@ -1,5 +1,7 @@
 package com.automatelinux.pt.data.api
 
+import com.automatelinux.pt.data.model.JourneyLiveTokenResponse
+import com.automatelinux.pt.data.model.JourneyLiveUpdateRequest
 import com.automatelinux.pt.data.model.AppPingRequest
 import com.automatelinux.pt.data.model.AppPingResponse
 import com.automatelinux.pt.data.model.AppRegisterRequest
@@ -104,6 +106,9 @@ class PtApi(private val client: HttpClient) {
      */
     suspend fun getRouteShape(routeId: String): TripShapeResponse =
         fetch("/api/trip-shape", params = mapOf("routeId" to routeId))
+
+    suspend fun journeyLivePost(body: JourneyLiveUpdateRequest): JourneyLiveTokenResponse =
+        fetch("/api/journey-live", HttpMethod.Post, PtJson.encodeToString(body))
 
     suspend fun appPing(body: AppPingRequest): AppPingResponse =
         fetch("/api/app/ping", HttpMethod.Post, PtJson.encodeToString(body))
