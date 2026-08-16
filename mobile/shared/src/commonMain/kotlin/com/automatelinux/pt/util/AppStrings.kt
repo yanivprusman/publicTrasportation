@@ -242,6 +242,11 @@ interface AppStrings {
     val journeyLeavesIn: (String, String) -> String
     val journeyBoardNow: (String) -> String
     val journeyScheduleOnly: String
+    /** The live banner: what the feed says about the bus being waited for. */
+    val journeyBusArrivesIn: (String, String) -> String
+    val journeyBusDueNow: (String) -> String
+    val journeyThenIn: (String) -> String
+    val journeyLiveTag: String
     /** Chip-sized versions of the same two states: it fits where a sentence cannot. */
     val journeyFollowing: String
     val journeyNoLocation: String
@@ -551,6 +556,10 @@ val EnStrings: AppStrings = object : AppStrings {
     override val journeyLeavesIn: (String, String) -> String = { line, d -> "$line leaves in $d" }
     override val journeyBoardNow: (String) -> String = { line -> "Board $line now" }
     override val journeyScheduleOnly: String = "Following the timetable — no location"
+    override val journeyBusArrivesIn: (String, String) -> String = { line, d -> "$line arrives in $d" }
+    override val journeyBusDueNow: (String) -> String = { line -> "$line is arriving" }
+    override val journeyThenIn: (String) -> String = { d -> "then $d" }
+    override val journeyLiveTag: String = "Live"
     override val journeyFollowing: String = "Live"
     override val journeyNoLocation: String = "Timetable"
     override val journeyLocating: String = "Finding you…"
@@ -863,6 +872,10 @@ val HeStrings: AppStrings = object : AppStrings {
     override val journeyLeavesIn: (String, String) -> String = { line, d -> "$line יוצא בעוד $d" }
     override val journeyBoardNow: (String) -> String = { line -> "לעלות על $line עכשיו" }
     override val journeyScheduleOnly: String = "לפי לוח הזמנים — בלי מיקום"
+    override val journeyBusArrivesIn: (String, String) -> String = { line, d -> "$line מגיע בעוד $d" }
+    override val journeyBusDueNow: (String) -> String = { line -> "$line מגיע עכשיו" }
+    override val journeyThenIn: (String) -> String = { d -> "אחריו בעוד $d" }
+    override val journeyLiveTag: String = "בזמן אמת"
     override val journeyFollowing: String = "עוקב"
     override val journeyNoLocation: String = "לוח זמנים"
     override val journeyLocating: String = "מאתר אותך…"

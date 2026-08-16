@@ -191,7 +191,14 @@ fun stepJourney(
     itinerary: Itinerary,
     cursor: JourneyCursor,
     fix: GeoFix?,
-    nowMs: Long
+    nowMs: Long,
+    /**
+     * When the live feed says the ride being waited for actually reaches its
+     * boarding stop, epoch ms. Null when no feed or no sighting. Only the board
+     * call reads it: a bus running early must buzz the rider early, because the
+     * timetabled instant arrives after the bus has left.
+     */
+    liveBoardingArrivalMs: Long? = null
 ): JourneyUpdate {
     val legs = itinerary.legs
     val usable = fix?.takeIf { nowMs - it.atMs <= FIX_STALE_MS }
@@ -259,7 +266,15 @@ fun stepJourney(
         c = c.copy(alightAlerted = c.alightAlerted + c.legIndex)
     }
 
-    if (waitingUntilMs != null && waitingUntilMs - nowMs <= BOARD_CALL_LEAD_MS &&
+    // The board call goes by whichever the rider can actually miss: the earlier of
+    // the timetabled departure and the live sighting. A bus running early leaves at
+    // the sighting, and a timetable-only call would buzz an empty road.
+    val boardDueMs = if (waitingUntilMs != null && liveBoardingArrivalMs != null) {
+        min(waitingUntilMs, liveBoardingArrivalMs)
+    } else {
+        waitingUntilMs
+    }
+    if (boardDueMs != null && boardDueMs - nowMs <= BOARD_CALL_LEAD_MS &&
         c.legIndex !in c.boardAlerted
     ) {
         alerts += JourneyAlert.BOARD_NOW

@@ -1,5 +1,6 @@
 package com.automatelinux.pt.journey
 
+import com.automatelinux.pt.data.model.Itinerary
 import com.automatelinux.pt.data.model.TransitMode
 import com.automatelinux.pt.util.AppStrings
 import com.automatelinux.pt.util.formatDistance
@@ -139,6 +140,35 @@ object JourneyText {
     private fun walkDeadline(p: JourneyProgress, strings: AppStrings): String? {
         val next = p.nextLeg?.takeIf { it.isRide } ?: return null
         return next.startTime.takeIf { it.isNotBlank() }?.let { strings.journeyBy(formatTime(it)) }
+    }
+
+    /**
+     * The live banner: "64 arrives in 6 min · then 41 min".
+     *
+     * This is the line every other app leads with and this panel used to lack —
+     * the timetable countdown answers when the bus was *supposed* to come, and a
+     * rider standing at a pole wants the bus that actually exists. Null when the
+     * feed has nothing (no sighting is shown as silence, never as a guess).
+     */
+    fun liveBanner(
+        live: JourneyLiveInfo?,
+        itinerary: Itinerary?,
+        nowMs: Long,
+        strings: AppStrings
+    ): String? {
+        val info = live ?: return null
+        val ride = itinerary?.legs?.getOrNull(info.legIndex) ?: return null
+        with(JourneyLive) { if (info.isStale(nowMs)) return null }
+        val line = rideName(ride.routeShortName, ride.mode, strings)
+        val minutesAway = (info.arrivalMs - nowMs) / 60_000L
+        val head = if (minutesAway < 1) {
+            strings.journeyBusDueNow(line)
+        } else {
+            strings.journeyBusArrivesIn(line, strings.formatDuration(minutesAway * 60))
+        }
+        val next = info.nextArrivalMs?.let { it - nowMs }?.takeIf { it >= 60_000L }
+            ?.let { strings.journeyThenIn(strings.formatDuration(it / 60_000L * 60)) }
+        return if (next != null) "$head · $next" else head
     }
 
     fun notificationTitle(progress: JourneyProgress?, strings: AppStrings): String =

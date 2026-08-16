@@ -49,6 +49,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.automatelinux.pt.data.model.Itinerary
 import com.automatelinux.pt.data.model.TransitMode
+import com.automatelinux.pt.journey.JourneyLiveInfo
 import com.automatelinux.pt.journey.JourneyPhase
 import com.automatelinux.pt.journey.JourneyProgress
 import com.automatelinux.pt.journey.legFraction
@@ -57,9 +58,13 @@ import com.automatelinux.pt.ui.map.getModeColorWithRoute
 import com.automatelinux.pt.util.formatTime
 import com.automatelinux.pt.util.LocalAppStrings
 import kotlinx.coroutines.delay
+import kotlinx.datetime.Clock
 
 /** The colour of "get ready, this is you" — the same amber the cards use for urgency. */
 private val URGENT = Color(0xFFFFB74D)
+
+/** The colour of a live sighting — the same green the tracking chip already speaks. */
+private val LIVE_GREEN = Color(0xFF66BB6A)
 
 /** How long the end-journey button stays armed before it goes back to being an ✕. */
 private const val CONFIRM_END_TIMEOUT_MS = 4_000L
@@ -77,7 +82,13 @@ fun JourneyPanel(
     itinerary: Itinerary,
     progress: JourneyProgress?,
     onEnd: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    /** What the SIRI feed says about the bus being walked to or waited for. */
+    live: JourneyLiveInfo? = null,
+    /** Frame this leg on the map — every step row and the headline answer a tap. */
+    onFocusLeg: ((Int) -> Unit)? = null,
+    /** Fly the map to the live bus itself; wired to a tap on the live banner. */
+    onFocusVehicle: ((Double, Double) -> Unit)? = null
 ) {
     val strings = LocalAppStrings.current
     var expanded by remember { mutableStateOf(false) }
@@ -189,8 +200,66 @@ fun JourneyPanel(
 
             Spacer(Modifier.height(6.dp))
 
+            // The line every other app leads with: where the actual bus is. Shown
+            // only while a boarding stop is ahead and the report is fresh — silence,
+            // never a guess. Tapping it flies the map to the bus itself.
+            JourneyText.liveBanner(
+                live, itinerary,
+                Clock.System.now().toEpochMilliseconds(), strings
+            )?.let { banner ->
+                val vehicle = live?.vehicle
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(LIVE_GREEN.copy(alpha = 0.12f))
+                        .let { m ->
+                            if (vehicle != null && onFocusVehicle != null) {
+                                m.clickable { onFocusVehicle(vehicle.lat, vehicle.lon) }
+                            } else m
+                        }
+                        .padding(horizontal = 10.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Default.DirectionsBus,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = LIVE_GREEN
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = banner,
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = LIVE_GREEN,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = strings.journeyLiveTag,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = LIVE_GREEN.copy(alpha = 0.8f),
+                        maxLines = 1
+                    )
+                }
+                Spacer(Modifier.height(8.dp))
+            }
+
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(modifier = Modifier.weight(1f)) {
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .let { m ->
+                            // The headline answers a tap with the map: frame the leg
+                            // it is talking about.
+                            val idx = progress?.legIndex
+                            if (onFocusLeg != null && idx != null && idx < itinerary.legs.size) {
+                                m.clip(RoundedCornerShape(8.dp)).clickable { onFocusLeg(idx) }
+                            } else m
+                        }
+                ) {
                     Text(
                         text = JourneyText.headline(progress, strings),
                         style = MaterialTheme.typography.headlineSmall,
@@ -233,6 +302,12 @@ fun JourneyPanel(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .let { m ->
+                                    // A step answers a tap by showing itself on the
+                                    // map — the row is the question "where is that?".
+                                    if (onFocusLeg != null) m.clickable { onFocusLeg(index) } else m
+                                }
                                 .padding(vertical = 6.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {

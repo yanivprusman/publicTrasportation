@@ -3,7 +3,9 @@ package com.automatelinux.pt.journey
 import android.content.Context
 import android.content.Intent
 import androidx.core.content.ContextCompat
+import com.automatelinux.pt.data.api.PtApi
 import com.automatelinux.pt.data.model.Itinerary
+import com.automatelinux.pt.data.model.extractVehicleMarkers
 import com.automatelinux.pt.util.AppStrings
 import com.automatelinux.pt.util.EnStrings
 import kotlinx.coroutines.CoroutineScope
@@ -19,6 +21,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
+import org.koin.core.context.GlobalContext
 
 /**
  * The one live journey: it owns the cursor, runs the engine on a tick, and is the
@@ -36,12 +39,21 @@ object JourneySession {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var tick: Job? = null
     private var linger: Job? = null
+    private var livePoll: Job? = null
 
     private val _itinerary = MutableStateFlow<Itinerary?>(null)
     val itinerary: StateFlow<Itinerary?> = _itinerary.asStateFlow()
 
     private val _progress = MutableStateFlow<JourneyProgress?>(null)
     val progress: StateFlow<JourneyProgress?> = _progress.asStateFlow()
+
+    /**
+     * What the live feed says about the bus being walked to or waited for.
+     * Null whenever there is no such bus, no feed, or no sighting — the panel
+     * shows silence then, never a guess.
+     */
+    private val _live = MutableStateFlow<JourneyLiveInfo?>(null)
+    val live: StateFlow<JourneyLiveInfo?> = _live.asStateFlow()
 
     /** Alerts the rider must be told about. Replay 0: a missed alert is stale news. */
     private val _alerts = MutableSharedFlow<JourneyAlert>(extraBufferCapacity = 8)
@@ -72,6 +84,7 @@ object JourneySession {
         linger = null
         _itinerary.value = itinerary
         _progress.value = null
+        _live.value = null
 
         tick?.cancel()
         tick = scope.launch {
@@ -80,6 +93,7 @@ object JourneySession {
                 delay(TICK_MS)
             }
         }
+        startLivePolling()
 
         if (live) {
             ContextCompat.startForegroundService(
@@ -104,8 +118,11 @@ object JourneySession {
         tick = null
         linger?.cancel()
         linger = null
+        livePoll?.cancel()
+        livePoll = null
         _itinerary.value = null
         _progress.value = null
+        _live.value = null
         lastFix = null
         cursor = JourneyCursor()
         liveTracking = false
@@ -123,7 +140,11 @@ object JourneySession {
             itinerary = trip,
             cursor = cursor,
             fix = lastFix,
-            nowMs = Clock.System.now().toEpochMilliseconds()
+            nowMs = Clock.System.now().toEpochMilliseconds(),
+            // Only a sighting of THIS leg's bus may move its board call.
+            liveBoardingArrivalMs = _live.value
+                ?.takeIf { it.legIndex == cursor.legIndex }
+                ?.arrivalMs
         )
         cursor = update.cursor
         _progress.value = update.progress
@@ -141,6 +162,47 @@ object JourneySession {
         }
     }
 
+    /**
+     * Asks the SIRI feed where the bus being waited for actually is, for as long
+     * as one is being waited for.
+     *
+     * Runs in the session rather than the UI so a pocketed phone still gets its
+     * board call from the live sighting. It is quiet whenever no boarding stop is
+     * ahead (which is most of a ride), and it degrades to nothing on error: a
+     * journey without a feed is exactly the journey this app already knew how to
+     * run — off the timetable, saying so.
+     */
+    private fun startLivePolling() {
+        livePoll?.cancel()
+        livePoll = scope.launch {
+            val api = GlobalContext.get().get<PtApi>()
+            while (true) {
+                val trip = _itinerary.value ?: break
+                val legIndex = JourneyLive.watchLegIndex(trip, _progress.value)
+                val leg = legIndex?.let { trip.legs.getOrNull(it) }
+                val stopCode = leg?.fromStopCode
+                if (leg != null && legIndex != null && stopCode != null) {
+                    try {
+                        val markers = api.getTransport(station = stopCode).extractVehicleMarkers()
+                        _live.value = JourneyLive.infoFrom(
+                            legIndex = legIndex,
+                            leg = leg,
+                            markers = markers,
+                            nowMs = Clock.System.now().toEpochMilliseconds()
+                        )
+                    } catch (_: Exception) {
+                        // Keep the last report; the panel retires it by age, and the
+                        // next round may succeed.
+                    }
+                } else {
+                    _live.value = null
+                }
+                delay(LIVE_POLL_MS)
+            }
+        }
+    }
+
     private const val TICK_MS = 1_000L
     private const val ARRIVED_LINGER_MS = 20_000L
+    private const val LIVE_POLL_MS = 20_000L
 }

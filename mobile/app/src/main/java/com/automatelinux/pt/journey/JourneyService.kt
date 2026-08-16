@@ -107,6 +107,13 @@ class JourneyService : Service() {
             JourneySession.alerts.collectLatest { alert -> fire(alert) }
         }
         scope.launch {
+            // A fresh sighting redraws the shade line even when progress stood still.
+            JourneySession.live.collectLatest {
+                val p = JourneySession.progress.value ?: return@collectLatest
+                notifier().notify(NOTIFICATION_ID, ongoingNotification(p))
+            }
+        }
+        scope.launch {
             // The session owns the journey's lifetime — it now ends a finished trip
             // by itself, a beat after arrival. The service just follows: with no
             // itinerary there is nothing to keep alive from the shade.
@@ -211,7 +218,16 @@ class JourneyService : Service() {
     private fun ongoingNotification(progress: JourneyProgress?): Notification {
         val strings = JourneySession.strings
         val title = JourneyText.notificationTitle(progress, strings)
-        val body = JourneyText.notificationBody(progress, strings)
+        // The live sighting leads the pocket-check line: "64 arrives in 6 min" is
+        // the number the rider pulled the phone out for.
+        val banner = JourneyText.liveBanner(
+            JourneySession.live.value,
+            JourneySession.itinerary.value,
+            System.currentTimeMillis(),
+            strings
+        )
+        val body = listOfNotNull(banner, JourneyText.notificationBody(progress, strings))
+            .joinToString(" · ")
         return NotificationCompat.Builder(this, CHANNEL_ONGOING)
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle(title)

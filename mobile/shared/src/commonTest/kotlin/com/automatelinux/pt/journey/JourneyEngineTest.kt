@@ -103,6 +103,22 @@ class JourneyEngineTest {
     }
 
     @Test
+    fun `a bus sighted running early moves the board call earlier`() {
+        // Timetable departure t0+10 min; the feed sees the bus reaching the stop at
+        // t0+3 min. At t0+1.5 min a timetable-only call is still 6.5 min of silence
+        // away — and by the time it fired, the early bus would have left.
+        val now = t0 + 90_000L
+        val standing = GeoFix(lat = at(1), lon = lon, accuracyMeters = 8.0, atMs = now)
+        val withoutLive = stepJourney(trip, JourneyCursor(), fix = standing, nowMs = now)
+        assertFalse(JourneyAlert.BOARD_NOW in withoutLive.alerts)
+        val withLive = stepJourney(
+            trip, JourneyCursor(), fix = standing, nowMs = now,
+            liveBoardingArrivalMs = t0 + 3 * 60_000L
+        )
+        assertTrue(JourneyAlert.BOARD_NOW in withLive.alerts)
+    }
+
+    @Test
     fun `stops remaining counts down as the bus calls at each stop`() {
         var cursor = JourneyCursor(legIndex = 1)
         val seen = mutableListOf<Int>()

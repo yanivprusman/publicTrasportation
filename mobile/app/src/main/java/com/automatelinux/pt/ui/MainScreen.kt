@@ -180,6 +180,7 @@ fun MainScreen(
     // searching for something else mid-ride) no longer ends the trip.
     val journeyItinerary by JourneySession.itinerary.collectAsState()
     val journeyProgress by JourneySession.progress.collectAsState()
+    val journeyLive by JourneySession.live.collectAsState()
     var boardMode by remember { mutableStateOf(false) }
     var shareTripLink by remember { mutableStateOf<String?>(null) }
     var mapStyle by remember { mutableStateOf(settingsStore.mapStyle) }
@@ -930,7 +931,9 @@ fun MainScreen(
                     state = mapState,
                     style = PtMapStyle.fromStored(mapStyle),
                     overlays = PtMapOverlays(
-                        itinerary = routingState.displayedItinerary,
+                        // A running journey owns the map: its route stays drawn even
+                        // if the planner below has moved on to another search.
+                        itinerary = journeyItinerary ?: routingState.displayedItinerary,
                         origin = routingState.origin?.let { LatLng(it.lat, it.lon) },
                         destination = routingState.destination?.let { LatLng(it.lat, it.lon) },
                         via = routingState.via?.let { LatLng(it.lat, it.lon) },
@@ -953,7 +956,10 @@ fun MainScreen(
                             ?.let { mapOf("trip" to it) }
                             ?: if (activeTab == ActiveTab.LINES) lineShapeData.directions else null,
                         lineShapeFitsCamera = routingState.trackedBus?.shape?.isEmpty() != false,
-                        trackedBus = routingState.trackedBus?.marker,
+                        // On a live journey the bus being waited for is drawn the same
+                        // way a tracked bus is: watching it crawl the map toward your
+                        // stop is the whole comfort of a live feed.
+                        trackedBus = routingState.trackedBus?.marker ?: journeyLive?.vehicle,
                         // The map never prompts; it only draws what permission already allows.
                         showUserLocation = LocationHelper.hasPermission(context),
                         userLocationIcon = if (locationIconStyle == "dot") {
@@ -1273,7 +1279,28 @@ fun MainScreen(
                         JourneySession.stop(context)
                         scope.launch { bottomSheetState.partialExpand() }
                     },
-                    modifier = Modifier.align(Alignment.BottomCenter)
+                    modifier = Modifier.align(Alignment.BottomCenter),
+                    live = journeyLive,
+                    onFocusLeg = { index ->
+                        trip.legs.getOrNull(index)?.let { leg ->
+                            // The leg's real geometry when the router sent it; its two
+                            // ends otherwise. Framing a leg is the rider asking to look
+                            // somewhere, so the camera stops chasing the blue dot.
+                            val points = PolylineDecoder.decode(leg.polyline)
+                                .ifEmpty {
+                                    listOf(
+                                        LatLng(leg.from.lat, leg.from.lon),
+                                        LatLng(leg.to.lat, leg.to.lon)
+                                    )
+                                }
+                            followingLocation = false
+                            mapState.fitBounds(points, padding = 80)
+                        }
+                    },
+                    onFocusVehicle = { lat, lon ->
+                        followingLocation = false
+                        mapState.animateTo(LatLng(lat, lon), 15.0)
+                    }
                 )
             }
         }
