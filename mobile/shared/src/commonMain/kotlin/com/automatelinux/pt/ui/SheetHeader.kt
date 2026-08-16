@@ -86,7 +86,9 @@ fun SheetTabRow(
     locationIconStyle: String,
     onLocationIconStyleChange: (String) -> Unit,
     language: String,
-    onLanguageChange: (String) -> Unit
+    onLanguageChange: (String) -> Unit,
+    journeyAlertsEnabled: Boolean,
+    onJourneyAlertsChange: (Boolean) -> Unit
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
 
@@ -161,6 +163,18 @@ fun SheetTabRow(
                     onClick = {
                         val newLang = if (language == "he") "en" else "he"
                         onLanguageChange(newLang)
+                        menuExpanded = false
+                    }
+                )
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            if (journeyAlertsEnabled) strings.journeyAlertsOff
+                            else strings.journeyAlertsOn
+                        )
+                    },
+                    onClick = {
+                        onJourneyAlertsChange(!journeyAlertsEnabled)
                         menuExpanded = false
                     }
                 )

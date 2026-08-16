@@ -19,6 +19,7 @@ import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import com.automatelinux.pt.MainActivity
 import com.automatelinux.pt.R
+import com.automatelinux.pt.util.SettingsStore
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
@@ -30,6 +31,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import org.koin.core.context.GlobalContext
 
 /**
  * Keeps a journey alive while the phone is in a pocket.
@@ -44,6 +46,11 @@ class JourneyService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val locationClient by lazy { LocationServices.getFusedLocationProviderClient(this) }
     private var subscribed = false
+
+    // Resolved from Koin rather than injected: this service is not a Hilt entry point,
+    // and SettingsModule bridges the very same singleton into Hilt the same way. One
+    // instance, one SharedPreferences file, no second copy to fall out of sync.
+    private val settings: SettingsStore by lazy { GlobalContext.get().get() }
 
     private val locationCallback = object : LocationCallback() {
         override fun onLocationResult(result: LocationResult) {
@@ -214,26 +221,34 @@ class JourneyService : Service() {
     }
 
     private fun fire(alert: JourneyAlert) {
-        val strings = JourneySession.strings
-        val progress = JourneySession.progress.value
-        val (title, body) = JourneyText.alertText(alert, progress, strings) ?: return
+        // Read at fire time, not at journey start: the rider can flip the setting from
+        // the gear menu mid-ride, and the next alert has to honour that rather than a
+        // snapshot taken when they boarded. SettingsStore reads straight through to
+        // SharedPreferences, so there is nothing cached to go stale.
+        if (settings.journeyAlertsEnabled) {
+            val strings = JourneySession.strings
+            val progress = JourneySession.progress.value
+            JourneyText.alertText(alert, progress, strings)?.let { (title, body) ->
+                notifier().notify(
+                    ALERT_ID,
+                    NotificationCompat.Builder(this, CHANNEL_ALERT)
+                        .setSmallIcon(R.mipmap.ic_launcher)
+                        .setContentTitle(title)
+                        .setContentText(body)
+                        .setContentIntent(contentIntent())
+                        .setAutoCancel(true)
+                        .setCategory(NotificationCompat.CATEGORY_NAVIGATION)
+                        .setPriority(NotificationCompat.PRIORITY_HIGH)
+                        .setDefaults(NotificationCompat.DEFAULT_SOUND)
+                        .build()
+                )
+                vibrate()
+            }
+        }
 
-        notifier().notify(
-            ALERT_ID,
-            NotificationCompat.Builder(this, CHANNEL_ALERT)
-                .setSmallIcon(R.mipmap.ic_launcher)
-                .setContentTitle(title)
-                .setContentText(body)
-                .setContentIntent(contentIntent())
-                .setAutoCancel(true)
-                .setCategory(NotificationCompat.CATEGORY_NAVIGATION)
-                .setPriority(NotificationCompat.PRIORITY_HIGH)
-                .setDefaults(NotificationCompat.DEFAULT_SOUND)
-                .build()
-        )
-        vibrate()
-
-        // Arrival is the end of the journey, not a step of it.
+        // Arrival is the end of the journey, not a step of it. This is control flow, so
+        // it runs whether or not the rider is being told about it — silencing the alerts
+        // must not leave a finished trip sitting in the shade forever.
         if (alert == JourneyAlert.ARRIVED) stopJourney()
     }
 

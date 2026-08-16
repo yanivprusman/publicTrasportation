@@ -89,6 +89,17 @@ class SettingsStore(private val prefs: Settings) {
         get() = prefs.getInt("max_walk_minutes", 0)
         set(value) { prefs.putInt("max_walk_minutes", value) }
 
+    /**
+     * Whether a journey may sound and buzz before the rider's stop. Off by default:
+     * a phone that makes noise on its own is a thing the rider has to have opted into,
+     * not one they have to discover how to stop. The ongoing lock-screen line is not
+     * covered by this — it is the foreground service's own notification, silent and
+     * low-importance, and Android requires it while the trip tracks a live position.
+     */
+    var journeyAlertsEnabled: Boolean
+        get() = prefs.getBoolean("journey_alerts_enabled", false)
+        set(value) { prefs.putBoolean("journey_alerts_enabled", value) }
+
     private val suggestionListSerializer = ListSerializer(GeocodeSuggestion.serializer())
 
     fun getRecentSearches(): List<GeocodeSuggestion> {

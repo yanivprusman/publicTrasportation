@@ -351,6 +351,7 @@ fun MainScreen(
     }
 
     var locationIconStyle by remember { mutableStateOf(settingsStore.locationIconStyle) }
+    var journeyAlertsEnabled by remember { mutableStateOf(settingsStore.journeyAlertsEnabled) }
 
 
     LaunchedEffect(currentMapCenter, currentMapZoom) {
@@ -649,7 +650,12 @@ fun MainScreen(
                             locationIconStyle = newStyle
                         },
                         language = settingsStore.language,
-                        onLanguageChange = onLanguageChange
+                        onLanguageChange = onLanguageChange,
+                        journeyAlertsEnabled = journeyAlertsEnabled,
+                        onJourneyAlertsChange = { enabled ->
+                            settingsStore.journeyAlertsEnabled = enabled
+                            journeyAlertsEnabled = enabled
+                        }
                     )
 
                     Column(

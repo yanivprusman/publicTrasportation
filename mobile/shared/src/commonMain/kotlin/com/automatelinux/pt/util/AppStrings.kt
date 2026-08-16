@@ -251,6 +251,8 @@ interface AppStrings {
     val journeyEndConfirm: String
     val journeyChannelOngoing: String
     val journeyChannelAlerts: String
+    val journeyAlertsOn: String
+    val journeyAlertsOff: String
     val journeyLiveNeedsLocation: String
     val journeyAllSteps: String
     val journeyEtaAt: (String) -> String
@@ -555,6 +557,10 @@ val EnStrings: AppStrings = object : AppStrings {
     override val journeyEndConfirm: String = "End journey"
     override val journeyChannelOngoing: String = "Journey in progress"
     override val journeyChannelAlerts: String = "Journey alerts"
+    // The menu line names the state one tap away, like the icon and language items
+    // above it — so it reads as the thing you are about to do, not a status readout.
+    override val journeyAlertsOn: String = "Alerts: On"
+    override val journeyAlertsOff: String = "Alerts: Off"
     override val journeyLiveNeedsLocation: String =
         "Location is off, so stops can't be counted — the journey will follow the timetable."
     override val journeyAllSteps: String = "All steps"
@@ -862,6 +868,8 @@ val HeStrings: AppStrings = object : AppStrings {
     override val journeyEndConfirm: String = "סיים נסיעה"
     override val journeyChannelOngoing: String = "נסיעה פעילה"
     override val journeyChannelAlerts: String = "התראות נסיעה"
+    override val journeyAlertsOn: String = "התראות: מופעלות"
+    override val journeyAlertsOff: String = "התראות: כבויות"
     override val journeyLiveNeedsLocation: String =
         "המיקום כבוי, אז אי אפשר לספור תחנות — הנסיעה תעקוב אחרי לוח הזמנים."
     override val journeyAllSteps: String = "כל השלבים"
