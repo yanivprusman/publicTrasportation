@@ -136,11 +136,15 @@ object JourneySession {
         // outlives this call.
         val endToken = _shareToken.value
         val endTrip = _itinerary.value
+        // Progress captured BEFORE the wipe below, or the farewell post reads a
+        // blank state and the page's last words become "Starting journey…".
+        val endProgress = _progress.value
         if (endToken != null && endTrip != null) {
             scope.launch {
                 try {
-                    GlobalContext.get().get<PtApi>()
-                        .journeyLivePost(shareRequest(endTrip, endToken, withLegs = false, ended = true))
+                    GlobalContext.get().get<PtApi>().journeyLivePost(
+                        shareRequest(endTrip, endToken, withLegs = false, ended = true, p = endProgress)
+                    )
                 } catch (_: Exception) {
                     // The share ages out on the server on its own.
                 }
@@ -194,9 +198,9 @@ object JourneySession {
         trip: Itinerary,
         token: String?,
         withLegs: Boolean,
-        ended: Boolean = false
+        ended: Boolean = false,
+        p: JourneyProgress? = _progress.value
     ): JourneyLiveUpdateRequest {
-        val p = _progress.value
         return JourneyLiveUpdateRequest(
             token = token,
             headline = JourneyText.headline(p, strings),
