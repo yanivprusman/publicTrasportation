@@ -27,8 +27,14 @@ class JourneyTextTest {
     private fun iso(minutes: Int) =
         Instant.fromEpochMilliseconds(t0 + minutes * 60_000L).toString()
 
-    /** The single-walk itinerary: what "walk 286 m to the pin" actually looks like. */
-    private fun walkTo(name: String) = Itinerary(
+    /**
+     * The single-walk itinerary: what "walk 286 m to the pin" actually looks like.
+     *
+     * Its two ends are ~290 m apart in a straight line, so [distanceMeters] can be
+     * raised to describe a path that bends — which is the only way to tell the two
+     * measures apart in a test.
+     */
+    private fun walkTo(name: String, distanceMeters: Int = 286) = Itinerary(
         duration = 300,
         startTime = iso(0),
         endTime = iso(5),
@@ -41,7 +47,7 @@ class JourneyTextTest {
                 startTime = iso(0),
                 endTime = iso(5),
                 duration = 300,
-                distanceMeters = 286
+                distanceMeters = distanceMeters
             )
         )
     )
@@ -104,6 +110,25 @@ class JourneyTextTest {
     }
 
     @Test
+    fun `the metres are the metres you walk, not the crow's flight`() {
+        // The other half of "150 m · 7 min on foot": 150 m was the straight line to
+        // the pole, while the 7 min covered the pavement that bends around the
+        // buildings to reach it. Standing at the start of a 600 m path whose ends are
+        // 290 m apart, the card owes the rider the 600.
+        val atStart = GeoFix(lat = 30.8536, lon = 34.7822, atMs = t0)
+        val detail = JourneyText.detail(
+            stepJourney(
+                walkTo("stop A", distanceMeters = 600),
+                JourneyCursor(),
+                fix = atStart,
+                nowMs = t0
+            ).progress,
+            EnStrings
+        )
+        assertEquals("600 m · 5 min on foot", detail)
+    }
+
+    @Test
     fun `the metres and the minutes describe the same walk`() {
         // The one the rider caught: "150 m · 7 min on foot". The metres were what was
         // left to walk; the minutes were the whole 385 m leg. Standing halfway along,
@@ -119,7 +144,7 @@ class JourneyTextTest {
             "half the walk left should read as half the time, got: $detail"
         )
         val meters = detail.substringBefore(" m").toInt()
-        assertTrue(meters in 100..190, "expected roughly half of 286 m, got $meters in: $detail")
+        assertTrue(meters in 130..160, "expected roughly half of 286 m, got $meters in: $detail")
     }
 
     /** Walk to a pole, then a bus off it — the shape almost every real trip starts with. */

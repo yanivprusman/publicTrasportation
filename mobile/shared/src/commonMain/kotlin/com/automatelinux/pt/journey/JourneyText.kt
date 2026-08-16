@@ -80,12 +80,25 @@ object JourneyText {
         p.leg?.startTime?.takeIf { it.isNotBlank() }?.let { " · ${formatTime(it)}" } ?: ""
 
     /**
-     * Metres still to walk — measured when a fix says so, and the leg's own length
-     * when nothing does.
+     * Metres still to WALK — pavement, not the crow's flight.
+     *
+     * `metersToTarget` is a straight line, and printing it next to a duration that
+     * covers the real path is what made "150 m · 7 min on foot": 150 m to the pole
+     * through the buildings, 385 m of pavement around them, and a rider left to
+     * conclude the app thinks they crawl. The leg carries the path length; live
+     * progress shortens it by the same fraction the minutes and the progress bar use,
+     * so all three move together and all three mean the same walk.
+     *
+     * A leg the server sent no distance for has only the straight line to offer, and
+     * says so at whatever length it is rather than printing nothing.
      */
     private fun walkDistance(p: JourneyProgress, strings: AppStrings): String? {
-        p.metersToTarget?.let { return formatDistance(it.toInt(), strings) }
-        return p.leg?.distanceMeters?.let { formatDistance(it, strings) }
+        val path = p.leg?.distanceMeters
+        if (path != null) {
+            val left = (path * (1.0 - p.legFraction())).toInt().coerceIn(0, path)
+            return formatDistance(left, strings)
+        }
+        return p.metersToTarget?.let { formatDistance(it.toInt(), strings) }
     }
 
     /**
