@@ -1,6 +1,10 @@
 package com.automatelinux.pt.journey
 
 import com.automatelinux.pt.data.model.TransitMode
+// Shared with the step list and the result cards on purpose: the walk card names the
+// same instant those rows do, and a second copy of the ISO-to-HH:mm rule is how two
+// parts of one panel start disagreeing about what time it is.
+import com.automatelinux.pt.ui.routing.formatTime
 import com.automatelinux.pt.util.AppStrings
 import com.automatelinux.pt.util.formatDistance
 
@@ -56,8 +60,29 @@ object JourneyText {
                 p.metersToTarget?.let { add(formatDistance(it.toInt(), strings)) }
                 p.leg?.distanceMeters?.takeIf { p.metersToTarget == null }
                     ?.let { add(formatDistance(it, strings)) }
+                walkTiming(p, strings)?.let { add(it) }
             }.joinToString(" · ").ifBlank { null }
         }
+    }
+
+    /**
+     * The half of a walk that metres cannot say: whether there is time.
+     *
+     * Every other phase of the panel carries a clock — a ride being waited for leaves
+     * in so many minutes, a ride underway has so many stops left — and the walk card
+     * carried none, so "378 m" was the whole answer to the one question a rider on
+     * foot is actually asking. While there is time left it counts that down, because
+     * that is the number you act on. Once the leg's scheduled end has passed it names
+     * the instant instead: a countdown run through zero reads as "no time at all" on a
+     * walk you are merely a minute behind on, and the rider who is late needs to know
+     * what they are late *for*.
+     */
+    private fun walkTiming(p: JourneyProgress, strings: AppStrings): String? {
+        val leg = p.leg ?: return null
+        val left = p.secondsToTarget
+        if (left != null && left > 0) return strings.journeyOnFoot(strings.formatDuration(left))
+        return leg.endTime.takeIf { it.isNotBlank() }
+            ?.let { strings.journeyScheduled(formatTime(it)) }
     }
 
     fun notificationTitle(progress: JourneyProgress?, strings: AppStrings): String =

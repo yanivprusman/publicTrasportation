@@ -4,10 +4,12 @@ import com.automatelinux.pt.data.model.Itinerary
 import com.automatelinux.pt.data.model.Place
 import com.automatelinux.pt.data.model.RouteLeg
 import com.automatelinux.pt.data.model.TransitMode
+import com.automatelinux.pt.ui.routing.formatTime
 import com.automatelinux.pt.util.EnStrings
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 import kotlinx.datetime.Instant
 
 /**
@@ -66,5 +68,52 @@ class JourneyTextTest {
     @Test
     fun `a walk that ends somewhere real still names it`() {
         assertEquals("Walk to stop A", headlineFor("stop A"))
+    }
+
+    private fun walkDetailAt(nowMinutes: Int): String? =
+        JourneyText.detail(
+            stepJourney(
+                walkTo("stop A"),
+                JourneyCursor(),
+                fix = null,
+                nowMs = t0 + nowMinutes * 60_000L
+            ).progress,
+            EnStrings
+        )
+
+    @Test
+    fun `a walk card says how long the walk has, not only how far`() {
+        // The bug this covers: the card read "286 m" and nothing else, so the one
+        // question a rider on foot has — do I have time — was answered nowhere on it.
+        val detail = walkDetailAt(0)
+        assertEquals("286 m · 5 min on foot", detail)
+    }
+
+    @Test
+    fun `the walk countdown falls with the clock`() {
+        assertEquals("286 m · 2 min on foot", walkDetailAt(3))
+    }
+
+    @Test
+    fun `a walk past its scheduled end names the time instead of counting below zero`() {
+        // Two minutes late and still short of the stop. Without a fix the schedule
+        // would have closed this leg 30s after its end, so being late on foot is a
+        // state only a live position can reach — and it is the state a countdown
+        // would render as a negative or a flat "0 min".
+        val late = t0 + 7 * 60_000L
+        val detail = JourneyText.detail(
+            stepJourney(
+                walkTo("stop A"),
+                JourneyCursor(),
+                fix = GeoFix(lat = 30.8536, lon = 34.7822, atMs = late),
+                nowMs = late
+            ).progress,
+            EnStrings
+        )
+        assertFalse(detail!!.contains("-"), "a late walk must not print a negative duration: $detail")
+        assertTrue(
+            detail.endsWith("Scheduled ${formatTime(iso(5))}"),
+            "a late walk should name the instant it was due, got: $detail"
+        )
     }
 }
