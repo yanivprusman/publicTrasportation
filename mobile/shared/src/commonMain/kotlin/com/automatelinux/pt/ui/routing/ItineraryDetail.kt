@@ -22,6 +22,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.DirectionsBike
 import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
 import androidx.compose.material.icons.filled.Accessible
+import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.DirectionsBoat
 import androidx.compose.material.icons.filled.DirectionsBus
 import androidx.compose.material.icons.filled.DirectionsCar
@@ -112,6 +113,10 @@ fun ItineraryDetail(
     onCancelReminder: (() -> Unit)? = null,
     onStartJourney: (() -> Unit)? = null,
     onShareTrip: (() -> Unit)? = null,
+    /** Per ride-leg: the same line's later departures, formatted — "and if I miss it?". */
+    nextDepartures: Map<Int, List<String>> = emptyMap(),
+    /** Hands the fare off to the payment app; every competitor keeps Pay one tap away. */
+    onPay: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val strings = LocalAppStrings.current
@@ -187,6 +192,19 @@ fun ItineraryDetail(
                         )
                     }
                 }
+                if (onPay != null) {
+                    Spacer(Modifier.width(8.dp))
+                    FilledTonalButton(
+                        onClick = onPay,
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.CreditCard,
+                            contentDescription = strings.payFare,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
             }
         }
 
@@ -211,7 +229,8 @@ fun ItineraryDetail(
                     isTracking = trackedLegIndex == index,
                     onSetReminder = onSetReminder,
                     hasReminder = activeReminderLegIndex == index,
-                    onCancelReminder = onCancelReminder
+                    onCancelReminder = onCancelReminder,
+                    alsoAt = nextDepartures[index] ?: emptyList()
                 )
                 val next = legs.getOrNull(index + 1)
                 if (next != null) {
@@ -363,7 +382,8 @@ private fun LegSegment(
     isTracking: Boolean = false,
     onSetReminder: ((RouteLeg) -> Unit)? = null,
     hasReminder: Boolean = false,
-    onCancelReminder: (() -> Unit)? = null
+    onCancelReminder: (() -> Unit)? = null,
+    alsoAt: List<String> = emptyList()
 ) {
     val strings = LocalAppStrings.current
     var showStops by remember { mutableStateOf(false) }
@@ -536,6 +556,17 @@ private fun LegSegment(
                             )
                         }
                     }
+                }
+
+                if (alsoAt.isNotEmpty()) {
+                    // What happens if this one is missed — the row every rider
+                    // checks before deciding how fast to walk.
+                    Text(
+                        text = strings.alsoAt(alsoAt.joinToString(" · ")),
+                        modifier = Modifier.padding(top = 4.dp),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
 
                 val stops = leg.intermediateStops

@@ -103,6 +103,8 @@ fun RoutePlannerPanel(
     onCancelReminder: (() -> Unit)? = null,
     onStartJourney: (() -> Unit)? = null,
     onShareTrip: (() -> Unit)? = null,
+    nextDepartures: Map<Int, List<String>> = emptyMap(),
+    onPay: (() -> Unit)? = null,
     onToggleDayOverview: (() -> Unit)? = null,
     onSelectDayDeparture: ((Int?) -> Unit)? = null,
     onPickDayDeparture: ((String) -> Unit)? = null,
@@ -376,7 +378,9 @@ fun RoutePlannerPanel(
                         activeReminderLegIndex = activeReminderLegIndex,
                         onCancelReminder = onCancelReminder,
                         onStartJourney = onStartJourney,
-                        onShareTrip = onShareTrip
+                        onShareTrip = onShareTrip,
+                        nextDepartures = nextDepartures,
+                        onPay = onPay
                     )
                 }
             )

@@ -137,6 +137,12 @@ data class RoutingState(
     val liveBoardings: Map<String, LiveBoarding> = emptyMap(),
     /** The zero-input answer: departures from the nearest stop, while no trip is planned. */
     val nearbyBoard: NearbyBoard? = null,
+    /**
+     * For the OPEN itinerary: the same line's departures after the one being
+     * ridden, keyed by leg index and already formatted ("14:05"). What happens
+     * if this bus is missed — the question every other app answers on the card.
+     */
+    val nextDepartures: Map<Int, List<String>> = emptyMap(),
     val selectedIndex: Int = 0,
     val loading: Boolean = false,
     val error: String? = null,

@@ -183,6 +183,12 @@ fun MainScreen(
     val journeyProgress by JourneySession.progress.collectAsState()
     val journeyLive by JourneySession.live.collectAsState()
     val journeyShareToken by JourneySession.shareToken.collectAsState()
+
+    // "And if I miss it?" — fetched for whichever itinerary is selected, so the
+    // detail's ride rows can name the same line's later departures.
+    LaunchedEffect(routingState.selectedItinerary) {
+        routingState.selectedItinerary?.let { routingViewModel.loadNextDepartures(it) }
+    }
     var boardMode by remember { mutableStateOf(false) }
     var shareTripLink by remember { mutableStateOf<String?>(null) }
     var mapStyle by remember { mutableStateOf(settingsStore.mapStyle) }
@@ -397,6 +403,19 @@ fun MainScreen(
     // phone), then location (what counts the stops). Each answer is acted on
     // explicitly — a refusal starts the journey on the timetable and the panel says
     // so, rather than silently pretending to follow the rider.
+    // The fare is paid in HopOn — hand off rather than pretending this app sells
+    // tickets. Without the app installed, the store page is the honest landing.
+    val payWithHopOn: () -> Unit = {
+        val launch = context.packageManager.getLaunchIntentForPackage(HOPON_PACKAGE)
+        if (launch != null) {
+            context.startActivity(launch)
+        } else {
+            context.startActivity(
+                Intent(Intent.ACTION_VIEW, android.net.Uri.parse("market://details?id=$HOPON_PACKAGE"))
+            )
+        }
+    }
+
     var pendingJourney by remember { mutableStateOf<Itinerary?>(null) }
 
     val beginJourney: (Itinerary, Boolean) -> Unit = { trip, live ->
@@ -799,6 +818,8 @@ fun MainScreen(
                                             )
                                         }
                                     },
+                                    nextDepartures = routingState.nextDepartures,
+                                    onPay = payWithHopOn,
                                     onToggleDayOverview = {
                                         keyboardController?.hide()
                                         routingViewModel.toggleDayOverview()
@@ -1314,7 +1335,8 @@ fun MainScreen(
                             }
                         }
                     },
-                    sharing = journeyShareToken != null
+                    sharing = journeyShareToken != null,
+                    onPay = payWithHopOn
                 )
             }
         }
@@ -1390,3 +1412,6 @@ fun MainScreen(
         }
     }
 }
+
+/** The payment app the Pay button hands the fare to. */
+private const val HOPON_PACKAGE = "co.hopon.client"

@@ -566,6 +566,50 @@ class RoutingViewModel(
             })
         })
 
+    private var nextDeparturesJob: Job? = null
+
+    /**
+     * For the itinerary the rider has open: the same line's departures AFTER the
+     * one this trip rides, per ride leg — the answer to "and if I miss it?".
+     *
+     * Resolved through the timetable stop nearest each boarding point, filtered
+     * to the leg's published line. A leg whose stop or line cannot be resolved
+     * simply contributes nothing — the row shows no "also at" rather than times
+     * that might belong to another pole.
+     */
+    fun loadNextDepartures(itinerary: Itinerary) {
+        nextDeparturesJob?.cancel()
+        _state.value = _state.value.copy(nextDepartures = emptyMap())
+        nextDeparturesJob = viewModelScope.launch {
+            val found = mutableMapOf<Int, List<String>>()
+            itinerary.legs.forEachIndexed { index, leg ->
+                val line = leg.routeShortName?.takeIf {
+                    it.isNotBlank() && leg.mode != com.automatelinux.pt.data.model.TransitMode.WALK
+                } ?: return@forEachIndexed
+                val ridden = runCatching { Instant.parse(leg.startTime) }.getOrNull()
+                    ?: return@forEachIndexed
+                try {
+                    val stop = api.nearbyStops(leg.from.lat, leg.from.lon, 150)
+                        .firstOrNull { it.id.isNotBlank() } ?: return@forEachIndexed
+                    val later = api.getStoptimes(stop.id, 40).stopTimes
+                        .filter { it.routeShortName.equals(line, ignoreCase = true) }
+                        .mapNotNull { entry ->
+                            (entry.place.departure ?: entry.place.scheduledDeparture)
+                                ?.let { iso -> runCatching { Instant.parse(iso) }.getOrNull() }
+                        }
+                        .filter { it > ridden }
+                        .sorted()
+                        .take(2)
+                        .map { com.automatelinux.pt.util.formatTime(it.toString()) }
+                    if (later.isNotEmpty()) found[index] = later
+                } catch (_: Exception) {
+                    // This leg's "also at" is a nicety; the trip stands without it.
+                }
+            }
+            _state.value = _state.value.copy(nextDepartures = found)
+        }
+    }
+
     fun trackBusOnLeg(
         legIndex: Int,
         lat: Double,

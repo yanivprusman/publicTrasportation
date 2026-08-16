@@ -222,6 +222,23 @@ class JourneyTextTest {
         assertEquals("286 m · 5 min on foot", walkDetailAt(0))
     }
 
+    @Test
+    fun `the boarding line carries the pole's printed code`() {
+        // "Board at stop A" is not enough on a street with a pole in each
+        // direction; the printed code is how the rider confirms which one.
+        val withCode = rideOnly().let { trip ->
+            trip.copy(legs = trip.legs.map { it.copy(fromStopCode = "13868") })
+        }
+        val detail = JourneyText.detail(
+            stepJourney(withCode, JourneyCursor(), fix = null, nowMs = t0).progress,
+            EnStrings
+        )
+        assertTrue(
+            detail!!.endsWith("stop 13868"),
+            "expected the stop code at the end, got: $detail"
+        )
+    }
+
     /** Standing at the pole, then rolling: one ride, looked at twice. */
     private fun rideOnly() = Itinerary(
         duration = 1500,

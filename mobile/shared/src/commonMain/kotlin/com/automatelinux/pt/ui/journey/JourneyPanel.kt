@@ -23,6 +23,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.DirectionsBus
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
@@ -92,7 +93,9 @@ fun JourneyPanel(
     onFocusVehicle: ((Double, Double) -> Unit)? = null,
     /** Hand out a link that shows this journey live. Green while somebody can watch. */
     onShare: (() -> Unit)? = null,
-    sharing: Boolean = false
+    sharing: Boolean = false,
+    /** Hands the fare off to the payment app, without leaving the live journey. */
+    onPay: (() -> Unit)? = null
 ) {
     val strings = LocalAppStrings.current
     var expanded by remember { mutableStateOf(false) }
@@ -368,6 +371,29 @@ fun JourneyPanel(
                                 },
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                    if (onPay != null) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable(onClick = onPay)
+                                .padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.CreditCard,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(Modifier.width(10.dp))
+                            Text(
+                                text = strings.payFare,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.primary
                             )
                         }
                     }
