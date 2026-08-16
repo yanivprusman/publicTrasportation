@@ -106,6 +106,12 @@ class JourneyService : Service() {
         scope.launch {
             JourneySession.alerts.collectLatest { alert -> fire(alert) }
         }
+        scope.launch {
+            // The session owns the journey's lifetime — it now ends a finished trip
+            // by itself, a beat after arrival. The service just follows: with no
+            // itinerary there is nothing to keep alive from the shade.
+            JourneySession.itinerary.collectLatest { if (it == null) stopJourney() }
+        }
 
         // A journey the user swiped away, or one the system restarted with no session
         // behind it, has nothing to navigate — do not sit in the notification shade
@@ -246,10 +252,9 @@ class JourneyService : Service() {
             }
         }
 
-        // Arrival is the end of the journey, not a step of it. This is control flow, so
-        // it runs whether or not the rider is being told about it — silencing the alerts
-        // must not leave a finished trip sitting in the shade forever.
-        if (alert == JourneyAlert.ARRIVED) stopJourney()
+        // Arrival needs no control flow here: the session lingers on "You've
+        // arrived!" for a moment and then clears itself, and the itinerary watcher
+        // above takes this service down with it — alerts silenced or not.
     }
 
     private fun vibrate() {

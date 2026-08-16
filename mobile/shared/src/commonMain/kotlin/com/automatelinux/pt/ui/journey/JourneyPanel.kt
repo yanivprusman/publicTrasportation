@@ -137,30 +137,44 @@ fun JourneyPanel(
                 Spacer(Modifier.width(8.dp))
                 TrackingChip(positionKnown = progress?.positionKnown == true)
                 Spacer(Modifier.width(8.dp))
-                Text(
-                    text = strings.journeyEtaAt(formatTime(itinerary.endTime)),
-                    modifier = Modifier.weight(1f),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
                 if (confirmEnd) {
-                    Text(
-                        text = strings.journeyEndConfirm,
+                    // Armed. The confirming tap gets the whole rest of the row at
+                    // full thumb height — a label-sized target was missed three
+                    // times in a row from a moving bus (#226), and a tap that falls
+                    // short of it must not land on the expand chevron underneath.
+                    Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
+                            .weight(1f)
+                            .heightIn(min = 48.dp)
+                            .clip(RoundedCornerShape(10.dp))
                             .background(URGENT.copy(alpha = 0.18f))
-                            .clickable(onClick = onEnd)
-                            .padding(horizontal = 8.dp, vertical = 4.dp),
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = URGENT,
-                        maxLines = 1
-                    )
+                            .clickable(onClick = onEnd),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = strings.journeyEndConfirm,
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = URGENT,
+                            maxLines = 1
+                        )
+                    }
                 } else {
+                    Text(
+                        text = strings.journeyEtaAt(formatTime(itinerary.endTime)),
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                     IconButton(
-                        onClick = { confirmEnd = true },
+                        // A finished trip has nothing left to protect — once the
+                        // rider has arrived, the ✕ just closes the panel.
+                        onClick = {
+                            if (progress?.phase == JourneyPhase.ARRIVED) onEnd()
+                            else confirmEnd = true
+                        },
                         modifier = Modifier.size(32.dp)
                     ) {
                         Icon(

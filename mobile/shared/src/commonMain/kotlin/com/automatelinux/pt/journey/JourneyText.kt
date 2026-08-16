@@ -118,7 +118,10 @@ object JourneyText {
      */
     private fun walkTiming(p: JourneyProgress, strings: AppStrings): String? {
         val total = p.leg?.duration?.takeIf { it > 0 } ?: return null
-        val left = (total * (1.0 - p.legFraction())).toLong().coerceIn(60L, total)
+        // The minute floor may EXCEED a short leg's total: a 35-second hop across the
+        // interchange still reads "1 min", never "0 min" — and coerceIn(60, 35) is an
+        // empty range, which threw on exactly those legs.
+        val left = (total * (1.0 - p.legFraction())).toLong().coerceIn(60L, maxOf(total, 60L))
         return strings.journeyOnFoot(strings.formatDuration(left))
     }
 

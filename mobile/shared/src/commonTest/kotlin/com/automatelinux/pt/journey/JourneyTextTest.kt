@@ -147,6 +147,35 @@ class JourneyTextTest {
         assertTrue(meters in 130..160, "expected roughly half of 286 m, got $meters in: $detail")
     }
 
+    @Test
+    fun `a walk shorter than a minute rounds up to one, and does not throw`() {
+        // The 35-second hop across an interchange: the minute floor exceeded the
+        // leg's own total, and coerceIn(60, 35) is an empty range — the panel
+        // crashed on every tick of exactly the legs too short to matter.
+        val shortHop = Itinerary(
+            duration = 35,
+            startTime = iso(0),
+            endTime = iso(1),
+            transfers = 0,
+            legs = listOf(
+                RouteLeg(
+                    mode = TransitMode.WALK,
+                    from = Place("platform 1", 30.8536, 34.7822),
+                    to = Place("platform 3", 30.8538, 34.7822),
+                    startTime = iso(0),
+                    endTime = Instant.fromEpochMilliseconds(t0 + 35_000L).toString(),
+                    duration = 35,
+                    distanceMeters = 40
+                )
+            )
+        )
+        val detail = JourneyText.detail(
+            stepJourney(shortHop, JourneyCursor(), fix = null, nowMs = t0).progress,
+            EnStrings
+        )
+        assertEquals("40 m · 1 min on foot", detail)
+    }
+
     /** Walk to a pole, then a bus off it — the shape almost every real trip starts with. */
     private fun walkThenRide() = Itinerary(
         duration = 1800,

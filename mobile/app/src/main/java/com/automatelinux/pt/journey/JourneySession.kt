@@ -35,6 +35,7 @@ object JourneySession {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var tick: Job? = null
+    private var linger: Job? = null
 
     private val _itinerary = MutableStateFlow<Itinerary?>(null)
     val itinerary: StateFlow<Itinerary?> = _itinerary.asStateFlow()
@@ -67,6 +68,8 @@ object JourneySession {
         liveTracking = live
         cursor = JourneyCursor()
         lastFix = null
+        linger?.cancel()
+        linger = null
         _itinerary.value = itinerary
         _progress.value = null
 
@@ -99,6 +102,8 @@ object JourneySession {
     internal fun clear() {
         tick?.cancel()
         tick = null
+        linger?.cancel()
+        linger = null
         _itinerary.value = null
         _progress.value = null
         lastFix = null
@@ -123,7 +128,19 @@ object JourneySession {
         cursor = update.cursor
         _progress.value = update.progress
         update.alerts.forEach { _alerts.emit(it) }
+
+        // Arrival ends the journey by itself: linger long enough for "You've
+        // arrived!" to be read, then put everything away. Before this lived here, a
+        // journey run off the timetable alone (no service) ticked forever, and its
+        // panel sat on the map until ended by hand.
+        if (update.progress.phase == JourneyPhase.ARRIVED && linger == null) {
+            linger = scope.launch {
+                delay(ARRIVED_LINGER_MS)
+                clear()
+            }
+        }
     }
 
     private const val TICK_MS = 1_000L
+    private const val ARRIVED_LINGER_MS = 20_000L
 }
