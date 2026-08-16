@@ -110,6 +110,7 @@ Next.js App Router route handlers:
 - `line-shape/route.ts` — `GET /api/line-shape?line=60` — returns GTFS route polylines by direction, cached (24h TTL), auto-downloads GTFS
 - `directions/route.ts` — `GET /api/directions?start=lon,lat&end=lon,lat` — proxies driving directions from OpenRouteService
 - `stops/route.ts` — `GET /api/stops?q=query` — search stops by name or code from GTFS stops.txt
+- `journey-live/route.ts` — `POST /api/journey-live` (create/update a live journey share; tokens minted server-side only) / `GET ?token=` — in-memory store, 3h TTL. The Android app posts position+progress every 10s while sharing; `/journey/<token>` (app/journey/[token]/) is the public viewer page. Dev-mode gotcha: pages only hydrate from hosts in the unit's `ALLOWED_DEV_ORIGINS` (127.0.0.1 included since 2026-08-16 — automateLinux `services/system/pt-dev.service`).
 
 ### MOTIS Transit Router (`motis/`)
 
