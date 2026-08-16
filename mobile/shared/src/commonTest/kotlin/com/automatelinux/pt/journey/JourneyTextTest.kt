@@ -4,7 +4,6 @@ import com.automatelinux.pt.data.model.Itinerary
 import com.automatelinux.pt.data.model.Place
 import com.automatelinux.pt.data.model.RouteLeg
 import com.automatelinux.pt.data.model.TransitMode
-import com.automatelinux.pt.ui.routing.formatTime
 import com.automatelinux.pt.util.EnStrings
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -90,16 +89,24 @@ class JourneyTextTest {
     }
 
     @Test
-    fun `the walk countdown falls with the clock`() {
-        assertEquals("286 m · 2 min on foot", walkDetailAt(3))
+    fun `the walk time is the walk, not the wait for the bus at the end of it`() {
+        // The regression: a walk to a stop is timetabled to end when the bus leaves,
+        // so the gap to the leg's end is the WAIT, not the walk. Reading that out
+        // loud told a rider who opened the journey an hour early that a five-minute
+        // stroll would take an hour and five.
+        val anHourEarly = t0 - 60 * 60_000L
+        val detail = JourneyText.detail(
+            stepJourney(walkTo("stop A"), JourneyCursor(), fix = null, nowMs = anHourEarly).progress,
+            EnStrings
+        )
+        assertEquals("286 m · 5 min on foot", detail)
     }
 
     @Test
-    fun `a walk past its scheduled end names the time instead of counting below zero`() {
-        // Two minutes late and still short of the stop. Without a fix the schedule
-        // would have closed this leg 30s after its end, so being late on foot is a
-        // state only a live position can reach — and it is the state a countdown
-        // would render as a negative or a flat "0 min".
+    fun `the walk time never counts below zero`() {
+        // Two minutes past the schedule and still short of the stop — a state only a
+        // live position can reach, since without one the schedule closes the leg 30s
+        // after its end. A remaining-time reading would go negative here.
         val late = t0 + 7 * 60_000L
         val detail = JourneyText.detail(
             stepJourney(
@@ -112,8 +119,8 @@ class JourneyTextTest {
         )
         assertFalse(detail!!.contains("-"), "a late walk must not print a negative duration: $detail")
         assertTrue(
-            detail.endsWith("Scheduled ${formatTime(iso(5))}"),
-            "a late walk should name the instant it was due, got: $detail"
+            detail.endsWith("5 min on foot"),
+            "a late walk still takes as long as it takes, got: $detail"
         )
     }
 }

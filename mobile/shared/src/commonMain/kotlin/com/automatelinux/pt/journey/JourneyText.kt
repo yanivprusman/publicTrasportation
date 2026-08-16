@@ -1,10 +1,6 @@
 package com.automatelinux.pt.journey
 
 import com.automatelinux.pt.data.model.TransitMode
-// Shared with the step list and the result cards on purpose: the walk card names the
-// same instant those rows do, and a second copy of the ISO-to-HH:mm rule is how two
-// parts of one panel start disagreeing about what time it is.
-import com.automatelinux.pt.ui.routing.formatTime
 import com.automatelinux.pt.util.AppStrings
 import com.automatelinux.pt.util.formatDistance
 
@@ -66,24 +62,22 @@ object JourneyText {
     }
 
     /**
-     * The half of a walk that metres cannot say: whether there is time.
+     * The half of a walk that metres cannot say: how long it takes.
      *
      * Every other phase of the panel carries a clock — a ride being waited for leaves
      * in so many minutes, a ride underway has so many stops left — and the walk card
      * carried none, so "378 m" was the whole answer to the one question a rider on
-     * foot is actually asking. While there is time left it counts that down, because
-     * that is the number you act on. Once the leg's scheduled end has passed it names
-     * the instant instead: a countdown run through zero reads as "no time at all" on a
-     * walk you are merely a minute behind on, and the rider who is late needs to know
-     * what they are late *for*.
+     * foot is actually asking.
+     *
+     * It is the leg's OWN length, deliberately, and not the countdown to its end. A
+     * walk to a stop is timetabled to end when the bus leaves, so a rider who starts
+     * the journey early is not late for anything — but `secondsToTarget` there is the
+     * wait, not the walk, and reading it out loud produced "151 m · 1h 10min on foot"
+     * for a two-minute stroll. The wait is the WAITING phase's line to say, once the
+     * rider is standing at the pole.
      */
-    private fun walkTiming(p: JourneyProgress, strings: AppStrings): String? {
-        val leg = p.leg ?: return null
-        val left = p.secondsToTarget
-        if (left != null && left > 0) return strings.journeyOnFoot(strings.formatDuration(left))
-        return leg.endTime.takeIf { it.isNotBlank() }
-            ?.let { strings.journeyScheduled(formatTime(it)) }
-    }
+    private fun walkTiming(p: JourneyProgress, strings: AppStrings): String? =
+        p.leg?.duration?.takeIf { it > 0 }?.let { strings.journeyOnFoot(strings.formatDuration(it)) }
 
     fun notificationTitle(progress: JourneyProgress?, strings: AppStrings): String =
         headline(progress, strings)
