@@ -630,7 +630,10 @@ class RoutingViewModel(
                 access = access,
                 destination = destination,
                 stopLat = lat,
-                stopLon = lon
+                stopLon = lon,
+                // The monitored stop is resolved from the itinerary's boarding
+                // point, so it is genuinely the user's.
+                stationIsUsers = true
             )
         )
         trackingJob = viewModelScope.launch {
@@ -749,7 +752,13 @@ class RoutingViewModel(
         lineName: String,
         destination: String = "",
         routeId: String? = null,
-        vehicleRef: String? = null
+        vehicleRef: String? = null,
+        /**
+         * True when [stationCode] is a stop the user chose (their arrivals
+         * board); false when it is merely the stop that reported a tapped map
+         * marker — which is the bus's stop, not the user's.
+         */
+        stationIsUsers: Boolean = false
     ) {
         stopTracking()
         val seq = ++trackSeq
@@ -760,7 +769,8 @@ class RoutingViewModel(
                 legIndex = -1,
                 lineName = lineName,
                 destination = destination,
-                stationCode = stationCode
+                stationCode = stationCode,
+                stationIsUsers = stationIsUsers
             )
         )
         trackingJob = viewModelScope.launch {

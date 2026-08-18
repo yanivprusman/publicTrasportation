@@ -108,6 +108,14 @@ data class TrackedBus(
     /** The SIRI-monitored stop the polling asks about; kept so a pause can resume. */
     val stationCode: String? = null,
     /**
+     * Whether [stationCode] is a stop the USER chose (their arrivals board, their
+     * itinerary's boarding stop) — as opposed to whichever stop happened to report
+     * a tapped map marker, which can be any stop up the road. Only a chosen stop
+     * may be labeled "your stop"; labeling the reporting stop that way told a
+     * rider at Midreshet Ben-Gurion that מחנה אריאל שרון was their stop.
+     */
+    val stationIsUsers: Boolean = false,
+    /**
      * That stop's name, for the card. The countdown is the arrival at THIS stop — and
      * when tracking starts from a tapped map marker, this is whichever stop reported
      * the vehicle, generally not the one the user is standing at. Leaving it unnamed

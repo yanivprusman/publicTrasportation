@@ -883,7 +883,10 @@ fun MainScreen(
                                             lineName = line,
                                             destination = dest,
                                             routeId = routeId,
-                                            vehicleRef = vehicleRef
+                                            vehicleRef = vehicleRef,
+                                            // The user picked this station's board;
+                                            // it is genuinely their stop.
+                                            stationIsUsers = true
                                         )
                                     },
                                     getDestinationName = { arrivalsViewModel.getDestinationName(it) },
@@ -1051,7 +1054,27 @@ fun MainScreen(
                             onStopTap = { lat, lon ->
                                 mapState.animateTo(LatLng(lat, lon), 15.0)
                             },
-                            boardingStopCode = tracked.stationCode,
+                            // "your stop" must be true to say. A stop the user chose
+                            // qualifies; the stop that reported a tapped map marker is
+                            // the BUS's stop, so there the label goes to the line's
+                            // stop nearest the user — or to none when they are not
+                            // near the line at all.
+                            boardingStopCode = if (tracked.stationIsUsers) {
+                                tracked.stationCode
+                            } else {
+                                userLocation?.let { user ->
+                                    lineStops.stops
+                                        .map { stop ->
+                                            stop to metersBetween(
+                                                user.latitude, user.longitude,
+                                                stop.lat, stop.lon
+                                            )
+                                        }
+                                        .minByOrNull { it.second }
+                                        ?.takeIf { it.second <= 400.0 }
+                                        ?.first?.stopCode
+                                }
+                            },
                             modifier = bottomSlot
                         )
                     } else {
