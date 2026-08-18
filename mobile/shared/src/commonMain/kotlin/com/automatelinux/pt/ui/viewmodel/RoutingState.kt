@@ -93,6 +93,13 @@ data class TrackedBus(
     val destination: String = "",
     /** The SIRI-monitored stop the polling asks about; kept so a pause can resume. */
     val stationCode: String? = null,
+    /**
+     * That stop's name, for the card. The countdown is the arrival at THIS stop — and
+     * when tracking starts from a tapped map marker, this is whichever stop reported
+     * the vehicle, generally not the one the user is standing at. Leaving it unnamed
+     * let "in 3min" read as "at my station" for a bus that had already passed it.
+     */
+    val stationName: String? = null,
     /** The vehicle the user picked out of a stop's arrivals, followed on first poll. */
     val preferredVehicleRef: String? = null,
     /** Where you board — the other half of the "where is it relative to me" question. */

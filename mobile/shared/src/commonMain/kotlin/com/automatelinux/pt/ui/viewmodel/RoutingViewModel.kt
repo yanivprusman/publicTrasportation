@@ -648,13 +648,16 @@ class RoutingViewModel(
                 }
             }
             val stops = try { api.nearbyStops(lat, lon, 300) } catch (_: Exception) { emptyList() }
-            val stationCode = stops.firstOrNull()?.stopCode
+            val monitoredStop = stops.firstOrNull()
+            val stationCode = monitoredStop?.stopCode
             if (stationCode == null) {
                 updateTracking(seq) { it.copy(status = TrackingStatus.NO_MONITORED_STOP) }
                 return@launch
             }
             // Kept so polling can be resumed after a pause without re-resolving it.
-            updateTracking(seq) { it.copy(stationCode = stationCode) }
+            updateTracking(seq) {
+                it.copy(stationCode = stationCode, stationName = monitoredStop.stopName)
+            }
             pollTrackedBus(seq, stationCode, lineName)
         }
     }
@@ -779,7 +782,9 @@ class RoutingViewModel(
                     null
                 }
                 if (stop != null) {
-                    updateTracking(seq) { it.copy(stopLat = stop.lat, stopLon = stop.lon) }
+                    updateTracking(seq) {
+                        it.copy(stopLat = stop.lat, stopLon = stop.lon, stationName = stop.stopName)
+                    }
                 }
             }
             // Follow the vehicle the user actually tapped, not whichever is nearest.

@@ -178,6 +178,7 @@ interface AppStrings {
     val trackingNotStartedYet: (String) -> String
     val trackingError: String
     val trackingDistanceAway: (String) -> String
+    val trackingEtaAtStop: (String) -> String
     val trackingFrameBus: String
     val liveBusesNearby: String
     val liveBusesSearching: String
@@ -499,6 +500,7 @@ val EnStrings: AppStrings = object : AppStrings {
     override val trackingNotStartedYet: (String) -> String = { t -> "Your bus hasn't started its run yet — scheduled for $t" }
     override val trackingError: String = "Live position unavailable"
     override val trackingDistanceAway: (String) -> String = { distance -> "$distance away" }
+    override val trackingEtaAtStop: (String) -> String = { stop -> "at $stop" }
     override val trackingFrameBus: String = "Show the bus"
     override val liveBusesNearby: String = "Live buses nearby"
     override val liveBusesSearching: String = "Looking for live buses…"
@@ -819,6 +821,7 @@ val HeStrings: AppStrings = object : AppStrings {
     override val trackingNotStartedYet: (String) -> String = { t -> "האוטובוס שלך עוד לא יצא לדרך — מתוכנן ל-$t" }
     override val trackingError: String = "המיקום החי אינו זמין"
     override val trackingDistanceAway: (String) -> String = { distance -> "במרחק $distance" }
+    override val trackingEtaAtStop: (String) -> String = { stop -> "בתחנת $stop" }
     override val trackingFrameBus: String = "הצג את האוטובוס"
     override val liveBusesNearby: String = "אוטובוסים חיים בסביבה"
     override val liveBusesSearching: String = "מחפש אוטובוסים חיים…"

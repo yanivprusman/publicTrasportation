@@ -157,6 +157,20 @@ fun TrackedBusCard(
                 )
             }
 
+            // The stop the countdown counts down TO. A bus tapped on the map is tracked
+            // at whichever stop reported it — often several stops up the road — so a
+            // bare "in 3min" read as "at my station" even when the bus had already
+            // passed it. The number was always true; this line is what it was true of.
+            tracked.stationName?.takeIf { it.isNotBlank() }?.let { stationName ->
+                Text(
+                    text = strings.trackingEtaAtStop(stationName),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
             tracked.marker?.recordedAt?.let { recordedAt ->
                 val age = ageSeconds(recordedAt, now)
                 if (age != null) {
