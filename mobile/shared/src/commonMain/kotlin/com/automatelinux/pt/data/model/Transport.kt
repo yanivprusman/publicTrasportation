@@ -110,3 +110,24 @@ data class VehicleMarker(
 
 /** Vehicles the server already extracted; see [SiriResponse.vehicles]. */
 fun SiriResponse.extractVehicleMarkers(): List<VehicleMarker> = vehicles ?: emptyList()
+
+/**
+ * One route's ordered stop list, from /api/route-stops. The route_id already
+ * encodes the direction in this feed, so [stops] is the exact sequence a bus
+ * on that route drives — first stop to last.
+ */
+@Serializable
+data class RouteStopsResponse(
+    val routeId: String = "",
+    val lineNumber: String = "",
+    val headsign: String = "",
+    val stops: List<RouteStopItem> = emptyList()
+)
+
+@Serializable
+data class RouteStopItem(
+    val stopCode: String = "",
+    val name: String = "",
+    val lat: Double = 0.0,
+    val lon: Double = 0.0
+)

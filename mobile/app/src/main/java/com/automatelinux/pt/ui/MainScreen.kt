@@ -93,6 +93,7 @@ import com.automatelinux.pt.reminder.ReminderScheduler
 import com.automatelinux.pt.ui.arrivals.ArrivalsPanel
 import com.automatelinux.pt.ui.components.PreSuggestion
 import com.automatelinux.pt.ui.lines.LineShapeData
+import com.automatelinux.pt.ui.lines.LineStopsSheet
 import com.automatelinux.pt.ui.lines.LinesBrowserPanel
 import com.automatelinux.pt.map.LatLng
 import com.automatelinux.pt.ui.map.MapStyles
@@ -1036,20 +1037,39 @@ fun MainScreen(
                 // aside (below), the map is the whole view, and the card sits at the
                 // bottom where a thumb already is.
                 routingState.trackedBus?.let { tracked ->
-                    TrackedBusCard(
-                        tracked = tracked,
-                        onSelectVehicle = { routingViewModel.selectTrackedVehicle(it) },
-                        onClose = { routingViewModel.stopTracking() },
-                        distanceFromUserMeters = userLocation?.let { user ->
-                            tracked.marker?.let { bus ->
-                                metersBetween(user.latitude, user.longitude, bus.lat, bus.lon).toInt()
-                            }
-                        },
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .navigationBarsPadding()
-                            .padding(start = 12.dp, end = 12.dp, bottom = 24.dp)
-                    )
+                    val bottomSlot = Modifier
+                        .align(Alignment.BottomCenter)
+                        .navigationBarsPadding()
+                        .padding(start = 12.dp, end = 12.dp, bottom = 24.dp)
+                    val lineStops = routingState.lineStops
+                    if (lineStops != null) {
+                        // The stop list takes the card's slot rather than stacking on
+                        // it — two cards deep leaves no map, and the map is the point.
+                        LineStopsSheet(
+                            state = lineStops,
+                            onClose = { routingViewModel.hideLineStops() },
+                            onStopTap = { lat, lon ->
+                                mapState.animateTo(LatLng(lat, lon), 15.0)
+                            },
+                            boardingStopCode = tracked.stationCode,
+                            modifier = bottomSlot
+                        )
+                    } else {
+                        TrackedBusCard(
+                            tracked = tracked,
+                            onSelectVehicle = { routingViewModel.selectTrackedVehicle(it) },
+                            onClose = { routingViewModel.stopTracking() },
+                            onShowLineStops = tracked.marker?.lineRef?.let { routeId ->
+                                { routingViewModel.showLineStops(routeId) }
+                            },
+                            distanceFromUserMeters = userLocation?.let { user ->
+                                tracked.marker?.let { bus ->
+                                    metersBetween(user.latitude, user.longitude, bus.lat, bus.lon).toInt()
+                                }
+                            },
+                            modifier = bottomSlot
+                        )
+                    }
                 }
 
                 // An empty map is not an answer. Live buses can legitimately report

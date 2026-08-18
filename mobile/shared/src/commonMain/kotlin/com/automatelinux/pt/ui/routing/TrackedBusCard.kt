@@ -1,5 +1,6 @@
 package com.automatelinux.pt.ui.routing
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -67,6 +68,12 @@ fun TrackedBusCard(
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
     /**
+     * Opens the line's stop list. On the header row rather than a dedicated
+     * button: "what is this line, where does it stop" is a question about the
+     * line's name, so its name is where the finger goes.
+     */
+    onShowLineStops: (() -> Unit)? = null,
+    /**
      * Straight-line metres from the user to this bus, or null when there is no location
      * fix. Passed in rather than derived here because only the platform layer knows where
      * the user is — and null must stay null: the card shows no distance at all rather
@@ -93,7 +100,14 @@ fun TrackedBusCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
     ) {
         Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = if (onShowLineStops != null) {
+                    Modifier.clickable(onClick = onShowLineStops)
+                } else {
+                    Modifier
+                }
+            ) {
                 LineBadge(tracked.lineName)
                 Spacer(Modifier.width(10.dp))
 

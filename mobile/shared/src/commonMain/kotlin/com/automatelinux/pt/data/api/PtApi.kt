@@ -11,6 +11,7 @@ import com.automatelinux.pt.data.model.AppStateResponse
 import com.automatelinux.pt.data.model.DayOverviewResult
 import com.automatelinux.pt.data.model.GeocodeSuggestion
 import com.automatelinux.pt.data.model.RouteResult
+import com.automatelinux.pt.data.model.RouteStopsResponse
 import com.automatelinux.pt.data.model.SiriResponse
 import com.automatelinux.pt.data.model.StopResult
 import com.automatelinux.pt.data.model.StoptimesResponse
@@ -92,6 +93,10 @@ class PtApi(private val client: HttpClient) {
 
     suspend fun getLineShape(line: String): Map<String, List<List<Double>>> =
         fetch("/api/line-shape", params = mapOf("line" to line))
+
+    /** The ordered stop list of one route; routeId is SIRI's LineRef. */
+    suspend fun getRouteStops(routeId: String): RouteStopsResponse =
+        fetch("/api/route-stops", params = mapOf("routeId" to routeId))
 
     /**
      * Geometry of one specific trip. Preferred over [getLineShape] wherever the

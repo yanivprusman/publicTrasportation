@@ -76,6 +76,20 @@ data class NearbyBoard(
     val error: String? = null
 )
 
+/**
+ * A line's stops, in driving order, for the sheet the tracked card opens.
+ * The route_id encodes the direction in this feed, so this is the sequence the
+ * tracked bus itself will drive — not a both-directions muddle.
+ */
+data class LineStopsUi(
+    val routeId: String,
+    val lineNumber: String = "",
+    val headsign: String = "",
+    val stops: List<com.automatelinux.pt.data.model.RouteStopItem> = emptyList(),
+    val loading: Boolean = true,
+    val error: Boolean = false
+)
+
 data class TrackedBus(
     val legIndex: Int,
     val lineName: String,
@@ -158,6 +172,11 @@ data class RoutingState(
     val enabledModes: Set<TransitFilter> = TransitFilter.entries.toSet(),
     val maxWalkMinutes: Int? = null,
     val trackedBus: TrackedBus? = null,
+    /**
+     * The stop list of one line, opened from the tracked-bus card's line badge.
+     * Non-null while the sheet is on screen; the tracked bus stays live under it.
+     */
+    val lineStops: LineStopsUi? = null,
     val showDayOverview: Boolean = false,
     val dayOverview: DayOverviewResult? = null,
     val dayLoading: Boolean = false,

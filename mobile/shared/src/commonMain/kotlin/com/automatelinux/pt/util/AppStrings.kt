@@ -180,6 +180,10 @@ interface AppStrings {
     val trackingDistanceAway: (String) -> String
     val trackingEtaAtStop: (String) -> String
     val trackingFrameBus: String
+    val lineStopsLoading: String
+    val lineStopsError: String
+    val lineStopsCount: (Int) -> String
+    val lineStopsYourStop: String
     val liveBusesNearby: String
     val liveBusesSearching: String
     val liveBusesNone: (String) -> String
@@ -502,6 +506,10 @@ val EnStrings: AppStrings = object : AppStrings {
     override val trackingDistanceAway: (String) -> String = { distance -> "$distance away" }
     override val trackingEtaAtStop: (String) -> String = { stop -> "at $stop" }
     override val trackingFrameBus: String = "Show the bus"
+    override val lineStopsLoading: String = "Loading stops…"
+    override val lineStopsError: String = "Couldn't load the stop list"
+    override val lineStopsCount: (Int) -> String = { n -> "$n stops" }
+    override val lineStopsYourStop: String = "your stop"
     override val liveBusesNearby: String = "Live buses nearby"
     override val liveBusesSearching: String = "Looking for live buses…"
     override val liveBusesNone: (String) -> String = { radius -> "No live buses within $radius of the map centre" }
@@ -823,6 +831,10 @@ val HeStrings: AppStrings = object : AppStrings {
     override val trackingDistanceAway: (String) -> String = { distance -> "במרחק $distance" }
     override val trackingEtaAtStop: (String) -> String = { stop -> "בתחנת $stop" }
     override val trackingFrameBus: String = "הצג את האוטובוס"
+    override val lineStopsLoading: String = "טוען תחנות…"
+    override val lineStopsError: String = "רשימת התחנות לא נטענה"
+    override val lineStopsCount: (Int) -> String = { n -> "$n תחנות" }
+    override val lineStopsYourStop: String = "התחנה שלך"
     override val liveBusesNearby: String = "אוטובוסים חיים בסביבה"
     override val liveBusesSearching: String = "מחפש אוטובוסים חיים…"
     override val liveBusesNone: (String) -> String = { radius -> "אין אוטובוסים חיים ברדיוס $radius ממרכז המפה" }

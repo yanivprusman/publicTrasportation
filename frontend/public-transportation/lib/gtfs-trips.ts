@@ -41,6 +41,12 @@ let tripCache: Map<string, TripFacts> | null = null;
 // only produces misses.
 let routeShapeCache: Map<string, string> | null = null;
 
+// route_id -> a representative trip, for callers that need per-trip data (the
+// stop sequence in stop_times.txt) but only hold a route. Same "first trip
+// wins" choice as the shape above, and for the same reason: without a specific
+// trip there is nothing to choose between the day's variants.
+let routeTripCache: Map<string, { tripId: string; headsign: string }> | null = null;
+
 function parseFlag(raw: string | undefined): WheelchairAccess {
   switch (raw?.trim()) {
     case '1': return 'accessible';
@@ -59,6 +65,7 @@ function loadTrips(): Map<string, TripFacts> {
     console.error(`gtfs-trips: ${TRIPS_FILE} missing — every trip will report unknown`);
     tripCache = new Map();
     routeShapeCache = new Map();
+    routeTripCache = new Map();
     return tripCache;
   }
 
@@ -69,13 +76,16 @@ function loadTrips(): Map<string, TripFacts> {
   const accessIdx = header.indexOf('wheelchair_accessible');
   const shapeIdx = header.indexOf('shape_id');
   const routeIdx = header.indexOf('route_id');
+  const headsignIdx = header.indexOf('trip_headsign');
 
   const map = new Map<string, TripFacts>();
   const routeShapes = new Map<string, string>();
+  const routeTrips = new Map<string, { tripId: string; headsign: string }>();
   if (tripIdx === -1 || accessIdx === -1 || shapeIdx === -1) {
     console.error('gtfs-trips: trips.txt is missing trip_id / wheelchair_accessible / shape_id');
     tripCache = map;
     routeShapeCache = routeShapes;
+    routeTripCache = routeTrips;
     return map;
   }
 
@@ -89,16 +99,23 @@ function loadTrips(): Map<string, TripFacts> {
       access: parseFlag(cols[accessIdx]),
       shapeId,
     });
-    if (shapeId && routeIdx !== -1) {
+    if (routeIdx !== -1) {
       const routeId = cols[routeIdx]?.trim();
       // First shape wins: a route runs several variants over the day, and
       // without a specific trip there is nothing to choose between them.
-      if (routeId && !routeShapes.has(routeId)) routeShapes.set(routeId, shapeId);
+      if (routeId && shapeId && !routeShapes.has(routeId)) routeShapes.set(routeId, shapeId);
+      if (routeId && !routeTrips.has(routeId)) {
+        routeTrips.set(routeId, {
+          tripId,
+          headsign: headsignIdx !== -1 ? (cols[headsignIdx]?.trim() ?? '') : '',
+        });
+      }
     }
   }
 
   tripCache = map;
   routeShapeCache = routeShapes;
+  routeTripCache = routeTrips;
   return map;
 }
 
@@ -133,6 +150,19 @@ export function tripWheelchairAccess(motisTripId: string | undefined): Wheelchai
 export function routeShapeId(routeId: string): string | null {
   loadTrips();
   return routeShapeCache?.get(routeId) || null;
+}
+
+/**
+ * A representative trip of the route, for reading per-trip GTFS data (the stop
+ * sequence) when the caller holds only a route — a live SIRI arrival, whose
+ * LineRef is the route_id. The headsign comes along because it is the route's
+ * public destination and trips.txt is the only place it is written.
+ */
+export function routeRepresentativeTrip(
+  routeId: string
+): { tripId: string; headsign: string } | null {
+  loadTrips();
+  return routeTripCache?.get(routeId) || null;
 }
 
 export function tripShapeId(motisTripId: string | undefined): string | null {

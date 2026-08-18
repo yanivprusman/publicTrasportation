@@ -795,6 +795,43 @@ class RoutingViewModel(
         }
     }
 
+    /**
+     * Open the tracked line's stop list. Fetched fresh each open rather than
+     * cached: it is one small request, and the server holds the cache.
+     */
+    fun showLineStops(routeId: String) {
+        _state.value = _state.value.copy(lineStops = LineStopsUi(routeId = routeId))
+        viewModelScope.launch {
+            val result = try {
+                api.getRouteStops(routeId)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                null
+            }
+            // The user may have closed the sheet, or opened another line, while
+            // the fetch was in flight — only the sheet still asking gets the answer.
+            val current = _state.value.lineStops
+            if (current?.routeId != routeId) return@launch
+            _state.value = _state.value.copy(
+                lineStops = if (result == null || result.stops.isEmpty()) {
+                    current.copy(loading = false, error = true)
+                } else {
+                    current.copy(
+                        lineNumber = result.lineNumber,
+                        headsign = result.headsign,
+                        stops = result.stops,
+                        loading = false
+                    )
+                }
+            )
+        }
+    }
+
+    fun hideLineStops() {
+        _state.value = _state.value.copy(lineStops = null)
+    }
+
     /** Follow a different one of the vehicles the feed reports for this line. */
     fun selectTrackedVehicle(index: Int) {
         updateTracking(trackSeq) { tracked ->
@@ -813,7 +850,8 @@ class RoutingViewModel(
         trackSeq++
         trackingJob?.cancel()
         trackingJob = null
-        _state.value = _state.value.copy(trackedBus = null)
+        // The stop list opens from the tracked card; it must not outlive it.
+        _state.value = _state.value.copy(trackedBus = null, lineStops = null)
     }
 
     fun debugFill(autoSearch: Boolean = true, origin: GeocodeSuggestion, destination: GeocodeSuggestion) {
