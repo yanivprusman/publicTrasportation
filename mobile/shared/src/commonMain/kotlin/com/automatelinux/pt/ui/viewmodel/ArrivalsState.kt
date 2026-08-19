@@ -8,6 +8,9 @@ import com.automatelinux.pt.data.model.VehicleMarker
 import com.automatelinux.pt.data.model.lineLabel
 import kotlinx.datetime.Instant
 
+/** How the last live-buses poll failed, if it did. See [ArrivalsState.nearbyVehiclesFailure]. */
+enum class NearbyVehiclesFailure { NONE, NO_SERVER, NO_LIVE_DATA }
+
 data class ArrivalsState(
     val stationCode: String = "26472",
     val stationName: String = "",
@@ -32,12 +35,16 @@ data class ArrivalsState(
      */
     val nearbyVehiclesLoaded: Boolean = false,
     /**
-     * The last poll never got an answer: the stop list (or every SIRI query in it)
-     * failed. This is a third fact next to "quiet area" and "search smaller than the
-     * screen" — an error shown as an empty map once read as "no live buses within
-     * 50.0 km of the map centre" while the phone simply had no route to a server.
+     * The last poll never got an answer — a third fact next to "quiet area" and
+     * "search smaller than the screen". An error shown as an empty map once read as
+     * "no live buses within 50.0 km of the map centre" while the phone simply had no
+     * route to a server. The two failure shapes are kept apart because they point at
+     * different repairs: NO_SERVER means this phone reached nothing (check your
+     * connection), NO_LIVE_DATA means the server answered but no SIRI query did (the
+     * night MOT's feed died, "no connection to the server" would have been the next
+     * confident falsehood).
      */
-    val nearbyVehiclesUnavailable: Boolean = false,
+    val nearbyVehiclesFailure: NearbyVehiclesFailure = NearbyVehiclesFailure.NONE,
     /**
      * How far out the search actually walked before it stopped, so the UI can name it.
      * Without this an empty map is unexplainable: the user cannot tell a quiet area from

@@ -109,6 +109,7 @@ import com.automatelinux.pt.ui.routing.RoutePlannerPanel
 import com.automatelinux.pt.ui.routing.TrackedBusCard
 import android.widget.Toast
 import com.automatelinux.pt.ui.viewmodel.ArrivalsViewModel
+import com.automatelinux.pt.ui.viewmodel.NearbyVehiclesFailure
 import com.automatelinux.pt.ui.viewmodel.RoutingViewModel
 import com.automatelinux.pt.widget.DeparturesWidgetProvider
 import com.automatelinux.pt.util.LocalAppStrings
@@ -1111,7 +1112,14 @@ fun MainScreen(
                         // A poll that never got an answer is a third fact, before the
                         // empty/quiet distinction below even applies: "no buses within
                         // 50 km" was once shown for a phone with no route to any server.
-                        arrivalsState.nearbyVehiclesUnavailable -> strings.liveBusesUnavailable
+                        // Two failure shapes, two sentences — reaching no server and
+                        // reaching a server whose live feed is silent point at
+                        // different repairs, and naming the wrong one is the same
+                        // confident-falsehood bug this state exists to prevent.
+                        arrivalsState.nearbyVehiclesFailure == NearbyVehiclesFailure.NO_SERVER ->
+                            strings.liveBusesUnavailable
+                        arrivalsState.nearbyVehiclesFailure == NearbyVehiclesFailure.NO_LIVE_DATA ->
+                            strings.liveBusesFeedDown
                         // Found buses, all of them off the screen — which looks exactly
                         // like finding none. The whole point of walking outward is that
                         // in a village the answer legitimately lies outside the view.

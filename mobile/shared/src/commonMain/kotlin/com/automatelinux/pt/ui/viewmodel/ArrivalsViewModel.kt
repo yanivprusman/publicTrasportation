@@ -262,7 +262,7 @@ class ArrivalsViewModel(
         val viewportRadius = viewportRadiusMeters.toInt()
         _state.value = _state.value.copy(
             nearbyVehiclesLoaded = false,
-            nearbyVehiclesUnavailable = false,
+            nearbyVehiclesFailure = NearbyVehiclesFailure.NONE,
             nearbyVehiclesReachedMeters = 0,
             nearbyVehiclesNearestMeters = 0
         )
@@ -283,7 +283,7 @@ class ArrivalsViewModel(
                     _state.value = _state.value.copy(
                         nearbyVehicles = emptyList(),
                         nearbyVehiclesLoaded = true,
-                        nearbyVehiclesUnavailable = true
+                        nearbyVehiclesFailure = NearbyVehiclesFailure.NO_SERVER
                     )
                     delay(NEARBY_VEHICLE_INTERVAL_MS)
                     continue
@@ -334,10 +334,16 @@ class ArrivalsViewModel(
                 _state.value = _state.value.copy(
                     nearbyVehicles = vehicles,
                     nearbyVehiclesLoaded = true,
-                    // Stops existed but not one SIRI query completed: the network died
-                    // between the two questions — the same unasked-question fact as the
-                    // catch above, not a report of empty roads.
-                    nearbyVehiclesUnavailable = stops.isNotEmpty() && answered == 0,
+                    // Stops existed but not one SIRI query completed. NOT the same fact
+                    // as the catch above: the server itself answered, so either the
+                    // network died between the two questions or the live feed behind
+                    // the server is down (MOT's SIRI died for a whole evening once).
+                    // The message must not name a culprit it cannot see.
+                    nearbyVehiclesFailure = if (stops.isNotEmpty() && answered == 0) {
+                        NearbyVehiclesFailure.NO_LIVE_DATA
+                    } else {
+                        NearbyVehiclesFailure.NONE
+                    },
                     nearbyVehiclesReachedMeters = reachedMeters,
                     nearbyVehiclesNearestMeters = vehicles.minOfOrNull {
                         distanceMeters(it.lat, it.lon, lat, lon).toInt()
@@ -354,7 +360,7 @@ class ArrivalsViewModel(
         _state.value = _state.value.copy(
             nearbyVehicles = emptyList(),
             nearbyVehiclesLoaded = false,
-            nearbyVehiclesUnavailable = false,
+            nearbyVehiclesFailure = NearbyVehiclesFailure.NONE,
             nearbyVehiclesReachedMeters = 0,
             nearbyVehiclesNearestMeters = 0
         )

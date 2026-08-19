@@ -188,6 +188,7 @@ interface AppStrings {
     val liveBusesNearby: String
     val liveBusesSearching: String
     val liveBusesUnavailable: String
+    val liveBusesFeedDown: String
     val liveBusesNone: (String) -> String
     val liveBusesZoomIn: (String) -> String
     val liveBusesOffscreen: (String) -> String
@@ -516,6 +517,10 @@ val EnStrings: AppStrings = object : AppStrings {
     override val liveBusesNearby: String = "Live buses nearby"
     override val liveBusesSearching: String = "Looking for live buses…"
     override val liveBusesUnavailable: String = "Can't check live buses — no connection to the server"
+    // Deliberately does not name a culprit: the server answered, so this is either the
+    // live feed behind it being down or the connection dying mid-poll — indistinguishable
+    // from the phone.
+    override val liveBusesFeedDown: String = "Live bus data isn't coming through right now"
     override val liveBusesNone: (String) -> String = { radius -> "No live buses within $radius of the map centre" }
     override val liveBusesZoomIn: (String) -> String = { radius -> "Only searching $radius around the centre — zoom in to cover what you see" }
     override val liveBusesOffscreen: (String) -> String = { distance -> "Nearest live bus is $distance away — zoom out to see it" }
@@ -843,6 +848,7 @@ val HeStrings: AppStrings = object : AppStrings {
     override val liveBusesNearby: String = "אוטובוסים חיים בסביבה"
     override val liveBusesSearching: String = "מחפש אוטובוסים חיים…"
     override val liveBusesUnavailable: String = "אי אפשר לבדוק אוטובוסים חיים — אין חיבור לשרת"
+    override val liveBusesFeedDown: String = "נתוני אוטובוסים חיים לא מתקבלים כרגע"
     override val liveBusesNone: (String) -> String = { radius -> "אין אוטובוסים חיים ברדיוס $radius ממרכז המפה" }
     override val liveBusesZoomIn: (String) -> String = { radius -> "החיפוש מכסה $radius סביב מרכז המפה בלבד — התקרב כדי לכסות את מה שרואים" }
     override val liveBusesOffscreen: (String) -> String = { distance -> "האוטובוס החי הקרוב ביותר במרחק $distance — התרחק כדי לראות אותו" }
