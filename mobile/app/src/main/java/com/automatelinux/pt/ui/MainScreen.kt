@@ -1075,6 +1075,8 @@ fun MainScreen(
                                         ?.first?.stopCode
                                 }
                             },
+                            etaStopCode = tracked.stationCode,
+                            etaArrivalIso = tracked.marker?.expectedArrival,
                             modifier = bottomSlot
                         )
                     } else {

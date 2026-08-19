@@ -26,15 +26,28 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.automatelinux.pt.ui.arrivals.LineBadge
 import com.automatelinux.pt.ui.viewmodel.LineStopsUi
+import com.automatelinux.pt.util.AppStrings
 import com.automatelinux.pt.util.LocalAppStrings
+import kotlinx.coroutines.delay
+import kotlinx.datetime.Clock
+import kotlinx.datetime.Instant
+
+/** The tracked-bus marker orange; marks the countdown's stop in the list too. */
+private val BusOrange = Color(0xFFFB8C00)
 
 /**
  * The line, spelled out: its number, its destination, and every stop it makes,
@@ -48,11 +61,31 @@ fun LineStopsSheet(
     onClose: () -> Unit,
     /** Centers the map on a tapped stop — the list answers "where is that". */
     onStopTap: (Double, Double) -> Unit,
-    /** The tracked card's monitored stop, marked in the list as "your stop". */
+    /** The stop nearest the user (or their chosen one), marked "your stop". */
     boardingStopCode: String? = null,
+    /**
+     * The SIRI-monitored stop — where the card's countdown points. Marked in
+     * bus-orange with the live countdown itself, so the list answers both
+     * "where am I" and "where is the bus about to be" without conflating them.
+     */
+    etaStopCode: String? = null,
+    /** ISO ExpectedArrivalTime at [etaStopCode], from the tracked marker. */
+    etaArrivalIso: String? = null,
     modifier: Modifier = Modifier
 ) {
     val strings = LocalAppStrings.current
+
+    // The countdown caption re-reads the clock like the card does — a frozen
+    // "in 3min" under a live list would quietly go stale.
+    var now by remember { mutableStateOf(Clock.System.now()) }
+    if (etaArrivalIso != null) {
+        LaunchedEffect(Unit) {
+            while (true) {
+                delay(1000)
+                now = Clock.System.now()
+            }
+        }
+    }
 
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -129,6 +162,8 @@ fun LineStopsSheet(
                         itemsIndexed(state.stops) { index, stop ->
                             val isBoarding =
                                 boardingStopCode != null && stop.stopCode == boardingStopCode
+                            val isEtaStop =
+                                etaStopCode != null && stop.stopCode == etaStopCode
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier
@@ -141,10 +176,13 @@ fun LineStopsSheet(
                                     modifier = Modifier
                                         .size(24.dp)
                                         .background(
-                                            color = if (isBoarding) {
-                                                MaterialTheme.colorScheme.primary
-                                            } else {
-                                                MaterialTheme.colorScheme.surfaceVariant
+                                            // "Your stop" outranks the bus's when they
+                                            // coincide — you already know where the bus
+                                            // is from the caption.
+                                            color = when {
+                                                isBoarding -> MaterialTheme.colorScheme.primary
+                                                isEtaStop -> BusOrange
+                                                else -> MaterialTheme.colorScheme.surfaceVariant
                                             },
                                             shape = CircleShape
                                         )
@@ -153,8 +191,8 @@ fun LineStopsSheet(
                                         text = "${index + 1}",
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = if (isBoarding) {
-                                            MaterialTheme.colorScheme.onPrimary
+                                        color = if (isBoarding || isEtaStop) {
+                                            Color.White
                                         } else {
                                             MaterialTheme.colorScheme.onSurfaceVariant
                                         }
@@ -165,7 +203,11 @@ fun LineStopsSheet(
                                     Text(
                                         text = stop.name,
                                         style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = if (isBoarding) FontWeight.Bold else FontWeight.Normal,
+                                        fontWeight = if (isBoarding || isEtaStop) {
+                                            FontWeight.Bold
+                                        } else {
+                                            FontWeight.Normal
+                                        },
                                         color = MaterialTheme.colorScheme.onSurface,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
@@ -177,6 +219,16 @@ fun LineStopsSheet(
                                             color = MaterialTheme.colorScheme.primary
                                         )
                                     }
+                                    if (isEtaStop) {
+                                        val eta = etaCaption(etaArrivalIso, now, strings)
+                                        if (eta != null) {
+                                            Text(
+                                                text = eta,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = BusOrange
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -185,4 +237,20 @@ fun LineStopsSheet(
             }
         }
     }
+}
+
+/**
+ * The live countdown at the monitored stop, phrased exactly like the card's
+ * headline so the two never disagree. Null when the arrival time is absent or
+ * unparseable — an unmarked stop beats a wrong number.
+ */
+private fun etaCaption(iso: String?, now: Instant, strings: AppStrings): String? {
+    if (iso == null) return null
+    val arrival = try {
+        Instant.parse(iso)
+    } catch (_: Exception) {
+        return null
+    }
+    val minutes = (arrival - now).inWholeMinutes
+    return if (minutes <= 0) strings.arrivalNow else strings.arrivalInMin(minutes)
 }
