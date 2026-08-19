@@ -178,10 +178,17 @@ class PtApi(private val client: HttpClient) {
             return sendTo(next)
         }
 
-        if (response.status.value in GATEWAY_FAILURE_CODES) {
+        // A server is unhealthy in two ways: a gateway-class status, or a body that is
+        // not JSON at all. The second is how the dev-auth sign-in wall presents — the
+        // client follows its redirect and receives a perfectly successful HTML page —
+        // and without this check that server passes every health test the failover
+        // runs on, so the app stays wedged on it until the process dies.
+        val unhealthy = response.status.value in GATEWAY_FAILURE_CODES ||
+            response.contentType()?.match(ContentType.Application.Json) != true
+        if (unhealthy) {
             val next = ServerConfig.findReachableServer(exclude = attempted)
             if (next != null) return sendTo(next)
-            // Nothing healthier exists — return the gateway error rather than pretending,
+            // Nothing healthier exists — return the response rather than pretending,
             // so the caller surfaces a real failure instead of an empty result.
         }
         return response

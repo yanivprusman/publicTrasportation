@@ -1108,6 +1108,10 @@ fun MainScreen(
                     val nearestMeters = arrivalsState.nearbyVehiclesNearestMeters
                     val liveBusesHint = when {
                         !arrivalsState.nearbyVehiclesLoaded -> strings.liveBusesSearching
+                        // A poll that never got an answer is a third fact, before the
+                        // empty/quiet distinction below even applies: "no buses within
+                        // 50 km" was once shown for a phone with no route to any server.
+                        arrivalsState.nearbyVehiclesUnavailable -> strings.liveBusesUnavailable
                         // Found buses, all of them off the screen — which looks exactly
                         // like finding none. The whole point of walking outward is that
                         // in a village the answer legitimately lies outside the view.

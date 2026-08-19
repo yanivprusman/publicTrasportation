@@ -262,6 +262,7 @@ class ArrivalsViewModel(
         val viewportRadius = viewportRadiusMeters.toInt()
         _state.value = _state.value.copy(
             nearbyVehiclesLoaded = false,
+            nearbyVehiclesUnavailable = false,
             nearbyVehiclesReachedMeters = 0,
             nearbyVehiclesNearestMeters = 0
         )
@@ -270,12 +271,29 @@ class ArrivalsViewModel(
                 // One request, nearest-first, capped server-side. Everything below walks
                 // this list rather than re-querying at a wider radius, so widening the
                 // search costs SIRI requests only where it actually needs them.
-                val stops = fetchNearbyStops(lat, lon, NEARBY_VEHICLE_SEARCH_CEILING_M)
+                //
+                // NOT fetchNearbyStops: its swallow-to-empty is fine for opportunistic
+                // callers, but here an unasked question shown as an empty answer is how
+                // "no route to any server" once read as "no live buses within 50.0 km".
+                val stops = try {
+                    api.nearbyStops(lat, lon, NEARBY_VEHICLE_SEARCH_CEILING_M)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (_: Exception) {
+                    _state.value = _state.value.copy(
+                        nearbyVehicles = emptyList(),
+                        nearbyVehiclesLoaded = true,
+                        nearbyVehiclesUnavailable = true
+                    )
+                    delay(NEARBY_VEHICLE_INTERVAL_MS)
+                    continue
+                }
                 val seen = mutableMapOf<String, VehicleMarker>()
                 // With no stops at all, the ceiling IS the answer: the search can honestly
                 // say it looked 50 km out and found nowhere to ask.
                 var reachedMeters = if (stops.isEmpty()) NEARBY_VEHICLE_SEARCH_CEILING_M else 0
                 var queried = 0
+                var answered = 0
 
                 for (round in stops.chunked(NEARBY_VEHICLE_ROUND_STOPS)) {
                     if (queried >= NEARBY_VEHICLE_MAX_STOPS) break
@@ -295,6 +313,7 @@ class ArrivalsViewModel(
                             }
                         }.awaitAll()
                     }
+                    answered += responses.count { it != null }
                     for (response in responses.filterNotNull()) {
                         // Harvested from the same response the markers come from — which is
                         // the only place a bus tapped here can have its destination named,
@@ -315,6 +334,10 @@ class ArrivalsViewModel(
                 _state.value = _state.value.copy(
                     nearbyVehicles = vehicles,
                     nearbyVehiclesLoaded = true,
+                    // Stops existed but not one SIRI query completed: the network died
+                    // between the two questions — the same unasked-question fact as the
+                    // catch above, not a report of empty roads.
+                    nearbyVehiclesUnavailable = stops.isNotEmpty() && answered == 0,
                     nearbyVehiclesReachedMeters = reachedMeters,
                     nearbyVehiclesNearestMeters = vehicles.minOfOrNull {
                         distanceMeters(it.lat, it.lon, lat, lon).toInt()
@@ -331,6 +354,7 @@ class ArrivalsViewModel(
         _state.value = _state.value.copy(
             nearbyVehicles = emptyList(),
             nearbyVehiclesLoaded = false,
+            nearbyVehiclesUnavailable = false,
             nearbyVehiclesReachedMeters = 0,
             nearbyVehiclesNearestMeters = 0
         )

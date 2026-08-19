@@ -4,6 +4,7 @@ import com.automatelinux.pt.data.api.ptHttpEngine
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.request.get
+import io.ktor.client.statement.bodyAsText
 import io.ktor.http.isSuccess
 import kotlin.concurrent.Volatile
 
@@ -33,6 +34,11 @@ object ServerConfig {
     private val healthClient: HttpClient by lazy {
         HttpClient(ptHttpEngine()) {
             expectSuccess = false
+            // A redirect is an answer from some OTHER server. The dev-auth wall on the
+            // public host 302s /api/health to a sign-in page that itself answers 200, so
+            // a probe that follows redirects certifies the wall as a healthy PT backend
+            // — and every later request gets HTML instead of JSON (the 50-km-void bug).
+            followRedirects = false
             install(HttpTimeout) {
                 connectTimeoutMillis = REACHABILITY_TIMEOUT_MS
                 requestTimeoutMillis = REACHABILITY_TIMEOUT_MS
@@ -99,7 +105,10 @@ object ServerConfig {
 
     suspend fun isReachable(url: String): Boolean =
         try {
-            healthClient.get("$url/api/health").status.isSuccess()
+            val response = healthClient.get("$url/api/health")
+            // 2xx alone is not proof of the right server — a captive portal or an auth
+            // wall can 200 anything. Only the PT backend says {"status":"ok"} here.
+            response.status.isSuccess() && response.bodyAsText().contains("\"status\":\"ok\"")
         } catch (_: Exception) {
             // Any failure to complete the probe — DNS, connect, timeout, TLS — means
             // "not reachable". The specific cause is not actionable here; the caller

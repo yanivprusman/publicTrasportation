@@ -32,6 +32,13 @@ data class ArrivalsState(
      */
     val nearbyVehiclesLoaded: Boolean = false,
     /**
+     * The last poll never got an answer: the stop list (or every SIRI query in it)
+     * failed. This is a third fact next to "quiet area" and "search smaller than the
+     * screen" — an error shown as an empty map once read as "no live buses within
+     * 50.0 km of the map centre" while the phone simply had no route to a server.
+     */
+    val nearbyVehiclesUnavailable: Boolean = false,
+    /**
      * How far out the search actually walked before it stopped, so the UI can name it.
      * Without this an empty map is unexplainable: the user cannot tell a quiet area from
      * a search far smaller than the screen they are looking at.

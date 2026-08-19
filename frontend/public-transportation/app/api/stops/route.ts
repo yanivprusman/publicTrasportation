@@ -30,7 +30,12 @@ function loadStops(): Stop[] {
   if (stopsCache) return stopsCache;
 
   const stopsFile = path.join(process.cwd(), '../../gtfs/israel-public-transportation/stops.txt');
-  if (!fs.existsSync(stopsFile)) return [];
+  // Missing data must be an error, not an empty country. This file is gitignored, so a
+  // checkout that never fetched GTFS has no stops — served as [], that read as "no live
+  // buses within 50.0 km of the map centre" on a road with an hourly line.
+  if (!fs.existsSync(stopsFile)) {
+    throw new Error(`GTFS stops file missing: ${stopsFile}`);
+  }
 
   const content = fs.readFileSync(stopsFile, 'utf8');
   const lines = content.split('\n');
@@ -42,7 +47,9 @@ function loadStops(): Stop[] {
   const lonIdx = header.indexOf('stop_lon');
   const typeIdx = header.indexOf('location_type');
 
-  if (codeIdx === -1 || nameIdx === -1 || latIdx === -1 || lonIdx === -1) return [];
+  if (codeIdx === -1 || nameIdx === -1 || latIdx === -1 || lonIdx === -1) {
+    throw new Error(`GTFS stops file has an unexpected header: ${stopsFile}`);
+  }
 
   const stops: Stop[] = [];
   for (let i = 1; i < lines.length; i++) {
@@ -73,7 +80,12 @@ export async function GET(request: NextRequest) {
   const lonParam = request.nextUrl.searchParams.get('lon');
   const radiusParam = request.nextUrl.searchParams.get('radius');
 
-  const stops = loadStops();
+  let stops: Stop[];
+  try {
+    stops = loadStops();
+  } catch (e) {
+    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+  }
 
   const bboxParam = request.nextUrl.searchParams.get('bbox');
   if (bboxParam) {
