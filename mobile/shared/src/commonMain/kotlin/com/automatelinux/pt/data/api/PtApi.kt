@@ -23,9 +23,13 @@ import io.ktor.client.request.parameter
 import io.ktor.client.request.request
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
+import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.HttpMethod
 import io.ktor.http.contentType
+import io.ktor.http.isSuccess
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 
 /**
@@ -132,7 +136,28 @@ class PtApi(private val client: HttpClient) {
         method: HttpMethod = HttpMethod.Get,
         body: String? = null,
         params: Map<String, Any?> = emptyMap()
-    ): T = execute(path, method, body, params).body()
+    ): T {
+        val response = execute(path, method, body, params)
+        // A failed request carries `{error, message}`, not the payload type.
+        // Deserializing that as T can only produce a kotlinx-serialization crash
+        // ("Field 'itineraries' is required...") — and e.message is what the screens
+        // show, so the user would read the crash. Speak the server's words instead.
+        if (!response.status.isSuccess()) {
+            throw PtApiException(
+                response.status.value,
+                apiErrorMessage(response.status.value, response.bodyAsText())
+            )
+        }
+        // A successful status with a non-JSON body is a page, not data — the dev-auth
+        // sign-in wall presents exactly this way when no healthier peer exists.
+        if (response.contentType()?.match(ContentType.Application.Json) != true) {
+            throw PtApiException(
+                response.status.value,
+                "The server answered with a web page instead of data (HTTP ${response.status.value})"
+            )
+        }
+        return response.body()
+    }
 
     /**
      * Sends the request to the active server, falling across to another peer when that
@@ -198,4 +223,26 @@ class PtApi(private val client: HttpClient) {
         /** Statuses that indicate the *server* is unhealthy, not that the request was wrong. */
         val GATEWAY_FAILURE_CODES = setOf(502, 503, 504)
     }
+}
+
+/** A non-2xx answer from the backend, carrying the server's own explanation as [message]. */
+class PtApiException(val statusCode: Int, message: String) : Exception(message)
+
+/** The one error shape every backend /api handler answers with. */
+@Serializable
+private data class ApiErrorBody(val error: String? = null, val message: String? = null)
+
+/**
+ * The user-facing text for a failed response: the server's `{error, message}` when the
+ * body is that shape, the bare status when it is anything else (a proxy's HTML error
+ * page, an empty body, JSON of some other shape).
+ */
+internal fun apiErrorMessage(statusCode: Int, bodyText: String): String {
+    val parsed = try {
+        PtJson.decodeFromString<ApiErrorBody>(bodyText)
+    } catch (_: Exception) {
+        null
+    }
+    val detail = listOfNotNull(parsed?.error, parsed?.message).joinToString(": ")
+    return detail.ifEmpty { "Server error (HTTP $statusCode)" }
 }
