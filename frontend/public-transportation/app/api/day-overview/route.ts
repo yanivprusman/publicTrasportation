@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ensureMotis } from '@/lib/motis-manager';
-import { MODE_GROUPS, normalizeMode, type NormalizedMode } from '@/lib/motis-modes';
+import { MODE_GROUPS, normalizeMode, PEDESTRIAN_SPEED, type NormalizedMode } from '@/lib/motis-modes';
 
 const MOTIS_PORT = process.env.MOTIS_PORT || '3504';
 const MOTIS_BASE = `http://localhost:${MOTIS_PORT}`;
@@ -179,6 +179,7 @@ export async function GET(request: NextRequest) {
         time: new Date(startMs).toISOString(),
         arriveBy: 'false',
         numItineraries: '10',
+        pedestrianSpeed: PEDESTRIAN_SPEED,
       });
       if (cursor) params.set('pageCursor', cursor);
       if (transitModes) params.set('transitModes', transitModes.join(','));

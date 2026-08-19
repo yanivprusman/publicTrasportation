@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ensureMotis } from '@/lib/motis-manager';
-import { MODE_GROUPS, normalizeMode } from '@/lib/motis-modes';
+import { MODE_GROUPS, normalizeMode, PEDESTRIAN_SPEED } from '@/lib/motis-modes';
 import { tripWheelchairAccess } from '@/lib/gtfs-trips';
 import { stopIdentity } from '@/lib/gtfs-stops';
 import { fareBetween } from '@/lib/gtfs-fares';
@@ -272,6 +272,7 @@ async function planHalf(
     time,
     arriveBy: String(arriveBy),
     numItineraries: '5',
+    pedestrianSpeed: PEDESTRIAN_SPEED,
   });
   if (transitModes) params.set('transitModes', transitModes.join(','));
   if (maxWalkSeconds !== null) {
@@ -520,6 +521,7 @@ export async function GET(request: NextRequest) {
       time: routeTime,
       arriveBy: String(isArriveBy),
       numItineraries: '5',
+      pedestrianSpeed: PEDESTRIAN_SPEED,
     });
     if (pageCursor) params.set('pageCursor', pageCursor);
     if (transitModes) params.set('transitModes', transitModes.join(','));

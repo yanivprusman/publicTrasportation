@@ -42,3 +42,11 @@ export function normalizeMode(mode: string | undefined): NormalizedMode {
   // it as BUS (solid colored line) rather than the grey dashed walk style.
   return MODE_MAP[mode] ?? 'BUS';
 }
+
+// Meters per second assumed for first/last-mile walking, sent as ?pedestrianSpeed=
+// on every plan call. MOTIS's built-in default (~1.1 m/s) priced a 375 m walk at
+// 7 minutes where Moovit says 4 and Maps says 3 — and since the same figure feeds
+// the routing itself, the planner also skipped buses the rider could in fact
+// catch. 1.5 is exactly Moovit's assumption (their 360 m = 4 min). Requires
+// MOTIS >= 2.9 — a 2.8 server silently ignores the parameter.
+export const PEDESTRIAN_SPEED = '1.5';
