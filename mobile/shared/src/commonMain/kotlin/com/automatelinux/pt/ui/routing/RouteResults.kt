@@ -49,7 +49,7 @@ fun RouteResults(
     error: String?,
     searched: Boolean = false,
     onRetry: (() -> Unit)? = null,
-    sortMode: RouteSortMode = RouteSortMode.FASTEST,
+    sortMode: RouteSortMode = RouteSortMode.ARRIVES_FIRST,
     onSortChange: ((RouteSortMode) -> Unit)? = null,
     onEarlier: (() -> Unit)? = null,
     onLater: (() -> Unit)? = null,
@@ -139,6 +139,15 @@ fun RouteResults(
                             modifier = Modifier.padding(horizontal = 8.dp),
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
+                            FilterChip(
+                                selected = sortMode == RouteSortMode.ARRIVES_FIRST,
+                                onClick = { onSortChange(RouteSortMode.ARRIVES_FIRST) },
+                                label = { Text(strings.arrivesFirst, style = MaterialTheme.typography.labelSmall) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                                )
+                            )
                             FilterChip(
                                 selected = sortMode == RouteSortMode.FASTEST,
                                 onClick = { onSortChange(RouteSortMode.FASTEST) },

@@ -143,6 +143,7 @@ interface AppStrings {
     val mapStyleSatellite: String
     val earlier: String
     val later: String
+    val arrivesFirst: String
     val fastest: String
     val fewerTransfers: String
     val lessWalking: String
@@ -469,6 +470,7 @@ val EnStrings: AppStrings = object : AppStrings {
     override val mapStyleSatellite: String = "Satellite"
     override val earlier: String = "Earlier"
     override val later: String = "Later"
+    override val arrivesFirst: String = "Arrives first"
     override val fastest: String = "Fastest"
     override val fewerTransfers: String = "Fewer transfers"
     override val lessWalking: String = "Less walking"
@@ -794,6 +796,7 @@ val HeStrings: AppStrings = object : AppStrings {
     override val mapStyleSatellite: String = "לוויין"
     override val earlier: String = "מוקדם יותר"
     override val later: String = "מאוחר יותר"
+    override val arrivesFirst: String = "מגיע ראשון"
     override val fastest: String = "המהיר ביותר"
     override val fewerTransfers: String = "פחות החלפות"
     override val lessWalking: String = "פחות הליכה"

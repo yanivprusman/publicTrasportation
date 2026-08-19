@@ -175,7 +175,7 @@ data class RoutingState(
     val selectedIndex: Int = 0,
     val loading: Boolean = false,
     val error: String? = null,
-    val sortMode: RouteSortMode = RouteSortMode.FASTEST,
+    val sortMode: RouteSortMode = RouteSortMode.ARRIVES_FIRST,
     val travelMode: TravelMode = TravelMode.TRANSIT,
     val enabledModes: Set<TransitFilter> = TransitFilter.entries.toSet(),
     val maxWalkMinutes: Int? = null,
@@ -195,6 +195,12 @@ data class RoutingState(
         get() {
             val itineraries = results?.itineraries ?: return emptyList()
             return when (sortMode) {
+                // Parsed rather than compared as strings: ISO offsets can differ
+                // across a DST boundary, where lexicographic order lies. An
+                // unparsable time sinks to the bottom instead of sorting randomly.
+                RouteSortMode.ARRIVES_FIRST -> itineraries.sortedBy {
+                    try { Instant.parse(it.endTime) } catch (_: Exception) { Instant.DISTANT_FUTURE }
+                }
                 RouteSortMode.FASTEST -> itineraries.sortedBy { it.duration }
                 RouteSortMode.FEWER_TRANSFERS -> itineraries.sortedBy { it.transfers }
                 RouteSortMode.LESS_WALKING -> itineraries.sortedBy { it.walkDuration }

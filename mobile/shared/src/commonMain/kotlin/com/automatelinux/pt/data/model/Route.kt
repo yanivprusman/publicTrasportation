@@ -141,6 +141,13 @@ data class Itinerary(
 }
 
 enum class RouteSortMode {
+    /**
+     * Earliest arrival at the destination first — the default. "Fastest" orders by
+     * trip length, which put a 12:22→13:32 ride above a 10:52→12:03 one: the list
+     * answered "which trip is shortest" when the question is "which gets me there
+     * first".
+     */
+    ARRIVES_FIRST,
     FASTEST, FEWER_TRANSFERS, LESS_WALKING
 }
 

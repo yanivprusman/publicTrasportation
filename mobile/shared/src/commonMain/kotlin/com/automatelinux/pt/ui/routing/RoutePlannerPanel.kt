@@ -83,7 +83,7 @@ fun RoutePlannerPanel(
     cardOpacity: Float = 0.6f,
     preSuggestions: List<PreSuggestion> = emptyList(),
     onLongPressSuggestion: ((GeocodeSuggestion) -> Unit)? = null,
-    sortMode: RouteSortMode = RouteSortMode.FASTEST,
+    sortMode: RouteSortMode = RouteSortMode.ARRIVES_FIRST,
     onSortChange: ((RouteSortMode) -> Unit)? = null,
     onTravelModeChange: ((TravelMode) -> Unit)? = null,
     onToggleModeFilter: ((TransitFilter) -> Unit)? = null,
