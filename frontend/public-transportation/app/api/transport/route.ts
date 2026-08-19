@@ -3,6 +3,7 @@ import http from 'http';
 import fs from 'fs';
 import path from 'path';
 import { normaliseVehicles } from '../../../lib/siri-vehicles';
+import { fileStamp } from '../../../lib/file-stamp';
 
 function httpGet(url: string, headers: Record<string, string>, timeoutMs: number): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -28,13 +29,17 @@ function httpGet(url: string, headers: Record<string, string>, timeoutMs: number
   });
 }
 
-// Cache stop_code → stop_name from GTFS stops.txt
+// Cache stop_code → stop_name from GTFS stops.txt. Rebuilt when the nightly
+// update replaces the file (see lib/file-stamp.ts).
 let stopNameCache: Map<string, string> | null = null;
+let stopNamesStamp = -2;
 
 function loadStopNames(): Map<string, string> {
-  if (stopNameCache) return stopNameCache;
-
   const stopsFile = path.join(process.cwd(), '../../gtfs/israel-public-transportation/stops.txt');
+  const stamp = fileStamp(stopsFile);
+  if (stopNameCache && stamp === stopNamesStamp) return stopNameCache;
+  stopNamesStamp = stamp;
+
   if (!fs.existsSync(stopsFile)) return new Map();
 
   const content = fs.readFileSync(stopsFile, 'utf8');

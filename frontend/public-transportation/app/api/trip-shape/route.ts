@@ -3,6 +3,7 @@ import { execFileSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { routeShapeId, tripShapeId } from '@/lib/gtfs-trips';
+import { fileStamp } from '@/lib/file-stamp';
 
 /**
  * The geometry of one trip, or of one route in one direction.
@@ -26,8 +27,17 @@ const SHAPES_FILE = path.join(
 // cached, because a trip's geometry cannot change while the feed is unchanged.
 const shapeCache = new Map<string, number[][]>();
 const SHAPE_CACHE_MAX = 200;
+// Flushed when the nightly update replaces shapes.txt — shape ids are per-feed,
+// and a stale cache would keep answering with geometry the feed no longer has
+// (see lib/file-stamp.ts).
+let shapesStamp = -2;
 
 function loadShape(shapeId: string): number[][] {
+  const stamp = fileStamp(SHAPES_FILE);
+  if (stamp !== shapesStamp) {
+    shapeCache.clear();
+    shapesStamp = stamp;
+  }
   const cached = shapeCache.get(shapeId);
   if (cached) return cached;
 

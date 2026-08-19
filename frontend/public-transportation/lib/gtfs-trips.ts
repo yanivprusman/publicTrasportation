@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { fileStamp } from './file-stamp';
 
 /**
  * Per-trip facts read out of GTFS `trips.txt`: wheelchair access and shape id.
@@ -47,6 +48,12 @@ let routeShapeCache: Map<string, string> | null = null;
 // trip there is nothing to choose between the day's variants.
 let routeTripCache: Map<string, { tripId: string; headsign: string }> | null = null;
 
+// The trips.txt these caches were built from. update-data.sh replaces the file
+// nightly under the running process; serving the old feed's trip/shape ids
+// against the new files matches nothing (route-stops 404'd every line the
+// morning after the first nightly swap).
+let tripsStamp = -2;
+
 function parseFlag(raw: string | undefined): WheelchairAccess {
   switch (raw?.trim()) {
     case '1': return 'accessible';
@@ -56,7 +63,9 @@ function parseFlag(raw: string | undefined): WheelchairAccess {
 }
 
 function loadTrips(): Map<string, TripFacts> {
-  if (tripCache) return tripCache;
+  const stamp = fileStamp(TRIPS_FILE);
+  if (tripCache && stamp === tripsStamp) return tripCache;
+  tripsStamp = stamp;
 
   if (!fs.existsSync(TRIPS_FILE)) {
     // Not a fallback: with no timetable there is no accessibility answer, and
