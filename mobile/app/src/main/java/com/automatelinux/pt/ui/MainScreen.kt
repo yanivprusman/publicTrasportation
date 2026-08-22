@@ -837,6 +837,30 @@ fun MainScreen(
                                         activeTab = ActiveTab.ARRIVALS
                                         arrivalsViewModel.setStationCode(code, name)
                                         scope.launch { bottomSheetState.expand() }
+                                    },
+                                    // A long-pressed leg in the timeline edits the plan
+                                    // around itself: boarding point → new origin, or
+                                    // alighting point → new destination. The setter
+                                    // re-searches; when the coords didn't change, its
+                                    // sameCoords gate skips that but still clears the
+                                    // results, so search explicitly to give them back.
+                                    onLegAsStart = { leg ->
+                                        val prev = routingState.origin
+                                        routingViewModel.setOriginFromCoords(
+                                            leg.from.lat, leg.from.lon, leg.from.name.ifBlank { null }
+                                        )
+                                        if (prev != null && prev.lat == leg.from.lat && prev.lon == leg.from.lon) {
+                                            routingViewModel.search()
+                                        }
+                                    },
+                                    onLegAsEnd = { leg ->
+                                        val prev = routingState.destination
+                                        routingViewModel.setDestinationFromCoords(
+                                            leg.to.lat, leg.to.lon, leg.to.name.ifBlank { null }
+                                        )
+                                        if (prev != null && prev.lat == leg.to.lat && prev.lon == leg.to.lon) {
+                                            routingViewModel.search()
+                                        }
                                     }
                                 )
                             }

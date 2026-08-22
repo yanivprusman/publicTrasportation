@@ -111,6 +111,9 @@ fun RoutePlannerPanel(
     onRetryDayOverview: (() -> Unit)? = null,
     /** Open the full arrivals board for a stop — where the nearby card's long tail lives. */
     onOpenStopBoard: ((String, String) -> Unit)? = null,
+    /** Long-press on a leg in the opened timeline: re-plan around that leg. */
+    onLegAsStart: ((RouteLeg) -> Unit)? = null,
+    onLegAsEnd: ((RouteLeg) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val strings = LocalAppStrings.current
@@ -380,7 +383,9 @@ fun RoutePlannerPanel(
                         onStartJourney = onStartJourney,
                         onShareTrip = onShareTrip,
                         nextDepartures = nextDepartures,
-                        onPay = onPay
+                        onPay = onPay,
+                        onLegAsStart = onLegAsStart,
+                        onLegAsEnd = onLegAsEnd
                     )
                 }
             )

@@ -1,8 +1,10 @@
 package com.automatelinux.pt.ui.routing
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -36,6 +38,8 @@ import androidx.compose.material.icons.filled.Train
 import androidx.compose.material.icons.filled.Tram
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -117,6 +121,13 @@ fun ItineraryDetail(
     nextDepartures: Map<Int, List<String>> = emptyMap(),
     /** Hands the fare off to the payment app; every competitor keeps Pay one tap away. */
     onPay: (() -> Unit)? = null,
+    /**
+     * Re-plan the trip so it begins where this leg boards / ends where it alights.
+     * Offered from a long press on the leg, matching the live journey panel — a tap
+     * keeps its existing meanings (map focus, stop list).
+     */
+    onLegAsStart: ((RouteLeg) -> Unit)? = null,
+    onLegAsEnd: ((RouteLeg) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val strings = LocalAppStrings.current
@@ -230,7 +241,9 @@ fun ItineraryDetail(
                     onSetReminder = onSetReminder,
                     hasReminder = activeReminderLegIndex == index,
                     onCancelReminder = onCancelReminder,
-                    alsoAt = nextDepartures[index] ?: emptyList()
+                    alsoAt = nextDepartures[index] ?: emptyList(),
+                    onLegAsStart = onLegAsStart,
+                    onLegAsEnd = onLegAsEnd
                 )
                 val next = legs.getOrNull(index + 1)
                 if (next != null) {
@@ -372,6 +385,7 @@ private fun TimelineNode(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun LegSegment(
     leg: RouteLeg,
@@ -383,228 +397,282 @@ private fun LegSegment(
     onSetReminder: ((RouteLeg) -> Unit)? = null,
     hasReminder: Boolean = false,
     onCancelReminder: (() -> Unit)? = null,
-    alsoAt: List<String> = emptyList()
+    alsoAt: List<String> = emptyList(),
+    onLegAsStart: ((RouteLeg) -> Unit)? = null,
+    onLegAsEnd: ((RouteLeg) -> Unit)? = null
 ) {
     val strings = LocalAppStrings.current
     var showStops by remember { mutableStateOf(false) }
+    var showLegMenu by remember { mutableStateOf(false) }
     val isTransit = leg.mode != TransitMode.WALK
+    val editable = onLegAsStart != null && onLegAsEnd != null
     val color = legSpineColor(leg)
 
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(IntrinsicSize.Min)
-            .then(if (onClick != null) Modifier.clickable {
-                if (!leg.intermediateStops.isNullOrEmpty()) showStops = true
-                onClick()
-            } else Modifier)
-    ) {
-        Spacer(Modifier.width(TimeGutterWidth))
-        Box(
+    Box {
+        Row(
             modifier = Modifier
-                .width(SpineWidth)
-                .fillMaxHeight()
-                .drawBehind {
-                    drawSpineSegment(color, !isTransit, 0f, size.height)
-                }
-        )
-        Spacer(Modifier.width(10.dp))
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .padding(vertical = 8.dp)
-        ) {
-            if (!isTransit) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.DirectionsWalk,
-                        contentDescription = null,
-                        tint = WalkSpineColor,
-                        modifier = Modifier.size(16.dp)
+                .fillMaxWidth()
+                .height(IntrinsicSize.Min)
+                // A tap keeps its meanings (map focus, stop list); holding the leg
+                // instead edits the trip around it.
+                .then(when {
+                    editable -> Modifier.combinedClickable(
+                        onClick = {
+                            if (onClick != null) {
+                                if (!leg.intermediateStops.isNullOrEmpty()) showStops = true
+                                onClick()
+                            }
+                        },
+                        onLongClick = { showLegMenu = true }
                     )
-                    Spacer(Modifier.width(4.dp))
-                    Text(
-                        // "Walk 6 min" does not say whether that is around the corner
-                        // or across a junction; both Moovit and Maps print the metres.
-                        text = leg.distanceMeters
-                            ?.let { "${strings.walkMode} ${strings.walkDistance(it)} · ${strings.formatDuration(leg.duration)}" }
-                            ?: "${strings.walkMode} ${strings.formatDuration(leg.duration)}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            } else {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Row(
-                        modifier = Modifier.background(color, RoundedCornerShape(6.dp))
-                            .padding(horizontal = 8.dp, vertical = 3.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            modeIcon(leg.mode),
-                            contentDescription = getModeLabel(leg.mode, strings),
-                            tint = onColorFor(color),
-                            modifier = Modifier.size(14.dp)
-                        )
-                        leg.routeShortName?.let { route ->
-                            Spacer(Modifier.width(4.dp))
-                            Text(
-                                text = route,
-                                color = onColorFor(color),
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
+                    onClick != null -> Modifier.clickable {
+                        if (!leg.intermediateStops.isNullOrEmpty()) showStops = true
+                        onClick()
                     }
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        text = strings.formatDuration(leg.duration),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    // What this ride costs on its own, so the journey total on the
-                    // card is explicable rather than asserted.
-                    leg.fare?.let { fare ->
+                    else -> Modifier
+                })
+        ) {
+            Spacer(Modifier.width(TimeGutterWidth))
+            Box(
+                modifier = Modifier
+                    .width(SpineWidth)
+                    .fillMaxHeight()
+                    .drawBehind {
+                        drawSpineSegment(color, !isTransit, 0f, size.height)
+                    }
+            )
+            Spacer(Modifier.width(10.dp))
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(vertical = 8.dp)
+            ) {
+                if (!isTransit) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.DirectionsWalk,
+                            contentDescription = null,
+                            tint = WalkSpineColor,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            // "Walk 6 min" does not say whether that is around the corner
+                            // or across a junction; both Moovit and Maps print the metres.
+                            text = leg.distanceMeters
+                                ?.let { "${strings.walkMode} ${strings.walkDistance(it)} · ${strings.formatDuration(leg.duration)}" }
+                                ?: "${strings.walkMode} ${strings.formatDuration(leg.duration)}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                } else {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            modifier = Modifier.background(color, RoundedCornerShape(6.dp))
+                                .padding(horizontal = 8.dp, vertical = 3.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                modeIcon(leg.mode),
+                                contentDescription = getModeLabel(leg.mode, strings),
+                                tint = onColorFor(color),
+                                modifier = Modifier.size(14.dp)
+                            )
+                            leg.routeShortName?.let { route ->
+                                Spacer(Modifier.width(4.dp))
+                                Text(
+                                    text = route,
+                                    color = onColorFor(color),
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
                         Spacer(Modifier.width(8.dp))
                         Text(
-                            text = if (fare % 1.0 == 0.0) "₪${fare.toFixed(0)}" else "₪${fare.toFixed(2)}",
+                            text = strings.formatDuration(leg.duration),
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color(0xFF81C784)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        // What this ride costs on its own, so the journey total on the
+                        // card is explicable rather than asserted.
+                        leg.fare?.let { fare ->
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = if (fare % 1.0 == 0.0) "₪${fare.toFixed(0)}" else "₪${fare.toFixed(2)}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color(0xFF81C784)
+                            )
+                        }
+                        // Whether you can board at all outranks the agency's name, so it
+                        // sits on the headline row. UNKNOWN says nothing: for someone who
+                        // depends on this, a silent guess is worse than no answer.
+                        if (leg.access != WheelchairAccess.UNKNOWN) {
+                            Spacer(Modifier.width(8.dp))
+                            Icon(
+                                Icons.Default.Accessible,
+                                contentDescription = if (leg.access == WheelchairAccess.ACCESSIBLE) {
+                                    strings.accessAccessible
+                                } else {
+                                    strings.accessNotAccessible
+                                },
+                                modifier = Modifier.size(15.dp),
+                                tint = if (leg.access == WheelchairAccess.ACCESSIBLE) {
+                                    AccessibleGreen
+                                } else {
+                                    MaterialTheme.colorScheme.error
+                                }
+                            )
+                        }
+                    }
+
+                    leg.agencyName?.let { agency ->
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            text = agency,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    // Whether you can board at all outranks the agency's name, so it
-                    // sits on the headline row. UNKNOWN says nothing: for someone who
-                    // depends on this, a silent guess is worse than no answer.
-                    if (leg.access != WheelchairAccess.UNKNOWN) {
-                        Spacer(Modifier.width(8.dp))
-                        Icon(
-                            Icons.Default.Accessible,
-                            contentDescription = if (leg.access == WheelchairAccess.ACCESSIBLE) {
-                                strings.accessAccessible
-                            } else {
-                                strings.accessNotAccessible
-                            },
-                            modifier = Modifier.size(15.dp),
-                            tint = if (leg.access == WheelchairAccess.ACCESSIBLE) {
-                                AccessibleGreen
-                            } else {
-                                MaterialTheme.colorScheme.error
+
+                    Spacer(Modifier.height(4.dp))
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (onTrackBus != null) {
+                            FilledTonalButton(
+                                onClick = { onTrackBus(legIndex, leg) },
+                                modifier = Modifier.height(30.dp),
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                                colors = if (isTracking) ButtonDefaults.filledTonalButtonColors(
+                                    containerColor = MaterialTheme.colorScheme.tertiary,
+                                    contentColor = MaterialTheme.colorScheme.onTertiary
+                                ) else ButtonDefaults.filledTonalButtonColors()
+                            ) {
+                                Icon(
+                                    Icons.Default.GpsFixed,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(Modifier.width(4.dp))
+                                Text(
+                                    text = if (isTracking) strings.trackingBus else strings.trackBus,
+                                    fontSize = 11.sp
+                                )
                             }
+                        }
+
+                        if (onSetReminder != null) {
+                            FilledTonalButton(
+                                onClick = {
+                                    if (hasReminder) onCancelReminder?.invoke()
+                                    else onSetReminder(leg)
+                                },
+                                modifier = Modifier.height(30.dp),
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                                colors = if (hasReminder) ButtonDefaults.filledTonalButtonColors(
+                                    containerColor = MaterialTheme.colorScheme.error,
+                                    contentColor = MaterialTheme.colorScheme.onError
+                                ) else ButtonDefaults.filledTonalButtonColors()
+                            ) {
+                                Icon(
+                                    if (hasReminder) Icons.Default.NotificationsOff else Icons.Default.Notifications,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(Modifier.width(4.dp))
+                                Text(
+                                    text = if (hasReminder) strings.cancelReminder else strings.departureReminder,
+                                    fontSize = 11.sp
+                                )
+                            }
+                        }
+                    }
+
+                    if (alsoAt.isNotEmpty()) {
+                        // What happens if this one is missed — the row every rider
+                        // checks before deciding how fast to walk.
+                        Text(
+                            text = strings.alsoAt(alsoAt.joinToString(" · ")),
+                            modifier = Modifier.padding(top = 4.dp),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                }
 
-                leg.agencyName?.let { agency ->
-                    Spacer(Modifier.height(2.dp))
-                    Text(
-                        text = agency,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                    val stops = leg.intermediateStops
+                    if (!stops.isNullOrEmpty()) {
+                        Text(
+                            text = if (showStops) strings.hideStops(stops.size) else strings.showStops(stops.size),
+                            modifier = Modifier
+                                .clickable { showStops = !showStops }
+                                .padding(vertical = 4.dp),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
 
-                Spacer(Modifier.height(4.dp))
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    if (onTrackBus != null) {
-                        FilledTonalButton(
-                            onClick = { onTrackBus(legIndex, leg) },
-                            modifier = Modifier.height(30.dp),
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
-                            colors = if (isTracking) ButtonDefaults.filledTonalButtonColors(
-                                containerColor = MaterialTheme.colorScheme.tertiary,
-                                contentColor = MaterialTheme.colorScheme.onTertiary
-                            ) else ButtonDefaults.filledTonalButtonColors()
-                        ) {
-                            Icon(
-                                Icons.Default.GpsFixed,
-                                contentDescription = null,
-                                modifier = Modifier.size(14.dp)
-                            )
-                            Spacer(Modifier.width(4.dp))
-                            Text(
-                                text = if (isTracking) strings.trackingBus else strings.trackBus,
-                                fontSize = 11.sp
-                            )
-                        }
-                    }
-
-                    if (onSetReminder != null) {
-                        FilledTonalButton(
-                            onClick = {
-                                if (hasReminder) onCancelReminder?.invoke()
-                                else onSetReminder(leg)
-                            },
-                            modifier = Modifier.height(30.dp),
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
-                            colors = if (hasReminder) ButtonDefaults.filledTonalButtonColors(
-                                containerColor = MaterialTheme.colorScheme.error,
-                                contentColor = MaterialTheme.colorScheme.onError
-                            ) else ButtonDefaults.filledTonalButtonColors()
-                        ) {
-                            Icon(
-                                if (hasReminder) Icons.Default.NotificationsOff else Icons.Default.Notifications,
-                                contentDescription = null,
-                                modifier = Modifier.size(14.dp)
-                            )
-                            Spacer(Modifier.width(4.dp))
-                            Text(
-                                text = if (hasReminder) strings.cancelReminder else strings.departureReminder,
-                                fontSize = 11.sp
-                            )
-                        }
-                    }
-                }
-
-                if (alsoAt.isNotEmpty()) {
-                    // What happens if this one is missed — the row every rider
-                    // checks before deciding how fast to walk.
-                    Text(
-                        text = strings.alsoAt(alsoAt.joinToString(" · ")),
-                        modifier = Modifier.padding(top = 4.dp),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
-                val stops = leg.intermediateStops
-                if (!stops.isNullOrEmpty()) {
-                    Text(
-                        text = if (showStops) strings.hideStops(stops.size) else strings.showStops(stops.size),
-                        modifier = Modifier
-                            .clickable { showStops = !showStops }
-                            .padding(vertical = 4.dp),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-
-                    AnimatedVisibility(visible = showStops) {
-                        Column(modifier = Modifier.padding(top = 2.dp)) {
-                            for (stop in stops) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(6.dp)
-                                            .background(color.copy(alpha = 0.7f), RoundedCornerShape(3.dp))
-                                    )
-                                    Spacer(Modifier.width(8.dp))
-                                    Text(
-                                        text = stop.name,
-                                        modifier = if (onStopClick != null) Modifier
-                                            .clickable { onStopClick(stop) }
-                                            .padding(vertical = 2.dp)
-                                        else Modifier.padding(vertical = 2.dp),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = if (onStopClick != null) MaterialTheme.colorScheme.primary
-                                        else MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
+                        AnimatedVisibility(visible = showStops) {
+                            Column(modifier = Modifier.padding(top = 2.dp)) {
+                                for (stop in stops) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(6.dp)
+                                                .background(color.copy(alpha = 0.7f), RoundedCornerShape(3.dp))
+                                        )
+                                        Spacer(Modifier.width(8.dp))
+                                        Text(
+                                            text = stop.name,
+                                            modifier = if (onStopClick != null) Modifier
+                                                .clickable { onStopClick(stop) }
+                                                .padding(vertical = 2.dp)
+                                            else Modifier.padding(vertical = 2.dp),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = if (onStopClick != null) MaterialTheme.colorScheme.primary
+                                            else MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
                 }
+            }
+        }
+        if (editable) {
+            DropdownMenu(
+                expanded = showLegMenu,
+                onDismissRequest = { showLegMenu = false }
+            ) {
+                // Each item names the actual stop it would pin, so the choice reads
+                // as a plan, not an abstraction. The trip's own two ends are the
+                // rider's pins and have no name; those fall back to "here".
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            if (leg.from.name.isBlank()) strings.journeyStartHere
+                            else strings.journeyStartFrom(leg.from.name)
+                        )
+                    },
+                    onClick = {
+                        showLegMenu = false
+                        onLegAsStart?.invoke(leg)
+                    }
+                )
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            if (leg.to.name.isBlank()) strings.journeyEndHere
+                            else strings.journeyEndAt(leg.to.name)
+                        )
+                    },
+                    onClick = {
+                        showLegMenu = false
+                        onLegAsEnd?.invoke(leg)
+                    }
+                )
             }
         }
     }
