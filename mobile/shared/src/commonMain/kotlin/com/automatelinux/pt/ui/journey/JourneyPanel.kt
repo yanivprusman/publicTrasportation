@@ -2,8 +2,10 @@ package com.automatelinux.pt.ui.journey
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,6 +32,8 @@ import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.LocationOff
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -79,6 +83,7 @@ private const val CONFIRM_END_TIMEOUT_MS = 4_000L
  * it. What this panel owns is the half a map cannot show: which stop is yours, and how
  * many are left before it.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun JourneyPanel(
     itinerary: Itinerary,
@@ -89,6 +94,13 @@ fun JourneyPanel(
     live: JourneyLiveInfo? = null,
     /** Frame this leg on the map — every step row and the headline answer a tap. */
     onFocusLeg: ((Int) -> Unit)? = null,
+    /**
+     * Re-plan the trip so it begins where this leg boards / ends where it alights.
+     * Offered from a long press on a step, because it replaces the whole journey —
+     * a tap keeps meaning only "show me on the map".
+     */
+    onLegAsStart: ((Int) -> Unit)? = null,
+    onLegAsEnd: ((Int) -> Unit)? = null,
     /** Fly the map to the live bus itself; wired to a tap on the live banner. */
     onFocusVehicle: ((Double, Double) -> Unit)? = null,
     /** Hand out a link that shows this journey live. Green while somebody can watch. */
@@ -311,6 +323,9 @@ fun JourneyPanel(
             LegPips(itinerary = itinerary, progress = progress, accent = accent)
 
             AnimatedVisibility(visible = expanded && hasSteps) {
+                // Which step's long-press menu is open, if any. Lives with the list:
+                // collapsing the steps takes the menu down with them.
+                var legMenuFor by remember { mutableStateOf<Int?>(null) }
                 Column(
                     modifier = Modifier
                         .heightIn(max = 260.dp)
@@ -320,58 +335,104 @@ fun JourneyPanel(
                     itinerary.legs.forEachIndexed { index, leg ->
                         val done = (progress?.legIndex ?: 0) > index
                         val current = progress?.legIndex == index
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(8.dp))
-                                .let { m ->
-                                    // A step answers a tap by showing itself on the
-                                    // map — the row is the question "where is that?".
-                                    if (onFocusLeg != null) m.clickable { onFocusLeg(index) } else m
-                                }
-                                .padding(vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            val color = if (leg.mode == TransitMode.WALK) {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            } else {
-                                getModeColorWithRoute(leg.mode, leg.routeColor)
-                            }
-                            Icon(
-                                imageVector = if (leg.mode == TransitMode.WALK) {
-                                    Icons.AutoMirrored.Filled.DirectionsWalk
+                        val editable = onLegAsStart != null && onLegAsEnd != null
+                        Box {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .let { m ->
+                                        // A step answers a tap by showing itself on the
+                                        // map — the row is the question "where is that?".
+                                        // Holding it instead edits the trip around it.
+                                        when {
+                                            editable -> m.combinedClickable(
+                                                onClick = { onFocusLeg?.invoke(index) },
+                                                onLongClick = { legMenuFor = index }
+                                            )
+                                            onFocusLeg != null -> m.clickable { onFocusLeg(index) }
+                                            else -> m
+                                        }
+                                    }
+                                    .padding(vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                val color = if (leg.mode == TransitMode.WALK) {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
                                 } else {
-                                    Icons.Default.DirectionsBus
-                                },
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp),
-                                tint = color
-                            )
-                            Spacer(Modifier.width(10.dp))
-                            Text(
-                                // Every row shows the next instant it is about. For a
-                                // leg not yet begun that is when it begins; for the one
-                                // underway it is when it ends, because its start time is
-                                // already in the past and reads, next to a live headline,
-                                // as if it were now.
-                                text = formatTime(if (current) leg.endTime else leg.startTime),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(Modifier.width(10.dp))
-                            Text(
-                                text = legLine(leg.routeShortName, leg.mode, leg.to.name, strings),
-                                modifier = Modifier.weight(1f),
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = if (current) FontWeight.Bold else FontWeight.Normal,
-                                color = when {
-                                    current -> MaterialTheme.colorScheme.onSurface
-                                    done -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                                    else -> MaterialTheme.colorScheme.onSurfaceVariant
-                                },
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
+                                    getModeColorWithRoute(leg.mode, leg.routeColor)
+                                }
+                                Icon(
+                                    imageVector = if (leg.mode == TransitMode.WALK) {
+                                        Icons.AutoMirrored.Filled.DirectionsWalk
+                                    } else {
+                                        Icons.Default.DirectionsBus
+                                    },
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp),
+                                    tint = color
+                                )
+                                Spacer(Modifier.width(10.dp))
+                                Text(
+                                    // Every row shows the next instant it is about. For a
+                                    // leg not yet begun that is when it begins; for the one
+                                    // underway it is when it ends, because its start time is
+                                    // already in the past and reads, next to a live headline,
+                                    // as if it were now.
+                                    text = formatTime(if (current) leg.endTime else leg.startTime),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Spacer(Modifier.width(10.dp))
+                                Text(
+                                    text = legLine(leg.routeShortName, leg.mode, leg.to.name, strings),
+                                    modifier = Modifier.weight(1f),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = if (current) FontWeight.Bold else FontWeight.Normal,
+                                    color = when {
+                                        current -> MaterialTheme.colorScheme.onSurface
+                                        done -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                        else -> MaterialTheme.colorScheme.onSurfaceVariant
+                                    },
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                            if (editable) {
+                                DropdownMenu(
+                                    expanded = legMenuFor == index,
+                                    onDismissRequest = { legMenuFor = null }
+                                ) {
+                                    // Each item names the actual stop it would pin, so
+                                    // the choice reads as a plan, not an abstraction.
+                                    // The trip's own two ends are the rider's pins and
+                                    // have no name; those fall back to "here".
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                if (leg.from.name.isBlank()) strings.journeyStartHere
+                                                else strings.journeyStartFrom(leg.from.name)
+                                            )
+                                        },
+                                        onClick = {
+                                            legMenuFor = null
+                                            onLegAsStart?.invoke(index)
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                if (leg.to.name.isBlank()) strings.journeyEndHere
+                                                else strings.journeyEndAt(leg.to.name)
+                                            )
+                                        },
+                                        onClick = {
+                                            legMenuFor = null
+                                            onLegAsEnd?.invoke(index)
+                                        }
+                                    )
+                                }
+                            }
                         }
                     }
                     if (onPay != null) {

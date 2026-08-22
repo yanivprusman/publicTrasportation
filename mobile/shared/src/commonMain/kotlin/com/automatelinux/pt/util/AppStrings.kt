@@ -274,6 +274,11 @@ interface AppStrings {
     val journeyAlertsOff: String
     val journeyLiveNeedsLocation: String
     val journeyAllSteps: String
+    /** Long-press menu on a journey step: re-plan the trip around that leg. */
+    val journeyStartFrom: (String) -> String
+    val journeyStartHere: String
+    val journeyEndAt: (String) -> String
+    val journeyEndHere: String
     val journeyEtaAt: (String) -> String
     /** The deadline a walk is measured against: the ride at the end of it. */
     val journeyBy: (String) -> String
@@ -604,6 +609,10 @@ val EnStrings: AppStrings = object : AppStrings {
     override val journeyLiveNeedsLocation: String =
         "Location is off, so stops can't be counted — the journey will follow the timetable."
     override val journeyAllSteps: String = "All steps"
+    override val journeyStartFrom: (String) -> String = { place -> "Start from $place" }
+    override val journeyStartHere: String = "Start from here"
+    override val journeyEndAt: (String) -> String = { place -> "End at $place" }
+    override val journeyEndHere: String = "End here"
     override val journeyEtaAt: (String) -> String = { time -> "Arrive $time" }
     override val journeyBy: (String) -> String = { time -> "by $time" }
     override val dayOverview: String = "Day overview"
@@ -930,6 +939,10 @@ val HeStrings: AppStrings = object : AppStrings {
     override val journeyLiveNeedsLocation: String =
         "המיקום כבוי, אז אי אפשר לספור תחנות — הנסיעה תעקוב אחרי לוח הזמנים."
     override val journeyAllSteps: String = "כל השלבים"
+    override val journeyStartFrom: (String) -> String = { place -> "התחל מ$place" }
+    override val journeyStartHere: String = "התחל מכאן"
+    override val journeyEndAt: (String) -> String = { place -> "סיים ב$place" }
+    override val journeyEndHere: String = "סיים כאן"
     override val journeyEtaAt: (String) -> String = { time -> "הגעה $time" }
     override val journeyBy: (String) -> String = { time -> "עד $time" }
     override val dayOverview: String = "סקירת יום"

@@ -1381,6 +1381,56 @@ fun MainScreen(
                         followingLocation = false
                         mapState.animateTo(LatLng(lat, lon), 15.0)
                     },
+                    // A long-pressed step edits the trip around itself: its boarding
+                    // point becomes the new origin (or its alighting point the new
+                    // destination), the journey ends, and the planner re-searches.
+                    // The endpoint that is NOT changing normally still sits in the
+                    // planner; when the journey outlived its search (a restored
+                    // session), it is taken from the trip's own far end. The changed
+                    // endpoint is set last, because setting the second of the two is
+                    // what fires the search.
+                    onLegAsStart = { index ->
+                        trip.legs.getOrNull(index)?.let { leg ->
+                            JourneySession.stop(context)
+                            activeTab = ActiveTab.ROUTE
+                            if (routingState.destination == null) {
+                                val end = trip.legs.last().to
+                                routingViewModel.setDestinationFromCoords(
+                                    end.lat, end.lon, end.name.ifBlank { null }
+                                )
+                            }
+                            val prev = routingState.origin
+                            routingViewModel.setOriginFromCoords(
+                                leg.from.lat, leg.from.lon, leg.from.name.ifBlank { null }
+                            )
+                            // Same coords as before means the setter skipped its
+                            // auto-search — but it still cleared the results, and
+                            // the journey is already over. Search anyway, or the
+                            // rider is left with a planner emptied by their edit.
+                            if (prev != null && prev.lat == leg.from.lat && prev.lon == leg.from.lon) {
+                                routingViewModel.search()
+                            }
+                        }
+                    },
+                    onLegAsEnd = { index ->
+                        trip.legs.getOrNull(index)?.let { leg ->
+                            JourneySession.stop(context)
+                            activeTab = ActiveTab.ROUTE
+                            if (routingState.origin == null) {
+                                val start = trip.legs.first().from
+                                routingViewModel.setOriginFromCoords(
+                                    start.lat, start.lon, start.name.ifBlank { null }
+                                )
+                            }
+                            val prev = routingState.destination
+                            routingViewModel.setDestinationFromCoords(
+                                leg.to.lat, leg.to.lon, leg.to.name.ifBlank { null }
+                            )
+                            if (prev != null && prev.lat == leg.to.lat && prev.lon == leg.to.lon) {
+                                routingViewModel.search()
+                            }
+                        }
+                    },
                     onShare = {
                         scope.launch {
                             val url = JourneySession.shareLive()
