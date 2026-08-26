@@ -154,12 +154,14 @@ fun MainScreen(
 
     val sheetScrollState = rememberScrollState()
     var sheetContentHeightPx by remember { mutableIntStateOf(0) }
-    // How much map there is, and where the sheet's top edge currently cuts it off.
-    // Both are written from layout and read ONLY inside click handlers -- never
-    // during composition -- so the sheet's top moving every frame of a drag
-    // invalidates nothing.
+    // The band of map the user can actually see: how much map there is, where the
+    // sheet's top edge cuts it off at the bottom, and where the status bar and the
+    // hint pill stop covering it at the top. All written from layout and read ONLY
+    // inside click handlers -- never during composition -- so the sheet's top moving
+    // every frame of a drag invalidates nothing.
     var mapAreaHeightPx by remember { mutableIntStateOf(0) }
     var sheetTopInRootPx by remember { mutableFloatStateOf(0f) }
+    var liveBusesHintBottomInRootPx by remember { mutableFloatStateOf(0f) }
     var showOpacitySlider by remember { mutableStateOf(false) }
     var showDebugSettings by remember { mutableStateOf(false) }
     var sheetOpacity by remember { mutableFloatStateOf(settingsStore.sheetOpacity) }
@@ -1171,20 +1173,18 @@ fun MainScreen(
                             // focused.
                             followingLocation = false
                             mapState.fitBounds(
-                                boundsClearOfSheet(
+                                boundsInsideVisibleBand(
                                     center = currentMapCenter,
                                     target = LatLng(bus.lat, bus.lon),
-                                    // The sheet's top edge is where the map stops
-                                    // being visible. Unmeasured only before the first
-                                    // layout, which is also before this hint can be
-                                    // drawn, let alone tapped.
-                                    visibleFraction = if (mapAreaHeightPx > 0) {
-                                        (sheetTopInRootPx / mapAreaHeightPx).toDouble()
-                                    } else {
-                                        1.0
-                                    }
+                                    mapHeightPx = mapAreaHeightPx.toDouble(),
+                                    // The band runs from the bottom of the hint the
+                                    // user just tapped -- which already clears the
+                                    // status bar -- down to the sheet's top edge.
+                                    bandTopPx = liveBusesHintBottomInRootPx.toDouble(),
+                                    bandBottomPx = sheetTopInRootPx.toDouble(),
+                                    paddingPx = LIVE_BUS_FRAME_PADDING_PX.toDouble()
                                 ),
-                                padding = 80
+                                padding = LIVE_BUS_FRAME_PADDING_PX
                             )
                         }
                     }
@@ -1228,6 +1228,13 @@ fun MainScreen(
                             modifier = Modifier
                                 .align(Alignment.TopStart)
                                 .padding(top = 48.dp, start = 12.dp, end = 76.dp)
+                                // Where the top chrome stops covering the map: this
+                                // pill sits below the status bar, so its own bottom
+                                // edge is the top of the band a framed bus must land in.
+                                .onGloballyPositioned {
+                                    liveBusesHintBottomInRootPx =
+                                        it.positionInRoot().y + it.size.height
+                                }
                                 // Only the sentence that names a bus is a control; the
                                 // rest are statements, and a ripple on a statement
                                 // promises something that would not happen.
@@ -1615,39 +1622,55 @@ fun MainScreen(
 /** The payment app the Pay button hands the fare to. */
 private const val HOPON_PACKAGE = "co.hopon.client"
 
+/** Border left around a framed live bus, in pixels. */
+private const val LIVE_BUS_FRAME_PADDING_PX = 80
+
 /**
- * The box to frame so that both [center] and [target] end up in the part of the map the
- * bottom sheet is NOT covering.
+ * The box to frame so that both [center] and [target] land in the band of map the user
+ * can actually see — between [bandTopPx] (below the status bar and the hint) and
+ * [bandBottomPx] (the top edge of the bottom sheet), within a map [mapHeightPx] tall.
  *
- * Framing the two points alone is not enough: the sheet overlays the map, so a bus that
- * lies south of the centre lands behind it and "tap to show it" would show nothing. The
- * camera API takes one uniform padding, which cannot express "keep clear of the bottom",
- * so the box is instead extended SOUTH by the covered share. The fitted box is centred in
- * the whole map view, so pushing its bottom edge down under the sheet lifts the real
- * content into the visible band above it.
+ * Framing the two points alone is not enough, because the sheet and the status bar
+ * overlay the map: a bus south of the centre lands behind the sheet, and one north of it
+ * lands behind the clock — which is exactly what "tap to show it" must not do. The camera
+ * API takes a single uniform padding and cannot express "keep clear of the top and the
+ * bottom", so the box is padded in MAP units instead: extended north by the covered strip
+ * above the band and south by the covered strip below it. The fitted box is centred in
+ * the whole map view, so those two extensions push the real content into the band.
  *
- * The extension is measured against the box's WIDER side (its east-west span converted to
- * latitude), so a purely east-west pair — zero height, and therefore nothing to scale — is
- * still pushed up rather than left sitting on the view's centre line.
+ * With scale k (degrees of latitude per pixel), an extension of `strip * k` covers a strip
+ * of `strip` pixels. Requiring the content itself to span the band's usable height fixes
+ * k at `latSpan / (band - 2 * padding)`, which is the whole derivation.
  *
- * @param visibleFraction how much of the map's height is uncovered, 0..1.
+ * The span is measured on the box's WIDER side (its east-west extent converted to
+ * latitude), so a purely east-west pair — no height, and therefore nothing to scale — is
+ * still placed rather than left sitting on the view's centre line.
  */
-private fun boundsClearOfSheet(
+private fun boundsInsideVisibleBand(
     center: LatLng,
     target: LatLng,
-    visibleFraction: Double
+    mapHeightPx: Double,
+    bandTopPx: Double,
+    bandBottomPx: Double,
+    paddingPx: Double
 ): List<LatLng> {
-    // A sheet dragged to full height leaves no band to aim at, and the ratio below would
-    // run away; 0.3 keeps the framing sane in a state where the map is barely on screen
-    // anyway. The 0.9 is margin — landing exactly on the sheet's edge is not "visible".
-    val usable = visibleFraction.coerceIn(0.3, 1.0) * 0.9
-    val latSpan = abs(target.latitude - center.latitude)
-    val lonSpanAsLat = abs(target.longitude - center.longitude) *
-        cos(center.latitude * PI / 180.0)
-    val extendSouth = max(latSpan, lonSpanAsLat) * (1.0 - usable) / usable
+    val span = max(
+        abs(target.latitude - center.latitude),
+        abs(target.longitude - center.longitude) * cos(center.latitude * PI / 180.0)
+    )
+    // A sheet dragged to full height leaves no band to aim at and would drive the scale to
+    // infinity. An eighth of the map keeps the framing sane in a state where the map is
+    // barely on screen anyway.
+    val usable = (bandBottomPx - bandTopPx - 2 * paddingPx).coerceAtLeast(mapHeightPx / 8)
+    val perPixel = span / usable
     return listOf(
         center,
         target,
-        LatLng(min(center.latitude, target.latitude) - extendSouth, center.longitude)
+        LatLng(max(center.latitude, target.latitude) + bandTopPx * perPixel, center.longitude),
+        LatLng(
+            min(center.latitude, target.latitude) -
+                (mapHeightPx - bandBottomPx).coerceAtLeast(0.0) * perPixel,
+            center.longitude
+        )
     )
 }
