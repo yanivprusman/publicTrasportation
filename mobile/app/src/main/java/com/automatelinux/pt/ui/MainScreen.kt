@@ -6,6 +6,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import com.automatelinux.pt.BuildConfig
 import com.google.android.gms.location.LocationServices
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -73,11 +74,17 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.minus
 import kotlinx.datetime.toLocalDateTime
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import org.koin.compose.viewmodel.koinViewModel
+import kotlin.math.PI
+import kotlin.math.abs
+import kotlin.math.cos
+import kotlin.math.max
+import kotlin.math.min
 import com.automatelinux.feedbacklib.ui.DismissibleSheet
 import com.automatelinux.feedbacklib.ui.rememberDismissibleSheetState
 import android.content.Intent
@@ -147,6 +154,12 @@ fun MainScreen(
 
     val sheetScrollState = rememberScrollState()
     var sheetContentHeightPx by remember { mutableIntStateOf(0) }
+    // How much map there is, and where the sheet's top edge currently cuts it off.
+    // Both are written from layout and read ONLY inside click handlers -- never
+    // during composition -- so the sheet's top moving every frame of a drag
+    // invalidates nothing.
+    var mapAreaHeightPx by remember { mutableIntStateOf(0) }
+    var sheetTopInRootPx by remember { mutableFloatStateOf(0f) }
     var showOpacitySlider by remember { mutableStateOf(false) }
     var showDebugSettings by remember { mutableStateOf(false) }
     var sheetOpacity by remember { mutableFloatStateOf(settingsStore.sheetOpacity) }
@@ -637,7 +650,10 @@ fun MainScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .onGloballyPositioned { sheetContentHeightPx = it.size.height },
+                        .onGloballyPositioned {
+                            sheetContentHeightPx = it.size.height
+                            sheetTopInRootPx = it.positionInRoot().y
+                        },
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     // Fully expanded, the sheet reaches the top of the window and its
@@ -978,7 +994,11 @@ fun MainScreen(
                 }
             },
             content = { _ ->
-            Box(modifier = Modifier.fillMaxSize()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .onGloballyPositioned { mapAreaHeightPx = it.size.height }
+            ) {
                 PtMap(
                     state = mapState,
                     style = PtMapStyle.fromStored(mapStyle),
@@ -1131,8 +1151,45 @@ fun MainScreen(
                 if (liveBuses) {
                     val reachedMeters = arrivalsState.nearbyVehiclesReachedMeters
                     val nearestMeters = arrivalsState.nearbyVehiclesNearestMeters
-                    val liveBusesHint = when {
-                        !arrivalsState.nearbyVehiclesLoaded -> strings.liveBusesSearching
+                    // A sentence that tells the user to do something the app can do
+                    // itself is a chore, not an answer: the off-screen hint knows
+                    // exactly which bus it means, so tapping it frames that bus rather
+                    // than leaving the user to pinch outward until something appears.
+                    // The bus is looked up when the tap happens, not when the sentence
+                    // was composed, so the camera goes where it is NOW -- these markers
+                    // move every poll.
+                    val showNearestLiveBus: () -> Unit = {
+                        val bus = arrivalsState.nearbyVehicles.minByOrNull {
+                            metersBetween(
+                                currentMapCenter.latitude, currentMapCenter.longitude,
+                                it.lat, it.lon
+                            )
+                        }
+                        if (bus != null) {
+                            // Framing is the user asking to look somewhere; the camera
+                            // must stop chasing the blue dot, exactly as when a leg is
+                            // focused.
+                            followingLocation = false
+                            mapState.fitBounds(
+                                boundsClearOfSheet(
+                                    center = currentMapCenter,
+                                    target = LatLng(bus.lat, bus.lon),
+                                    // The sheet's top edge is where the map stops
+                                    // being visible. Unmeasured only before the first
+                                    // layout, which is also before this hint can be
+                                    // drawn, let alone tapped.
+                                    visibleFraction = if (mapAreaHeightPx > 0) {
+                                        (sheetTopInRootPx / mapAreaHeightPx).toDouble()
+                                    } else {
+                                        1.0
+                                    }
+                                ),
+                                padding = 80
+                            )
+                        }
+                    }
+                    val liveBusesHint: Pair<String, (() -> Unit)?>? = when {
+                        !arrivalsState.nearbyVehiclesLoaded -> strings.liveBusesSearching to null
                         // A poll that never got an answer is a third fact, before the
                         // empty/quiet distinction below even applies: "no buses within
                         // 50 km" was once shown for a phone with no route to any server.
@@ -1141,9 +1198,9 @@ fun MainScreen(
                         // different repairs, and naming the wrong one is the same
                         // confident-falsehood bug this state exists to prevent.
                         arrivalsState.nearbyVehiclesFailure == NearbyVehiclesFailure.NO_SERVER ->
-                            strings.liveBusesUnavailable
+                            strings.liveBusesUnavailable to null
                         arrivalsState.nearbyVehiclesFailure == NearbyVehiclesFailure.NO_LIVE_DATA ->
-                            strings.liveBusesFeedDown
+                            strings.liveBusesFeedDown to null
                         // Found buses, all of them off the screen — which looks exactly
                         // like finding none. The whole point of walking outward is that
                         // in a village the answer legitimately lies outside the view.
@@ -1152,24 +1209,35 @@ fun MainScreen(
                             // corner may well be on screen, and telling someone to zoom out
                             // to find a bus they can already see is worse than staying quiet.
                             if (nearestMeters > currentMapCornerMeters) {
-                                strings.liveBusesOffscreen(formatDistance(nearestMeters, strings))
+                                strings.liveBusesOffscreen(formatDistance(nearestMeters, strings)) to
+                                    showNearestLiveBus
                             } else {
                                 null
                             }
                         // The view covers half again more ground than was searched, so
                         // the emptiness says nothing about most of what is on screen.
                         currentMapRadiusMeters > reachedMeters * 1.5 ->
-                            strings.liveBusesZoomIn(formatDistance(reachedMeters, strings))
-                        else -> strings.liveBusesNone(formatDistance(reachedMeters, strings))
+                            strings.liveBusesZoomIn(formatDistance(reachedMeters, strings)) to null
+                        else -> strings.liveBusesNone(formatDistance(reachedMeters, strings)) to null
                     }
-                    liveBusesHint?.let { hint ->
+                    liveBusesHint?.let { (hint, onTap) ->
                         Surface(
                             // Start-aligned against the end-aligned button column, so the
                             // two swap sides together under RTL and never collide; the end
                             // padding keeps a long sentence off the buttons.
                             modifier = Modifier
                                 .align(Alignment.TopStart)
-                                .padding(top = 48.dp, start = 12.dp, end = 76.dp),
+                                .padding(top = 48.dp, start = 12.dp, end = 76.dp)
+                                // Only the sentence that names a bus is a control; the
+                                // rest are statements, and a ripple on a statement
+                                // promises something that would not happen.
+                                .then(
+                                    if (onTap != null) {
+                                        Modifier.clickable(onClick = onTap)
+                                    } else {
+                                        Modifier
+                                    }
+                                ),
                             color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
                             shape = RoundedCornerShape(20.dp),
                             shadowElevation = 4.dp
@@ -1546,3 +1614,40 @@ fun MainScreen(
 
 /** The payment app the Pay button hands the fare to. */
 private const val HOPON_PACKAGE = "co.hopon.client"
+
+/**
+ * The box to frame so that both [center] and [target] end up in the part of the map the
+ * bottom sheet is NOT covering.
+ *
+ * Framing the two points alone is not enough: the sheet overlays the map, so a bus that
+ * lies south of the centre lands behind it and "tap to show it" would show nothing. The
+ * camera API takes one uniform padding, which cannot express "keep clear of the bottom",
+ * so the box is instead extended SOUTH by the covered share. The fitted box is centred in
+ * the whole map view, so pushing its bottom edge down under the sheet lifts the real
+ * content into the visible band above it.
+ *
+ * The extension is measured against the box's WIDER side (its east-west span converted to
+ * latitude), so a purely east-west pair — zero height, and therefore nothing to scale — is
+ * still pushed up rather than left sitting on the view's centre line.
+ *
+ * @param visibleFraction how much of the map's height is uncovered, 0..1.
+ */
+private fun boundsClearOfSheet(
+    center: LatLng,
+    target: LatLng,
+    visibleFraction: Double
+): List<LatLng> {
+    // A sheet dragged to full height leaves no band to aim at, and the ratio below would
+    // run away; 0.3 keeps the framing sane in a state where the map is barely on screen
+    // anyway. The 0.9 is margin — landing exactly on the sheet's edge is not "visible".
+    val usable = visibleFraction.coerceIn(0.3, 1.0) * 0.9
+    val latSpan = abs(target.latitude - center.latitude)
+    val lonSpanAsLat = abs(target.longitude - center.longitude) *
+        cos(center.latitude * PI / 180.0)
+    val extendSouth = max(latSpan, lonSpanAsLat) * (1.0 - usable) / usable
+    return listOf(
+        center,
+        target,
+        LatLng(min(center.latitude, target.latitude) - extendSouth, center.longitude)
+    )
+}

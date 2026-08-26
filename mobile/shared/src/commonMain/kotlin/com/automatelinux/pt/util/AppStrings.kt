@@ -191,6 +191,11 @@ interface AppStrings {
     val liveBusesFeedDown: String
     val liveBusesNone: (String) -> String
     val liveBusesZoomIn: (String) -> String
+    /**
+     * The one live-buses hint that is a control rather than a statement: it names a
+     * specific bus, so tapping it frames that bus. Keep the wording an invitation to
+     * tap — telling the user to pinch outward themselves is a chore the app can do.
+     */
     val liveBusesOffscreen: (String) -> String
     val accessAccessible: String
     val accessNotAccessible: String
@@ -528,7 +533,7 @@ val EnStrings: AppStrings = object : AppStrings {
     override val liveBusesFeedDown: String = "Live bus data isn't coming through right now"
     override val liveBusesNone: (String) -> String = { radius -> "No live buses within $radius of the map centre" }
     override val liveBusesZoomIn: (String) -> String = { radius -> "Only searching $radius around the centre — zoom in to cover what you see" }
-    override val liveBusesOffscreen: (String) -> String = { distance -> "Nearest live bus is $distance away — zoom out to see it" }
+    override val liveBusesOffscreen: (String) -> String = { distance -> "Nearest live bus is $distance away — tap to show it" }
     override val accessAccessible: String = "Wheelchair accessible"
     override val accessNotAccessible: String = "Not wheelchair accessible"
     override val distanceKm: (String) -> String = { km -> "$km km" }
@@ -860,7 +865,7 @@ val HeStrings: AppStrings = object : AppStrings {
     override val liveBusesFeedDown: String = "נתוני אוטובוסים חיים לא מתקבלים כרגע"
     override val liveBusesNone: (String) -> String = { radius -> "אין אוטובוסים חיים ברדיוס $radius ממרכז המפה" }
     override val liveBusesZoomIn: (String) -> String = { radius -> "החיפוש מכסה $radius סביב מרכז המפה בלבד — התקרב כדי לכסות את מה שרואים" }
-    override val liveBusesOffscreen: (String) -> String = { distance -> "האוטובוס החי הקרוב ביותר במרחק $distance — התרחק כדי לראות אותו" }
+    override val liveBusesOffscreen: (String) -> String = { distance -> "האוטובוס החי הקרוב ביותר במרחק $distance — הקש כדי לראות אותו" }
     override val accessAccessible: String = "נגיש לכיסא גלגלים"
     override val accessNotAccessible: String = "לא נגיש לכיסא גלגלים"
     override val distanceKm: (String) -> String = { km -> "$km ק״מ" }
