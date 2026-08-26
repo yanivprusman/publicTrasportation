@@ -80,7 +80,7 @@ const MarkersLayer = ({
         <Marker
           key={`vehicle-${index}`}
           position={vehicle.position}
-          icon={createBusIcon(vehicle.lineNumber)}
+          icon={createBusIcon(vehicle.lineNumber, vehicle.bearingDegrees)}
         >
           <Popup>
             <div>

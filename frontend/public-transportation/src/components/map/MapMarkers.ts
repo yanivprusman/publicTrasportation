@@ -180,29 +180,58 @@ export const centerIcon = new L.Icon({
 
 const busIconCache = new Map<string, L.DivIcon>()
 
-export const createBusIcon = (lineNumber: string): L.DivIcon => {
-  const cached = busIconCache.get(lineNumber)
+/**
+ * Headings are bucketed to 15 degrees before they reach the icon cache.
+ *
+ * The cache is keyed by what the icon LOOKS like, and a live bearing changes by a degree
+ * at a time — keyed raw it would mint up to 360 icons per line and never evict any of
+ * them, on a layer that re-renders every 15s poll. 15 degrees is under a pixel of tip
+ * travel on a 56px marker, so the bucket is invisible and the cache stays bounded at
+ * 24 entries per line.
+ */
+const BEARING_BUCKET = 15
+
+export const createBusIcon = (lineNumber: string, bearingDegrees: number | null = null): L.DivIcon => {
+  const bucketed =
+    bearingDegrees == null ? null : (Math.round(bearingDegrees / BEARING_BUCKET) * BEARING_BUCKET) % 360
+  const key = `${lineNumber}|${bucketed ?? 'none'}`
+  const cached = busIconCache.get(key)
   if (cached) return cached
+
+  // Outside the body, not inside it: this marker's line number is centred ON the glyph
+  // (.bus-marker-number), so the middle is the one place an arrow cannot go. The Android
+  // marker makes the opposite choice for the opposite reason — its badge is pinned to a
+  // corner, which is what an orbiting arrow would disappear behind.
+  // The chevron's base sits at r=23 from the centre. That is not padding taste: this body
+  // is a SQUARE, so its outline is 16.75 from the centre at the edge midpoints but 20.9 at
+  // the rounded corners (14.14 to the corner arc's centre, +6 radius, +0.75 stroke). An
+  // earlier base at r=21 cleared the edges and was swallowed by the corners — the arrow
+  // simply vanished at 45/135/225/315. Anything drawn here must clear 20.9, not 16.75.
+  const chevron =
+    bucketed == null
+      ? ''
+      : `<path d="M32 3 L36.5 9 L27.5 9 Z" fill="#0D47A1" transform="rotate(${bucketed} 32 32)"/>`
 
   const icon = L.divIcon({
     className: 'bus-marker-wrapper',
-    iconSize: [40, 40],
-    iconAnchor: [20, 20],
-    popupAnchor: [0, -22],
+    iconSize: [64, 64],
+    iconAnchor: [32, 32],
+    popupAnchor: [0, -34],
     html: `
       <div class="bus-marker">
-        <svg viewBox="0 0 40 40" width="40" height="40" xmlns="http://www.w3.org/2000/svg">
-          <rect x="4" y="4" width="32" height="32" rx="6" fill="#1565C0" stroke="#0D47A1" stroke-width="1.5"/>
-          <rect x="8" y="6" width="24" height="8" rx="2" fill="#90CAF9" opacity="0.6"/>
-          <circle cx="12" cy="34" r="2.5" fill="#333"/>
-          <circle cx="28" cy="34" r="2.5" fill="#333"/>
+        <svg viewBox="0 0 64 64" width="64" height="64" xmlns="http://www.w3.org/2000/svg">
+          <rect x="16" y="16" width="32" height="32" rx="6" fill="#1565C0" stroke="#0D47A1" stroke-width="1.5"/>
+          <rect x="20" y="18" width="24" height="8" rx="2" fill="#90CAF9" opacity="0.6"/>
+          <circle cx="24" cy="46" r="2.5" fill="#333"/>
+          <circle cx="40" cy="46" r="2.5" fill="#333"/>
+          ${chevron}
         </svg>
         <span class="bus-marker-number">${lineNumber}</span>
       </div>
     `,
   })
 
-  busIconCache.set(lineNumber, icon)
+  busIconCache.set(key, icon)
   return icon
 }
 

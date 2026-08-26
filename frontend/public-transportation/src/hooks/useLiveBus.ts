@@ -16,6 +16,17 @@ export interface LiveBusVehicle {
    */
   metersFromStop: number
   vehicleRef: string
+  /**
+   * Compass degrees the vehicle is pointing, or null when the feed had no reading.
+   *
+   * Read from the server's normalised `_vehicles` and NOT from `journey.Bearing`, even
+   * though this poll already has the raw journey in hand. Raw, a third of the fleet
+   * reports `Bearing: "0"` to mean "no reading", and drawing that would point them all
+   * north — the same shape of mistake that made DistanceFromStop a distance to the stop
+   * in six places. lib/siri-vehicles.ts decides what the field means; this only matches
+   * the vehicle to it.
+   */
+  bearingDegrees: number | null
 }
 
 export type LiveBusPhase =
@@ -140,6 +151,9 @@ export function useLiveBus(itinerary: Itinerary | null, active: boolean): LiveBu
                 metersBetween(location.Latitude, location.Longitude, stopLat, stopLon)
               ),
               vehicleRef: journey.VehicleRef,
+              bearingDegrees:
+                data._vehicles?.find(v => v.vehicleRef === String(journey.VehicleRef))
+                  ?.bearingDegrees ?? null,
             },
             expectedArrival,
             error: null,

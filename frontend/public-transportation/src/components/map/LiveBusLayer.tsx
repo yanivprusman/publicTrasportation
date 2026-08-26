@@ -20,22 +20,35 @@ function escapeHtml(text: string): string {
 
 // Fixed colors (not theme variables): divIcon HTML renders outside the app's
 // CSS-variable scope, and green-on-white reads well on map tiles in both themes.
-const busIcon = (line: string) => L.divIcon({
+// 44px rather than the 34px this started at: the heading chevron sits INSIDE the disc,
+// because the line badge is pinned to the top-right and an arrow orbiting outside would
+// vanish behind it for a whole sector of the compass. 34px left no clear room between the
+// glyph and the edge. (createBusIcon in MapMarkers.ts puts its arrow outside instead —
+// its number is centred on the glyph, so there the middle is the occupied space.)
+const busIcon = (line: string, bearingDegrees: number | null) => L.divIcon({
   className: '',
   html:
-    '<div style="position:relative;width:34px;height:34px;">' +
+    '<div style="position:relative;width:44px;height:44px;">' +
     '<div class="pt-live-bus-pulse"></div>' +
     '<div style="position:absolute;inset:0;border-radius:50%;background:#2e7d32;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;font-size:16px;">\u{1F68C}</div>' +
+    (bearingDegrees == null
+      ? ''
+      : '<svg style="position:absolute;inset:0;" viewBox="0 0 44 44" width="44" height="44">' +
+        `<path d="M22 5 L25.5 10 L18.5 10 Z" fill="#fff" transform="rotate(${bearingDegrees} 22 22)"/>` +
+        '</svg>') +
     `<div style="position:absolute;top:-9px;right:-11px;background:#fff;color:#1b5e20;border:2px solid #2e7d32;border-radius:9px;padding:0 5px;font:700 11px/16px sans-serif;white-space:nowrap;">${escapeHtml(line)}</div>` +
     '</div>',
-  iconSize: [34, 34],
-  iconAnchor: [17, 17],
+  iconSize: [44, 44],
+  iconAnchor: [22, 22],
 })
 
 /** The tracked vehicle of the selected itinerary's next bus leg, pulsing live. */
 const LiveBusLayer = ({ bus }: { bus: LiveBusMarkerData | null }) => {
   const { t } = useI18n()
-  const icon = useMemo(() => (bus ? busIcon(bus.lineNumber) : null), [bus?.lineNumber]) // eslint-disable-line react-hooks/exhaustive-deps
+  const icon = useMemo(
+    () => (bus ? busIcon(bus.lineNumber, bus.vehicle.bearingDegrees) : null),
+    [bus?.lineNumber, bus?.vehicle.bearingDegrees] // eslint-disable-line react-hooks/exhaustive-deps
+  )
 
   if (!bus || !icon) return null
 
