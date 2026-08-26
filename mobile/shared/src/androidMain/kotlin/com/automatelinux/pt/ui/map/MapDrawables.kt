@@ -5,6 +5,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.LinearGradient
 import android.graphics.Paint
+import android.graphics.Path
 import android.graphics.PixelFormat
 import android.graphics.RadialGradient
 import android.graphics.Shader
@@ -65,9 +66,14 @@ internal fun createCircleDrawable(
 internal fun createBusMarkerDrawable(
     fillColor: Int,
     lineNumber: String,
-    density: Float
+    density: Float,
+    bearingDegrees: Int? = null
 ): Drawable {
-    val discRadius = 13f * density
+    // 15dp rather than the 13dp this started at: the heading chevron lives INSIDE the
+    // disc, and 13dp left it under 1dp clear of both the glyph and the disc edge, which
+    // at map scale read as one white smudge. See the chevron block in draw() for why it
+    // cannot simply sit outside the ring instead.
+    val discRadius = 15f * density
     val ringWidth = 2f * density
     // Square, with the disc dead centre so the marker can keep ANCHOR_CENTER and sit on
     // the bus's real coordinate. The badge lives in the corner slack this leaves.
@@ -102,6 +108,16 @@ internal fun createBusMarkerDrawable(
         textAlign = Paint.Align.CENTER
     }
 
+    // Points north (up) around the origin; draw() translates to the marker centre and
+    // rotates it to the bearing. Built once, like the paints — the whole vehicle layer is
+    // rebuilt every 15s poll, so per-draw allocation is paid on every marker every time.
+    val chevronPath = Path().apply {
+        moveTo(0f, -13.5f * density)
+        lineTo(-3f * density, -10f * density)
+        lineTo(3f * density, -10f * density)
+        close()
+    }
+
     val label = lineNumber.trim()
     val textWidth = if (label.isEmpty()) 0f else badgeTextPaint.measureText(label)
     val badgeHeight = 14f * density
@@ -114,6 +130,23 @@ internal fun createBusMarkerDrawable(
 
             canvas.drawCircle(cx, cy, discRadius + ringWidth, ringPaint)
             canvas.drawCircle(cx, cy, discRadius, discPaint)
+
+            // Which way the bus is actually pointing. Inside the disc rather than as an
+            // arrowhead outside the ring, because the line badge is pinned to the
+            // top-right and an orbiting arrow disappears behind it for every heading
+            // between roughly NE and ENE — a seventh of the compass, silently. Anything
+            // drawn inside the circle collides with nothing at any angle.
+            //
+            // The map is always north-up (no rotation gesture is enabled), so the
+            // compass bearing IS the screen angle. If map rotation is ever added, this
+            // has to become `bearing - mapOrientation`.
+            if (bearingDegrees != null) {
+                canvas.save()
+                canvas.translate(cx, cy)
+                canvas.rotate(bearingDegrees.toFloat())
+                canvas.drawPath(chevronPath, glyphPaint)
+                canvas.restore()
+            }
 
             // The bus, as body + window band + two wheels — the same reading the web's SVG
             // gives, at a size where any more detail would turn to mush.

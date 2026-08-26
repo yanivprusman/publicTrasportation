@@ -34,6 +34,22 @@ export interface NormalisedVehicle {
    * computed from two positions, not read from here.
    */
   tripTravelledMeters: number
+  /**
+   * Compass degrees the vehicle is pointing: 0 is north, increasing clockwise. Null when
+   * the feed has no reading, which is most of them.
+   *
+   * SIRI's `Bearing: "0"` means "no reading", NOT due north, and normalising that away is
+   * the whole reason this field exists here rather than being read raw by each client.
+   * Measured over 108 vehicles across five stations: all 37 zeroes also reported
+   * `Velocity: 0`, and not one vehicle with a non-zero velocity ever reported bearing 0.
+   * A real compass would leave ~0.3% of vehicles at exactly 0, not 34%. Drawn raw, a
+   * third of the fleet would point north.
+   *
+   * The converse does NOT hold — a vehicle stopped at a stop (`Velocity: 0`) usually
+   * still reports the heading it last drove in, and that heading is good. So this is
+   * keyed off the bearing alone; velocity is not consulted.
+   */
+  bearingDegrees: number | null
   /** The monitored stop that reported this vehicle; lets a tapped marker be tracked. */
   stopCode: string | null
   /** SIRI LineRef = the GTFS route_id (LineRef 11057 = line 64). Identifies the route exactly. */
@@ -79,6 +95,15 @@ export function normaliseVehicles(
 
       const destinationRef = journey.DestinationRef != null ? String(journey.DestinationRef) : null
 
+      // 0 is the feed's "no reading" sentinel — see bearingDegrees. Rounded to a whole
+      // degree so the wire type stays an integer: the mobile clients deserialize this
+      // into an Int, and a fractional degree would fail the whole response, not one field.
+      const rawBearing = Number(journey.Bearing)
+      const bearingDegrees =
+        Number.isFinite(rawBearing) && rawBearing !== 0
+          ? Math.round(((rawBearing % 360) + 360) % 360)
+          : null
+
       vehicles.push({
         vehicleRef: journey.VehicleRef != null ? String(journey.VehicleRef) : '',
         lineNumber: journey.PublishedLineName ?? '',
@@ -87,6 +112,7 @@ export function normaliseVehicles(
         expectedArrival: String(expectedArrival),
         recordedAt: visit.RecordedAtTime ?? null,
         tripTravelledMeters: Number(call.DistanceFromStop) || 0,
+        bearingDegrees,
         stopCode: visit.MonitoringRef != null ? String(visit.MonitoringRef) : null,
         lineRef: journey.LineRef != null ? String(journey.LineRef) : null,
         destinationRef,

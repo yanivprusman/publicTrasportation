@@ -99,6 +99,15 @@ data class VehicleMarker(
     val tripTravelledMeters: Int = 0,
     /** SIRI RecordedAtTime, ISO-8601 with offset. Null when the feed omits it. */
     val recordedAt: String? = null,
+    /**
+     * Compass degrees this vehicle is pointing — 0 is north, increasing clockwise. Null
+     * when the feed had no reading.
+     *
+     * The server already normalised SIRI's `Bearing: "0"` sentinel away (see
+     * lib/siri-vehicles.ts, which measures why 0 is "unknown" and not "north"), so any
+     * value here is a real heading and needs no re-checking for zero at the draw site.
+     */
+    val bearingDegrees: Int? = null,
     /** The monitored stop this was reported by; lets a tapped marker be tracked. */
     val stopCode: String? = null,
     /** SIRI LineRef, i.e. the GTFS route_id — draws the correct line. */

@@ -186,7 +186,8 @@ fun VehicleMarkerOverlay(
                     icon = createBusMarkerDrawable(
                         Color.parseColor("#E91E63"),
                         vm.lineNumber,
-                        map.resources.displayMetrics.density
+                        map.resources.displayMetrics.density,
+                        vm.bearingDegrees
                     )
                     if (onVehicleTap != null) {
                         // A dot you cannot act on is decoration; tapping one is how
@@ -308,7 +309,8 @@ fun TrackedBusOverlay(
                 icon = createBusMarkerDrawable(
                     Color.parseColor("#FF6D00"),
                     marker.lineNumber,
-                    map.resources.displayMetrics.density
+                    map.resources.displayMetrics.density,
+                    marker.bearingDegrees
                 )
                 setInfoWindow(null)
             }
