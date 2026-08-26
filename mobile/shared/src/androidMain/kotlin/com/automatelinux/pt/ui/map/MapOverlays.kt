@@ -208,11 +208,15 @@ fun VehicleMarkerOverlay(
 fun StopMarkersOverlay(
     map: MapView,
     stops: List<com.automatelinux.pt.data.model.StopResult>,
+    // The stop whose arrivals board is open, drawn with a centre dot so the user can see
+    // which of the dots they are watching.
+    activeStopCode: String? = null,
     onStopTap: ((com.automatelinux.pt.data.model.StopResult) -> Unit)? = null
 ) {
-    LaunchedEffect(stops) {
+    LaunchedEffect(stops, activeStopCode) {
         map.overlays.removeAll { (it as? Marker)?.id == "stop_marker" }
 
+        val density = map.resources.displayMetrics.density
         for (stop in stops) {
             val marker = Marker(map).apply {
                 id = "stop_marker"
@@ -220,7 +224,7 @@ fun StopMarkersOverlay(
                 setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
                 title = stop.stopName
                 snippet = stop.stopCode
-                icon = createCircleDrawable(Color.parseColor("#1976D2"), 16, Color.WHITE, 3f)
+                icon = createStopMarkerDrawable(density, stop.stopCode == activeStopCode)
                 setInfoWindow(null)
                 if (onStopTap != null) {
                     setOnMarkerClickListener { _, _ ->

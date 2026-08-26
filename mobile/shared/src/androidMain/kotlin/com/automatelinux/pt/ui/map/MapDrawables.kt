@@ -14,6 +14,59 @@ import android.graphics.drawable.Drawable
 import android.view.animation.LinearInterpolator
 import org.osmdroid.views.MapView
 
+internal val STOP_MARKER_BLUE: Int = Color.parseColor("#1976D2")
+
+/**
+ * A transit stop on the map: a white disc inside a blue ring, gaining a blue centre when
+ * it is the stop whose arrivals board is open.
+ *
+ * A stop used to be a filled blue disc — the same shape, and very nearly the same blue, as
+ * the device's own position ([GpsLocationOverlay.createBlueDotBitmap], #4285F4 at 7dp).
+ * "Where you are" and "where a bus stops" were separated by eight pixels of diameter and
+ * one shade of blue, which is not a distinction anyone reads on a moving map. Filled means
+ * you; ringed means a stop. The selected stop keeps the rule — it gains a centre dot
+ * rather than becoming a disc, so the one marker the user just tapped cannot be mistaken
+ * for themselves either.
+ *
+ * This matches the web, whose StopsLayer has drawn stops hollow all along; Android was the
+ * half that never did.
+ *
+ * Sizes are dp, not the raw pixel count the old marker used: a pixel radius shrinks as
+ * screens get denser, and a ring drawn that thin greys into an unreadable smudge.
+ */
+internal fun createStopMarkerDrawable(density: Float, selected: Boolean): Drawable {
+    val coreRadius = 3.5f * density
+    val ringWidth = (if (selected) 3.5f else 3f) * density
+    val centreRadius = 2f * density
+    val outerRadius = coreRadius + ringWidth
+    val size = (outerRadius * 2).toInt() + 2
+    return object : Drawable() {
+        override fun draw(canvas: Canvas) {
+            val cx = bounds.centerX().toFloat()
+            val cy = bounds.centerY().toFloat()
+            val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
+
+            paint.color = STOP_MARKER_BLUE
+            canvas.drawCircle(cx, cy, outerRadius, paint)
+
+            paint.color = Color.WHITE
+            canvas.drawCircle(cx, cy, coreRadius, paint)
+
+            if (selected) {
+                paint.color = STOP_MARKER_BLUE
+                canvas.drawCircle(cx, cy, centreRadius, paint)
+            }
+        }
+
+        override fun getIntrinsicWidth() = size
+        override fun getIntrinsicHeight() = size
+        override fun setAlpha(alpha: Int) {}
+        override fun setColorFilter(colorFilter: android.graphics.ColorFilter?) {}
+        @Deprecated("Deprecated")
+        override fun getOpacity() = PixelFormat.TRANSLUCENT
+    }
+}
+
 internal fun createCircleDrawable(
     fillColor: Int,
     radius: Int,

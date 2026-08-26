@@ -28,6 +28,12 @@ data class PtMapOverlays(
     val vehicles: List<VehicleMarker> = emptyList(),
     val vehiclesVisible: Boolean = true,
     val stops: List<StopResult> = emptyList(),
+    /**
+     * Which of [stops] is the one whose arrivals board is open, by stop code.
+     *
+     * Renderers draw it as the selected stop; null means none of them is.
+     */
+    val activeStopCode: String? = null,
     /** Per-direction shape geometry for a browsed line, keyed by direction id. */
     val lineShape: Map<String, List<List<Double>>>? = null,
     /** Whether [lineShape] should fit the camera to itself; see LineShapeOverlay. */

@@ -65,7 +65,7 @@ actual fun PtMap(
             redrawKey = overlays.itinerary
         )
         VehicleMarkerOverlay(mapView, overlays.vehicles, overlays.vehiclesVisible, onVehicleTap)
-        StopMarkersOverlay(mapView, overlays.stops, onStopTap)
+        StopMarkersOverlay(mapView, overlays.stops, overlays.activeStopCode, onStopTap)
         // Always composed, empty when there is no shape: the overlay clears its
         // polylines at the start of its effect, so dropping it out of the composition
         // instead left the last line drawn on the map forever.

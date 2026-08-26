@@ -1020,6 +1020,7 @@ fun MainScreen(
                         },
                         vehiclesVisible = liveBuses || arrivalsState.showVehicleMarkers,
                         stops = nearbyStops,
+                        activeStopCode = arrivalsState.stationCode.takeIf { it.isNotEmpty() },
                         // Tracking wins over the Lines tab: a bus can be reported far
                         // up the road, well off the stretch of the itinerary you ride,
                         // so its own line is what makes the marker mean anything.
