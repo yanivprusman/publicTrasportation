@@ -8,6 +8,8 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.Shader
+import androidx.compose.ui.graphics.toArgb
+import com.automatelinux.pt.ui.theme.CurrentLocationBlue
 import com.google.android.gms.location.FusedLocationProviderClient
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
@@ -60,7 +62,7 @@ class GpsLocationOverlay(
                 style = Paint.Style.FILL
             }
             val dotPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                color = Color.parseColor("#4285F4")
+                color = CurrentLocationBlue.toArgb()
                 style = Paint.Style.FILL
             }
             canvas.drawCircle(cx, cy, dotRadius + borderWidth, borderPaint)
@@ -90,7 +92,7 @@ class GpsLocationOverlay(
             val conePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 shader = LinearGradient(
                     cx, cy - coneLength, cx, cy,
-                    Color.TRANSPARENT, Color.parseColor("#804285F4"),
+                    Color.TRANSPARENT, CurrentLocationBlue.copy(alpha = 0.5f).toArgb(),
                     Shader.TileMode.CLAMP
                 )
             }
@@ -107,7 +109,7 @@ class GpsLocationOverlay(
                 style = Paint.Style.FILL
             }
             val dotPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                color = Color.parseColor("#4285F4")
+                color = CurrentLocationBlue.toArgb()
                 style = Paint.Style.FILL
             }
             canvas.drawCircle(cx, cy, dotRadius + borderWidth, borderPaint)

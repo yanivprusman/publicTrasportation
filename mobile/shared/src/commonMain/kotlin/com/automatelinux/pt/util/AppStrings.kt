@@ -123,6 +123,11 @@ interface AppStrings {
     val serversTried: (String) -> String
     val noServerReachable: String
     val useCurrentLocation: String
+    /** Caption under an endpoint that is the device's own position. */
+    val myLocation: String
+    /** Content description of the origin / destination markers in the planner. */
+    val originMarker: String
+    val destinationMarker: String
     val clear: String
     val locationIconDot: String
     val locationIconPerson: String
@@ -462,6 +467,9 @@ val EnStrings: AppStrings = object : AppStrings {
     override val serversTried: (String) -> String = { s -> "Servers tried: $s" }
     override val noServerReachable: String = "No PT server reachable"
     override val useCurrentLocation: String = "Use current location"
+    override val myLocation: String = "My location"
+    override val originMarker: String = "Origin"
+    override val destinationMarker: String = "Destination"
     override val clear: String = "Clear"
     override val locationIconDot: String = "Location: Blue Dot"
     override val locationIconPerson: String = "Location: Person"
@@ -797,6 +805,9 @@ val HeStrings: AppStrings = object : AppStrings {
     override val serversTried: (String) -> String = { s -> "שרתים שנוסו: $s" }
     override val noServerReachable: String = "לא ניתן להתחבר לשרת PT"
     override val useCurrentLocation: String = "השתמש במיקום נוכחי"
+    override val myLocation: String = "המיקום שלי"
+    override val originMarker: String = "נקודת מוצא"
+    override val destinationMarker: String = "יעד"
     override val clear: String = "נקה"
     override val locationIconDot: String = "מיקום: נקודה כחולה"
     override val locationIconPerson: String = "מיקום: דמות"

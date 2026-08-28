@@ -58,6 +58,13 @@ fun <T> AutocompleteField(
     modifier: Modifier = Modifier,
     onClear: () -> Unit = {},
     leadingIcon: @Composable (() -> Unit)? = null,
+    /**
+     * Sits before the clear button. The leading slot marks *what the field holds*;
+     * an action put there has to impersonate a marker to get a place to stand.
+     */
+    trailingAccessory: @Composable (() -> Unit)? = null,
+    /** One line under the field — where "this is your GPS fix" belongs, not in the value. */
+    supportingText: @Composable (() -> Unit)? = null,
     debounceMs: Long = 300,
     suppressSearch: Boolean = false,
     preSuggestions: List<PreSuggestion> = emptyList(),
@@ -153,15 +160,21 @@ fun <T> AutocompleteField(
                 },
             singleLine = true,
             leadingIcon = leadingIcon,
-            trailingIcon = {
-                if (value.isNotEmpty()) {
-                    IconButton(onClick = {
-                        onValueChange("")
-                        suggestions = emptyList()
-                        showDropdown = false
-                        onClear()
-                    }) {
-                        Icon(Icons.Default.Clear, contentDescription = strings.clear)
+            supportingText = supportingText,
+            trailingIcon = if (trailingAccessory == null && value.isEmpty()) null else {
+                {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        trailingAccessory?.invoke()
+                        if (value.isNotEmpty()) {
+                            IconButton(onClick = {
+                                onValueChange("")
+                                suggestions = emptyList()
+                                showDropdown = false
+                                onClear()
+                            }) {
+                                Icon(Icons.Default.Clear, contentDescription = strings.clear)
+                            }
+                        }
                     }
                 }
             }

@@ -64,17 +64,33 @@ class RoutingViewModel(
         if (s.origin != null && s.destination != null && (s.results != null || s.loading)) search()
     }
 
-    fun setOrigin(suggestion: GeocodeSuggestion?) {
+    /** Anything the user names — typed, picked, cleared — is by definition not the GPS fix. */
+    fun setOrigin(suggestion: GeocodeSuggestion?) = applyOrigin(suggestion, isCurrentLocation = false)
+
+    fun setDestination(suggestion: GeocodeSuggestion?) =
+        applyDestination(suggestion, isCurrentLocation = false)
+
+    private fun applyOrigin(suggestion: GeocodeSuggestion?, isCurrentLocation: Boolean) {
         val previous = _state.value.origin
-        _state.value = _state.value.copy(origin = suggestion, results = null, error = null)
+        _state.value = _state.value.copy(
+            origin = suggestion,
+            originIsCurrentLocation = isCurrentLocation && suggestion != null,
+            results = null,
+            error = null
+        )
         clearDayOverview()
         if (!sameCoords(previous, suggestion)) autoSearchIfReady()
         syncNearbyBoard()
     }
 
-    fun setDestination(suggestion: GeocodeSuggestion?) {
+    private fun applyDestination(suggestion: GeocodeSuggestion?, isCurrentLocation: Boolean) {
         val previous = _state.value.destination
-        _state.value = _state.value.copy(destination = suggestion, results = null, error = null)
+        _state.value = _state.value.copy(
+            destination = suggestion,
+            destinationIsCurrentLocation = isCurrentLocation && suggestion != null,
+            results = null,
+            error = null
+        )
         clearDayOverview()
         if (!sameCoords(previous, suggestion)) autoSearchIfReady()
         syncNearbyBoard()
@@ -194,6 +210,9 @@ class RoutingViewModel(
         _state.value = s.copy(
             origin = s.destination,
             destination = s.origin,
+            // The marks belong to the places, so they change seats with them.
+            originIsCurrentLocation = s.destinationIsCurrentLocation,
+            destinationIsCurrentLocation = s.originIsCurrentLocation,
             results = null,
             error = null
         )
@@ -267,16 +286,34 @@ class RoutingViewModel(
         search()
     }
 
-    fun setOriginFromCoords(lat: Double, lon: Double, name: String? = null, placeholder: String = MAP_LOCATION_LABEL) {
+    /**
+     * [isCurrentLocation] separates "the device is here" from "the user pointed here":
+     * both arrive as a bare pair of coordinates, and only the caller knows which. It
+     * has to be carried into [resolveAddress] too, or the street name landing a moment
+     * later would quietly demote the GPS fix to an ordinary address.
+     */
+    fun setOriginFromCoords(
+        lat: Double,
+        lon: Double,
+        name: String? = null,
+        placeholder: String = MAP_LOCATION_LABEL,
+        isCurrentLocation: Boolean = false
+    ) {
         val displayName = name ?: placeholder
-        setOrigin(GeocodeSuggestion(name = displayName, lat = lat, lon = lon))
-        if (name == null) resolveAddress(lat, lon) { setOrigin(it) }
+        applyOrigin(GeocodeSuggestion(name = displayName, lat = lat, lon = lon), isCurrentLocation)
+        if (name == null) resolveAddress(lat, lon) { applyOrigin(it, isCurrentLocation) }
     }
 
-    fun setDestinationFromCoords(lat: Double, lon: Double, name: String? = null, placeholder: String = MAP_LOCATION_LABEL) {
+    fun setDestinationFromCoords(
+        lat: Double,
+        lon: Double,
+        name: String? = null,
+        placeholder: String = MAP_LOCATION_LABEL,
+        isCurrentLocation: Boolean = false
+    ) {
         val displayName = name ?: placeholder
-        setDestination(GeocodeSuggestion(name = displayName, lat = lat, lon = lon))
-        if (name == null) resolveAddress(lat, lon) { setDestination(it) }
+        applyDestination(GeocodeSuggestion(name = displayName, lat = lat, lon = lon), isCurrentLocation)
+        if (name == null) resolveAddress(lat, lon) { applyDestination(it, isCurrentLocation) }
     }
 
     private fun resolveAddress(lat: Double, lon: Double, apply: (GeocodeSuggestion) -> Unit) {
@@ -865,7 +902,12 @@ class RoutingViewModel(
     }
 
     fun debugFill(autoSearch: Boolean = true, origin: GeocodeSuggestion, destination: GeocodeSuggestion) {
-        _state.value = _state.value.copy(origin = origin, destination = destination)
+        _state.value = _state.value.copy(
+            origin = origin,
+            destination = destination,
+            originIsCurrentLocation = false,
+            destinationIsCurrentLocation = false
+        )
         if (autoSearch) {
             search()
         }

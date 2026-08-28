@@ -128,6 +128,12 @@ import com.automatelinux.pt.util.TripLink
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.launch
 
+/**
+ * Who is waiting on the location permission. One launcher serves three buttons, and
+ * the answer has to go back to the one that asked.
+ */
+private enum class GpsTarget { ORIGIN, DESTINATION, MAP_FOLLOW }
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun MainScreen(
@@ -241,7 +247,8 @@ fun MainScreen(
                     gpsLoading = false
                     routingViewModel.setOriginFromCoords(
                         loc.latitude, loc.longitude,
-                        placeholder = strings.selectedLocation
+                        placeholder = strings.myLocation,
+                        isCurrentLocation = true
                     )
                     mapState.animateTo(LatLng(loc.latitude, loc.longitude), 15.0)
                 },
@@ -259,7 +266,8 @@ fun MainScreen(
                     gpsLoadingDestination = false
                     routingViewModel.setDestinationFromCoords(
                         loc.latitude, loc.longitude,
-                        placeholder = strings.selectedLocation
+                        placeholder = strings.myLocation,
+                        isCurrentLocation = true
                     )
                     mapState.animateTo(LatLng(loc.latitude, loc.longitude), 15.0)
                 },
@@ -308,20 +316,41 @@ fun MainScreen(
         onDispose { LocationHelper.stopFollowing(fusedLocationClient, callback) }
     }
 
+    // Which button opened the permission dialog. Without it the grant always filled
+    // the origin, so a first-run tap on the destination's location button set the
+    // *other* field — the one place the user had not asked about.
+    var pendingGpsTarget by remember { mutableStateOf<GpsTarget?>(null) }
+
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
-        if (granted) fetchCurrentLocation()
+        val target = pendingGpsTarget
+        pendingGpsTarget = null
+        if (granted) when (target) {
+            GpsTarget.ORIGIN -> fetchCurrentLocation()
+            GpsTarget.DESTINATION -> fetchCurrentLocationForDestination()
+            GpsTarget.MAP_FOLLOW -> {
+                followingLocation = true
+                centerMapOnCurrentLocation()
+            }
+            null -> Unit
+        }
     }
 
     val onGpsClick: () -> Unit = {
         if (LocationHelper.hasPermission(context)) fetchCurrentLocation()
-        else permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+        else {
+            pendingGpsTarget = GpsTarget.ORIGIN
+            permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+        }
     }
 
     val onGpsClickDestination: () -> Unit = {
         if (LocationHelper.hasPermission(context)) fetchCurrentLocationForDestination()
-        else permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+        else {
+            pendingGpsTarget = GpsTarget.DESTINATION
+            permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+        }
     }
 
     // Departure reminder: exact AlarmManager alarm + system notification, so it fires
@@ -1354,6 +1383,7 @@ fun MainScreen(
                                     centerMapOnCurrentLocation()
                                 }
                             } else {
+                                pendingGpsTarget = GpsTarget.MAP_FOLLOW
                                 permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
                             }
                         },

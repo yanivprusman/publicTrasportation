@@ -153,6 +153,14 @@ data class RoutingState(
     val destination: GeocodeSuggestion? = null,
     val via: GeocodeSuggestion? = null,
     val viaFieldVisible: Boolean = false,
+    /**
+     * The endpoint is the device's own position, not a place the user named. Set only
+     * by the GPS fetchers and cleared by any other way of filling the field, so the
+     * planner can mark it with the map's "you" dot instead of an anonymous address —
+     * and so a reverse-geocoded street name can't pass itself off as a typed one.
+     */
+    val originIsCurrentLocation: Boolean = false,
+    val destinationIsCurrentLocation: Boolean = false,
     val departureTime: Instant? = null,
     val arriveBy: Boolean = false,
     val results: RouteResult? = null,

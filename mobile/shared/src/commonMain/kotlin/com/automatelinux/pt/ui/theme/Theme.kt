@@ -14,6 +14,13 @@ val RailBlue = Color(0xFF2196F3)
 val TramOrange = Color(0xFFFF5722)
 val SubwayPurple = Color(0xFF9C27B0)
 
+/**
+ * "You are here" blue. The map's location dot and the planner's origin marker only
+ * read as the same thing while they are literally the same colour, so both take it
+ * from here rather than each carrying its own literal.
+ */
+val CurrentLocationBlue = Color(0xFF4285F4)
+
 val DarkColorScheme = darkColorScheme(
     primary = PtBlue,
     onPrimary = Color.White,

@@ -1,8 +1,13 @@
 package com.automatelinux.pt.ui.routing
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MyLocation
+import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.outlined.Circle
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -14,12 +19,20 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.automatelinux.pt.data.model.GeocodeSuggestion
 import com.automatelinux.pt.ui.components.AutocompleteField
 import com.automatelinux.pt.ui.components.PreSuggestion
+import com.automatelinux.pt.ui.theme.CurrentLocationBlue
 import com.automatelinux.pt.util.LocalAppStrings
+
+/** What the field's leading marker says the value is. */
+enum class LocationMarker { NONE, ORIGIN, DESTINATION }
 
 @Composable
 fun LocationInput(
@@ -29,7 +42,13 @@ fun LocationInput(
     onClear: () -> Unit,
     onGeocode: suspend (String) -> List<GeocodeSuggestion>,
     modifier: Modifier = Modifier,
-    showGpsButton: Boolean = false,
+    marker: LocationMarker = LocationMarker.NONE,
+    /**
+     * The value in this field is the device's own position. The marker becomes the
+     * map's "you" dot and a caption says so — the reverse-geocoded street name in the
+     * field is where you are, and on its own is indistinguishable from one you typed.
+     */
+    isCurrentLocation: Boolean = false,
     onGpsClick: (() -> Unit)? = null,
     gpsLoading: Boolean = false,
     preSuggestions: List<PreSuggestion> = emptyList(),
@@ -75,7 +94,33 @@ fun LocationInput(
         onLongPressSuggestion = onLongPressSuggestion,
         emptyText = LocalAppStrings.current.nothingFound,
         errorText = LocalAppStrings.current.searchUnavailable,
-        leadingIcon = if (showGpsButton && onGpsClick != null) {
+        leadingIcon = when {
+            isCurrentLocation -> {
+                { CurrentLocationDot(description = strings.myLocation) }
+            }
+            marker == LocationMarker.ORIGIN -> {
+                {
+                    Icon(
+                        Icons.Outlined.Circle,
+                        contentDescription = strings.originMarker,
+                        modifier = Modifier.size(18.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            marker == LocationMarker.DESTINATION -> {
+                {
+                    Icon(
+                        Icons.Default.Place,
+                        contentDescription = strings.destinationMarker,
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            else -> null
+        },
+        trailingAccessory = if (onGpsClick == null) null else {
             {
                 IconButton(onClick = onGpsClick, enabled = !gpsLoading) {
                     if (gpsLoading) {
@@ -93,6 +138,37 @@ fun LocationInput(
                     }
                 }
             }
-        } else null
+        },
+        supportingText = if (!isCurrentLocation) null else {
+            {
+                Text(
+                    text = strings.myLocation,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = CurrentLocationBlue
+                )
+            }
+        }
     )
+}
+
+/**
+ * The map's location dot, drawn at field scale: same blue, same white ring. Copying
+ * the map's own glyph is the whole point — two different blues would read as two
+ * different things.
+ */
+@Composable
+private fun CurrentLocationDot(description: String) {
+    Box(
+        modifier = Modifier
+            .size(18.dp)
+            .semantics { contentDescription = description }
+            .background(Color.White, CircleShape),
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .size(13.dp)
+                .background(CurrentLocationBlue, CircleShape)
+        )
+    }
 }
