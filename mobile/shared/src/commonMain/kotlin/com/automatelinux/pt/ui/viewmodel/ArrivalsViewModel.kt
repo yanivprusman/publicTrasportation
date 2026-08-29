@@ -43,12 +43,29 @@ private const val NEARBY_VEHICLE_TARGET_BUSES = 5
 private const val NEARBY_VEHICLE_ROUND_STOPS = 5
 
 /**
- * The request budget for one poll, and the real bound on this search — four rounds of
- * [NEARBY_VEHICLE_ROUND_STOPS]. Walking outward has to stop somewhere, and it should stop
- * on work done rather than on distance: 20 SIRI requests is the cost, whether they cover
- * a block or half the Negev.
+ * The ordinary request budget for one poll — four rounds of [NEARBY_VEHICLE_ROUND_STOPS].
+ * A budget, not a wall: the walk may spend past it while the screen still shows ground it
+ * has not asked about (see [nearbyWalkShouldStop]). Downtown Tel Aviv is where a flat cap
+ * showed its edge — 20 stops was 560 m of an 840 m screen, so the map answered "no live
+ * buses within 560 m" having never asked the stops in the outer half of the view.
  */
-private const val NEARBY_VEHICLE_MAX_STOPS = 20
+private const val NEARBY_VEHICLE_BASE_STOPS = 20
+
+/**
+ * The wall. A dense city centre puts dozens of stops inside one screen, so covering the
+ * viewport has to stay bounded or a zoomed-out map would fan out hundreds of SIRI requests
+ * every poll. Past this the walk stops with the viewport still uncovered — which is not a
+ * silent lie: the map then says it searched only so far and asks the user to zoom in.
+ */
+private const val NEARBY_VEHICLE_MAX_STOPS = 60
+
+/**
+ * Ceiling for the poll interval. An expensive walk earns a longer wait so the request
+ * *rate* stays what it was — see [nearbyPollDelayMs]. Stretchable precisely because the
+ * expensive walk is the one that found nothing: a quiet area does not go stale the way a
+ * bus two stops away does.
+ */
+private const val NEARBY_VEHICLE_MAX_INTERVAL_MS = 45_000L
 
 /**
  * How far the stop *list* may reach. Nearly free, which is why it is generous: it is one
@@ -58,6 +75,38 @@ private const val NEARBY_VEHICLE_MAX_STOPS = 20
  * ceiling was the whole bug.
  */
 private const val NEARBY_VEHICLE_SEARCH_CEILING_M = 50_000
+
+/**
+ * Whether the outward walk has done enough, given what it has found and how much of the
+ * screen it has covered. Pure, so the trade-off is testable without a network.
+ *
+ * Three bounds rather than one count, because one count cannot serve both a village and a
+ * city centre:
+ *  - the wall ([NEARBY_VEHICLE_MAX_STOPS]) always wins;
+ *  - below it the walk never stops while the screen still shows unasked ground, whatever
+ *    the budget says — reporting on less ground than the user is looking at is the bug
+ *    this exists to prevent;
+ *  - once the screen is covered it stops on either enough buses or the ordinary budget.
+ */
+internal fun nearbyWalkShouldStop(
+    queried: Int,
+    busesFound: Int,
+    reachedMeters: Int,
+    viewportRadiusMeters: Int
+): Boolean {
+    if (queried >= NEARBY_VEHICLE_MAX_STOPS) return true
+    if (reachedMeters < viewportRadiusMeters) return false
+    return busesFound >= NEARBY_VEHICLE_TARGET_BUSES || queried >= NEARBY_VEHICLE_BASE_STOPS
+}
+
+/**
+ * How long to wait before the next poll, scaled by what the last one cost. A walk that
+ * spent three times the ordinary budget waits three times as long, so letting the walk
+ * cover the viewport raises the peak requests per poll without raising the sustained rate.
+ */
+internal fun nearbyPollDelayMs(queried: Int): Long =
+    (NEARBY_VEHICLE_INTERVAL_MS * queried / NEARBY_VEHICLE_BASE_STOPS)
+        .coerceIn(NEARBY_VEHICLE_INTERVAL_MS, NEARBY_VEHICLE_MAX_INTERVAL_MS)
 
 class ArrivalsViewModel(
     private val api: PtApi
@@ -239,8 +288,9 @@ class ArrivalsViewModel(
      * SIRI is monitored per stop, so "the buses around here" is the union of what the
      * stops report. The server returns them sorted nearest-first, which is what lets this
      * *walk outward*: a round of [NEARBY_VEHICLE_ROUND_STOPS] stops at a time, stopping
-     * once it holds [NEARBY_VEHICLE_TARGET_BUSES] buses and has covered the screen, and
-     * in any case once [NEARBY_VEHICLE_MAX_STOPS] requests are spent.
+     * once it holds [NEARBY_VEHICLE_TARGET_BUSES] buses and has covered the screen, or
+     * once the ordinary budget is spent with the screen covered, and in any case at the
+     * [NEARBY_VEHICLE_MAX_STOPS] wall. See [nearbyWalkShouldStop].
      *
      * That walk is the whole point. A fixed radius cannot serve both a city and a
      * village: 700 m, then 2 km, both drew an empty map in Midreshet Ben Gurion while
@@ -248,8 +298,10 @@ class ArrivalsViewModel(
      * makes the promise identical in both places, and lets the sparse case pay for its
      * own extra rounds while the dense case still stops after one.
      *
-     * [viewportRadiusMeters] no longer bounds the search, only its floor: the walk does
-     * not stop early while the screen still shows ground it has not asked about.
+     * [viewportRadiusMeters] does not bound the search, it is its floor: the walk does not
+     * stop while the screen still shows ground it has not asked about — not even when the
+     * ordinary budget is gone. Only the wall overrides that, and the UI says so when it
+     * is hit rather than passing a partial search off as an answer.
      *
      * Two things are deliberately NOT bounded. The number of vehicles — [seen] is ordered
      * by whichever stop answered first, so truncating it would drop a different bus each
@@ -296,7 +348,6 @@ class ArrivalsViewModel(
                 var answered = 0
 
                 for (round in stops.chunked(NEARBY_VEHICLE_ROUND_STOPS)) {
-                    if (queried >= NEARBY_VEHICLE_MAX_STOPS) break
                     // A round is issued concurrently: walking outward multiplies the
                     // requests, and sequentially they would outlast the poll interval.
                     val responses = coroutineScope {
@@ -327,7 +378,7 @@ class ArrivalsViewModel(
 
                     queried += round.size
                     reachedMeters = round.last().distanceMeters
-                    if (seen.size >= NEARBY_VEHICLE_TARGET_BUSES && reachedMeters >= viewportRadius) break
+                    if (nearbyWalkShouldStop(queried, seen.size, reachedMeters, viewportRadius)) break
                 }
 
                 val vehicles = seen.values.toList()
@@ -349,7 +400,9 @@ class ArrivalsViewModel(
                         distanceMeters(it.lat, it.lon, lat, lon).toInt()
                     } ?: 0
                 )
-                delay(NEARBY_VEHICLE_INTERVAL_MS)
+                // Paced by what this poll actually cost, not by a constant — the walk is
+                // now allowed to be expensive, so the interval is what keeps the rate flat.
+                delay(nearbyPollDelayMs(queried))
             }
         }
     }
