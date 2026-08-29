@@ -10,6 +10,7 @@ import com.automatelinux.pt.data.model.AppStateRequest
 import com.automatelinux.pt.data.model.AppStateResponse
 import com.automatelinux.pt.data.model.DayOverviewResult
 import com.automatelinux.pt.data.model.GeocodeSuggestion
+import com.automatelinux.pt.data.model.NearestBusResponse
 import com.automatelinux.pt.data.model.RouteResult
 import com.automatelinux.pt.data.model.RouteStopsResponse
 import com.automatelinux.pt.data.model.SiriResponse
@@ -82,6 +83,14 @@ class PtApi(private val client: HttpClient) {
 
     suspend fun nearbyStops(lat: Double, lon: Double, radius: Int = 500): List<StopResult> =
         fetch("/api/stops", params = mapOf("lat" to lat, "lon" to lon, "radius" to radius))
+
+    /**
+     * The nearest bus reporting anywhere, for when the local live-buses walk came back
+     * empty. [after] is how far that walk already covered — the server skips everything
+     * inside it rather than paying to re-ask stops this phone has already probed.
+     */
+    suspend fun nearestBus(lat: Double, lon: Double, after: Int): NearestBusResponse =
+        fetch("/api/nearest-bus", params = mapOf("lat" to lat, "lon" to lon, "after" to after))
 
     suspend fun getStoptimes(stopId: String, n: Int = 30): StoptimesResponse =
         fetch("/api/stoptimes", params = mapOf("stopId" to stopId, "n" to n))

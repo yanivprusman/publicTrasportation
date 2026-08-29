@@ -316,7 +316,9 @@ class ArrivalsViewModel(
             nearbyVehiclesLoaded = false,
             nearbyVehiclesFailure = NearbyVehiclesFailure.NONE,
             nearbyVehiclesReachedMeters = 0,
-            nearbyVehiclesNearestMeters = 0
+            nearbyVehiclesNearestMeters = 0,
+            nearestRunningBus = null,
+            nearestRunningBusMeters = 0
         )
         nearbyVehiclesJob = viewModelScope.launch {
             while (true) {
@@ -398,8 +400,30 @@ class ArrivalsViewModel(
                     nearbyVehiclesReachedMeters = reachedMeters,
                     nearbyVehiclesNearestMeters = vehicles.minOfOrNull {
                         distanceMeters(it.lat, it.lon, lat, lon).toInt()
-                    } ?: 0
+                    } ?: 0,
+                    // Buses in hand answer the question themselves; a stale nationwide
+                    // answer next to real markers would be a second, contradicting one.
+                    nearestRunningBus = if (vehicles.isNotEmpty()) null else _state.value.nearestRunningBus,
+                    nearestRunningBusMeters = if (vehicles.isNotEmpty()) 0 else _state.value.nearestRunningBusMeters
                 )
+
+                // Only when the neighbourhood came back empty, and only outside what was
+                // just walked — the server is told how far this phone already covered so
+                // it never pays to re-ask a stop already probed here.
+                if (vehicles.isEmpty()) {
+                    try {
+                        val answer = api.nearestBus(lat, lon, reachedMeters)
+                        _state.value = _state.value.copy(
+                            nearestRunningBus = answer.vehicle,
+                            nearestRunningBusMeters = answer.distanceMeters ?: 0
+                        )
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (_: Exception) {
+                        // A failed lookup must not turn into "no buses anywhere": leave the
+                        // previous answer standing and let the next poll try again.
+                    }
+                }
                 // Paced by what this poll actually cost, not by a constant — the walk is
                 // now allowed to be expensive, so the interval is what keeps the rate flat.
                 delay(nearbyPollDelayMs(queried))

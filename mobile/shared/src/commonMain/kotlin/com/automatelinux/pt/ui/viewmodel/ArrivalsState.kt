@@ -57,6 +57,18 @@ data class ArrivalsState(
      * at all — this is what lets the map say "nearest one is 12 km away" instead.
      */
     val nearbyVehiclesNearestMeters: Int = 0,
+    /**
+     * The nearest bus reporting ANYWHERE, asked for only when the local walk found none.
+     *
+     * "Nothing around me" and "nothing running at all" are different facts, and the local
+     * walk cannot tell them apart: it spends its budget on the stops nearest the user, so
+     * on a Shabbat afternoon it reports on 330 m of a silent Tel Aviv while Haifa runs
+     * normally 85 km away. Null means the question has not been answered — either the
+     * local walk found buses and it was never asked, or the answer has not come back yet.
+     */
+    val nearestRunningBus: VehicleMarker? = null,
+    /** Distance from the search centre to [nearestRunningBus]. */
+    val nearestRunningBusMeters: Int = 0,
     val error: String? = null,
     val loading: Boolean = false,
     val timetable: List<StopTimeEntry> = emptyList(),

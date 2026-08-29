@@ -140,3 +140,25 @@ data class RouteStopItem(
     val lat: Double = 0.0,
     val lon: Double = 0.0
 )
+
+/**
+ * The nearest bus that is actually reporting, at any distance — `/api/nearest-bus`.
+ *
+ * Answers a different question from the live-buses layer, which walks the stops nearest
+ * the user and so can only ever report on the neighbourhood. When a whole region is quiet
+ * — a Shabbat afternoon in Gush Dan, a village any day — "nothing here" and "nothing
+ * anywhere" are different facts and the neighbourhood cannot tell them apart.
+ *
+ * [searchedFromMeters] is what the caller had already covered itself; the server skips
+ * candidates inside it rather than re-asking stops the live layer already probed.
+ */
+@Serializable
+data class NearestBusResponse(
+    val found: Boolean = false,
+    val vehicle: VehicleMarker? = null,
+    val distanceMeters: Int? = null,
+    val searchedMeters: Int = 0,
+    val searchedFromMeters: Int = 0,
+    val candidateStops: Int = 0,
+    val siriRequests: Int = 0,
+)

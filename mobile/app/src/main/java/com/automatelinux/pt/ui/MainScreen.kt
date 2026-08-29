@@ -1043,7 +1043,11 @@ fun MainScreen(
                         // Vehicles and line shapes belong to their own tabs; drawing them
                         // everywhere would clutter a map being used for something else.
                         vehicles = when {
+                            // Falling back to the nationwide answer is what makes "tap to
+                            // show it" mean anything: without a marker the camera flies
+                            // 85 km to an empty map and the user is worse off than before.
                             liveBuses -> arrivalsState.nearbyVehicles
+                                .ifEmpty { listOfNotNull(arrivalsState.nearestRunningBus) }
                             activeTab == ActiveTab.ARRIVALS -> arrivalsState.vehicleMarkers
                             else -> emptyList()
                         },
@@ -1218,6 +1222,25 @@ fun MainScreen(
                             )
                         }
                     }
+                    // Same framing as the off-screen hint, for the bus the server found
+                    // when this neighbourhood had none. It can be a long way off, so the
+                    // camera has to travel rather than nudge.
+                    val showNearestRunningBus: () -> Unit = {
+                        arrivalsState.nearestRunningBus?.let { bus ->
+                            followingLocation = false
+                            mapState.fitBounds(
+                                boundsInsideVisibleBand(
+                                    center = currentMapCenter,
+                                    target = LatLng(bus.lat, bus.lon),
+                                    mapHeightPx = mapAreaHeightPx.toDouble(),
+                                    bandTopPx = liveBusesHintBottomInRootPx.toDouble(),
+                                    bandBottomPx = sheetTopInRootPx.toDouble(),
+                                    paddingPx = LIVE_BUS_FRAME_PADDING_PX.toDouble()
+                                ),
+                                padding = LIVE_BUS_FRAME_PADDING_PX
+                            )
+                        }
+                    }
                     val liveBusesHint: Pair<String, (() -> Unit)?>? = when {
                         !arrivalsState.nearbyVehiclesLoaded -> strings.liveBusesSearching to null
                         // A poll that never got an answer is a third fact, before the
@@ -1244,6 +1267,16 @@ fun MainScreen(
                             } else {
                                 null
                             }
+                        // Nothing around here, but the server found one somewhere. This
+                        // outranks the zoom hint below on purpose: "zoom in" asks the user
+                        // to go looking in a neighbourhood already known to be empty,
+                        // while this names the bus and offers to fly there. On a Shabbat
+                        // afternoon in Tel Aviv the honest answer is not about the screen
+                        // at all — it is that the nearest running bus is in Haifa.
+                        arrivalsState.nearestRunningBus != null ->
+                            strings.liveBusesOffscreen(
+                                formatDistance(arrivalsState.nearestRunningBusMeters, strings)
+                            ) to showNearestRunningBus
                         // The view covers half again more ground than was searched, so
                         // the emptiness says nothing about most of what is on screen.
                         currentMapRadiusMeters > reachedMeters * 1.5 ->

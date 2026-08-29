@@ -1,33 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import http from 'http';
 import fs from 'fs';
 import path from 'path';
 import { normaliseVehicles } from '../../../lib/siri-vehicles';
 import { fileStamp } from '../../../lib/file-stamp';
-
-function httpGet(url: string, headers: Record<string, string>, timeoutMs: number): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const parsed = new URL(url);
-    const req = http.get({
-      hostname: parsed.hostname,
-      port: parsed.port,
-      path: parsed.pathname + parsed.search,
-      headers,
-      timeout: timeoutMs,
-    }, (res) => {
-      // Collect raw bytes and decode once at the end. Concatenating Buffers as
-      // strings (data += chunk) decodes each chunk independently, so a
-      // multi-byte UTF-8 sequence split across a chunk boundary — every Hebrew
-      // character is 2 bytes — corrupts into replacement characters. SIRI stop,
-      // destination, and line names are Hebrew, so this must reassemble first.
-      const chunks: Buffer[] = [];
-      res.on('data', (chunk: Buffer) => { chunks.push(chunk); });
-      res.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
-    });
-    req.on('error', reject);
-    req.on('timeout', () => { req.destroy(); reject(new Error('Request timed out')); });
-  });
-}
+import { fetchStopMonitoring } from '../../../lib/siri-fetch';
 
 // Cache stop_code → stop_name from GTFS stops.txt. Rebuilt when the nightly
 // update replaces the file (see lib/file-stamp.ts).
@@ -86,27 +62,17 @@ function resolveStopNames(data: Record<string, unknown>): Record<string, string>
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
-  const apiKey = process.env.MOT_API_KEY || 'YP719171';
   const station = searchParams.get('station') || '26472';
   const line = searchParams.get('line');
   const detailLevel = searchParams.get('detail') || 'calls';
   const previewInterval = searchParams.get('interval') || 'PT60M';
 
   try {
-    const proxyPortFile = '/tmp/pt_proxy_port';
-
-    if (!fs.existsSync(proxyPortFile)) {
-      throw new Error("Proxy not running (port file not found). Run 'd startApp --app pt' to start the proxy.");
-    }
-
-    const port = fs.readFileSync(proxyPortFile, 'utf8').trim();
-    let localUrl = `http://localhost:${port}/Channels/HTTPChannel/SmQuery/2.8/json?Key=${apiKey}&MonitoringRef=${station}&StopVisitDetailLevel=${detailLevel}&PreviewInterval=${previewInterval}`;
-    if (line) localUrl += `&LineRef=${line}`;
-
-    // Use http module instead of fetch — the SSH tunnel proxy doesn't
-    // handle undici's (Node.js fetch) connection behavior correctly.
-    const body = await httpGet(localUrl, { 'Host': 'moran.mot.gov.il:110' }, 10000);
-    const data = JSON.parse(body);
+    const data = await fetchStopMonitoring(station, {
+      detail: detailLevel,
+      line,
+      interval: previewInterval,
+    }) as Record<string, any>
 
     data._stopNames = resolveStopNames(data);
     // The raw SIRI tree stays in the payload — the arrivals board still reads visits from
