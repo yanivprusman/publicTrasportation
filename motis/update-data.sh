@@ -25,11 +25,20 @@ echo "[$(date '+%Y-%m-%d %H:%M:%S')] Starting MOTIS data update..."
 # --- Download to staging ---
 mkdir -p "$STAGING_DIR"
 
+# Retry transient upstream failures. On 2026-09-05 Geofabrik answered the OSM
+# request with a 502 for a few minutes; the run died after 4s and the feed sat a
+# day stale. --retry covers exactly the transient set (408, 429, 5xx, connection
+# resets) and re-requests the SAME url — it is not a fallback to another source,
+# so a real breakage (404 because a url moved, a short/corrupt file) still fails
+# loudly at the validations below. --retry-max-time bounds the whole retry
+# window; --max-time still bounds each individual attempt.
 echo "Downloading fresh GTFS feed..."
-curl -fSL --max-time 300 -o "$STAGING_DIR/israel-gtfs.zip" "$GTFS_URL"
+curl -fSL --max-time 300 --retry 5 --retry-delay 10 --retry-max-time 600 \
+    -o "$STAGING_DIR/israel-gtfs.zip" "$GTFS_URL"
 
 echo "Downloading fresh OSM extract..."
-curl -fSL --max-time 600 -o "$STAGING_DIR/israel.osm.pbf" "$OSM_URL"
+curl -fSL --max-time 600 --retry 5 --retry-delay 10 --retry-max-time 900 \
+    -o "$STAGING_DIR/israel.osm.pbf" "$OSM_URL"
 
 # --- Validate file sizes ---
 GTFS_SIZE=$(stat -c%s "$STAGING_DIR/israel-gtfs.zip")
