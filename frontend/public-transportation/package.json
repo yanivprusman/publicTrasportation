@@ -5,6 +5,7 @@
   "type": "module",
   "dependencies": {
     "@addnewfeature/feedback-lib-launcher": "file:../../../../automateLinux/packages/feedback-lib-launcher",
+    "@automatelinux/geo": "file:../../../../automateLinux/packages/geo",
     "@claudecontrol/feedback-lib": "file:../../../../automateLinux/packages/feedback-lib",
     "@mapbox/polyline": "^1.2.1",
     "axios": "^1.8.4",

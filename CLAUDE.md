@@ -51,7 +51,7 @@ There are no tests or linter configured.
 ┌────────────────▼────────────────────────────────────────┐
 │  Next.js Server (App Router) - port 3002/3003            │
 │  /api/route → MOTIS     /api/transport → MOT SIRI        │
-│  /api/geocode → MOTIS   /api/line-shape → GTFS files     │
+│  /api/geocode → geo pkg /api/line-shape → GTFS files     │
 │  /api/stoptimes → MOTIS /api/directions → OpenRouteService│
 │  /api/health            /api/stops → GTFS stops.txt       │
 └────────┬──────────────────────┬─────────────────────────┘
@@ -101,7 +101,7 @@ Next.js App Router route handlers:
 
 **Transit routing (via MOTIS on port 3504):**
 - `route/route.ts` — `GET /api/route?from=lat,lon&to=lat,lon&time=ISO&arriveBy=bool` — multimodal routing, cached (5min TTL, 500 max)
-- `geocode/route.ts` — `GET /api/geocode?text=query` — location autocomplete
+- `geocode/route.ts` — `GET /api/geocode?text=query` — location autocomplete. The MOTIS + Nominatim search itself (and reverse-geocode's lookup) is `@automatelinux/geo` in /opt/automateLinux/packages, shared with midreshaze and brownSigns
 - `stoptimes/route.ts` — `GET /api/stoptimes?stopId=X&n=20` — stop departures
 - `health/route.ts` — `GET /api/health` — health check with MOTIS connectivity
 
