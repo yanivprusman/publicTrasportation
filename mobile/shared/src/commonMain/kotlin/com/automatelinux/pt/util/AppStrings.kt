@@ -202,6 +202,8 @@ interface AppStrings {
      * tap — telling the user to pinch outward themselves is a chore the app can do.
      */
     val liveBusesOffscreen: (String) -> String
+    /** In place of a ride's price when the journey's first fare already paid for it. */
+    val fareFreeTransfer: String
     val accessAccessible: String
     val accessNotAccessible: String
     val distanceKm: (String) -> String
@@ -542,6 +544,7 @@ val EnStrings: AppStrings = object : AppStrings {
     override val liveBusesNone: (String) -> String = { radius -> "No live buses within $radius of the map centre" }
     override val liveBusesZoomIn: (String) -> String = { radius -> "Only searching $radius around the centre — zoom in to cover what you see" }
     override val liveBusesOffscreen: (String) -> String = { distance -> "Nearest live bus is $distance away — tap to show it" }
+    override val fareFreeTransfer: String = "free transfer"
     override val accessAccessible: String = "Wheelchair accessible"
     override val accessNotAccessible: String = "Not wheelchair accessible"
     override val distanceKm: (String) -> String = { km -> "$km km" }
@@ -877,6 +880,7 @@ val HeStrings: AppStrings = object : AppStrings {
     override val liveBusesNone: (String) -> String = { radius -> "אין אוטובוסים חיים ברדיוס $radius ממרכז המפה" }
     override val liveBusesZoomIn: (String) -> String = { radius -> "החיפוש מכסה $radius סביב מרכז המפה בלבד — התקרב כדי לכסות את מה שרואים" }
     override val liveBusesOffscreen: (String) -> String = { distance -> "האוטובוס החי הקרוב ביותר במרחק $distance — הקש כדי לראות אותו" }
+    override val fareFreeTransfer: String = "מעבר חינם"
     override val accessAccessible: String = "נגיש לכיסא גלגלים"
     override val accessNotAccessible: String = "לא נגיש לכיסא גלגלים"
     override val distanceKm: (String) -> String = { km -> "$km ק״מ" }

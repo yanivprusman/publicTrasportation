@@ -496,11 +496,16 @@ private fun LegSegment(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         // What this ride costs on its own, so the journey total on the
-                        // card is explicable rather than asserted.
+                        // card is explicable rather than asserted — including when it
+                        // costs nothing because the first fare covers it.
                         leg.fare?.let { fare ->
                             Spacer(Modifier.width(8.dp))
                             Text(
-                                text = if (fare % 1.0 == 0.0) "₪${fare.toFixed(0)}" else "₪${fare.toFixed(2)}",
+                                text = when {
+                                    leg.fareCoveredByTransfer -> strings.fareFreeTransfer
+                                    fare % 1.0 == 0.0 -> "₪${fare.toFixed(0)}"
+                                    else -> "₪${fare.toFixed(2)}"
+                                },
                                 style = MaterialTheme.typography.bodySmall,
                                 color = Color(0xFF81C784)
                             )

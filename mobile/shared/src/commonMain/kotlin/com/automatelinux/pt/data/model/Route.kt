@@ -94,7 +94,13 @@ data class RouteLeg(
     val fromStopCode: String? = null,
     val toStopCode: String? = null,
     /** Single-ride price for this leg from the operators' fare table, in ILS. */
-    val fare: Double? = null
+    val fare: Double? = null,
+    /**
+     * The journey's first fare already paid for this ride — a free transfer within
+     * 15 km and 90 minutes. Its [fare] is still the single-ride price; it is just not
+     * charged.
+     */
+    val fareCoveredByTransfer: Boolean = false
 )
 
 @Serializable

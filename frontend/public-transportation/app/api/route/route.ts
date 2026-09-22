@@ -3,7 +3,8 @@ import { ensureMotis } from '@/lib/motis-manager';
 import { MODE_GROUPS, normalizeMode, PEDESTRIAN_SPEED } from '@/lib/motis-modes';
 import { tripWheelchairAccess } from '@/lib/gtfs-trips';
 import { stopIdentity } from '@/lib/gtfs-stops';
-import { fareBetween } from '@/lib/gtfs-fares';
+import { rideFare } from '@/lib/gtfs-fares';
+import { journeyFare, PricedRide } from '@/lib/journey-fare';
 
 const MOTIS_PORT = process.env.MOTIS_PORT || '3504';
 const MOTIS_BASE = `http://localhost:${MOTIS_PORT}`;
@@ -154,9 +155,9 @@ function transformItinerary(itin: MotisItinerary) {
         if (boarding?.stopCode) transformed.fromStopCode = boarding.stopCode;
         if (alighting?.stopCode) transformed.toStopCode = alighting.stopCode;
 
-        // Null when the fare table has no rule for this pair; the itinerary then
+        // Null when the fare table has no rule for this ride; the itinerary then
         // reports no total rather than a partial one.
-        const fare = fareBetween(boarding?.zoneId, alighting?.zoneId);
+        const fare = rideFare(leg.routeId, boarding?.zoneId, alighting?.zoneId);
         if (fare !== null) transformed.fare = fare;
       }
       if (leg.intermediateStops && leg.intermediateStops.length > 0) {
@@ -169,14 +170,14 @@ function transformItinerary(itin: MotisItinerary) {
       return transformed;
   });
 
-  // One unpriced ride makes the whole journey unpriced. Summing the legs we can
-  // price and calling it the total would understate the fare, which is the same
-  // failure the flat-rate estimate made and the reason it was replaced.
+  // One unpriced ride makes the whole journey unpriced (see lib/journey-fare.ts),
+  // and a ride the first fare already paid for says so rather than showing a price
+  // the rider will not be charged.
   const rides = legs.filter(l => l.mode !== 'WALK');
-  const priced = rides.filter(l => typeof l.fare === 'number');
-  const fareTotal = rides.length > 0 && priced.length === rides.length
-    ? Number(priced.reduce((sum, l) => sum + (l.fare as number), 0).toFixed(2))
-    : null;
+  const { total: fareTotal, coveredByTransfer } = journeyFare(rides as unknown as PricedRide[]);
+  rides.forEach((ride, i) => {
+    if (coveredByTransfer.has(i)) ride.fareCoveredByTransfer = true;
+  });
 
   return {
     duration: itin.duration || 0,
