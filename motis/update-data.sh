@@ -119,15 +119,14 @@ done
 # the old [[ -d ]] guard silently skipped this and stops stayed empty forever.
 mkdir -p "$PT_BACKEND_GTFS_DIR/israel-public-transportation"
 cp -f "$DATA_INPUT_DIR/israel-gtfs.zip" "$PT_BACKEND_GTFS_DIR/israel-gtfs.zip"
-# trips.txt carries wheelchair_accessible, which SIRI does not report at all —
-# /api/route reads it to tag each transit leg. trips.txt + shapes.txt also back
-# /api/trip-shape and /api/line-shape. stop_times.txt backs /api/route-stops (a
-# line's ordered stop list). ALL of them must be re-extracted together with
-# stops.txt: any file left off this list silently freezes at its last copy while
-# the importer moves on — trips.txt's fresh trip ids then resolve to zero rows in
-# it (that is exactly how shapes.txt broke in March 2025, and stop_times.txt
-# again until August 2026).
-unzip -o -q -d "$PT_BACKEND_GTFS_DIR/israel-public-transportation" "$PT_BACKEND_GTFS_DIR/israel-gtfs.zip" stops.txt trips.txt shapes.txt routes.txt stop_times.txt
-echo "GTFS copied + stops/trips/shapes/routes/stop_times extracted to $PT_BACKEND_GTFS_DIR"
+# The WHOLE feed is extracted, not a list of the files some route reads today. A
+# list is how every one of these broke: any file left off it silently freezes at
+# its last copy while the importer moves on. shapes.txt froze in March 2025,
+# stop_times.txt until August 2026, and fare_attributes.txt + fare_rules.txt
+# until September 2026, when /api/route priced line 60 Midreshet Ben-Gurion →
+# Be'er Sheva at ₪17 from the March 2025 table while HopOn charged ₪19. The next
+# file a route starts reading must not need a line added here to stay current.
+unzip -o -q -d "$PT_BACKEND_GTFS_DIR/israel-public-transportation" "$PT_BACKEND_GTFS_DIR/israel-gtfs.zip"
+echo "GTFS copied + extracted in full to $PT_BACKEND_GTFS_DIR"
 
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] MOTIS data update complete"

@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { fileStamp } from './file-stamp';
 
 /**
  * What a ride actually costs, from the operators' own fare table.
@@ -35,9 +36,15 @@ interface FareTable {
 }
 
 let cache: FareTable | null = null;
+// Rebuilt when the nightly update replaces either file (see lib/file-stamp.ts).
+// Guarded only by "already loaded?", a price change reached no rider until the
+// server happened to restart.
+let cacheStamp = -2;
 
 function load(): FareTable {
-  if (cache) return cache;
+  const stamp = fileStamp(ATTRS_FILE) + fileStamp(RULES_FILE);
+  if (cache && stamp === cacheStamp) return cache;
+  cacheStamp = stamp;
 
   const empty: FareTable = { keys: new Float64Array(0), tiers: new Uint8Array(0), prices: [] };
 
