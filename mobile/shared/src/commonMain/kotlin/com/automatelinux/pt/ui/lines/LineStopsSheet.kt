@@ -75,18 +75,18 @@ fun LineStopsSheet(
     etaArrivalIso: String? = null,
     /**
      * The tracked bus's expected arrival at [etaStopCode] and every stop after it. Each
-     * of those rows shows its clock time — the countdown alone answered "when is it
-     * here", not "when do I get where I'm going".
+     * of those rows shows its clock time and its own countdown — one countdown alone
+     * answered "when is it here", not "when do I get where I'm going".
      */
     upcomingCalls: List<UpcomingCall> = emptyList(),
     modifier: Modifier = Modifier
 ) {
     val strings = LocalAppStrings.current
 
-    // The countdown caption re-reads the clock like the card does — a frozen
+    // The countdown captions re-read the clock like the card does — a frozen
     // "in 3min" under a live list would quietly go stale.
     var now by remember { mutableStateOf(Clock.System.now()) }
-    if (etaArrivalIso != null) {
+    if (etaArrivalIso != null || upcomingCalls.isNotEmpty()) {
         LaunchedEffect(Unit) {
             while (true) {
                 delay(1000)
@@ -176,6 +176,18 @@ fun LineStopsSheet(
                                 boardingStopCode != null && stop.stopCode == boardingStopCode
                             val isEtaStop =
                                 etaStopCode != null && stop.stopCode == etaStopCode
+                            // Your stop and the bus's next one share the orange: the
+                            // theme's blue was hard to see on this dark card, and the
+                            // captions already say which is which.
+                            val highlighted = isBoarding || isEtaStop
+                            // The monitored stop's time comes from the marker too, so a
+                            // server that predates upcomingCalls still gets its countdown.
+                            val arrival = arrivalTimes.getOrNull(index)
+                                ?: etaArrivalIso.takeIf { isEtaStop }
+                            val caption = listOfNotNull(
+                                strings.lineStopsYourStop.takeIf { isBoarding },
+                                etaCaption(arrival, now, strings)
+                            ).joinToString(" · ")
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier
@@ -188,13 +200,10 @@ fun LineStopsSheet(
                                     modifier = Modifier
                                         .size(24.dp)
                                         .background(
-                                            // "Your stop" outranks the bus's when they
-                                            // coincide — you already know where the bus
-                                            // is from the caption.
-                                            color = when {
-                                                isBoarding -> MaterialTheme.colorScheme.primary
-                                                isEtaStop -> BusOrange
-                                                else -> MaterialTheme.colorScheme.surfaceVariant
+                                            color = if (highlighted) {
+                                                BusOrange
+                                            } else {
+                                                MaterialTheme.colorScheme.surfaceVariant
                                             },
                                             shape = CircleShape
                                         )
@@ -203,7 +212,7 @@ fun LineStopsSheet(
                                         text = "${index + 1}",
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = if (isBoarding || isEtaStop) {
+                                        color = if (highlighted) {
                                             Color.White
                                         } else {
                                             MaterialTheme.colorScheme.onSurfaceVariant
@@ -215,48 +224,33 @@ fun LineStopsSheet(
                                     Text(
                                         text = stop.name,
                                         style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = if (isBoarding || isEtaStop) {
-                                            FontWeight.Bold
-                                        } else {
-                                            FontWeight.Normal
-                                        },
+                                        fontWeight = if (highlighted) FontWeight.Bold else FontWeight.Normal,
                                         color = MaterialTheme.colorScheme.onSurface,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
-                                    if (isBoarding) {
+                                    if (caption.isNotEmpty()) {
                                         Text(
-                                            text = strings.lineStopsYourStop,
+                                            text = caption,
                                             style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.primary
+                                            color = if (highlighted) {
+                                                BusOrange
+                                            } else {
+                                                MaterialTheme.colorScheme.onSurfaceVariant
+                                            }
                                         )
                                     }
-                                    if (isEtaStop) {
-                                        val eta = etaCaption(etaArrivalIso, now, strings)
-                                        if (eta != null) {
-                                            Text(
-                                                text = eta,
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = BusOrange
-                                            )
-                                        }
-                                    }
                                 }
-                                val arrival = arrivalTimes.getOrNull(index)
                                 if (arrival != null) {
                                     Spacer(Modifier.width(10.dp))
                                     Text(
                                         text = formatTime(arrival),
                                         style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = if (isBoarding || isEtaStop) {
-                                            FontWeight.Bold
+                                        fontWeight = if (highlighted) FontWeight.Bold else FontWeight.Normal,
+                                        color = if (highlighted) {
+                                            BusOrange
                                         } else {
-                                            FontWeight.Normal
-                                        },
-                                        color = when {
-                                            isBoarding -> MaterialTheme.colorScheme.primary
-                                            isEtaStop -> BusOrange
-                                            else -> MaterialTheme.colorScheme.onSurfaceVariant
+                                            MaterialTheme.colorScheme.onSurfaceVariant
                                         }
                                     )
                                 }
@@ -270,8 +264,8 @@ fun LineStopsSheet(
 }
 
 /**
- * The live countdown at the monitored stop, phrased exactly like the card's
- * headline so the two never disagree. Null when the arrival time is absent or
+ * The live countdown to a stop, phrased exactly like the card's headline so the
+ * two never disagree. Null when the arrival time is absent or
  * unparseable — an unmarked stop beats a wrong number.
  */
 private fun etaCaption(iso: String?, now: Instant, strings: AppStrings): String? {
