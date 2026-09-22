@@ -799,6 +799,7 @@ fun MainScreen(
                                     onSortChange = { routingViewModel.setSortMode(it) },
                                     onTravelModeChange = { routingViewModel.setTravelMode(it) },
                                     onToggleModeFilter = { routingViewModel.toggleModeFilter(it) },
+                                    onShowAllModes = { routingViewModel.showAllModes() },
                                     onMaxWalkChange = { routingViewModel.setMaxWalk(it) },
                                     onEarlier = { routingViewModel.searchEarlier() },
                                     onLater = { routingViewModel.searchLater() },

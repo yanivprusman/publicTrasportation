@@ -53,6 +53,13 @@ class RoutingViewModel(
         researchIfSearched()
     }
 
+    fun showAllModes() {
+        val all = TransitFilter.entries.toSet()
+        settingsStore.routeModes = all.map { it.apiKey }.toSet()
+        _state.value = _state.value.copy(enabledModes = all)
+        researchIfSearched()
+    }
+
     fun setMaxWalk(minutes: Int?) {
         settingsStore.maxWalkMinutes = minutes ?: 0
         _state.value = _state.value.copy(maxWalkMinutes = minutes)

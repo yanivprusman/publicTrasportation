@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ensureMotis } from '@/lib/motis-manager';
-import { MODE_GROUPS, normalizeMode, PEDESTRIAN_SPEED } from '@/lib/motis-modes';
+import { MODE_GROUPS, normalizeMode, PEDESTRIAN_SPEED, UNCAPPED_WALK_SECONDS } from '@/lib/motis-modes';
 import { tripWheelchairAccess } from '@/lib/gtfs-trips';
 import { stopIdentity } from '@/lib/gtfs-stops';
 import { rideFare } from '@/lib/gtfs-fares';
@@ -265,7 +265,7 @@ async function planHalf(
   time: string,
   arriveBy: boolean,
   transitModes: string[] | null,
-  maxWalkSeconds: number | null
+  maxWalkSeconds: number
 ): Promise<MotisItinerary[]> {
   const params = new URLSearchParams({
     fromPlace,
@@ -276,10 +276,8 @@ async function planHalf(
     pedestrianSpeed: PEDESTRIAN_SPEED,
   });
   if (transitModes) params.set('transitModes', transitModes.join(','));
-  if (maxWalkSeconds !== null) {
-    params.set('maxPreTransitTime', String(maxWalkSeconds));
-    params.set('maxPostTransitTime', String(maxWalkSeconds));
-  }
+  params.set('maxPreTransitTime', String(maxWalkSeconds));
+  params.set('maxPostTransitTime', String(maxWalkSeconds));
   const response = await fetch(`${MOTIS_BASE}/api/v1/plan?${params}`, {
     signal: AbortSignal.timeout(15000),
   });
@@ -297,7 +295,7 @@ async function planViaTrip(
   time: string,
   arriveBy: boolean,
   transitModes: string[] | null,
-  maxWalkSeconds: number | null
+  maxWalkSeconds: number
 ): Promise<MotisItinerary[]> {
   const combined: MotisItinerary[] = [];
   if (!arriveBy) {
@@ -407,7 +405,7 @@ export async function GET(request: NextRequest) {
     transitModes = [...new Set(keys.flatMap(k => MODE_GROUPS[k]))];
   }
 
-  let maxWalkSeconds: number | null = null;
+  let maxWalkSeconds = UNCAPPED_WALK_SECONDS;
   if (maxWalkParam !== null) {
     const minutes = Number(maxWalkParam);
     if (!Number.isInteger(minutes) || minutes < 1 || minutes > 60) {
@@ -463,7 +461,7 @@ export async function GET(request: NextRequest) {
         { status: 400 }
       );
     }
-    const viaCacheKey = `via|${from}|${via}|${to}|${timeBucket}|${isArriveBy}|${transitModes?.join(',') || ''}|${maxWalkSeconds || ''}`;
+    const viaCacheKey = `via|${from}|${via}|${to}|${timeBucket}|${isArriveBy}|${transitModes?.join(',') || ''}|${maxWalkSeconds}`;
     const viaCached = getCachedRoute(viaCacheKey);
     if (viaCached) {
       return NextResponse.json(viaCached);
@@ -506,7 +504,7 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  const cacheKey = `${from}|${to}|${timeBucket}|${isArriveBy}|${pageCursor || ''}|${transitModes?.join(',') || ''}|${maxWalkSeconds || ''}`;
+  const cacheKey = `${from}|${to}|${timeBucket}|${isArriveBy}|${pageCursor || ''}|${transitModes?.join(',') || ''}|${maxWalkSeconds}`;
 
   const cached = getCachedRoute(cacheKey);
   if (cached) {
@@ -526,10 +524,8 @@ export async function GET(request: NextRequest) {
     });
     if (pageCursor) params.set('pageCursor', pageCursor);
     if (transitModes) params.set('transitModes', transitModes.join(','));
-    if (maxWalkSeconds !== null) {
-      params.set('maxPreTransitTime', String(maxWalkSeconds));
-      params.set('maxPostTransitTime', String(maxWalkSeconds));
-    }
+    params.set('maxPreTransitTime', String(maxWalkSeconds));
+    params.set('maxPostTransitTime', String(maxWalkSeconds));
 
     // Bike/car comparison routes are fetched with a second, direct-only plan
     // call rather than by adding directModes to the transit call: MOTIS uses

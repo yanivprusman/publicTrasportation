@@ -49,6 +49,14 @@ fun RouteResults(
     error: String?,
     searched: Boolean = false,
     onRetry: (() -> Unit)? = null,
+    /**
+     * The mode groups the search was limited to, named ("Tram", "Bus / Train"), or
+     * null when every mode was searched. An empty result under a filter is the
+     * filter's doing far more often than the trip's, so it says so and offers the
+     * one tap that undoes it — "try a different time" sent the rider the wrong way.
+     */
+    modeFilterLabel: String? = null,
+    onShowAllModes: (() -> Unit)? = null,
     sortMode: RouteSortMode = RouteSortMode.ARRIVES_FIRST,
     onSortChange: ((RouteSortMode) -> Unit)? = null,
     onEarlier: (() -> Unit)? = null,
@@ -244,15 +252,27 @@ fun RouteResults(
                         .padding(24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text(
-                        text = strings.noRoutesFound,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    if (onRetry != null) {
+                    if (modeFilterLabel != null && onShowAllModes != null) {
+                        Text(
+                            text = strings.noRoutesWithModes(modeFilterLabel),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
                         Spacer(Modifier.height(8.dp))
-                        OutlinedButton(onClick = onRetry) {
-                            Text(strings.retry)
+                        Button(onClick = onShowAllModes) {
+                            Text(strings.showAllModes)
+                        }
+                    } else {
+                        Text(
+                            text = strings.noRoutesFound,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        if (onRetry != null) {
+                            Spacer(Modifier.height(8.dp))
+                            OutlinedButton(onClick = onRetry) {
+                                Text(strings.retry)
+                            }
                         }
                     }
                 }

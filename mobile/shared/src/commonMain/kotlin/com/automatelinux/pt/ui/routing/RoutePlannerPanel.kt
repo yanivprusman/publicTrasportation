@@ -87,6 +87,7 @@ fun RoutePlannerPanel(
     onSortChange: ((RouteSortMode) -> Unit)? = null,
     onTravelModeChange: ((TravelMode) -> Unit)? = null,
     onToggleModeFilter: ((TransitFilter) -> Unit)? = null,
+    onShowAllModes: (() -> Unit)? = null,
     onMaxWalkChange: ((Int?) -> Unit)? = null,
     onEarlier: (() -> Unit)? = null,
     onLater: (() -> Unit)? = null,
@@ -363,6 +364,10 @@ fun RoutePlannerPanel(
                 error = state.error,
                 searched = state.results != null,
                 onRetry = onSearch,
+                modeFilterLabel = state.enabledModes
+                    .takeIf { it.size < TransitFilter.entries.size }
+                    ?.let { enabled -> TransitFilter.entries.filter { it in enabled }.joinToString(" / ") { it.label(strings) } },
+                onShowAllModes = onShowAllModes,
                 sortMode = sortMode,
                 onSortChange = if (state.results?.itineraries?.isNotEmpty() == true) onSortChange else null,
                 onEarlier = if (state.results?.itineraries?.isNotEmpty() == true) onEarlier else null,

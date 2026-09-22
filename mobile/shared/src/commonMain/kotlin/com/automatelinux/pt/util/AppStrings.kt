@@ -157,6 +157,8 @@ interface AppStrings {
     val noWalkLimit: String
     val walkMinutesChip: (Int) -> String
     val filteredModesHint: String
+    val noRoutesWithModes: (String) -> String
+    val showAllModes: String
     val fareEstimate: (String) -> String
     val nearbyStops: String
     val noNearbyStops: String
@@ -501,6 +503,8 @@ val EnStrings: AppStrings = object : AppStrings {
     override val noWalkLimit: String = "No limit"
     override val walkMinutesChip: (Int) -> String = { m -> "$m min" }
     override val filteredModesHint: String = "Mode filter is on — some routes are hidden"
+    override val noRoutesWithModes: (String) -> String = { modes -> "No route with $modes only — the mode filter is hiding the rest." }
+    override val showAllModes: String = "Show all modes"
     override val fareEstimate: (String) -> String = { amount -> "~$amount" }
     override val nearbyStops: String = "Nearby Stops"
     override val noNearbyStops: String = "No stops found nearby"
@@ -840,6 +844,8 @@ val HeStrings: AppStrings = object : AppStrings {
     override val noWalkLimit: String = "ללא הגבלה"
     override val walkMinutesChip: (Int) -> String = { m -> "$m דק׳" }
     override val filteredModesHint: String = "סינון אמצעי נסיעה פעיל — חלק מהמסלולים מוסתרים"
+    override val noRoutesWithModes: (String) -> String = { modes -> "אין מסלול עם $modes בלבד — סינון אמצעי הנסיעה מסתיר את השאר." }
+    override val showAllModes: String = "הצגת כל אמצעי הנסיעה"
     override val fareEstimate: (String) -> String = { amount -> "~$amount" }
     override val nearbyStops: String = "תחנות קרובות"
     override val noNearbyStops: String = "לא נמצאו תחנות בסביבה"

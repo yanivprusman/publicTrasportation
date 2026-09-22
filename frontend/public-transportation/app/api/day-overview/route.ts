@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ensureMotis } from '@/lib/motis-manager';
-import { MODE_GROUPS, normalizeMode, PEDESTRIAN_SPEED, type NormalizedMode } from '@/lib/motis-modes';
+import { MODE_GROUPS, normalizeMode, PEDESTRIAN_SPEED, UNCAPPED_WALK_SECONDS, type NormalizedMode } from '@/lib/motis-modes';
 
 const MOTIS_PORT = process.env.MOTIS_PORT || '3504';
 const MOTIS_BASE = `http://localhost:${MOTIS_PORT}`;
@@ -138,7 +138,7 @@ export async function GET(request: NextRequest) {
     transitModes = [...new Set(keys.flatMap(k => MODE_GROUPS[k]))];
   }
 
-  let maxWalkSeconds: number | null = null;
+  let maxWalkSeconds = UNCAPPED_WALK_SECONDS;
   if (maxWalkParam !== null) {
     const minutes = Number(maxWalkParam);
     if (!Number.isInteger(minutes) || minutes < 1 || minutes > 60) {
@@ -150,7 +150,7 @@ export async function GET(request: NextRequest) {
     maxWalkSeconds = minutes * 60;
   }
 
-  const cacheKey = `${from}|${to}|${new Date(startMs).toISOString()}|${new Date(endMs).toISOString()}|${transitModes?.join(',') || ''}|${maxWalkSeconds || ''}`;
+  const cacheKey = `${from}|${to}|${new Date(startMs).toISOString()}|${new Date(endMs).toISOString()}|${transitModes?.join(',') || ''}|${maxWalkSeconds}`;
   const cached = getCachedDay(cacheKey);
   if (cached) {
     return NextResponse.json(cached);
@@ -183,10 +183,8 @@ export async function GET(request: NextRequest) {
       });
       if (cursor) params.set('pageCursor', cursor);
       if (transitModes) params.set('transitModes', transitModes.join(','));
-      if (maxWalkSeconds !== null) {
-        params.set('maxPreTransitTime', String(maxWalkSeconds));
-        params.set('maxPostTransitTime', String(maxWalkSeconds));
-      }
+      params.set('maxPreTransitTime', String(maxWalkSeconds));
+      params.set('maxPostTransitTime', String(maxWalkSeconds));
 
       const response = await fetch(`${MOTIS_BASE}/api/v1/plan?${params}`, {
         signal: AbortSignal.timeout(15000),

@@ -27,9 +27,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.automatelinux.pt.ui.viewmodel.TransitFilter
+import com.automatelinux.pt.util.AppStrings
 import com.automatelinux.pt.util.LocalAppStrings
 
 private val WALK_CHOICES = listOf(5, 10, 15, 20)
+
+/** A mode group's name, as its chip shows it and as an empty result names the filter. */
+fun TransitFilter.label(strings: AppStrings): String = when (this) {
+    TransitFilter.BUS -> strings.busMode
+    TransitFilter.TRAIN -> strings.trainMode
+    TransitFilter.TRAM -> strings.tramMode
+}
 
 /**
  * Route options: which transit modes to route with and how far the passenger
@@ -53,21 +61,18 @@ fun RouteOptionsSection(
             ModeChip(
                 filter = TransitFilter.BUS,
                 icon = Icons.Default.DirectionsBus,
-                label = strings.busMode,
                 enabledModes = enabledModes,
                 onToggleMode = onToggleMode
             )
             ModeChip(
                 filter = TransitFilter.TRAIN,
                 icon = Icons.Default.Train,
-                label = strings.trainMode,
                 enabledModes = enabledModes,
                 onToggleMode = onToggleMode
             )
             ModeChip(
                 filter = TransitFilter.TRAM,
                 icon = Icons.Default.Tram,
-                label = strings.tramMode,
                 enabledModes = enabledModes,
                 onToggleMode = onToggleMode
             )
@@ -117,7 +122,6 @@ fun RouteOptionsSection(
 private fun RowScope.ModeChip(
     filter: TransitFilter,
     icon: ImageVector,
-    label: String,
     enabledModes: Set<TransitFilter>,
     onToggleMode: (TransitFilter) -> Unit
 ) {
@@ -125,7 +129,7 @@ private fun RowScope.ModeChip(
     FilterChip(
         selected = selected,
         onClick = { onToggleMode(filter) },
-        label = { Text(label, maxLines = 1) },
+        label = { Text(filter.label(LocalAppStrings.current), maxLines = 1) },
         leadingIcon = {
             Icon(icon, contentDescription = null, modifier = Modifier.size(FilterChipDefaults.IconSize))
         },

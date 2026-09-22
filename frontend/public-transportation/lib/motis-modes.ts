@@ -50,3 +50,13 @@ export function normalizeMode(mode: string | undefined): NormalizedMode {
 // catch. 1.5 is exactly Moovit's assumption (their 360 m = 4 min). Requires
 // MOTIS >= 2.9 — a 2.8 server silently ignores the parameter.
 export const PEDESTRIAN_SPEED = '1.5';
+
+// First/last-mile walk ceiling, in seconds, for a request that names no maxWalk
+// (the app's "No limit" chip). Leaving maxPre/PostTransitTime off is NOT
+// unlimited: MOTIS then applies its own 15-minute default, so "No limit" was
+// tighter than the "20 min" chip beside it. On 2026-09-22 a rider in Ramat Negev,
+// 3.3 km from the nearest stop (צומת קיבוץ טללים), got "no routes" under
+// "No limit" while MOTIS had three at a 60-minute cap. 60 is the API's own maxWalk
+// ceiling; city trips measured that day (Tel Aviv, Beer Sheva, Jerusalem) return
+// the identical itineraries at 15 and 60, in the same time.
+export const UNCAPPED_WALK_SECONDS = 60 * 60;
