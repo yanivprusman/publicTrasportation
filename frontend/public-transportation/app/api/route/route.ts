@@ -5,6 +5,7 @@ import { tripWheelchairAccess } from '@/lib/gtfs-trips';
 import { stopIdentity } from '@/lib/gtfs-stops';
 import { rideFare } from '@/lib/gtfs-fares';
 import { journeyFare, PricedRide } from '@/lib/journey-fare';
+import { NotOnLineError, planFromOnboard } from '@/lib/onboard';
 
 const MOTIS_PORT = process.env.MOTIS_PORT || '3504';
 const MOTIS_BASE = `http://localhost:${MOTIS_PORT}`;
@@ -70,6 +71,8 @@ interface MotisLeg {
   realTime?: boolean;
   scheduledStartTime?: string;
   scheduledEndTime?: string;
+  // The rider is already on this vehicle (lib/onboard.ts): no boarding, no fare.
+  onboard?: boolean;
 }
 
 interface MotisItinerary {
@@ -139,6 +142,7 @@ function transformItinerary(itin: MotisItinerary) {
       // Say where the times came from rather than implying certainty we lack.
       transformed.realTime = leg.realTime === true;
       if (leg.scheduledStartTime) transformed.scheduledStartTime = leg.scheduledStartTime;
+      if (leg.onboard) transformed.onboard = true;
       // Only transit legs can be inaccessible; a walk leg has nothing to board.
       if (leg.mode && leg.mode !== 'WALK') {
         transformed.wheelchairAccess = tripWheelchairAccess(leg.tripId);
@@ -156,8 +160,9 @@ function transformItinerary(itin: MotisItinerary) {
         if (alighting?.stopCode) transformed.toStopCode = alighting.stopCode;
 
         // Null when the fare table has no rule for this ride; the itinerary then
-        // reports no total rather than a partial one.
-        const fare = rideFare(leg.routeId, boarding?.zoneId, alighting?.zoneId);
+        // reports no total rather than a partial one. A ride the rider is already on
+        // was paid for when they boarded.
+        const fare = leg.onboard ? null : rideFare(leg.routeId, boarding?.zoneId, alighting?.zoneId);
         if (fare !== null) transformed.fare = fare;
       }
       if (leg.intermediateStops && leg.intermediateStops.length > 0) {
@@ -173,7 +178,7 @@ function transformItinerary(itin: MotisItinerary) {
   // One unpriced ride makes the whole journey unpriced (see lib/journey-fare.ts),
   // and a ride the first fare already paid for says so rather than showing a price
   // the rider will not be charged.
-  const rides = legs.filter(l => l.mode !== 'WALK');
+  const rides = legs.filter(l => l.mode !== 'WALK' && !l.onboard);
   const { total: fareTotal, coveredByTransfer } = journeyFare(rides as unknown as PricedRide[]);
   rides.forEach((ride, i) => {
     if (coveredByTransfer.has(i)) ride.fareCoveredByTransfer = true;
@@ -391,6 +396,9 @@ export async function GET(request: NextRequest) {
   const pageCursor = searchParams.get('pageCursor');
   const modesParam = searchParams.get('modes');
   const maxWalkParam = searchParams.get('maxWalk');
+  // The rider is on this line now; `from` is where the bus is. See lib/onboard.ts.
+  const onLine = searchParams.get('onLine')?.trim() || null;
+  const headingParam = searchParams.get('heading');
 
   let transitModes: string[] | null = null;
   if (modesParam !== null) {
@@ -444,6 +452,68 @@ export async function GET(request: NextRequest) {
   const timeBucket = isNaN(routeTimeMs)
     ? routeTime
     : new Date(routeTimeMs - (routeTimeMs % 60000)).toISOString();
+
+  if (onLine) {
+    // Riding is planned from the bus as it is now: a later departure, an arrival
+    // deadline, a detour through a stop or another page of it describe a trip the
+    // rider is not taking. Each is refused by name rather than quietly dropped.
+    const conflict = via ? 'via' : time ? 'time' : isArriveBy ? 'arriveBy' : pageCursor ? 'pageCursor' : null;
+    if (conflict) {
+      return NextResponse.json(
+        { error: `onLine plans from the bus you are on now; it cannot be combined with ${conflict}` },
+        { status: 400 }
+      );
+    }
+    let heading: number | null = null;
+    if (headingParam !== null) {
+      heading = Number(headingParam);
+      if (!Number.isFinite(heading) || heading < 0 || heading >= 360) {
+        return NextResponse.json(
+          { error: 'Invalid heading parameter. Expected degrees from 0 (inclusive) to 360 (exclusive).' },
+          { status: 400 }
+        );
+      }
+    }
+    await ensureMotis();
+    try {
+      const { itineraries, riding } = await planFromOnboard({
+        line: onLine,
+        lat: fromLat,
+        lon: fromLon,
+        heading,
+        nowMs: Date.now(),
+        planFrom: async (lat, lon, timeIso) => {
+          const params = new URLSearchParams({
+            fromPlace: `${lat},${lon}`,
+            toPlace: `${toLat},${toLon}`,
+            time: timeIso,
+            arriveBy: 'false',
+            numItineraries: '3',
+            pedestrianSpeed: PEDESTRIAN_SPEED,
+            maxPreTransitTime: String(maxWalkSeconds),
+            maxPostTransitTime: String(maxWalkSeconds),
+          });
+          if (transitModes) params.set('transitModes', transitModes.join(','));
+          const response = await fetch(`${MOTIS_BASE}/api/v1/plan?${params}`, {
+            signal: AbortSignal.timeout(15000),
+          });
+          if (!response.ok) throw new Error(`MOTIS returned ${response.status}`);
+          return response.json();
+        },
+      });
+      return NextResponse.json({
+        itineraries: itineraries.slice(0, 6).map(itin => transformItinerary(itin as MotisItinerary)),
+        riding,
+      });
+    } catch (error) {
+      if (error instanceof NotOnLineError) {
+        return NextResponse.json({ error: error.message }, { status: 404 });
+      }
+      const message = error instanceof Error ? error.message : String(error);
+      console.error('Error planning from on board:', message);
+      return NextResponse.json({ error: 'Failed to fetch route', message }, { status: 502 });
+    }
+  }
 
   // Trips through an intermediate stop are stitched from two MOTIS queries and
   // have no paging cursors or street alternatives — handled as their own branch.
