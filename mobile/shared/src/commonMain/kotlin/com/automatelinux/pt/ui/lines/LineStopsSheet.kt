@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -95,8 +96,26 @@ fun LineStopsSheet(
         }
     }
 
-    val arrivalTimes = remember(state.stops, upcomingCalls) {
-        stopArrivalTimes(state.stops, upcomingCalls)
+    // The monitored stop's time also comes from the marker, so a server that
+    // predates upcomingCalls still gets its countdown.
+    val arrivalTimes = remember(state.stops, upcomingCalls, etaStopCode, etaArrivalIso) {
+        stopArrivalTimes(state.stops, upcomingCalls).mapIndexed { i, time ->
+            time ?: etaArrivalIso.takeIf { state.stops[i].stopCode == etaStopCode }
+        }
+    }
+
+    // Open at the first stop the bus still has ahead, not at stop 1: the stops
+    // above it are behind the bus, and on a long line the one that matters sat
+    // two screens down. Once per opening — following every poll would yank the
+    // list out from under a rider scrolling back through the passed stops.
+    val listState = rememberLazyListState()
+    val nextStopIndex = arrivalTimes.indexOfFirst { it != null }.takeIf { it >= 0 }
+    var openedAtNextStop by remember(state.routeId) { mutableStateOf(false) }
+    LaunchedEffect(nextStopIndex) {
+        if (!openedAtNextStop && nextStopIndex != null) {
+            listState.scrollToItem(nextStopIndex)
+            openedAtNextStop = true
+        }
     }
 
     Card(
@@ -122,7 +141,7 @@ fun LineStopsSheet(
                     Spacer(Modifier.width(6.dp))
                     Text(
                         text = state.headsign,
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -170,7 +189,7 @@ fun LineStopsSheet(
                     )
                     // Bounded, not fillMaxHeight: the sheet sits over the map and the
                     // map must stay visible — the list is the index, the map the answer.
-                    LazyColumn(modifier = Modifier.heightIn(max = 340.dp)) {
+                    LazyColumn(state = listState, modifier = Modifier.heightIn(max = 340.dp)) {
                         itemsIndexed(state.stops) { index, stop ->
                             val isBoarding =
                                 boardingStopCode != null && stop.stopCode == boardingStopCode
@@ -180,10 +199,7 @@ fun LineStopsSheet(
                             // theme's blue was hard to see on this dark card, and the
                             // captions already say which is which.
                             val highlighted = isBoarding || isEtaStop
-                            // The monitored stop's time comes from the marker too, so a
-                            // server that predates upcomingCalls still gets its countdown.
                             val arrival = arrivalTimes.getOrNull(index)
-                                ?: etaArrivalIso.takeIf { isEtaStop }
                             val caption = listOfNotNull(
                                 strings.lineStopsYourStop.takeIf { isBoarding },
                                 etaCaption(arrival, now, strings)
@@ -198,7 +214,7 @@ fun LineStopsSheet(
                                 Box(
                                     contentAlignment = Alignment.Center,
                                     modifier = Modifier
-                                        .size(24.dp)
+                                        .size(30.dp)
                                         .background(
                                             color = if (highlighted) {
                                                 BusOrange
@@ -210,7 +226,7 @@ fun LineStopsSheet(
                                 ) {
                                     Text(
                                         text = "${index + 1}",
-                                        fontSize = 11.sp,
+                                        fontSize = 13.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = if (highlighted) {
                                             Color.White
@@ -219,11 +235,11 @@ fun LineStopsSheet(
                                         }
                                     )
                                 }
-                                Spacer(Modifier.width(10.dp))
+                                Spacer(Modifier.width(12.dp))
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
                                         text = stop.name,
-                                        style = MaterialTheme.typography.bodyMedium,
+                                        style = MaterialTheme.typography.bodyLarge,
                                         fontWeight = if (highlighted) FontWeight.Bold else FontWeight.Normal,
                                         color = MaterialTheme.colorScheme.onSurface,
                                         maxLines = 1,
@@ -232,7 +248,7 @@ fun LineStopsSheet(
                                     if (caption.isNotEmpty()) {
                                         Text(
                                             text = caption,
-                                            style = MaterialTheme.typography.bodySmall,
+                                            style = MaterialTheme.typography.bodyMedium,
                                             color = if (highlighted) {
                                                 BusOrange
                                             } else {
@@ -245,7 +261,7 @@ fun LineStopsSheet(
                                     Spacer(Modifier.width(10.dp))
                                     Text(
                                         text = formatTime(arrival),
-                                        style = MaterialTheme.typography.bodyMedium,
+                                        style = MaterialTheme.typography.bodyLarge,
                                         fontWeight = if (highlighted) FontWeight.Bold else FontWeight.Normal,
                                         color = if (highlighted) {
                                             BusOrange
