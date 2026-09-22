@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DirectionsBus
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.outlined.Circle
@@ -49,6 +50,10 @@ fun LocationInput(
      * field is where you are, and on its own is indistinguishable from one you typed.
      */
     isCurrentLocation: Boolean = false,
+    /** The value is the bus the rider is on; the marker becomes a bus. */
+    isRiding: Boolean = false,
+    /** Which trip of it, once the server has found it ("To Be'er Sheva · next stop …"). */
+    ridingCaption: String? = null,
     onGpsClick: (() -> Unit)? = null,
     gpsLoading: Boolean = false,
     preSuggestions: List<PreSuggestion> = emptyList(),
@@ -95,6 +100,16 @@ fun LocationInput(
         emptyText = LocalAppStrings.current.nothingFound,
         errorText = LocalAppStrings.current.searchUnavailable,
         leadingIcon = when {
+            isRiding -> {
+                {
+                    Icon(
+                        Icons.Default.DirectionsBus,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
             isCurrentLocation -> {
                 { CurrentLocationDot(description = strings.myLocation) }
             }
@@ -139,14 +154,26 @@ fun LocationInput(
                 }
             }
         },
-        supportingText = if (!isCurrentLocation) null else {
-            {
-                Text(
-                    text = strings.myLocation,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = CurrentLocationBlue
-                )
+        supportingText = when {
+            isRiding && ridingCaption != null -> {
+                {
+                    Text(
+                        text = ridingCaption,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
             }
+            isCurrentLocation -> {
+                {
+                    Text(
+                        text = strings.myLocation,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = CurrentLocationBlue
+                    )
+                }
+            }
+            else -> null
         }
     )
 }

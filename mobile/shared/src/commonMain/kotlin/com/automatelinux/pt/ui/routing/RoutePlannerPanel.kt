@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.AddHome
 import androidx.compose.material.icons.filled.AddLocationAlt
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.BookmarkAdd
+import androidx.compose.material.icons.filled.DirectionsBus
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.RemoveCircleOutline
@@ -88,6 +89,8 @@ fun RoutePlannerPanel(
     onTravelModeChange: ((TravelMode) -> Unit)? = null,
     onToggleModeFilter: ((TransitFilter) -> Unit)? = null,
     onShowAllModes: (() -> Unit)? = null,
+    /** "On a bus?" — the rider says which line they are on and plans from it. */
+    onRidingClick: (() -> Unit)? = null,
     onMaxWalkChange: ((Int?) -> Unit)? = null,
     onEarlier: (() -> Unit)? = null,
     onLater: (() -> Unit)? = null,
@@ -154,6 +157,10 @@ fun RoutePlannerPanel(
             onGeocode = onGeocode,
             marker = LocationMarker.ORIGIN,
             isCurrentLocation = state.originIsCurrentLocation,
+            isRiding = state.ridingLine != null,
+            ridingCaption = state.results?.riding
+                ?.takeIf { state.ridingLine != null }
+                ?.let { strings.ridingCaption(it.headsign.replace('_', ' '), it.nextStop) },
             onGpsClick = onGpsClick,
             gpsLoading = gpsLoading,
             preSuggestions = preSuggestions,
@@ -161,8 +168,11 @@ fun RoutePlannerPanel(
             modifier = Modifier.fillMaxWidth()
         )
 
+        // From on board the trip is the bus's: there is no stop to add on the way to
+        // it and nothing to swap it with.
+        val riding = state.ridingLine != null
         Box(modifier = Modifier.fillMaxWidth()) {
-            if (!state.viaFieldVisible) {
+            if (!state.viaFieldVisible && !riding) {
                 TextButton(
                     onClick = onShowViaField,
                     modifier = Modifier.align(Alignment.CenterStart)
@@ -175,12 +185,27 @@ fun RoutePlannerPanel(
                     Text(strings.addStop, modifier = Modifier.padding(start = 4.dp))
                 }
             }
-            IconButton(onClick = onSwap, modifier = Modifier.align(Alignment.Center)) {
-                Icon(
-                    Icons.Default.SwapVert,
-                    contentDescription = strings.swapOriginDestination,
-                    tint = MaterialTheme.colorScheme.primary
-                )
+            if (!riding) {
+                IconButton(onClick = onSwap, modifier = Modifier.align(Alignment.Center)) {
+                    Icon(
+                        Icons.Default.SwapVert,
+                        contentDescription = strings.swapOriginDestination,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+            if (onRidingClick != null && !riding) {
+                TextButton(
+                    onClick = onRidingClick,
+                    modifier = Modifier.align(Alignment.CenterEnd)
+                ) {
+                    Icon(
+                        Icons.Default.DirectionsBus,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Text(strings.onABus, modifier = Modifier.padding(start = 4.dp))
+                }
             }
         }
 
@@ -270,12 +295,15 @@ fun RoutePlannerPanel(
 
         Spacer(Modifier.height(8.dp))
 
-        TimePickerSection(
-            departureTime = state.departureTime,
-            onTimeChange = onTimeChange,
-            arriveBy = state.arriveBy,
-            onArriveByChange = onArriveByChange
-        )
+        // On a bus the only departure time is now.
+        if (!riding) {
+            TimePickerSection(
+                departureTime = state.departureTime,
+                onTimeChange = onTimeChange,
+                arriveBy = state.arriveBy,
+                onArriveByChange = onArriveByChange
+            )
+        }
 
         if (onToggleModeFilter != null && onMaxWalkChange != null) {
             Spacer(Modifier.height(4.dp))
@@ -300,7 +328,7 @@ fun RoutePlannerPanel(
 
         // Day overview and street alternatives are point-to-point only — the
         // backend doesn't produce them for trips stitched through a via stop.
-        if (onToggleDayOverview != null && state.origin != null && state.destination != null && state.via == null) {
+        if (onToggleDayOverview != null && state.origin != null && state.destination != null && state.via == null && !riding) {
             Spacer(Modifier.height(4.dp))
             OutlinedButton(
                 onClick = onToggleDayOverview,
@@ -340,7 +368,7 @@ fun RoutePlannerPanel(
         }
 
         val results = state.results
-        if (onTravelModeChange != null && state.via == null && results != null && !state.loading && state.error == null &&
+        if (onTravelModeChange != null && state.via == null && state.ridingLine == null && results != null && !state.loading && state.error == null &&
             (results.itineraries.isNotEmpty() || results.alternatives.isNotEmpty())
         ) {
             TravelModeStrip(
@@ -370,8 +398,8 @@ fun RoutePlannerPanel(
                 onShowAllModes = onShowAllModes,
                 sortMode = sortMode,
                 onSortChange = if (state.results?.itineraries?.isNotEmpty() == true) onSortChange else null,
-                onEarlier = if (state.results?.itineraries?.isNotEmpty() == true) onEarlier else null,
-                onLater = if (state.results?.itineraries?.isNotEmpty() == true) onLater else null,
+                onEarlier = if (state.results?.itineraries?.isNotEmpty() == true && state.ridingLine == null) onEarlier else null,
+                onLater = if (state.results?.itineraries?.isNotEmpty() == true && state.ridingLine == null) onLater else null,
                 liveBoardings = state.liveBoardings,
                 cardOpacity = cardOpacity,
                 // Opened in place, under its own card — the itinerary comes from the

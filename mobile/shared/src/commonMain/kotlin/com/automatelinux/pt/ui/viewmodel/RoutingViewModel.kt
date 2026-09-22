@@ -60,6 +60,69 @@ class RoutingViewModel(
         researchIfSearched()
     }
 
+    /** Where the rider is and which way they are moving, fed by the GPS while it matters. */
+    private data class RiderFix(val lat: Double, val lon: Double, val heading: Int?)
+
+    private var riderFix: RiderFix? = null
+    private var suggestionsWanted = false
+
+    /**
+     * The latest fix while the rider is choosing a line or riding one. A bus moves a
+     * kilometre a minute, so a search from on board must never use the fix the origin
+     * field was filled with — the server would read the difference as the bus being late.
+     */
+    fun updateRiderPosition(lat: Double, lon: Double, heading: Int?) {
+        riderFix = RiderFix(lat, lon, heading)
+        if (suggestionsWanted) loadLineSuggestions()
+    }
+
+    /** Asks which lines pass here now; waits for the first fix if there is none yet. */
+    fun requestLineSuggestions() {
+        suggestionsWanted = true
+        _state.value = _state.value.copy(lineSuggestions = null, lineSuggestionsLoading = true)
+        if (riderFix != null) loadLineSuggestions()
+    }
+
+    private fun loadLineSuggestions() {
+        val fix = riderFix ?: return
+        suggestionsWanted = false
+        viewModelScope.launch {
+            val lines = try {
+                api.ridingLines("${fix.lat},${fix.lon}", fix.heading).lines
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                // Suggestions are a convenience: the rider can still type the line.
+                emptyList()
+            }
+            _state.value = _state.value.copy(lineSuggestions = lines, lineSuggestionsLoading = false)
+        }
+    }
+
+    /**
+     * The rider is on [line]. [label] is what the From field shows ("On bus 60"). The
+     * trip is planned from now, straight from the bus, so a departure time, an arrival
+     * deadline and a stop along the way no longer apply and are cleared.
+     */
+    fun startRiding(line: String, label: String) {
+        val fix = riderFix ?: return
+        val trimmed = line.trim().takeIf { it.isNotEmpty() } ?: return
+        _state.value = _state.value.copy(
+            origin = GeocodeSuggestion(name = label, lat = fix.lat, lon = fix.lon),
+            originIsCurrentLocation = false,
+            ridingLine = trimmed,
+            via = null,
+            viaFieldVisible = false,
+            departureTime = null,
+            arriveBy = false,
+            lineSuggestions = null,
+            results = null,
+            error = null
+        )
+        clearDayOverview()
+        autoSearchIfReady()
+    }
+
     fun setMaxWalk(minutes: Int?) {
         settingsStore.maxWalkMinutes = minutes ?: 0
         _state.value = _state.value.copy(maxWalkMinutes = minutes)
@@ -82,6 +145,8 @@ class RoutingViewModel(
         _state.value = _state.value.copy(
             origin = suggestion,
             originIsCurrentLocation = isCurrentLocation && suggestion != null,
+            // Any other origin means the rider is no longer planning from a bus.
+            ridingLine = null,
             results = null,
             error = null
         )
@@ -182,6 +247,8 @@ class RoutingViewModel(
 
     fun searchEarlier() {
         val s = _state.value
+        // From on board there is only now.
+        if (s.ridingLine != null) return
         val earliest = s.results?.itineraries?.minByOrNull { it.startTime }?.startTime
         if (earliest != null) {
             try {
@@ -198,6 +265,7 @@ class RoutingViewModel(
 
     fun searchLater() {
         val s = _state.value
+        if (s.ridingLine != null) return
         val latest = s.results?.itineraries?.maxByOrNull { it.startTime }?.startTime
         if (latest != null) {
             try {
@@ -214,6 +282,8 @@ class RoutingViewModel(
 
     fun swapOriginDestination() {
         val s = _state.value
+        // A bus is somewhere to be, not somewhere to go.
+        if (s.ridingLine != null) return
         _state.value = s.copy(
             origin = s.destination,
             destination = s.origin,
@@ -567,10 +637,21 @@ class RoutingViewModel(
                 val viaPlace = s.via
                 val via = viaPlace?.let { "${it.lat},${it.lon}" }
 
-                val raw = api.searchRoute(
-                    from = from, to = to, via = via, time = time, arriveBy = arriveBy,
-                    modes = modes, maxWalk = s.maxWalkMinutes
-                )
+                val riding = s.ridingLine
+                val raw = if (riding != null) {
+                    // startRiding refuses to start without a fix, and one is never taken back.
+                    val fix = checkNotNull(riderFix) { "Riding without a GPS fix" }
+                    api.searchRoute(
+                        from = "${fix.lat},${fix.lon}", to = to,
+                        modes = modes, maxWalk = s.maxWalkMinutes,
+                        onLine = riding, heading = fix.heading
+                    )
+                } else {
+                    api.searchRoute(
+                        from = from, to = to, via = via, time = time, arriveBy = arriveBy,
+                        modes = modes, maxWalk = s.maxWalkMinutes
+                    )
+                }
                 // A stitched via trip has no name at the seam between its two halves —
                 // the server clears MOTIS's "START"/"END" sentinels there. Only this
                 // side knows what the rider picked, so it fills the name back in.

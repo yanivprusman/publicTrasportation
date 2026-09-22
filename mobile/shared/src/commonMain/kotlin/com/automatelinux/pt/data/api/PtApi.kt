@@ -10,6 +10,7 @@ import com.automatelinux.pt.data.model.AppStateRequest
 import com.automatelinux.pt.data.model.AppStateResponse
 import com.automatelinux.pt.data.model.DayOverviewResult
 import com.automatelinux.pt.data.model.GeocodeSuggestion
+import com.automatelinux.pt.data.model.LineSuggestionsResponse
 import com.automatelinux.pt.data.model.NearestBusResponse
 import com.automatelinux.pt.data.model.RouteResult
 import com.automatelinux.pt.data.model.RouteStopsResponse
@@ -49,14 +50,23 @@ class PtApi(private val client: HttpClient) {
         time: String? = null,
         arriveBy: Boolean? = null,
         modes: String? = null,
-        maxWalk: Int? = null
+        maxWalk: Int? = null,
+        /** The line the rider is on now; [from] is then where the bus is. */
+        onLine: String? = null,
+        /** Degrees the rider is moving, when the phone knows — tells a line's two directions apart. */
+        heading: Int? = null
     ): RouteResult = fetch(
         "/api/route",
         params = mapOf(
             "from" to from, "to" to to, "via" to via, "time" to time,
-            "arriveBy" to arriveBy, "modes" to modes, "maxWalk" to maxWalk
+            "arriveBy" to arriveBy, "modes" to modes, "maxWalk" to maxWalk,
+            "onLine" to onLine, "heading" to heading
         )
     )
+
+    /** Lines passing [at] now, going the rider's way when [heading] is known. */
+    suspend fun ridingLines(at: String, heading: Int? = null): LineSuggestionsResponse =
+        fetch("/api/riding", params = mapOf("at" to at, "heading" to heading))
 
     suspend fun dayOverview(
         from: String,

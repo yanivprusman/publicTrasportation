@@ -284,6 +284,10 @@ private fun BoardingLine(
 ) {
     val strings = LocalAppStrings.current
     val leg = itinerary.firstRide ?: return
+    if (leg.onboard) {
+        OnboardLine(leg, textColor)
+        return
+    }
     // The road wins over the timetable: when the operator says a vehicle is coming at
     // a different minute, that is the minute you have to be at the stop for.
     val timeIso = live?.expected ?: leg.startTime
@@ -401,6 +405,45 @@ private fun BoardingLine(
  * departures count, and only from the identical boarding stop — the same line number
  * leaves two different poles in this country.
  */
+/**
+ * "60 · Get off at השוק העירוני · 10:13" — for a journey that starts on the bus the rider
+ * is already on. There is nothing to catch, so no countdown; what they need is where
+ * to get off.
+ */
+@Composable
+private fun OnboardLine(leg: RouteLeg, textColor: Color) {
+    val strings = LocalAppStrings.current
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        val badgeColor = getModeColorWithRoute(leg.mode, leg.routeColor)
+        Box(
+            modifier = Modifier
+                .background(badgeColor, RoundedCornerShape(4.dp))
+                .padding(horizontal = 6.dp, vertical = 1.dp)
+        ) {
+            Text(
+                text = legPillLabel(leg, strings),
+                color = onColorFor(badgeColor),
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                softWrap = false
+            )
+        }
+        Spacer(Modifier.width(6.dp))
+        Text(
+            text = strings.getOffAt(leg.to.name, formatTime(leg.endTime)),
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = textColor,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
 fun liveBoardingFor(itinerary: Itinerary, live: Map<String, LiveBoarding>): LiveBoarding? {
     val ride = itinerary.firstRide ?: return null
     val stop = ride.fromStopCode ?: return null
@@ -409,7 +452,8 @@ fun liveBoardingFor(itinerary: Itinerary, live: Map<String, LiveBoarding>): Live
 }
 
 fun laterDeparturesOf(target: Itinerary, all: List<Itinerary>, limit: Int = 2): List<String> {
-    val ride = target.firstRide ?: return emptyList()
+    // A bus the rider is already on has no next departure to miss it for.
+    val ride = target.firstRide?.takeUnless { it.onboard } ?: return emptyList()
     val stop = ride.fromStopCode ?: ride.from.name
     return all.asSequence()
         .mapNotNull { it.firstRide }

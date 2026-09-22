@@ -159,6 +159,17 @@ interface AppStrings {
     val filteredModesHint: String
     val noRoutesWithModes: (String) -> String
     val showAllModes: String
+    val onABus: String
+    val whichBusTitle: String
+    val lineNumberLabel: String
+    val ridingSuggestionsHint: String
+    val ridingLocating: String
+    val ridingNoSuggestions: String
+    val planFromThisBus: String
+    val onBusLabel: (String) -> String
+    val ridingCaption: (String, String) -> String
+    val getOffAt: (String, String) -> String
+    val onBoardHere: (String) -> String
     val fareEstimate: (String) -> String
     val nearbyStops: String
     val noNearbyStops: String
@@ -505,6 +516,17 @@ val EnStrings: AppStrings = object : AppStrings {
     override val filteredModesHint: String = "Mode filter is on — some routes are hidden"
     override val noRoutesWithModes: (String) -> String = { modes -> "No route with $modes only — the mode filter is hiding the rest." }
     override val showAllModes: String = "Show all modes"
+    override val onABus: String = "On a bus?"
+    override val whichBusTitle: String = "Which bus are you on?"
+    override val lineNumberLabel: String = "Line number"
+    override val ridingSuggestionsHint: String = "Passing here now, going your way"
+    override val ridingLocating: String = "Finding where you are…"
+    override val ridingNoSuggestions: String = "No line is passing here right now"
+    override val planFromThisBus: String = "Plan from this bus"
+    override val onBusLabel: (String) -> String = { line -> "On bus $line" }
+    override val ridingCaption: (String, String) -> String = { headsign, next -> "To $headsign · next stop $next" }
+    override val getOffAt: (String, String) -> String = { stop, time -> "Get off at $stop · $time" }
+    override val onBoardHere: (String) -> String = { line -> "On bus $line — you are here" }
     override val fareEstimate: (String) -> String = { amount -> "~$amount" }
     override val nearbyStops: String = "Nearby Stops"
     override val noNearbyStops: String = "No stops found nearby"
@@ -846,6 +868,17 @@ val HeStrings: AppStrings = object : AppStrings {
     override val filteredModesHint: String = "סינון אמצעי נסיעה פעיל — חלק מהמסלולים מוסתרים"
     override val noRoutesWithModes: (String) -> String = { modes -> "אין מסלול עם $modes בלבד — סינון אמצעי הנסיעה מסתיר את השאר." }
     override val showAllModes: String = "הצגת כל אמצעי הנסיעה"
+    override val onABus: String = "באוטובוס?"
+    override val whichBusTitle: String = "באיזה אוטובוס אתה?"
+    override val lineNumberLabel: String = "מספר קו"
+    override val ridingSuggestionsHint: String = "עוברים כאן עכשיו, בכיוון שלך"
+    override val ridingLocating: String = "מאתר את המיקום שלך…"
+    override val ridingNoSuggestions: String = "אף קו לא עובר כאן עכשיו"
+    override val planFromThisBus: String = "תכנון מהאוטובוס הזה"
+    override val onBusLabel: (String) -> String = { line -> "באוטובוס $line" }
+    override val ridingCaption: (String, String) -> String = { headsign, next -> "לכיוון $headsign · תחנה הבאה: $next" }
+    override val getOffAt: (String, String) -> String = { stop, time -> "לרדת ב$stop · $time" }
+    override val onBoardHere: (String) -> String = { line -> "באוטובוס $line — אתה כאן" }
     override val fareEstimate: (String) -> String = { amount -> "~$amount" }
     override val nearbyStops: String = "תחנות קרובות"
     override val noNearbyStops: String = "לא נמצאו תחנות בסביבה"

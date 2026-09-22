@@ -1,5 +1,6 @@
 package com.automatelinux.pt.ui.viewmodel
 
+import com.automatelinux.pt.data.model.LineSuggestion
 import com.automatelinux.pt.data.model.DayOverviewResult
 import com.automatelinux.pt.data.model.DirectAlternative
 import com.automatelinux.pt.data.model.GeocodeSuggestion
@@ -187,6 +188,14 @@ data class RoutingState(
     val travelMode: TravelMode = TravelMode.TRANSIT,
     val enabledModes: Set<TransitFilter> = TransitFilter.entries.toSet(),
     val maxWalkMinutes: Int? = null,
+    /**
+     * The line the rider says they are on. While set, the origin is the bus itself:
+     * each search plans from the latest GPS fix on that line, not from a stop.
+     */
+    val ridingLine: String? = null,
+    /** Lines passing the rider now, going their way; null until asked for. */
+    val lineSuggestions: List<LineSuggestion>? = null,
+    val lineSuggestionsLoading: Boolean = false,
     val trackedBus: TrackedBus? = null,
     /**
      * The stop list of one line, opened from the tracked-bus card's line badge.

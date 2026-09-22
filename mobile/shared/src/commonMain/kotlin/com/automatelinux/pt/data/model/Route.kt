@@ -100,7 +100,13 @@ data class RouteLeg(
      * 15 km and 90 minutes. Its [fare] is still the single-ride price; it is just not
      * charged.
      */
-    val fareCoveredByTransfer: Boolean = false
+    val fareCoveredByTransfer: Boolean = false,
+    /**
+     * The rider is already on this vehicle — the leg starts where they are, not at a
+     * stop, and there is nothing to catch or pay. Only a search from on board has one,
+     * and only as its first leg.
+     */
+    val onboard: Boolean = false
 )
 
 @Serializable
@@ -169,5 +175,30 @@ data class DirectAlternative(
 @Serializable
 data class RouteResult(
     val itineraries: List<Itinerary>,
-    val alternatives: List<DirectAlternative> = emptyList()
+    val alternatives: List<DirectAlternative> = emptyList(),
+    /** Which trip the server found the rider on, for a search from on board. */
+    val riding: RidingInfo? = null
 )
+
+/** The trip of the named line the rider is on, as the server identified it. */
+@Serializable
+data class RidingInfo(
+    val tripId: String,
+    val line: String,
+    val headsign: String = "",
+    val nextStop: String = "",
+    /** Positive when the bus is behind its timetable. */
+    val delayMinutes: Int = 0
+)
+
+/** A line passing the rider now, going their way — a suggestion, never a choice made for them. */
+@Serializable
+data class LineSuggestion(
+    val line: String,
+    val headsign: String = "",
+    val mode: String = "BUS",
+    val nextStop: String = ""
+)
+
+@Serializable
+data class LineSuggestionsResponse(val lines: List<LineSuggestion> = emptyList())

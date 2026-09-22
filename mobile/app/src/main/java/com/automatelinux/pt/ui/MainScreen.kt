@@ -85,6 +85,7 @@ import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.roundToInt
 import com.automatelinux.feedbacklib.ui.DismissibleSheet
 import com.automatelinux.feedbacklib.ui.rememberDismissibleSheetState
 import android.content.Intent
@@ -112,6 +113,7 @@ import com.automatelinux.pt.ui.map.PtUserLocationIcon
 import com.automatelinux.pt.journey.JourneySession
 import com.automatelinux.pt.ui.journey.JourneyPanel
 import com.automatelinux.pt.ui.routing.DebugSettingsDialog
+import com.automatelinux.pt.ui.routing.RidingLineDialog
 import com.automatelinux.pt.ui.routing.RoutePlannerPanel
 import com.automatelinux.pt.ui.routing.TrackedBusCard
 import android.widget.Toast
@@ -132,7 +134,7 @@ import kotlinx.coroutines.launch
  * Who is waiting on the location permission. One launcher serves three buttons, and
  * the answer has to go back to the one that asked.
  */
-private enum class GpsTarget { ORIGIN, DESTINATION, MAP_FOLLOW }
+private enum class GpsTarget { ORIGIN, DESTINATION, MAP_FOLLOW, RIDING }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -316,6 +318,28 @@ fun MainScreen(
         onDispose { LocationHelper.stopFollowing(fusedLocationClient, callback) }
     }
 
+    // On a bus: GPS is followed while the rider is choosing a line and for as long as
+    // they ride it. Unlike the tracked card's one-off fix, this one must stay fresh —
+    // the bus covers a kilometre a minute, and a plan from a stale fix reads the gap as
+    // the bus running late.
+    var ridingDialogOpen by remember { mutableStateOf(false) }
+    val trackingRider = ridingDialogOpen || routingState.ridingLine != null
+    DisposableEffect(trackingRider) {
+        if (!trackingRider || !LocationHelper.hasPermission(context)) {
+            return@DisposableEffect onDispose {}
+        }
+        val callback = LocationHelper.startFollowing(fusedLocationClient) { loc ->
+            // A bearing is only a direction while moving; parked at a stop it points anywhere.
+            val heading = if (loc.hasBearing() && loc.speed >= 2f) loc.bearing.roundToInt() % 360 else null
+            routingViewModel.updateRiderPosition(loc.latitude, loc.longitude, heading)
+        }
+        onDispose { LocationHelper.stopFollowing(fusedLocationClient, callback) }
+    }
+    val openRidingDialog = {
+        ridingDialogOpen = true
+        routingViewModel.requestLineSuggestions()
+    }
+
     // Which button opened the permission dialog. Without it the grant always filled
     // the origin, so a first-run tap on the destination's location button set the
     // *other* field — the one place the user had not asked about.
@@ -333,6 +357,7 @@ fun MainScreen(
                 followingLocation = true
                 centerMapOnCurrentLocation()
             }
+            GpsTarget.RIDING -> openRidingDialog()
             null -> Unit
         }
     }
@@ -341,6 +366,14 @@ fun MainScreen(
         if (LocationHelper.hasPermission(context)) fetchCurrentLocation()
         else {
             pendingGpsTarget = GpsTarget.ORIGIN
+            permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+        }
+    }
+
+    val onRidingClick: () -> Unit = {
+        if (LocationHelper.hasPermission(context)) openRidingDialog()
+        else {
+            pendingGpsTarget = GpsTarget.RIDING
             permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
         }
     }
@@ -800,6 +833,7 @@ fun MainScreen(
                                     onTravelModeChange = { routingViewModel.setTravelMode(it) },
                                     onToggleModeFilter = { routingViewModel.toggleModeFilter(it) },
                                     onShowAllModes = { routingViewModel.showAllModes() },
+                                    onRidingClick = onRidingClick,
                                     onMaxWalkChange = { routingViewModel.setMaxWalk(it) },
                                     onEarlier = { routingViewModel.searchEarlier() },
                                     onLater = { routingViewModel.searchLater() },
@@ -1642,6 +1676,18 @@ fun MainScreen(
                     recentSearchesVersion++
                 },
                 onDismiss = { showSetHomeDialog = false }
+            )
+        }
+
+        if (ridingDialogOpen) {
+            RidingLineDialog(
+                suggestions = routingState.lineSuggestions,
+                loading = routingState.lineSuggestionsLoading,
+                onPick = { line ->
+                    ridingDialogOpen = false
+                    routingViewModel.startRiding(line, strings.onBusLabel(line))
+                },
+                onDismiss = { ridingDialogOpen = false }
             )
         }
 
