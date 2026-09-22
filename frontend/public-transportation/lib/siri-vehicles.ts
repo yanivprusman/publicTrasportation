@@ -61,7 +61,35 @@ export interface NormalisedVehicle {
    * arrow.
    */
   destinationName: string
+  /**
+   * Every stop this vehicle has still to reach, from the monitored stop to the end of its
+   * trip, in driving order — SIRI's MonitoredCall followed by its OnwardCalls. The first
+   * entry is the monitored stop itself, so its time equals [expectedArrival].
+   *
+   * This is what lets a stop list print a time on every stop rather than only the one
+   * being polled. Stops the vehicle must pass BEFORE the monitored stop are not here: the
+   * feed only reports onward of the stop you asked about.
+   */
+  upcomingCalls: UpcomingCall[]
 }
+
+export interface UpcomingCall {
+  stopCode: string
+  /** ISO-8601 with offset. */
+  expectedArrival: string
+}
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+function toCall(raw: any): UpcomingCall | null {
+  const stopCode = raw?.StopPointRef
+  const expectedArrival = raw?.ExpectedArrivalTime
+  // A call with no stop or no time cannot be placed on a row — dropped, not defaulted,
+  // for the same reason vehicles without a position are. (SIRI's `Order` is not carried:
+  // it skips numbers, 33 then 35 on line 66 on 2026-09-22, so it cannot index a stop list.)
+  if (stopCode == null || !expectedArrival) return null
+  return { stopCode: String(stopCode), expectedArrival: String(expectedArrival) }
+}
+/* eslint-enable @typescript-eslint/no-explicit-any */
 
 /**
  * Extract every vehicle with a known position from a SIRI StopMonitoring response.
@@ -104,6 +132,11 @@ export function normaliseVehicles(
           ? Math.round(((rawBearing % 360) + 360) % 360)
           : null
 
+      const onward = journey.OnwardCalls?.OnwardCall
+      const upcomingCalls = [call, ...(Array.isArray(onward) ? onward : [])]
+        .map(toCall)
+        .filter((c): c is UpcomingCall => c !== null)
+
       vehicles.push({
         vehicleRef: journey.VehicleRef != null ? String(journey.VehicleRef) : '',
         lineNumber: journey.PublishedLineName ?? '',
@@ -117,6 +150,7 @@ export function normaliseVehicles(
         lineRef: journey.LineRef != null ? String(journey.LineRef) : null,
         destinationRef,
         destinationName: (destinationRef && stopNames[destinationRef]) || '',
+        upcomingCalls,
       })
     }
   }

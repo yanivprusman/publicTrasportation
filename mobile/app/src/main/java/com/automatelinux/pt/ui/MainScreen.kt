@@ -1158,6 +1158,7 @@ fun MainScreen(
                             },
                             etaStopCode = tracked.stationCode,
                             etaArrivalIso = tracked.marker?.expectedArrival,
+                            upcomingCalls = tracked.marker?.upcomingCalls.orEmpty(),
                             modifier = bottomSlot
                         )
                     } else {

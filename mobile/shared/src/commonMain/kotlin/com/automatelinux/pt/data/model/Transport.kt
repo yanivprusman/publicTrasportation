@@ -114,7 +114,21 @@ data class VehicleMarker(
     val lineRef: String? = null,
     val destinationRef: String? = null,
     /** Resolved from GTFS by the server. Empty when unknown — never the raw stop code. */
-    val destinationName: String = ""
+    val destinationName: String = "",
+    /**
+     * Every stop this vehicle has still to reach, from [stopCode] to the end of its trip,
+     * in driving order, each with its expected arrival. The first entry is [stopCode]
+     * itself. Stops before [stopCode] are absent — the feed only reports onward of the
+     * stop that was asked.
+     */
+    val upcomingCalls: List<UpcomingCall> = emptyList()
+)
+
+@Serializable
+data class UpcomingCall(
+    val stopCode: String,
+    /** ISO-8601 with offset. */
+    val expectedArrival: String
 )
 
 /** Vehicles the server already extracted; see [SiriResponse.vehicles]. */

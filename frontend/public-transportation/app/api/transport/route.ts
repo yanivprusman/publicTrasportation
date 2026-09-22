@@ -80,6 +80,16 @@ export async function GET(request: NextRequest) {
     // a SIRI field means. See lib/siri-vehicles.ts for why that was worth centralising.
     data._vehicles = normaliseVehicles(data, data._stopNames);
 
+    // Each vehicle's onward calls now travel in `_vehicles[].upcomingCalls`, so the raw
+    // copy goes. It is most of a busy stop's payload — measured 2026-09-22 at אבן
+    // גבירול/ארלוזורוב (20699): 2,363 onward calls in a 294 KB response — and no client
+    // reads it from the raw tree; shipping both would roughly double every board poll.
+    for (const delivery of data?.Siri?.ServiceDelivery?.StopMonitoringDelivery ?? []) {
+      for (const visit of delivery?.MonitoredStopVisit ?? []) {
+        if (visit?.MonitoredVehicleJourney) delete visit.MonitoredVehicleJourney.OnwardCalls;
+      }
+    }
+
     return NextResponse.json(data);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

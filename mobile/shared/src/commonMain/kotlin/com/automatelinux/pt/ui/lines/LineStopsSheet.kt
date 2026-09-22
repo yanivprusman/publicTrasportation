@@ -38,10 +38,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.automatelinux.pt.data.model.UpcomingCall
 import com.automatelinux.pt.ui.arrivals.LineBadge
 import com.automatelinux.pt.ui.viewmodel.LineStopsUi
 import com.automatelinux.pt.util.AppStrings
 import com.automatelinux.pt.util.LocalAppStrings
+import com.automatelinux.pt.util.formatTime
 import kotlinx.coroutines.delay
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
@@ -71,6 +73,12 @@ fun LineStopsSheet(
     etaStopCode: String? = null,
     /** ISO ExpectedArrivalTime at [etaStopCode], from the tracked marker. */
     etaArrivalIso: String? = null,
+    /**
+     * The tracked bus's expected arrival at [etaStopCode] and every stop after it. Each
+     * of those rows shows its clock time — the countdown alone answered "when is it
+     * here", not "when do I get where I'm going".
+     */
+    upcomingCalls: List<UpcomingCall> = emptyList(),
     modifier: Modifier = Modifier
 ) {
     val strings = LocalAppStrings.current
@@ -85,6 +93,10 @@ fun LineStopsSheet(
                 now = Clock.System.now()
             }
         }
+    }
+
+    val arrivalTimes = remember(state.stops, upcomingCalls) {
+        stopArrivalTimes(state.stops, upcomingCalls)
     }
 
     Card(
@@ -229,6 +241,24 @@ fun LineStopsSheet(
                                             )
                                         }
                                     }
+                                }
+                                val arrival = arrivalTimes.getOrNull(index)
+                                if (arrival != null) {
+                                    Spacer(Modifier.width(10.dp))
+                                    Text(
+                                        text = formatTime(arrival),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = if (isBoarding || isEtaStop) {
+                                            FontWeight.Bold
+                                        } else {
+                                            FontWeight.Normal
+                                        },
+                                        color = when {
+                                            isBoarding -> MaterialTheme.colorScheme.primary
+                                            isEtaStop -> BusOrange
+                                            else -> MaterialTheme.colorScheme.onSurfaceVariant
+                                        }
+                                    )
                                 }
                             }
                         }
