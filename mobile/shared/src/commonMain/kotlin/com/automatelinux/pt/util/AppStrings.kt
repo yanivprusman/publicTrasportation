@@ -165,6 +165,7 @@ interface AppStrings {
     val ridingSuggestionsHint: String
     val ridingLocating: String
     val ridingNoSuggestions: String
+    val ridingNoMatch: (String) -> String
     val planFromThisBus: String
     val onBusLabel: (String) -> String
     val ridingCaption: (String, String) -> String
@@ -522,6 +523,7 @@ val EnStrings: AppStrings = object : AppStrings {
     override val ridingSuggestionsHint: String = "Passing here now, going your way"
     override val ridingLocating: String = "Finding where you are…"
     override val ridingNoSuggestions: String = "No line is passing here right now"
+    override val ridingNoMatch: (String) -> String = { line -> "Line $line isn't passing here now, going your way" }
     override val planFromThisBus: String = "Plan from this bus"
     override val onBusLabel: (String) -> String = { line -> "On bus $line" }
     override val ridingCaption: (String, String) -> String = { headsign, next -> "To $headsign · next stop $next" }
@@ -874,6 +876,7 @@ val HeStrings: AppStrings = object : AppStrings {
     override val ridingSuggestionsHint: String = "עוברים כאן עכשיו, בכיוון שלך"
     override val ridingLocating: String = "מאתר את המיקום שלך…"
     override val ridingNoSuggestions: String = "אף קו לא עובר כאן עכשיו"
+    override val ridingNoMatch: (String) -> String = { line -> "קו $line לא עובר כאן עכשיו בכיוון שלך" }
     override val planFromThisBus: String = "תכנון מהאוטובוס הזה"
     override val onBusLabel: (String) -> String = { line -> "באוטובוס $line" }
     override val ridingCaption: (String, String) -> String = { headsign, next -> "לכיוון $headsign · תחנה הבאה: $next" }

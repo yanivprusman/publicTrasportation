@@ -39,10 +39,31 @@ import com.automatelinux.pt.ui.map.getModeColorWithRoute
 import com.automatelinux.pt.ui.map.onColorFor
 import com.automatelinux.pt.util.LocalAppStrings
 
+/** Suggestions shown at once; the rest are a keystroke away. */
+private const val MAX_SHOWN = 6
+
+/**
+ * The suggestions for what the rider has typed, best fit first: the line they typed
+ * itself, then lines that begin with it. With nothing typed, the best guesses.
+ *
+ * The server sends every line passing here, because at a city stop the timetable is all
+ * that ranks them: line 33 running ten minutes late came 35th at שוק עירוני, Be'er Sheva
+ * (2026-09-22), and was not among the six shown until the rider could narrow them.
+ */
+internal fun matchingSuggestions(all: List<LineSuggestion>, typed: String): List<LineSuggestion> {
+    val query = typed.trim()
+    if (query.isEmpty()) return all.take(MAX_SHOWN)
+    return all
+        .filter { it.line.startsWith(query, ignoreCase = true) }
+        .sortedBy { if (it.line.equals(query, ignoreCase = true)) 0 else 1 }
+        .take(MAX_SHOWN)
+}
+
 /**
  * "Which bus are you on?" — the rider types the line; the lines passing here now, going
- * their way, are offered underneath. Nothing is chosen for them: two lines share every
- * stretch of an intercity road, and only the rider knows which one they boarded.
+ * their way, are offered underneath and narrow as they type. Nothing is chosen for them:
+ * two lines share every stretch of an intercity road, and only the rider knows which one
+ * they boarded.
  *
  * Letters are allowed ("27א" is a Be'er Sheva line), so the keyboard is a text one.
  */
@@ -80,6 +101,7 @@ fun RidingLineDialog(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(Modifier.height(4.dp))
+                val shown = matchingSuggestions(suggestions.orEmpty(), line)
                 when {
                     loading -> Row(verticalAlignment = Alignment.CenterVertically) {
                         CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
@@ -91,8 +113,13 @@ fun RidingLineDialog(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    shown.isEmpty() -> Text(
+                        strings.ridingNoMatch(line.trim()),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                     else -> Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        suggestions.forEach { suggestion ->
+                        shown.forEach { suggestion ->
                             SuggestionRow(suggestion, onClick = { onPick(suggestion.line) })
                         }
                     }

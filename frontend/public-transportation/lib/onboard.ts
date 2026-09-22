@@ -49,8 +49,6 @@ const PLAN_CONCURRENCY = 8
  * that arrives seven minutes later survived for saving one second of walking.
  */
 const WALK_SLACK_S = 3 * 60
-/** Lines offered as suggestions. */
-const MAX_SUGGESTIONS = 6
 
 export interface MotisStop {
   name?: string
@@ -280,7 +278,13 @@ async function fetchTripLeg(tripId: string): Promise<OnboardLeg> {
 
 /**
  * The lines the rider could be on: running past here now and, when the phone knows its
- * heading, going the rider's way. One entry per line and direction.
+ * heading, going the rider's way. One entry per line and direction, best fit first.
+ *
+ * Every one of them, not a shortlist. At a city stop two dozen lines share the pavement
+ * at the same distance, so only the timetable ranks them, and a line running ten minutes
+ * late came 35th — line 33 at שוק עירוני, Be'er Sheva, 2026-09-22, with six shown. The
+ * app narrows the list to what the rider types; a cut made here hides the very bus they
+ * are on.
  */
 export async function suggestLines(
   lat: number,
@@ -289,16 +293,21 @@ export async function suggestLines(
   nowMs: number
 ): Promise<LineSuggestion[]> {
   const fits = await tripsCarryingRider(lat, lon, heading, nowMs)
-  // Trips of one line in one direction are consecutive departures; the best-fitting one
-  // stands for them. The direction is only known from the trip itself.
-  const shortlist = fits.slice(0, MAX_SUGGESTIONS * 3)
-  const legs = await Promise.all(shortlist.map(f => fetchTripLeg(f.tripId)))
+  // Trips of one line that reach the same next stop from here are departures in one
+  // direction; the best-fitting one stands for them. The headsign needs the trip itself.
+  const byDirection = new Map<string, TripFit>()
+  for (const f of fits) {
+    const key = `${f.line}|${f.segment.to?.stopId ?? ''}`
+    if (!byDirection.has(key)) byDirection.set(key, f)
+  }
+  const representatives = [...byDirection.values()]
+  const legs = await limited(representatives.map(f => () => fetchTripLeg(f.tripId)), PLAN_CONCURRENCY)
   const seen = new Set<string>()
   const suggestions: LineSuggestion[] = []
-  shortlist.forEach((f, i) => {
+  representatives.forEach((f, i) => {
     const headsign = legs[i].headsign || ''
     const key = `${f.line}|${headsign}`
-    if (seen.has(key) || suggestions.length >= MAX_SUGGESTIONS) return
+    if (seen.has(key)) return
     seen.add(key)
     suggestions.push({ line: f.line, headsign, mode: f.mode, nextStop: f.segment.to?.name || '' })
   })
