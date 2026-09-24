@@ -24,7 +24,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.windowInsetsBottomHeight
 import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -689,9 +688,14 @@ fun MainScreen(
     }
 
     // The window is edge-to-edge, so the navigation bar overlays the sheet's bottom
-    // strip. The peek height grows by exactly that overlay and the content gets a
-    // matching bottom spacer — otherwise the To field and every bottom action row
-    // render underneath the system bar (3-button navigation made them untappable).
+    // strip. Two things follow, and BOTH are needed: the peek height grows by that
+    // overlay, and the content is padded by it.
+    //
+    // 320.dp is not a taste decision — it is the height the planner block needs. At
+    // 280.dp the destination field ended 81px (~31dp) inside the navigation bar's
+    // strip: visibly cut, and in 3-button navigation the tap went to the system, not
+    // the field. Measured on a 1080x2400 @420dpi device; if the planner grows a row,
+    // re-measure rather than assume this still fits.
     val density = androidx.compose.ui.platform.LocalDensity.current
     val navBarHeight = with(density) {
         WindowInsets.navigationBars.getBottom(this).toDp()
@@ -713,7 +717,7 @@ fun MainScreen(
     ) {
         DismissibleSheet(
             state = sheetState,
-            peekHeight = 280.dp + navBarHeight,
+            peekHeight = 320.dp + navBarHeight,
             swipeRightStartZone = 96.dp,
             sheetOpacity = sheetOpacity,
             sheetContent = {
@@ -772,6 +776,19 @@ fun MainScreen(
                     Column(
                         modifier = Modifier
                             .imePadding()
+                            // Keeps every row out of the navigation bar's strip, not
+                            // just the last one. The peek fold lands mid-content, so a
+                            // trailing spacer only rescued a fully scrolled list: at
+                            // peek height the To field (route tab) and the nearby-stop
+                            // chips (arrivals tab) sat under the bar and, in 3-button
+                            // navigation, swallowed the tap entirely.
+                            //
+                            // navigationBarsPadding() does NOT work here: the sheet is a
+                            // Material3 BottomSheetScaffold, which consumes the window
+                            // insets before its content sees them, so the modifier
+                            // resolves to zero. navBarHeight is read once at screen level,
+                            // outside the sheet, which is why it is a real value.
+                            .padding(bottom = navBarHeight)
                             .verticalScroll(sheetScrollState)
                     ) {
                         when (activeTab) {
@@ -1047,7 +1064,6 @@ fun MainScreen(
                                 )
                             }
                         }
-                        Spacer(Modifier.windowInsetsBottomHeight(WindowInsets.navigationBars))
                     }
                     Box(
                         modifier = Modifier
