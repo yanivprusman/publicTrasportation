@@ -40,12 +40,12 @@ val webClientId: String = oauthProps.getProperty("webClientId") ?: ""
 
 android {
     namespace = "com.automatelinux.pt"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.automatelinux.pt"
         minSdk = 26
-        targetSdk = 35
+        targetSdk = 36
         versionCode = gitCommitCount
         versionName = "v${gitCommitCount} (${gitShortHash})"
         buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$webClientId\"")
