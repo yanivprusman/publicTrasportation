@@ -70,7 +70,7 @@ actual fun PtMap(
         // polylines at the start of its effect, so dropping it out of the composition
         // instead left the last line drawn on the map forever.
         LineShapeOverlay(mapView, overlays.lineShape ?: emptyMap(), overlays.lineShapeFitsCamera)
-        TrackedBusOverlay(mapView, overlays.trackedBus)
+        TrackedBusOverlay(mapView, overlays.trackedBus, onVehicleTap)
     }
 
     // The device's own position. The overlay owns a location subscription, so it is torn

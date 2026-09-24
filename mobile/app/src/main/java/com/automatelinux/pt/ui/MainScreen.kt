@@ -110,6 +110,7 @@ import com.automatelinux.pt.ui.map.PtMapState
 import com.automatelinux.pt.ui.map.PtMapStyle
 import com.automatelinux.pt.ui.map.PtUserLocationIcon
 import com.automatelinux.pt.journey.JourneySession
+import com.automatelinux.pt.data.model.VehicleMarker
 import com.automatelinux.pt.ui.journey.JourneyPanel
 import com.automatelinux.pt.ui.routing.DebugSettingsDialog
 import com.automatelinux.pt.ui.routing.RidingLineDialog
@@ -1161,7 +1162,38 @@ fun MainScreen(
                     },
                     // A bus on the map is the answer to "where is it" only once you
                     // can ask it for more; tapping opens the same tracking screen.
-                    onVehicleTap = { marker ->
+                    // Whatever colour it is drawn in — pink, or orange because it is
+                    // your journey's bus or already tracked — the tap ends on its card.
+                    onVehicleTap = onVehicleTap@{ marker ->
+                        val sameBus = { other: VehicleMarker? ->
+                            marker.vehicleRef.isNotEmpty() && other?.vehicleRef == marker.vehicleRef
+                        }
+                        // Already tracked: its card is open, so the tap brings it into view.
+                        if (sameBus(routingState.trackedBus?.marker)) {
+                            frameTrackedBus()
+                            return@onVehicleTap
+                        }
+                        // The journey's bus is tracked as its leg, so the card watches the
+                        // user's own boarding stop and draws the trip's own shape.
+                        val live = journeyLive
+                        val journeyLeg = live?.let {
+                            JourneySession.itinerary.value?.legs?.getOrNull(it.legIndex)
+                        }
+                        val journeyLine = journeyLeg?.routeShortName
+                        if (live != null && journeyLeg != null && journeyLine != null && sameBus(live.vehicle)) {
+                            routingViewModel.trackBusOnLeg(
+                                legIndex = live.legIndex,
+                                lat = journeyLeg.from.lat,
+                                lon = journeyLeg.from.lon,
+                                lineName = journeyLine,
+                                access = journeyLeg.access,
+                                destination = journeyLeg.to.name,
+                                tripId = journeyLeg.tripId,
+                                scheduledStart = journeyLeg.startTime,
+                                vehicleRef = marker.vehicleRef
+                            )
+                            return@onVehicleTap
+                        }
                         val stopCode = marker.stopCode
                         if (stopCode != null) {
                             routingViewModel.trackBusAtStop(

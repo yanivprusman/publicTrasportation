@@ -296,9 +296,12 @@ fun LineShapeOverlay(
 @Composable
 fun TrackedBusOverlay(
     map: MapView,
-    marker: VehicleMarker?
+    marker: VehicleMarker?,
+    // The same tap as any other bus: orange is a state of a bus, not a different kind
+    // of thing, so it answers a tap the way it did when it was pink.
+    onVehicleTap: ((VehicleMarker) -> Unit)? = null
 ) {
-    LaunchedEffect(marker) {
+    LaunchedEffect(marker, onVehicleTap != null) {
         map.overlays.removeAll { (it as? Marker)?.id == "tracked_bus" }
 
         if (marker != null) {
@@ -317,6 +320,9 @@ fun TrackedBusOverlay(
                     marker.bearingDegrees
                 )
                 setInfoWindow(null)
+                if (onVehicleTap != null) {
+                    setOnMarkerClickListener { _, _ -> onVehicleTap(marker); true }
+                }
             }
             map.overlays.add(m)
         }

@@ -743,7 +743,9 @@ class RoutingViewModel(
         access: WheelchairAccess = WheelchairAccess.UNKNOWN,
         destination: String = "",
         tripId: String? = null,
-        scheduledStart: String? = null
+        scheduledStart: String? = null,
+        /** The bus tapped on the map, when tracking started from one rather than a button. */
+        vehicleRef: String? = null
     ) {
         stopTracking()
         val seq = ++trackSeq
@@ -758,7 +760,8 @@ class RoutingViewModel(
                 stopLon = lon,
                 // The monitored stop is resolved from the itinerary's boarding
                 // point, so it is genuinely the user's.
-                stationIsUsers = true
+                stationIsUsers = true,
+                preferredVehicleRef = vehicleRef
             )
         )
         trackingJob = viewModelScope.launch {
