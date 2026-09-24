@@ -2,7 +2,10 @@ package com.automatelinux.pt.ui.map
 
 import androidx.compose.ui.graphics.Color
 import kotlin.math.pow
+import com.automatelinux.pt.data.model.Itinerary
 import com.automatelinux.pt.data.model.TransitMode
+import com.automatelinux.pt.data.model.VehicleMarker
+import com.automatelinux.pt.journey.JourneyLive
 
 /**
  * The colour a transit mode is drawn in, on the map and everywhere else.
@@ -79,3 +82,15 @@ private fun relativeLuminance(c: Color): Double {
     }
     return 0.2126 * channel(c.red) + 0.7152 * channel(c.green) + 0.0722 * channel(c.blue)
 }
+
+/**
+ * The colour of the [itinerary] leg that [marker] is a bus of, or null when it serves none.
+ *
+ * With a route on the map, a live bus of one of its lines is drawn in that line's own
+ * colour — the colour of the polyline it is driving — so "which of these is mine" is
+ * answered by looking, not by reading numbers. Every other bus stays in the neutral one.
+ */
+fun routeColorForVehicle(itinerary: Itinerary?, marker: VehicleMarker): Color? =
+    itinerary?.legs
+        ?.firstOrNull { it.mode != TransitMode.WALK && JourneyLive.serves(it, marker) }
+        ?.let { getModeColorWithRoute(it.mode, it.routeColor) }

@@ -170,9 +170,11 @@ fun VehicleMarkerOverlay(
     map: MapView,
     markers: List<VehicleMarker>,
     visible: Boolean,
-    onVehicleTap: ((VehicleMarker) -> Unit)? = null
+    onVehicleTap: ((VehicleMarker) -> Unit)? = null,
+    // The route on the map, so buses of its lines can wear their line's colour.
+    itinerary: com.automatelinux.pt.data.model.Itinerary? = null
 ) {
-    LaunchedEffect(markers, visible, onVehicleTap != null) {
+    LaunchedEffect(markers, visible, onVehicleTap != null, itinerary) {
         map.overlays.removeAll { (it as? Marker)?.id == "vehicle" }
 
         if (visible) {
@@ -184,7 +186,8 @@ fun VehicleMarkerOverlay(
                     title = "Line ${vm.lineNumber}"
                     snippet = "Vehicle: ${vm.vehicleRef}"
                     icon = createBusMarkerDrawable(
-                        Color.parseColor("#E91E63"),
+                        routeColorForVehicle(itinerary, vm)?.toArgb()
+                            ?: Color.parseColor("#E91E63"),
                         vm.lineNumber,
                         map.resources.displayMetrics.density,
                         vm.bearingDegrees

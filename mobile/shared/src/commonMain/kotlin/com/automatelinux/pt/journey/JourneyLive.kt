@@ -65,13 +65,7 @@ object JourneyLive {
         markers: List<VehicleMarker>,
         nowMs: Long
     ): List<Pair<Long, VehicleMarker>> = markers
-        .filter { marker ->
-            if (leg.routeId != null && marker.lineRef != null) {
-                marker.lineRef == leg.routeId
-            } else {
-                marker.lineNumber.equals(leg.routeShortName ?: "", ignoreCase = true)
-            }
-        }
+        .filter { marker -> serves(leg, marker) }
         .mapNotNull { marker ->
             parseMsOrNull(marker.expectedArrival)?.let { it to marker }
         }
@@ -95,6 +89,18 @@ object JourneyLive {
             fetchedAtMs = nowMs
         )
     }
+
+    /**
+     * Whether [marker] is a bus of [leg]'s line: by route id when both carry one (it
+     * tells the two directions of a line apart), else by published name.
+     */
+    fun serves(leg: RouteLeg, marker: VehicleMarker): Boolean =
+        if (leg.routeId != null && marker.lineRef != null) {
+            marker.lineRef == leg.routeId
+        } else {
+            // A leg with no name (a walk) serves no bus — not the ones with a blank name.
+            leg.routeShortName?.let { marker.lineNumber.equals(it, ignoreCase = true) } ?: false
+        }
 
     fun JourneyLiveInfo.isStale(nowMs: Long): Boolean = nowMs - fetchedAtMs > STALE_MS
 
