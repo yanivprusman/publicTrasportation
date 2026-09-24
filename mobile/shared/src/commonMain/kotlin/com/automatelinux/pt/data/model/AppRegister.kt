@@ -19,3 +19,19 @@ data class AppRegisterResponse(
     val ok: Boolean = false,
     val founderSince: String? = null
 )
+
+/**
+ * Account deletion. The install id is the whole payload and the whole
+ * credential: the phone that holds it is the one allowed to erase the account
+ * behind it, which is why no email is accepted here or by the server.
+ */
+@Serializable
+data class AppDeleteRequest(
+    val installId: String
+)
+
+@Serializable
+data class AppDeleteResponse(
+    val ok: Boolean = false,
+    val wasRegistered: Boolean = false
+)

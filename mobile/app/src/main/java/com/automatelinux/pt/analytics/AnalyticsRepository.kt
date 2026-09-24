@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import com.automatelinux.pt.BuildConfig
 import com.automatelinux.pt.data.api.PtApi
+import com.automatelinux.pt.data.model.AppDeleteRequest
 import com.automatelinux.pt.data.model.AppPingRequest
 import com.automatelinux.pt.data.model.AppRegisterRequest
 import com.automatelinux.pt.data.model.AppStateRequest
@@ -128,6 +129,39 @@ class AnalyticsRepository @Inject constructor(
         }
     } catch (e: Exception) {
         Log.d(TAG, "registration failed", e)
+        Result.failure(e)
+    }
+
+    /**
+     * Deletes the account and everything the server holds about it.
+     *
+     * Google Play requires this path to exist in the app itself for any app that
+     * lets people register, so it is a store requirement as much as a courtesy.
+     *
+     * Order matters: the server goes first, because clearing the local identity
+     * before the request succeeds would strand rows nobody can ask to delete
+     * again — the install id is the only handle on them. Afterwards the device
+     * keeps no trace: a fresh install id is minted, so the next ping starts an
+     * anonymous install rather than resurrecting the one just erased, and the
+     * vault is cleared so a reinstall does not restore the deleted identity.
+     */
+    suspend fun deleteAccount(): Result<Unit> = try {
+        val response = api.appDeleteAccount(AppDeleteRequest(installId = installId()))
+        if (response.ok) {
+            vault.clear()
+            store.registeredEmail = null
+            store.founderSince = null
+            store.installId = UUID.randomUUID().toString()
+            store.lastActiveDay = null
+            store.activeDays = 0
+            store.stateUpdatedAt = 0L
+            _identityState.value = IdentityState.UNREGISTERED
+            Result.success(Unit)
+        } else {
+            Result.failure(IllegalStateException("Deletion rejected"))
+        }
+    } catch (e: Exception) {
+        Log.d(TAG, "account deletion failed", e)
         Result.failure(e)
     }
 

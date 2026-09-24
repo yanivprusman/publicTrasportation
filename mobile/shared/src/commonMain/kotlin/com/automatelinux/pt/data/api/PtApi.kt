@@ -4,6 +4,8 @@ import com.automatelinux.pt.data.model.JourneyLiveTokenResponse
 import com.automatelinux.pt.data.model.JourneyLiveUpdateRequest
 import com.automatelinux.pt.data.model.AppPingRequest
 import com.automatelinux.pt.data.model.AppPingResponse
+import com.automatelinux.pt.data.model.AppDeleteRequest
+import com.automatelinux.pt.data.model.AppDeleteResponse
 import com.automatelinux.pt.data.model.AppRegisterRequest
 import com.automatelinux.pt.data.model.AppRegisterResponse
 import com.automatelinux.pt.data.model.AppStateRequest
@@ -143,6 +145,9 @@ class PtApi(private val client: HttpClient) {
 
     suspend fun appRegister(body: AppRegisterRequest): AppRegisterResponse =
         fetch("/api/app/register", HttpMethod.Post, PtJson.encodeToString(body))
+
+    suspend fun appDeleteAccount(body: AppDeleteRequest): AppDeleteResponse =
+        fetch("/api/app/delete", HttpMethod.Post, PtJson.encodeToString(body))
 
     suspend fun appGetState(installId: String): AppStateResponse =
         fetch("/api/app/state", params = mapOf("installId" to installId))

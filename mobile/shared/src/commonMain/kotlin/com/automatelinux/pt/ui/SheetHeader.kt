@@ -88,7 +88,8 @@ fun SheetTabRow(
     language: String,
     onLanguageChange: (String) -> Unit,
     journeyAlertsEnabled: Boolean,
-    onJourneyAlertsChange: (Boolean) -> Unit
+    onJourneyAlertsChange: (Boolean) -> Unit,
+    onDeleteAccount: () -> Unit
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
 
@@ -176,6 +177,20 @@ fun SheetTabRow(
                     onClick = {
                         onJourneyAlertsChange(!journeyAlertsEnabled)
                         menuExpanded = false
+                    }
+                )
+                // Last, and only here: deleting an account is not a setting the
+                // hand slips onto while reaching for the language toggle.
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            strings.deleteAccount,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    },
+                    onClick = {
+                        menuExpanded = false
+                        onDeleteAccount()
                     }
                 )
             }

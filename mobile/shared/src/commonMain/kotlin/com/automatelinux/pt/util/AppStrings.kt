@@ -298,6 +298,15 @@ interface AppStrings {
     val journeyChannelAlerts: String
     val journeyAlertsOn: String
     val journeyAlertsOff: String
+
+    // Account deletion — required in-app by Google Play for any app that lets
+    // people register.
+    val deleteAccount: String
+    val deleteAccountTitle: String
+    val deleteAccountBody: String
+    val deleteAccountConfirm: String
+    val deleteAccountDone: String
+    val deleteAccountFailed: String
     val journeyLiveNeedsLocation: String
     val journeyAllSteps: String
     /** Long-press menu on a journey step: re-plan the trip around that leg. */
@@ -650,6 +659,17 @@ val EnStrings: AppStrings = object : AppStrings {
     // above it — so it reads as the thing you are about to do, not a status readout.
     override val journeyAlertsOn: String = "Alerts: On"
     override val journeyAlertsOff: String = "Alerts: Off"
+
+    override val deleteAccount: String = "Delete my account"
+    override val deleteAccountTitle: String = "Delete your account?"
+    override val deleteAccountBody: String =
+        "This removes your email address, your phone number, the preferences " +
+        "synced to the account, and the usage records kept about it. It cannot " +
+        "be undone. The app keeps working — you will simply be unregistered."
+    override val deleteAccountConfirm: String = "Delete"
+    override val deleteAccountDone: String = "Your account has been deleted."
+    override val deleteAccountFailed: String =
+        "Could not delete the account — no connection to the server. Please try again."
     override val journeyLiveNeedsLocation: String =
         "Location is off, so stops can't be counted — the journey will follow the timetable."
     override val journeyAllSteps: String = "All steps"
@@ -998,6 +1018,17 @@ val HeStrings: AppStrings = object : AppStrings {
     override val journeyChannelAlerts: String = "התראות נסיעה"
     override val journeyAlertsOn: String = "התראות: מופעלות"
     override val journeyAlertsOff: String = "התראות: כבויות"
+
+    override val deleteAccount: String = "מחיקת החשבון שלי"
+    override val deleteAccountTitle: String = "למחוק את החשבון?"
+    override val deleteAccountBody: String =
+        "הפעולה מוחקת את כתובת האימייל, מספר הטלפון, ההעדפות שסונכרנו לחשבון " +
+        "ורישומי השימוש ששמורים עליו. אי אפשר לבטל אותה. האפליקציה תמשיך לעבוד — " +
+        "פשוט לא תהיה רשום."
+    override val deleteAccountConfirm: String = "מחק"
+    override val deleteAccountDone: String = "החשבון נמחק."
+    override val deleteAccountFailed: String =
+        "לא הצלחנו למחוק את החשבון — אין חיבור לשרת. אפשר לנסות שוב."
     override val journeyLiveNeedsLocation: String =
         "המיקום כבוי, אז אי אפשר לספור תחנות — הנסיעה תעקוב אחרי לוח הזמנים."
     override val journeyAllSteps: String = "כל השלבים"

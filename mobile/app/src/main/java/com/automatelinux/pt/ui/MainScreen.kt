@@ -148,6 +148,10 @@ fun MainScreen(
     // Called after any edit to state the account owns (favourites), so it can
     // be pushed to the server instead of living only on this handset.
     onSyncedStateChanged: () -> Unit = {},
+    // Deletes the account, then reports failure. Success needs no callback: the
+    // identity flips to unregistered and the app shows the registration screen,
+    // which is the truthful confirmation.
+    onDeleteAccount: (onError: () -> Unit) -> Unit = {},
     routingViewModel: RoutingViewModel = koinViewModel(),
     arrivalsViewModel: ArrivalsViewModel = koinViewModel()
 ) {
@@ -172,6 +176,8 @@ fun MainScreen(
     var liveBusesHintBottomInRootPx by remember { mutableFloatStateOf(0f) }
     var showOpacitySlider by remember { mutableStateOf(false) }
     var showDebugSettings by remember { mutableStateOf(false) }
+    var showDeleteAccount by remember { mutableStateOf(false) }
+    var deletingAccount by remember { mutableStateOf(false) }
     var sheetOpacity by remember { mutableFloatStateOf(settingsStore.sheetOpacity) }
     var cardOpacity by remember { mutableFloatStateOf(settingsStore.cardOpacity) }
 
@@ -759,7 +765,8 @@ fun MainScreen(
                         onJourneyAlertsChange = { enabled ->
                             settingsStore.journeyAlertsEnabled = enabled
                             journeyAlertsEnabled = enabled
-                        }
+                        },
+                        onDeleteAccount = { showDeleteAccount = true }
                     )
 
                     Column(
@@ -1705,6 +1712,25 @@ fun MainScreen(
                     savePlaceTarget = null
                 },
                 onDismiss = { savePlaceTarget = null }
+            )
+        }
+
+        if (showDeleteAccount) {
+            DeleteAccountDialog(
+                busy = deletingAccount,
+                onConfirm = {
+                    deletingAccount = true
+                    onDeleteAccount {
+                        deletingAccount = false
+                        showDeleteAccount = false
+                        Toast.makeText(
+                            context,
+                            strings.deleteAccountFailed,
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                },
+                onDismiss = { showDeleteAccount = false }
             )
         }
 

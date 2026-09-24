@@ -190,6 +190,11 @@ class MainActivity : ComponentActivity() {
                             },
                             onSyncedStateChanged = {
                                 lifecycleScope.launch { analytics.pushState() }
+                            },
+                            onDeleteAccount = { onError ->
+                                lifecycleScope.launch {
+                                    analytics.deleteAccount().onFailure { onError() }
+                                }
                             }
                         )
                     }
@@ -207,7 +212,8 @@ private fun ServerCheckScreen(
     widgetStation: Pair<String, String>?,
     onWidgetStationConsumed: () -> Unit,
     onLanguageChange: (String) -> Unit,
-    onSyncedStateChanged: () -> Unit
+    onSyncedStateChanged: () -> Unit,
+    onDeleteAccount: (onError: () -> Unit) -> Unit
 ) {
     val strings = LocalAppStrings.current
     var serverReady by remember { mutableStateOf(false) }
@@ -232,7 +238,8 @@ private fun ServerCheckScreen(
             onSharedTripConsumed = onSharedTripConsumed,
             widgetStation = widgetStation,
             onWidgetStationConsumed = onWidgetStationConsumed,
-            onSyncedStateChanged = onSyncedStateChanged
+            onSyncedStateChanged = onSyncedStateChanged,
+            onDeleteAccount = onDeleteAccount
         )
     } else {
         Box(

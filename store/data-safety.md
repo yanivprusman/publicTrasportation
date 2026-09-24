@@ -39,20 +39,22 @@ display preferences. Removed on uninstall or clear-data.
 
 ---
 
-# ⚠ Gap to close before a public release: account deletion
+# ✅ Closed: account deletion (2026-09-24)
 
-Play requires an app that **lets users create an account** to also let them **request deletion of
-that account and its data — from inside the app, and through a web URL** that can be reached
-without installing the app. PT has a registration gate (email + phone), so this applies.
+Play requires an app that **lets users create an account** to also let them **delete that account
+and its data — from inside the app, and through a web URL** reachable without installing it. PT has
+a registration gate, so this applied. It is now built:
 
-Today deletion is "email privacy@ya-niv.com", which the policy states. That is a human process,
-not the in-app path and public URL Play asks for.
+- **In-app:** Settings (the gear menu) → *מחיקת החשבון שלי* / *Delete my account*, with a
+  confirmation dialog that states what goes. On success the app returns to the registration screen,
+  which is the honest confirmation — the account really is gone.
+- **Web:** https://pt.prod.ya-niv.com/delete-account — bilingual, explains the in-app path and the
+  email route for someone who has already uninstalled.
+- **Server:** the daemon command `appDeleteAccount` erases, in one transaction, the user row, the
+  synced state, every install linked to the account and those installs' events.
 
-**What closing it takes:**
-1. A web page, e.g. `https://pt.prod.ya-niv.com/delete-account`, that explains what gets deleted
-   and takes a request.
-2. A visible in-app route to the same thing (Settings → delete my account).
-3. Server-side deletion of the registration row and the usage records tied to that install.
+Deliberately no delete-by-email endpoint: the install UUID is the credential, because an
+unauthenticated address would let anyone erase anyone.
 
-Not hard, but it is real work and it is required, so it should happen before the closed test ends
-rather than after the production application is submitted.
+**Data safety form:** answer *"Users can request that their data is deleted" = yes*, and give
+https://pt.prod.ya-niv.com/delete-account as the deletion URL.
