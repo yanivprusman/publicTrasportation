@@ -16,10 +16,13 @@ data class SeenVehicle(val marker: VehicleMarker, val lastSeenMs: Long)
  * stop's request timed out on mobile data, the whole poll failed, or the outward walk
  * stopped a round earlier than last time and never asked the stop that reported it.
  *
- * Long enough to cover one missed poll at the slowest cadence (45 s), short enough that a
- * bus which really left does not stand frozen on the map for minutes.
+ * Two minutes, the user's call: long enough to ride out two missed polls even at the
+ * slowest cadence (45 s). The bus is drawn faded from the first poll that misses it, so a
+ * long retention never passes a last-known position off as a current one. Past this it
+ * goes: unreported that long, its trip has ended, it has left the searched stops, or its
+ * tracker stopped — keeping it would draw a bus that is not there.
  */
-const val VEHICLE_RETAIN_MS = 50_000L
+const val VEHICLE_RETAIN_MS = 120_000L
 
 /**
  * The vehicles to draw after a poll: everything [fresh] reported, at its new position,
