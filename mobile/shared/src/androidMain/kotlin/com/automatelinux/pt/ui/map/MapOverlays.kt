@@ -165,6 +165,9 @@ fun OriginDestinationMarkers(
     }
 }
 
+/** How faded a bus the latest poll did not report is drawn. */
+private const val STALE_VEHICLE_ALPHA = 0.4f
+
 @Composable
 fun VehicleMarkerOverlay(
     map: MapView,
@@ -172,9 +175,10 @@ fun VehicleMarkerOverlay(
     visible: Boolean,
     onVehicleTap: ((VehicleMarker) -> Unit)? = null,
     // The route on the map, so buses of its lines can wear their line's colour.
-    itinerary: com.automatelinux.pt.data.model.Itinerary? = null
+    itinerary: com.automatelinux.pt.data.model.Itinerary? = null,
+    staleRefs: Set<String> = emptySet()
 ) {
-    LaunchedEffect(markers, visible, onVehicleTap != null, itinerary) {
+    LaunchedEffect(markers, visible, onVehicleTap != null, itinerary, staleRefs) {
         map.overlays.removeAll { (it as? Marker)?.id == "vehicle" }
 
         if (visible) {
@@ -184,6 +188,8 @@ fun VehicleMarkerOverlay(
                     position = GeoPoint(vm.lat, vm.lon)
                     setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
                     title = "Line ${vm.lineNumber}"
+                    // Last known position, not the latest report: faded, still tappable.
+                    alpha = if (vm.vehicleRef in staleRefs) STALE_VEHICLE_ALPHA else 1f
                     snippet = "Vehicle: ${vm.vehicleRef}"
                     icon = createBusMarkerDrawable(
                         routeColorForVehicle(itinerary, vm)?.toArgb()

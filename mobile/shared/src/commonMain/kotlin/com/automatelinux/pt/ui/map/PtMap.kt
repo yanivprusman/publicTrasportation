@@ -27,6 +27,12 @@ data class PtMapOverlays(
     val via: LatLng? = null,
     val vehicles: List<VehicleMarker> = emptyList(),
     val vehiclesVisible: Boolean = true,
+    /**
+     * Vehicles the latest poll did NOT report — drawn faded at their last known position
+     * until they age out (see VEHICLE_RETAIN_MS), so a bus the feed briefly missed stays
+     * on the map without claiming to be current (pt #273).
+     */
+    val staleVehicleRefs: Set<String> = emptySet(),
     val stops: List<StopResult> = emptyList(),
     /**
      * Which of [stops] is the one whose arrivals board is open, by stop code.

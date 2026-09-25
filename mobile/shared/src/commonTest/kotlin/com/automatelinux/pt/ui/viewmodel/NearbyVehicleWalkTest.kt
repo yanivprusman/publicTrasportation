@@ -86,4 +86,22 @@ class NearbyVehicleWalkTest {
         assertEquals(30_000L, nearbyPollDelayMs(40))
         assertEquals(45_000L, nearbyPollDelayMs(60))
     }
+
+    // pt #273: a poll that found five buses in round one stopped there, never asked the
+    // round-two stop that had reported a bus last time, and that bus left the map.
+    @Test
+    fun neverWalksShorterThanEarlierPollsOfTheSameView() {
+        assertFalse(
+            nearbyWalkShouldStop(
+                queried = 5, busesFound = 5, reachedMeters = 900, viewportRadiusMeters = 840,
+                minStops = 10
+            )
+        )
+        assertTrue(
+            nearbyWalkShouldStop(
+                queried = 10, busesFound = 5, reachedMeters = 900, viewportRadiusMeters = 840,
+                minStops = 10
+            )
+        )
+    }
 }

@@ -64,7 +64,10 @@ actual fun PtMap(
             // whenever the route redraws or the route's polylines would cover them.
             redrawKey = overlays.itinerary
         )
-        VehicleMarkerOverlay(mapView, overlays.vehicles, overlays.vehiclesVisible, onVehicleTap, overlays.itinerary)
+        VehicleMarkerOverlay(
+            mapView, overlays.vehicles, overlays.vehiclesVisible, onVehicleTap,
+            overlays.itinerary, overlays.staleVehicleRefs
+        )
         StopMarkersOverlay(mapView, overlays.stops, overlays.activeStopCode, onStopTap)
         // Always composed, empty when there is no shape: the overlay clears its
         // polylines at the start of its effect, so dropping it out of the composition

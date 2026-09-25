@@ -40,6 +40,8 @@ import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.SatelliteAlt
 import androidx.compose.material.icons.filled.Sensors
 import androidx.compose.material.icons.filled.Work
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -119,6 +121,7 @@ import com.automatelinux.pt.ui.routing.TrackedBusCard
 import android.widget.Toast
 import com.automatelinux.pt.ui.viewmodel.ArrivalsViewModel
 import com.automatelinux.pt.ui.viewmodel.NearbyVehiclesFailure
+import com.automatelinux.pt.ui.viewmodel.routeVehicleQueries
 import com.automatelinux.pt.ui.viewmodel.RoutingViewModel
 import com.automatelinux.pt.widget.DeparturesWidgetProvider
 import com.automatelinux.pt.util.LocalAppStrings
@@ -190,6 +193,9 @@ fun MainScreen(
     // stop — the question people open a transit app with when they have not
     // planned anything yet.
     var liveBuses by remember { mutableStateOf(false) }
+    // Narrows live buses to the displayed route's own lines (pt #272). Remembered across
+    // routes: someone who wants only their lines wants that for the next search too.
+    var liveBusesRouteOnly by remember { mutableStateOf(false) }
     var nearbyStops by remember { mutableStateOf<List<StopResult>>(emptyList()) }
     var currentMapZoom by remember { mutableStateOf(13.0) }
     var currentMapCenter by remember { mutableStateOf(PtMapState.DEFAULT_CENTER) }
@@ -463,8 +469,26 @@ fun MainScreen(
         }
     }
 
-    LaunchedEffect(liveBuses, currentMapCenter, currentMapRadiusMeters) {
-        if (!liveBuses) {
+    // The route the map is showing, and what the route-only filter could ask about it.
+    // Empty queries = nothing to filter to, so the filter is neither offered nor applied.
+    val mapItinerary = journeyItinerary ?: routingState.displayedItinerary
+    val routeQueryLegs = remember(mapItinerary) {
+        mapItinerary?.legs?.takeIf { routeVehicleQueries(it).isNotEmpty() }
+    }
+    val routeOnlyActive = liveBuses && liveBusesRouteOnly && routeQueryLegs != null
+
+    LaunchedEffect(routeOnlyActive, routeQueryLegs) {
+        if (routeOnlyActive && routeQueryLegs != null) {
+            arrivalsViewModel.startRouteVehicles(routeQueryLegs)
+        } else {
+            arrivalsViewModel.stopRouteVehicles()
+        }
+    }
+
+    LaunchedEffect(liveBuses, routeOnlyActive, currentMapCenter, currentMapRadiusMeters) {
+        // With the route filter on, the map-centre search would only spend requests on
+        // buses nobody is going to draw.
+        if (!liveBuses || routeOnlyActive) {
             arrivalsViewModel.stopNearbyVehicles()
             return@LaunchedEffect
         }
@@ -1095,7 +1119,7 @@ fun MainScreen(
                     overlays = PtMapOverlays(
                         // A running journey owns the map: its route stays drawn even
                         // if the planner below has moved on to another search.
-                        itinerary = journeyItinerary ?: routingState.displayedItinerary,
+                        itinerary = mapItinerary,
                         origin = routingState.origin?.let { LatLng(it.lat, it.lon) },
                         destination = routingState.destination?.let { LatLng(it.lat, it.lon) },
                         via = routingState.via?.let { LatLng(it.lat, it.lon) },
@@ -1105,12 +1129,18 @@ fun MainScreen(
                             // Falling back to the nationwide answer is what makes "tap to
                             // show it" mean anything: without a marker the camera flies
                             // 85 km to an empty map and the user is worse off than before.
+                            routeOnlyActive -> arrivalsState.routeVehicles
                             liveBuses -> arrivalsState.nearbyVehicles
                                 .ifEmpty { listOfNotNull(arrivalsState.nearestRunningBus) }
                             activeTab == ActiveTab.ARRIVALS -> arrivalsState.vehicleMarkers
                             else -> emptyList()
                         },
                         vehiclesVisible = liveBuses || arrivalsState.showVehicleMarkers,
+                        staleVehicleRefs = when {
+                            routeOnlyActive -> arrivalsState.routeStaleVehicleRefs
+                            liveBuses -> arrivalsState.nearbyStaleVehicleRefs
+                            else -> emptySet()
+                        },
                         stops = nearbyStops,
                         activeStopCode = arrivalsState.stationCode.takeIf { it.isNotEmpty() },
                         // Tracking wins over the Lines tab: a bus can be reported far
@@ -1285,8 +1315,13 @@ fun MainScreen(
                     // The bus is looked up when the tap happens, not when the sentence
                     // was composed, so the camera goes where it is NOW -- these markers
                     // move every poll.
+                    val shownLiveBuses = if (routeOnlyActive) {
+                        arrivalsState.routeVehicles
+                    } else {
+                        arrivalsState.nearbyVehicles
+                    }
                     val showNearestLiveBus: () -> Unit = {
-                        val bus = arrivalsState.nearbyVehicles.minByOrNull {
+                        val bus = shownLiveBuses.minByOrNull {
                             metersBetween(
                                 currentMapCenter.latitude, currentMapCenter.longitude,
                                 it.lat, it.lon
@@ -1332,7 +1367,27 @@ fun MainScreen(
                             )
                         }
                     }
-                    val liveBusesHint: Pair<String, (() -> Unit)?>? = when {
+                    // The route's buses are found along the route, not around the centre,
+                    // so none of the radius sentences below apply: only "looking", "could
+                    // not ask", "none running", or "off screen — tap to show".
+                    val routeNearestMeters = arrivalsState.routeVehicles.minOfOrNull {
+                        metersBetween(
+                            currentMapCenter.latitude, currentMapCenter.longitude,
+                            it.lat, it.lon
+                        )
+                    }
+                    val liveBusesHint: Pair<String, (() -> Unit)?>? = if (routeOnlyActive) when {
+                        !arrivalsState.routeVehiclesLoaded -> strings.liveBusesSearching to null
+                        arrivalsState.routeVehiclesFailure == NearbyVehiclesFailure.NO_LIVE_DATA &&
+                            arrivalsState.routeVehicles.isEmpty() ->
+                            strings.liveBusesFeedDown to null
+                        routeNearestMeters == null -> strings.liveBusesRouteNone to null
+                        routeNearestMeters > currentMapCornerMeters ->
+                            strings.liveBusesOffscreen(
+                                formatDistance(routeNearestMeters.toInt(), strings)
+                            ) to showNearestLiveBus
+                        else -> null
+                    } else when {
                         !arrivalsState.nearbyVehiclesLoaded -> strings.liveBusesSearching to null
                         // A poll that never got an answer is a third fact, before the
                         // empty/quiet distinction below even applies: "no buses within
@@ -1440,6 +1495,27 @@ fun MainScreen(
                             Icons.Default.Sensors,
                             contentDescription = strings.liveBusesNearby,
                             modifier = Modifier.size(22.dp)
+                        )
+                    }
+
+                    // Only where it can mean something: live buses on and a route on
+                    // the map with a stop the feed can be asked about.
+                    if (liveBuses && routeQueryLegs != null) {
+                        FilterChip(
+                            selected = liveBusesRouteOnly,
+                            onClick = { liveBusesRouteOnly = !liveBusesRouteOnly },
+                            label = { Text(strings.liveBusesRouteOnly) },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Default.DirectionsBus,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            },
+                            colors = FilterChipDefaults.filterChipColors(
+                                containerColor = MaterialTheme.colorScheme.surface
+                            ),
+                            elevation = FilterChipDefaults.filterChipElevation(elevation = 4.dp)
                         )
                     }
 

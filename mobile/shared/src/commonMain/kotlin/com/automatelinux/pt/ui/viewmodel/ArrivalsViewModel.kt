@@ -4,6 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.automatelinux.pt.data.api.PtApi
 import com.automatelinux.pt.data.model.MonitoredStopVisit
+import com.automatelinux.pt.data.model.RouteLeg
+import com.automatelinux.pt.data.model.TransitMode
+import com.automatelinux.pt.journey.JourneyLive
 import com.automatelinux.pt.data.model.SiriResponse
 import com.automatelinux.pt.data.model.StopResult
 import com.automatelinux.pt.data.model.VehicleMarker
@@ -87,14 +90,22 @@ private const val NEARBY_VEHICLE_SEARCH_CEILING_M = 50_000
  *    the budget says — reporting on less ground than the user is looking at is the bug
  *    this exists to prevent;
  *  - once the screen is covered it stops on either enough buses or the ordinary budget.
+ *
+ * [minStops] is how far earlier polls of the same view walked. Without it the walk's
+ * length depended on what the first rounds happened to find: a poll that found five buses
+ * in round one stopped there, never asked the round-two stops that had reported a bus the
+ * poll before, and that bus left the map until a later poll walked further again (pt #273).
+ * A view's walk now only ever grows, so the same stops are asked every time.
  */
 internal fun nearbyWalkShouldStop(
     queried: Int,
     busesFound: Int,
     reachedMeters: Int,
-    viewportRadiusMeters: Int
+    viewportRadiusMeters: Int,
+    minStops: Int = 0
 ): Boolean {
     if (queried >= NEARBY_VEHICLE_MAX_STOPS) return true
+    if (queried < minStops) return false
     if (reachedMeters < viewportRadiusMeters) return false
     return busesFound >= NEARBY_VEHICLE_TARGET_BUSES || queried >= NEARBY_VEHICLE_BASE_STOPS
 }
@@ -283,6 +294,20 @@ class ArrivalsViewModel(
     private var nearbyVehiclesJob: Job? = null
 
     /**
+     * What the live-buses map is drawing, keyed by vehicle, with when each was last
+     * reported. Outlives a restart of the poll (a pan or zoom), so the buses still on
+     * screen do not blink out while the new view's first poll is in flight.
+     */
+    private var nearbySightings: Map<String, SeenVehicle> = emptyMap()
+
+    private fun retainNearby(fresh: List<VehicleMarker>): List<VehicleMarker> {
+        val now = Clock.System.now().toEpochMilliseconds()
+        nearbySightings = mergeSightings(nearbySightings, fresh, now)
+        _state.value = _state.value.copy(nearbyStaleVehicleRefs = staleRefs(nearbySightings, now))
+        return nearbySightings.values.map { it.marker }
+    }
+
+    /**
      * Buses reporting around a point, for the map's live-buses mode.
      *
      * SIRI is monitored per stop, so "the buses around here" is the union of what the
@@ -321,6 +346,8 @@ class ArrivalsViewModel(
             nearestRunningBusMeters = 0
         )
         nearbyVehiclesJob = viewModelScope.launch {
+            // How far this view's polls have walked so far; see nearbyWalkShouldStop.
+            var walkFloor = 0
             while (true) {
                 // One request, nearest-first, capped server-side. Everything below walks
                 // this list rather than re-querying at a wider radius, so widening the
@@ -334,8 +361,10 @@ class ArrivalsViewModel(
                 } catch (e: CancellationException) {
                     throw e
                 } catch (_: Exception) {
+                    // Failing to ask is no evidence the buses left: the ones already
+                    // drawn stay until they age out, next to the sentence saying why.
                     _state.value = _state.value.copy(
-                        nearbyVehicles = emptyList(),
+                        nearbyVehicles = retainNearby(emptyList()),
                         nearbyVehiclesLoaded = true,
                         nearbyVehiclesFailure = NearbyVehiclesFailure.NO_SERVER
                     )
@@ -380,12 +409,19 @@ class ArrivalsViewModel(
 
                     queried += round.size
                     reachedMeters = round.last().distanceMeters
-                    if (nearbyWalkShouldStop(queried, seen.size, reachedMeters, viewportRadius)) break
+                    if (nearbyWalkShouldStop(
+                            queried, seen.size, reachedMeters, viewportRadius, walkFloor
+                        )
+                    ) break
                 }
+                walkFloor = maxOf(walkFloor, queried)
 
+                // What this poll reported, for the "is anything here" answers below; the
+                // map draws those plus the recently-seen buses this poll missed.
                 val vehicles = seen.values.toList()
+                val drawn = retainNearby(vehicles)
                 _state.value = _state.value.copy(
-                    nearbyVehicles = vehicles,
+                    nearbyVehicles = drawn,
                     nearbyVehiclesLoaded = true,
                     // Stops existed but not one SIRI query completed. NOT the same fact
                     // as the catch above: the server itself answered, so either the
@@ -398,19 +434,19 @@ class ArrivalsViewModel(
                         NearbyVehiclesFailure.NONE
                     },
                     nearbyVehiclesReachedMeters = reachedMeters,
-                    nearbyVehiclesNearestMeters = vehicles.minOfOrNull {
+                    nearbyVehiclesNearestMeters = drawn.minOfOrNull {
                         distanceMeters(it.lat, it.lon, lat, lon).toInt()
                     } ?: 0,
                     // Buses in hand answer the question themselves; a stale nationwide
                     // answer next to real markers would be a second, contradicting one.
-                    nearestRunningBus = if (vehicles.isNotEmpty()) null else _state.value.nearestRunningBus,
-                    nearestRunningBusMeters = if (vehicles.isNotEmpty()) 0 else _state.value.nearestRunningBusMeters
+                    nearestRunningBus = if (drawn.isNotEmpty()) null else _state.value.nearestRunningBus,
+                    nearestRunningBusMeters = if (drawn.isNotEmpty()) 0 else _state.value.nearestRunningBusMeters
                 )
 
                 // Only when the neighbourhood came back empty, and only outside what was
                 // just walked — the server is told how far this phone already covered so
                 // it never pays to re-ask a stop already probed here.
-                if (vehicles.isEmpty()) {
+                if (drawn.isEmpty()) {
                     try {
                         val answer = api.nearestBus(lat, lon, reachedMeters)
                         _state.value = _state.value.copy(
@@ -434,12 +470,86 @@ class ArrivalsViewModel(
     fun stopNearbyVehicles() {
         nearbyVehiclesJob?.cancel()
         nearbyVehiclesJob = null
+        nearbySightings = emptyMap()
         _state.value = _state.value.copy(
             nearbyVehicles = emptyList(),
+            nearbyStaleVehicleRefs = emptySet(),
             nearbyVehiclesLoaded = false,
             nearbyVehiclesFailure = NearbyVehiclesFailure.NONE,
             nearbyVehiclesReachedMeters = 0,
             nearbyVehiclesNearestMeters = 0
+        )
+    }
+
+    private var routeVehiclesJob: Job? = null
+    private var routeSightings: Map<String, SeenVehicle> = emptyMap()
+
+    /**
+     * Live buses of [legs]' own lines, wherever along the route they are (pt #272).
+     *
+     * Not a filter over [startNearbyVehicles]: that search is centred on the map, so
+     * filtering it would only ever show the route's buses that happen to be near the
+     * centre, and an empty answer would mean nothing. SIRI reports a bus at every stop
+     * still ahead of it, so each transit leg asks its boarding stop (buses on their way to
+     * you, up to an hour out) and its alighting stop (buses already past the boarding
+     * stop), with the leg's LineRef so the feed returns that line only. Two requests per
+     * leg, whatever the zoom.
+     */
+    fun startRouteVehicles(legs: List<RouteLeg>) {
+        routeVehiclesJob?.cancel()
+        routeSightings = emptyMap()
+        val queries = routeVehicleQueries(legs)
+        _state.value = _state.value.copy(
+            routeVehicles = emptyList(),
+            routeVehiclesLoaded = false,
+            routeVehiclesFailure = NearbyVehiclesFailure.NONE
+        )
+        routeVehiclesJob = viewModelScope.launch {
+            while (true) {
+                val responses = coroutineScope {
+                    queries.map { (stopCode, leg) ->
+                        async {
+                            try {
+                                leg to api.getTransport(station = stopCode, line = leg.routeId)
+                            } catch (e: CancellationException) {
+                                throw e
+                            } catch (_: Exception) {
+                                null
+                            }
+                        }
+                    }.awaitAll()
+                }
+                val fresh = responses.filterNotNull().flatMap { (leg, response) ->
+                    // The LineRef filter already did this when the leg has a route id;
+                    // a leg without one was asked unfiltered and is matched by name.
+                    response.extractVehicleMarkers().filter { JourneyLive.serves(leg, it) }
+                }
+                val now = Clock.System.now().toEpochMilliseconds()
+                routeSightings = mergeSightings(routeSightings, fresh, now)
+                _state.value = _state.value.copy(
+                    routeVehicles = routeSightings.values.map { it.marker },
+                    routeStaleVehicleRefs = staleRefs(routeSightings, now),
+                    routeVehiclesLoaded = true,
+                    routeVehiclesFailure = if (responses.all { it == null }) {
+                        NearbyVehiclesFailure.NO_LIVE_DATA
+                    } else {
+                        NearbyVehiclesFailure.NONE
+                    }
+                )
+                delay(NEARBY_VEHICLE_INTERVAL_MS)
+            }
+        }
+    }
+
+    fun stopRouteVehicles() {
+        routeVehiclesJob?.cancel()
+        routeVehiclesJob = null
+        routeSightings = emptyMap()
+        _state.value = _state.value.copy(
+            routeVehicles = emptyList(),
+            routeStaleVehicleRefs = emptySet(),
+            routeVehiclesLoaded = false,
+            routeVehiclesFailure = NearbyVehiclesFailure.NONE
         )
     }
 

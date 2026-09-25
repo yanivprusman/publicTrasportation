@@ -25,8 +25,22 @@ data class ArrivalsState(
     val showVehicleMarkers: Boolean = true,
     val lineFilter: String = "",
     val lastUpdated: Long? = null,
+    /**
+     * Live buses of the displayed route's own lines, asked of the route's own stops
+     * rather than of the map centre — the "my route only" filter (pt #272). Separate
+     * from [nearbyVehicles] because it answers a different question over different stops.
+     */
+    val routeVehicles: List<VehicleMarker> = emptyList(),
+    /** Which of [routeVehicles] the latest poll did not report; drawn faded. */
+    val routeStaleVehicleRefs: Set<String> = emptySet(),
+    /** Same contract as [nearbyVehiclesLoaded], for [routeVehicles]. */
+    val routeVehiclesLoaded: Boolean = false,
+    /** Same contract as [nearbyVehiclesFailure], for [routeVehicles]. */
+    val routeVehiclesFailure: NearbyVehiclesFailure = NearbyVehiclesFailure.NONE,
     /** Vehicles reported around the map's centre, independent of the selected stop. */
     val nearbyVehicles: List<VehicleMarker> = emptyList(),
+    /** Which of [nearbyVehicles] the latest poll did not report; drawn faded. */
+    val nearbyStaleVehicleRefs: Set<String> = emptySet(),
     /**
      * Whether a live-buses poll has completed since the mode was switched on. An empty
      * [nearbyVehicles] means "none reporting" only once this is true — before it, the
