@@ -409,6 +409,11 @@ class ArrivalsViewModel(
 
                     queried += round.size
                     reachedMeters = round.last().distanceMeters
+                    // A whole round with not one answer is the feed, not the stops. Walking
+                    // on would spend every remaining round on the same 10 s timeout: on
+                    // 2026-09-25 MOT's SIRI stopped answering and a zoomed-out map said
+                    // "Looking for live buses…" for two minutes before it could say so.
+                    if (answered == 0) break
                     if (nearbyWalkShouldStop(
                             queried, seen.size, reachedMeters, viewportRadius, walkFloor
                         )
@@ -446,7 +451,7 @@ class ArrivalsViewModel(
                 // Only when the neighbourhood came back empty, and only outside what was
                 // just walked — the server is told how far this phone already covered so
                 // it never pays to re-ask a stop already probed here.
-                if (drawn.isEmpty()) {
+                if (drawn.isEmpty() && answered > 0) {
                     try {
                         val answer = api.nearestBus(lat, lon, reachedMeters)
                         _state.value = _state.value.copy(
