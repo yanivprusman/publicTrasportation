@@ -6,6 +6,7 @@ import { stopIdentity } from '@/lib/gtfs-stops';
 import { rideFare } from '@/lib/gtfs-fares';
 import { journeyFare, PricedRide } from '@/lib/journey-fare';
 import { NotOnLineError, planFromOnboard } from '@/lib/onboard';
+import { expandScooterHops } from '@/lib/scooter-hops';
 
 const MOTIS_PORT = process.env.MOTIS_PORT || '3504';
 const MOTIS_BASE = `http://localhost:${MOTIS_PORT}`;
@@ -40,6 +41,13 @@ interface MotisPlace {
   // GTFS stop id, feed-prefixed ("israel_26635"). Present on transit endpoints only —
   // a walk leg's START/END are coordinates, not stops.
   stopId?: string;
+  // Timetabled call at this stop; MOTIS sets them on intermediate stops, which is
+  // what lets a scooter hop (lib/scooter-hops.ts) leave the bus there on time.
+  arrival?: string;
+  departure?: string;
+  scheduledArrival?: string;
+  scheduledDeparture?: string;
+  dropoffType?: string;
 }
 
 interface MotisLeg {
@@ -54,7 +62,7 @@ interface MotisLeg {
   routeShortName?: string;
   routeColor?: string;
   agencyName?: string;
-  legGeometry?: { points?: string };
+  legGeometry?: { points?: string; precision?: number };
   polyline?: string;
   intermediateStops?: MotisPlace[];
   // Carries the GTFS trip id, which is the only route to an accessibility flag.
@@ -681,7 +689,31 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const motisData = await response.json();
+    const motisData: MotisPlanResponse = await response.json();
+    if (scooter) {
+      // MOTIS rides only at the trip's two ends; the hop in the middle — off the
+      // bus early, ride to the train — is planned here. See lib/scooter-hops.ts.
+      const hops = await expandScooterHops(motisData.itineraries || [], async (lat, lon, timeIso) => {
+        const hopParams = new URLSearchParams({
+          fromPlace: `${lat},${lon}`,
+          toPlace: `${toLat},${toLon}`,
+          time: timeIso,
+          arriveBy: 'false',
+          numItineraries: '3',
+          pedestrianSpeed: PEDESTRIAN_SPEED,
+          maxPreTransitTime: String(streetCapSeconds),
+          maxPostTransitTime: String(streetCapSeconds),
+        });
+        if (transitModes) hopParams.set('transitModes', transitModes.join(','));
+        for (const [k, v] of Object.entries(scooterPlanParams(streetCapSeconds))) hopParams.set(k, v);
+        const hopResponse = await fetch(`${MOTIS_BASE}/api/v1/plan?${hopParams}`, {
+          signal: AbortSignal.timeout(15000),
+        });
+        if (!hopResponse.ok) throw new Error(`MOTIS returned ${hopResponse.status}`);
+        return hopResponse.json();
+      });
+      motisData.itineraries = [...(motisData.itineraries || []), ...(hops as MotisItinerary[])];
+    }
     const result = {
       ...transformMotisResponse(motisData, !pageCursor, scooter),
       ...(alternatives !== undefined ? { alternatives } : {}),
