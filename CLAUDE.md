@@ -101,6 +101,7 @@ Next.js App Router route handlers:
 
 **Transit routing (via MOTIS on port 3504):**
 - `route/route.ts` — `GET /api/route?from=lat,lon&to=lat,lon&time=ISO&arriveBy=bool` — multimodal routing, cached (5min TTL, 500 max)
+  - `&scooter=1&maxRide=<min>` — **scooter mode**: the rider's e-scooter travels with them, so the first/last mile is a ride (MOTIS BIKE profile) reported as a `SCOOTER` leg, and a bus combination slower than riding the whole way is dropped (the ride comes back as an itinerary). `maxWalk` is refused with it. Rationale, measurements and what deliberately is NOT set live on `scooterPlanParams` in `lib/motis-modes.ts`; `isStreetMode` is the one test for "the rider moves themself" — never `mode !== 'WALK'`.
 - `geocode/route.ts` — `GET /api/geocode?text=query` — location autocomplete. The MOTIS + Nominatim search itself (and reverse-geocode's lookup) is `@automatelinux/geo` in /opt/automateLinux/packages, shared with midreshaze and brownSigns
 - `stoptimes/route.ts` — `GET /api/stoptimes?stopId=X&n=20` — stop departures
 - `health/route.ts` — `GET /api/health` — health check with MOTIS connectivity
