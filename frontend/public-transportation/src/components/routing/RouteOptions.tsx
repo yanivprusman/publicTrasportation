@@ -1,5 +1,5 @@
 import type { UseRouteOptionsReturn } from '../../hooks/useRouteOptions'
-import { WALK_MINUTE_CHOICES, type TransitModeKey } from '../../hooks/useRouteOptions'
+import { RIDE_MINUTE_CHOICES, WALK_MINUTE_CHOICES, type TransitModeKey } from '../../hooks/useRouteOptions'
 import { useI18n } from '../../i18n'
 import type { TranslationKey } from '../../i18n/translations'
 import styles from './RouteOptions.module.css'
@@ -16,7 +16,13 @@ interface RouteOptionsProps {
 
 export default function RouteOptions({ routeOptions }: RouteOptionsProps) {
   const { t } = useI18n()
-  const { options, toggleMode, setMaxWalkMinutes } = routeOptions
+  const { options, toggleMode, setMaxWalkMinutes, toggleScooter, setMaxRideMinutes } = routeOptions
+  // With a scooter the first/last mile is ridden, not walked: the cap row keeps
+  // its place but asks about the ride, with choices sized for one.
+  const capChoices = options.scooter ? RIDE_MINUTE_CHOICES : WALK_MINUTE_CHOICES
+  const capMinutes = options.scooter ? options.maxRideMinutes : options.maxWalkMinutes
+  const setCap = options.scooter ? setMaxRideMinutes : setMaxWalkMinutes
+  const capKind = options.scooter ? 'ride' : 'walk'
 
   return (
     <div className={styles.wrapper}>
@@ -40,17 +46,33 @@ export default function RouteOptions({ routeOptions }: RouteOptionsProps) {
           )
         })}
       </div>
+      <div className={styles.scooterRow}>
+        <button
+          type="button"
+          className={`${styles.scooterChip} ${options.scooter ? styles.scooterChipActive : ''}`}
+          onClick={toggleScooter}
+          aria-pressed={options.scooter}
+          title={t('options.scooterTitle')}
+          data-id="toggle-scooter"
+        >
+          <span className={styles.modeIcon} aria-hidden="true">🛴</span>
+          {t('options.scooter')}
+        </button>
+        {options.scooter && (
+          <span className={styles.scooterNote} data-id="scooter-note">{t('options.scooterNote')}</span>
+        )}
+      </div>
       <div className={styles.walkRow}>
-        <span className={styles.walkLabel}>{t('options.maxWalk')}</span>
+        <span className={styles.walkLabel}>{options.scooter ? t('options.maxRide') : t('options.maxWalk')}</span>
         <div className={styles.walkChoices}>
-          {WALK_MINUTE_CHOICES.map(minutes => (
+          {capChoices.map(minutes => (
             <button
               key={minutes}
               type="button"
-              className={`${styles.walkBtn} ${options.maxWalkMinutes === minutes ? styles.walkBtnActive : ''}`}
-              onClick={() => setMaxWalkMinutes(minutes)}
-              aria-pressed={options.maxWalkMinutes === minutes}
-              data-id={`set-max-walk-${minutes}`}
+              className={`${styles.walkBtn} ${capMinutes === minutes ? styles.walkBtnActive : ''}`}
+              onClick={() => setCap(minutes)}
+              aria-pressed={capMinutes === minutes}
+              data-id={`set-max-${capKind}-${minutes}`}
             >
               {minutes}
             </button>

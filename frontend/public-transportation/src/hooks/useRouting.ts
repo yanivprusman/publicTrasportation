@@ -2,6 +2,7 @@ import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import type { GeocodeSuggestion, RouteResult, Itinerary, DirectAlternative } from '../types'
 import { searchRoute, reverseGeocode, type RouteQueryOptions } from '../services/routing-api'
 import { useRouteOptions, toRouteQueryOptions, isDefaultOptions, type UseRouteOptionsReturn } from './useRouteOptions'
+import { isStreetMode } from '../utils/mode-colors'
 
 const ROUTE_STORAGE_KEY = 'pt-saved-route'
 
@@ -21,7 +22,7 @@ function loadSavedRoute(): { origin: GeocodeSuggestion | null; destination: Geoc
 // legs' line-and-stop signature.
 function itineraryKey(itin: Itinerary): string {
   const legs = itin.legs
-    .filter(leg => leg.mode !== 'WALK')
+    .filter(leg => !isStreetMode(leg.mode))
     .map(leg => `${leg.mode}:${leg.routeShortName || ''}:${leg.from.name}:${leg.to.name}`)
     .join('|')
   return `${itin.startTime}|${itin.endTime}|${legs}`
@@ -190,7 +191,9 @@ export function useRouting(): UseRoutingReturn {
           setError(
             isDefaultOptions(optionsRef.current)
               ? 'errors.noRoutes'
-              : 'errors.noRoutesFiltered'
+              : optionsRef.current.scooter
+                ? 'errors.noRoutesScooter'
+                : 'errors.noRoutesFiltered'
           )
         }
       } else {

@@ -1,4 +1,5 @@
 import polyline from '@mapbox/polyline'
+import { isStreetMode } from './motis-modes'
 
 /**
  * Routing for a rider who is already on a bus.
@@ -355,7 +356,7 @@ function geometryFromRider(leg: OnboardLeg, lat: number, lon: number, stop: Moti
 }
 
 function rides(itin: OnboardItinerary): OnboardLeg[] {
-  return (itin.legs || []).filter(l => l.mode && l.mode !== 'WALK')
+  return (itin.legs || []).filter(l => !isStreetMode(l.mode))
 }
 
 function walkSeconds(itin: OnboardItinerary): number {
@@ -477,9 +478,9 @@ export async function planFromOnboard(opts: {
 
 function join(onBus: OnboardLeg, onward: OnboardLeg[]): OnboardItinerary {
   // MOTIS opens every plan with a walk from the query point; from a stop it is empty.
-  const legs = [onBus, ...onward.filter(l => !(l.mode === 'WALK' && (l.duration || 0) === 0))]
+  const legs = [onBus, ...onward.filter(l => !(isStreetMode(l.mode) && (l.duration || 0) === 0))]
   const end = legs[legs.length - 1].endTime || onBus.endTime
-  const transitCount = legs.filter(l => l.mode && l.mode !== 'WALK').length
+  const transitCount = legs.filter(l => !isStreetMode(l.mode)).length
   return {
     startTime: onBus.startTime,
     endTime: end,

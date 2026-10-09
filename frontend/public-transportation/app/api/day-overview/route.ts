@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ensureMotis } from '@/lib/motis-manager';
-import { MODE_GROUPS, normalizeMode, PEDESTRIAN_SPEED, UNCAPPED_WALK_SECONDS, type NormalizedMode } from '@/lib/motis-modes';
+import { MODE_GROUPS, isStreetMode, normalizeMode, parseScooterParam, scooterPlanParams, PEDESTRIAN_SPEED, UNCAPPED_WALK_SECONDS, type NormalizedMode } from '@/lib/motis-modes';
 
 const MOTIS_PORT = process.env.MOTIS_PORT || '3504';
 const MOTIS_BASE = `http://localhost:${MOTIS_PORT}`;
@@ -67,7 +67,7 @@ export interface DayDeparturePayload {
 // MOTIS pages overlap at the edges, so the sweep sees some itineraries twice.
 function departureKey(itin: MotisItinerary): string {
   const legs = (itin.legs || [])
-    .filter(leg => leg.mode && leg.mode !== 'WALK')
+    .filter(leg => !isStreetMode(leg.mode))
     .map(leg => `${leg.mode}:${leg.routeShortName || ''}:${leg.from?.name || ''}:${leg.to?.name || ''}`)
     .join('|');
   return `${itin.startTime}|${legs}`;
@@ -80,7 +80,7 @@ function toPayload(itin: MotisItinerary): DayDeparturePayload {
     duration: itin.duration || 0,
     transfers: itin.transfers || 0,
     lines: (itin.legs || [])
-      .filter(leg => leg.mode && leg.mode !== 'WALK')
+      .filter(leg => !isStreetMode(leg.mode))
       .map(leg => ({ mode: normalizeMode(leg.mode), name: leg.routeShortName || '' })),
   };
 }
@@ -93,6 +93,15 @@ export async function GET(request: NextRequest) {
   const end = searchParams.get('end');
   const modesParam = searchParams.get('modes');
   const maxWalkParam = searchParams.get('maxWalk');
+  const maxRideParam = searchParams.get('maxRide');
+  // The rider has an e-scooter that travels with them — see scooterPlanParams.
+  const scooter = parseScooterParam(searchParams.get('scooter'));
+  if (scooter === null) {
+    return NextResponse.json(
+      { error: 'Invalid scooter parameter. Expected 1 or 0.' },
+      { status: 400 }
+    );
+  }
 
   if (!from || !to) {
     return NextResponse.json(
@@ -138,19 +147,36 @@ export async function GET(request: NextRequest) {
     transitModes = [...new Set(keys.flatMap(k => MODE_GROUPS[k]))];
   }
 
-  let maxWalkSeconds = UNCAPPED_WALK_SECONDS;
-  if (maxWalkParam !== null) {
-    const minutes = Number(maxWalkParam);
+  // The first/last-mile cap, in minutes: how far the rider will walk to a stop —
+  // or, with a scooter, ride. They are separate parameters so a request cannot
+  // carry a walk limit for a rider who is not walking anywhere; with a scooter
+  // the same cap also bounds the direct ride (see scooterPlanParams).
+  if (scooter && maxWalkParam !== null) {
+    return NextResponse.json(
+      { error: 'maxWalk does not apply with scooter=1 — send maxRide instead.' },
+      { status: 400 }
+    );
+  }
+  if (!scooter && maxRideParam !== null) {
+    return NextResponse.json(
+      { error: 'maxRide requires scooter=1.' },
+      { status: 400 }
+    );
+  }
+  const capParam = scooter ? maxRideParam : maxWalkParam;
+  let streetCapSeconds = UNCAPPED_WALK_SECONDS;
+  if (capParam !== null) {
+    const minutes = Number(capParam);
     if (!Number.isInteger(minutes) || minutes < 1 || minutes > 60) {
       return NextResponse.json(
-        { error: 'Invalid maxWalk parameter. Expected whole minutes between 1 and 60.' },
+        { error: `Invalid ${scooter ? 'maxRide' : 'maxWalk'} parameter. Expected whole minutes between 1 and 60.` },
         { status: 400 }
       );
     }
-    maxWalkSeconds = minutes * 60;
+    streetCapSeconds = minutes * 60;
   }
 
-  const cacheKey = `${from}|${to}|${new Date(startMs).toISOString()}|${new Date(endMs).toISOString()}|${transitModes?.join(',') || ''}|${maxWalkSeconds}`;
+  const cacheKey = `${from}|${to}|${new Date(startMs).toISOString()}|${new Date(endMs).toISOString()}|${transitModes?.join(',') || ''}|${streetCapSeconds}|${scooter ? 'scooter' : 'walk'}`;
   const cached = getCachedDay(cacheKey);
   if (cached) {
     return NextResponse.json(cached);
@@ -183,8 +209,11 @@ export async function GET(request: NextRequest) {
       });
       if (cursor) params.set('pageCursor', cursor);
       if (transitModes) params.set('transitModes', transitModes.join(','));
-      params.set('maxPreTransitTime', String(maxWalkSeconds));
-      params.set('maxPostTransitTime', String(maxWalkSeconds));
+      params.set('maxPreTransitTime', String(streetCapSeconds));
+      params.set('maxPostTransitTime', String(streetCapSeconds));
+      if (scooter) {
+        for (const [k, v] of Object.entries(scooterPlanParams(streetCapSeconds))) params.set(k, v);
+      }
 
       const response = await fetch(`${MOTIS_BASE}/api/v1/plan?${params}`, {
         signal: AbortSignal.timeout(15000),
@@ -209,7 +238,7 @@ export async function GET(request: NextRequest) {
         if (departMs < startMs) continue;
         // Walk-only itineraries repeat at every requested time — they are not
         // scheduled departures, so they don't belong on a departures chart.
-        if (!(itin.legs || []).some(leg => leg.mode && leg.mode !== 'WALK')) continue;
+        if (!(itin.legs || []).some(leg => !isStreetMode(leg.mode))) continue;
         const key = departureKey(itin);
         if (seen.has(key)) continue;
         seen.add(key);

@@ -9,11 +9,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
 import androidx.compose.material.icons.filled.DirectionsBus
+import androidx.compose.material.icons.filled.ElectricScooter
 import androidx.compose.material.icons.filled.Train
 import androidx.compose.material.icons.filled.Tram
 import androidx.compose.material3.FilterChip
@@ -32,6 +32,11 @@ import com.automatelinux.pt.util.LocalAppStrings
 
 private val WALK_CHOICES = listOf(5, 10, 15, 20)
 
+// A scooter covers ground a walk never could — 30 minutes is about 7 km at the
+// router's bike speed — and that reach is the whole point of the option, so the
+// ride choices start where the walk ones end. "No limit" is the server's ceiling.
+private val RIDE_CHOICES = listOf(10, 20, 30, 45)
+
 /** A mode group's name, as its chip shows it and as an empty result names the filter. */
 fun TransitFilter.label(strings: AppStrings): String = when (this) {
     TransitFilter.BUS -> strings.busMode
@@ -40,15 +45,20 @@ fun TransitFilter.label(strings: AppStrings): String = when (this) {
 }
 
 /**
- * Route options: which transit modes to route with and how far the passenger
- * is willing to walk. Changing anything re-runs the active search.
+ * Route options: which transit modes to route with, whether the rider has a scooter
+ * that travels with them, and how far they will walk — or ride — to a stop. Changing
+ * anything re-runs the active search.
  */
 @Composable
 fun RouteOptionsSection(
     enabledModes: Set<TransitFilter>,
     maxWalkMinutes: Int?,
+    scooter: Boolean,
+    maxRideMinutes: Int?,
     onToggleMode: (TransitFilter) -> Unit,
     onMaxWalkChange: (Int?) -> Unit,
+    onScooterChange: (Boolean) -> Unit,
+    onMaxRideChange: (Int?) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val strings = LocalAppStrings.current
@@ -80,6 +90,35 @@ fun RouteOptionsSection(
 
         Spacer(Modifier.height(4.dp))
 
+        // Not a mode to include or exclude but a fact about the rider, so it has a
+        // row of its own rather than a fourth chip in the modes row.
+        FilterChip(
+            selected = scooter,
+            onClick = { onScooterChange(!scooter) },
+            label = { Text(strings.scooterOption, maxLines = 1) },
+            leadingIcon = {
+                Icon(
+                    Icons.Default.ElectricScooter,
+                    contentDescription = null,
+                    modifier = Modifier.size(FilterChipDefaults.IconSize)
+                )
+            }
+        )
+        if (scooter) {
+            Text(
+                text = strings.scooterHint,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
+        Spacer(Modifier.height(4.dp))
+
+        // With a scooter the first/last mile is ridden, not walked: the cap row keeps
+        // its place but asks about the ride, with choices sized for one.
+        val capChoices = if (scooter) RIDE_CHOICES else WALK_CHOICES
+        val cap = if (scooter) maxRideMinutes else maxWalkMinutes
+        val onCapChange = if (scooter) onMaxRideChange else onMaxWalkChange
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -88,21 +127,21 @@ fun RouteOptionsSection(
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             Icon(
-                Icons.AutoMirrored.Filled.DirectionsWalk,
-                contentDescription = strings.maxWalkLabel,
+                if (scooter) Icons.Default.ElectricScooter else Icons.AutoMirrored.Filled.DirectionsWalk,
+                contentDescription = if (scooter) strings.maxRideLabel else strings.maxWalkLabel,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(18.dp)
             )
             WalkChip(
-                selected = maxWalkMinutes == null,
+                selected = cap == null,
                 label = strings.noWalkLimit,
-                onClick = { onMaxWalkChange(null) }
+                onClick = { onCapChange(null) }
             )
-            WALK_CHOICES.forEach { minutes ->
+            capChoices.forEach { minutes ->
                 WalkChip(
-                    selected = maxWalkMinutes == minutes,
+                    selected = cap == minutes,
                     label = strings.walkMinutesChip(minutes),
-                    onClick = { onMaxWalkChange(minutes) }
+                    onClick = { onCapChange(minutes) }
                 )
             }
         }

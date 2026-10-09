@@ -60,7 +60,7 @@ export interface LineShapeData {
   headsigns: Record<string, string>
 }
 
-export type TransitMode = 'WALK' | 'BIKE' | 'CAR' | 'BUS' | 'RAIL' | 'TRAM' | 'SUBWAY'
+export type TransitMode = 'WALK' | 'SCOOTER' | 'BIKE' | 'CAR' | 'BUS' | 'RAIL' | 'TRAM' | 'SUBWAY'
 
 export interface Place {
   name: string

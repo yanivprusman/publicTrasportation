@@ -2,6 +2,7 @@ package com.automatelinux.pt.ui.viewmodel
 
 import com.automatelinux.pt.data.model.RouteLeg
 import com.automatelinux.pt.data.model.TransitMode
+import com.automatelinux.pt.data.model.isStreet
 import com.automatelinux.pt.data.model.VehicleMarker
 
 /** A vehicle on the map, and when a poll last actually reported it. */
@@ -64,7 +65,7 @@ fun staleRefs(sightings: Map<String, SeenVehicle>, nowMs: Long): Set<String> =
  * walking, or legs without stop codes), and the filter is not offered.
  */
 fun routeVehicleQueries(legs: List<RouteLeg>): List<Pair<String, RouteLeg>> =
-    legs.filter { it.mode != TransitMode.WALK }
+    legs.filter { !it.mode.isStreet }
         .flatMap { leg ->
             listOfNotNull(leg.fromStopCode, leg.toStopCode)
                 .filter { it.isNotBlank() }

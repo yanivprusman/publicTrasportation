@@ -4,6 +4,7 @@ import androidx.compose.ui.graphics.Color
 import kotlin.math.pow
 import com.automatelinux.pt.data.model.Itinerary
 import com.automatelinux.pt.data.model.TransitMode
+import com.automatelinux.pt.data.model.isStreet
 import com.automatelinux.pt.data.model.VehicleMarker
 import com.automatelinux.pt.journey.JourneyLive
 
@@ -25,6 +26,7 @@ fun getModeColor(mode: TransitMode): Color = when (mode) {
     TransitMode.FERRY -> Color(0xFF00ACC1)
     TransitMode.BIKE -> Color(0xFF00ACC1)
     TransitMode.CAR -> Color(0xFF546E7A)
+    TransitMode.SCOOTER -> Color(0xFF00897B)
 }
 
 /**
@@ -34,7 +36,7 @@ fun getModeColor(mode: TransitMode): Color = when (mode) {
  * sometimes attach one anyway.
  */
 fun getModeColorWithRoute(mode: TransitMode, routeColor: String?): Color {
-    if (mode == TransitMode.WALK) return getModeColor(mode)
+    if (mode.isStreet) return getModeColor(mode)
     if (!routeColor.isNullOrBlank()) {
         parseHexColor(routeColor)?.let { return it }
     }
@@ -92,5 +94,5 @@ private fun relativeLuminance(c: Color): Double {
  */
 fun routeColorForVehicle(itinerary: Itinerary?, marker: VehicleMarker): Color? =
     itinerary?.legs
-        ?.firstOrNull { it.mode != TransitMode.WALK && JourneyLive.serves(it, marker) }
+        ?.firstOrNull { !it.mode.isStreet && JourneyLive.serves(it, marker) }
         ?.let { getModeColorWithRoute(it.mode, it.routeColor) }

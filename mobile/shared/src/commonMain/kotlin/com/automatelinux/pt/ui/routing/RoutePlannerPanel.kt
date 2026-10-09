@@ -100,6 +100,8 @@ fun RoutePlannerPanel(
     /** "On a bus?" — the rider says which line they are on and plans from it. */
     onRidingClick: (() -> Unit)? = null,
     onMaxWalkChange: ((Int?) -> Unit)? = null,
+    onScooterChange: ((Boolean) -> Unit)? = null,
+    onMaxRideChange: ((Int?) -> Unit)? = null,
     onEarlier: (() -> Unit)? = null,
     onLater: (() -> Unit)? = null,
     homePlace: GeocodeSuggestion? = null,
@@ -341,13 +343,19 @@ fun RoutePlannerPanel(
             )
         }
 
-        if (onToggleModeFilter != null && onMaxWalkChange != null) {
+        if (onToggleModeFilter != null && onMaxWalkChange != null &&
+            onScooterChange != null && onMaxRideChange != null
+        ) {
             Spacer(Modifier.height(4.dp))
             RouteOptionsSection(
                 enabledModes = state.enabledModes,
                 maxWalkMinutes = state.maxWalkMinutes,
+                scooter = state.scooter,
+                maxRideMinutes = state.maxRideMinutes,
                 onToggleMode = onToggleModeFilter,
-                onMaxWalkChange = onMaxWalkChange
+                onMaxWalkChange = onMaxWalkChange,
+                onScooterChange = onScooterChange,
+                onMaxRideChange = onMaxRideChange
             )
         }
 

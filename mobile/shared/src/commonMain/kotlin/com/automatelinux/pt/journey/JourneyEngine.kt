@@ -4,6 +4,7 @@ import com.automatelinux.pt.data.model.Itinerary
 import com.automatelinux.pt.data.model.Place
 import com.automatelinux.pt.data.model.RouteLeg
 import com.automatelinux.pt.data.model.TransitMode
+import com.automatelinux.pt.data.model.isStreet
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.max
@@ -163,7 +164,7 @@ fun haversineMeters(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Dou
 private fun Double.toRadians(): Double = this * 0.017453292519943295
 
 val RouteLeg.isRide: Boolean
-    get() = mode != TransitMode.WALK && mode != TransitMode.BIKE
+    get() = !mode.isStreet
 
 /**
  * Every stop this leg calls at, boarding and alighting included, in travel order.

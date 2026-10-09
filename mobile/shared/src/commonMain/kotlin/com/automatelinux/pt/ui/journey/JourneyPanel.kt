@@ -24,6 +24,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
+import androidx.compose.material.icons.filled.ElectricScooter
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.DirectionsBus
@@ -55,6 +56,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.automatelinux.pt.data.model.Itinerary
 import com.automatelinux.pt.data.model.TransitMode
+import com.automatelinux.pt.data.model.isStreet
 import com.automatelinux.pt.journey.JourneyLiveInfo
 import com.automatelinux.pt.journey.JourneyPhase
 import com.automatelinux.pt.journey.JourneyProgress
@@ -363,10 +365,10 @@ fun JourneyPanel(
                                     getModeColorWithRoute(leg.mode, leg.routeColor)
                                 }
                                 Icon(
-                                    imageVector = if (leg.mode == TransitMode.WALK) {
-                                        Icons.AutoMirrored.Filled.DirectionsWalk
-                                    } else {
-                                        Icons.Default.DirectionsBus
+                                    imageVector = when (leg.mode) {
+                                        TransitMode.WALK -> Icons.AutoMirrored.Filled.DirectionsWalk
+                                        TransitMode.SCOOTER -> Icons.Default.ElectricScooter
+                                        else -> Icons.Default.DirectionsBus
                                     },
                                     contentDescription = null,
                                     modifier = Modifier.size(18.dp),
@@ -470,11 +472,13 @@ private fun legLine(
     mode: TransitMode,
     destination: String,
     strings: com.automatelinux.pt.util.AppStrings
-): String = if (mode == TransitMode.WALK) {
+): String = when {
+    mode == TransitMode.SCOOTER ->
+        if (destination.isBlank()) strings.journeyRideToDest else strings.journeyRideTo(destination)
     // The walk that ends the trip ends at the rider's own pin, which has no name.
-    if (destination.isBlank()) strings.journeyWalkToDest else strings.journeyWalkTo(destination)
-} else {
-    "${JourneyText.rideName(routeShortName, mode, strings)} → $destination"
+    mode.isStreet ->
+        if (destination.isBlank()) strings.journeyWalkToDest else strings.journeyWalkTo(destination)
+    else -> "${JourneyText.rideName(routeShortName, mode, strings)} → $destination"
 }
 
 /** Says out loud whether the panel is following the rider or only the timetable. */

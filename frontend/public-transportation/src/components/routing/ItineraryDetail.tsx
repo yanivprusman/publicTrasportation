@@ -3,7 +3,7 @@ import type { Coordinates, Itinerary, RouteLeg, TransitMode } from '../../types'
 import type { LiveBusState } from '../../hooks/useLiveBus'
 import { useDepartureReminder } from '../../hooks/useDepartureReminder'
 import { departureDayLabel, formatDuration, formatTime, nextDayOffset } from '../../utils/time-format'
-import { getModeStyle, getModeLabel } from '../../utils/mode-colors'
+import { getModeStyle, getModeLabel, isStreetMode } from '../../utils/mode-colors'
 import { buildTripLink, type SharedTrip } from '../../utils/trip-link'
 import DepartureCountdown from './DepartureCountdown'
 import LiveBusStatus from './LiveBusStatus'
@@ -25,6 +25,7 @@ interface ItineraryDetailProps {
 const MODE_ICONS: Record<TransitMode, string> = {
   WALK: '\u{1F6B6}',
   BIKE: '\u{1F6B4}',
+  SCOOTER: '\u{1F6F4}',
   CAR: '\u{1F697}',
   BUS: '\u{1F68C}',
   RAIL: '\u{1F686}',
@@ -152,7 +153,7 @@ function DepartureReminderButton({ itinerary }: { itinerary: Itinerary }) {
   const { t } = useI18n()
   const reminder = useDepartureReminder()
 
-  const firstTransit = itinerary.legs.find(leg => leg.mode !== 'WALK')
+  const firstTransit = itinerary.legs.find(leg => !isStreetMode(leg.mode))
   const departureIso = firstTransit?.startTime ?? itinerary.startTime
   const scheduled = reminder.isScheduledFor(departureIso)
 
@@ -242,7 +243,7 @@ function LegSegment({ leg }: { leg: RouteLeg }) {
   const [stopsOpen, setStopsOpen] = useState(false)
   const stopCount = leg.intermediateStops?.length ?? 0
   const stopsLabel = stopCount === 1 ? t('detail.stopsOne') : t('detail.stopsMany', { n: stopCount })
-  const isWalk = leg.mode === 'WALK'
+  const isStreet = isStreetMode(leg.mode)
 
   return (
     <div
@@ -251,13 +252,13 @@ function LegSegment({ leg }: { leg: RouteLeg }) {
     >
       <div className={styles.segmentTime} />
       <div className={styles.spineCell}>
-        <div className={isWalk ? styles.spineWalk : styles.spineRide} />
+        <div className={isStreet ? styles.spineWalk : styles.spineRide} />
       </div>
       <div className={styles.segmentContent}>
-        {isWalk ? (
+        {isStreet ? (
           <div className={styles.walkLine}>
-            <span className={styles.modeIcon} aria-hidden="true">{MODE_ICONS.WALK}</span>
-            <span>{t('detail.walk', { d: formatDuration(leg.duration) })}</span>
+            <span className={styles.modeIcon} aria-hidden="true">{MODE_ICONS[leg.mode]}</span>
+            <span>{t(leg.mode === 'SCOOTER' ? 'detail.ride' : 'detail.walk', { d: formatDuration(leg.duration) })}</span>
           </div>
         ) : (
           <>

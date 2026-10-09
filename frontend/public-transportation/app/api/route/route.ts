@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ensureMotis } from '@/lib/motis-manager';
-import { MODE_GROUPS, normalizeMode, PEDESTRIAN_SPEED, UNCAPPED_WALK_SECONDS } from '@/lib/motis-modes';
+import { MODE_GROUPS, isStreetMode, normalizeMode, parseScooterParam, scooterPlanParams, PEDESTRIAN_SPEED, UNCAPPED_WALK_SECONDS } from '@/lib/motis-modes';
 import { tripWheelchairAccess } from '@/lib/gtfs-trips';
 import { stopIdentity } from '@/lib/gtfs-stops';
 import { rideFare } from '@/lib/gtfs-fares';
@@ -92,7 +92,7 @@ interface MotisPlanResponse {
 
 function itineraryFingerprint(itin: MotisItinerary): string {
   return (itin.legs || [])
-    .filter(leg => leg.mode && leg.mode !== 'WALK')
+    .filter(leg => !isStreetMode(leg.mode))
     .map(leg => `${leg.mode}:${leg.routeShortName || ''}:${leg.from?.name || ''}:${leg.to?.name || ''}`)
     .join('|');
 }
@@ -113,10 +113,10 @@ function placeName(p?: MotisPlace): string {
   return name;
 }
 
-function transformItinerary(itin: MotisItinerary) {
+function transformItinerary(itin: MotisItinerary, scooter: boolean) {
   const legs = (itin.legs || []).map(leg => {
       const transformed: Record<string, unknown> = {
-        mode: normalizeMode(leg.mode),
+        mode: normalizeMode(leg.mode, scooter),
         from: {
           name: placeName(leg.from),
           lat: leg.from?.lat || 0,
@@ -144,7 +144,7 @@ function transformItinerary(itin: MotisItinerary) {
       if (leg.scheduledStartTime) transformed.scheduledStartTime = leg.scheduledStartTime;
       if (leg.onboard) transformed.onboard = true;
       // Only transit legs can be inaccessible; a walk leg has nothing to board.
-      if (leg.mode && leg.mode !== 'WALK') {
+      if (!isStreetMode(leg.mode)) {
         transformed.wheelchairAccess = tripWheelchairAccess(leg.tripId);
         // Passed through so the client can ask /api/trip-shape for this exact
         // trip's geometry. Resolving by line number instead draws another city's
@@ -178,7 +178,7 @@ function transformItinerary(itin: MotisItinerary) {
   // One unpriced ride makes the whole journey unpriced (see lib/journey-fare.ts),
   // and a ride the first fare already paid for says so rather than showing a price
   // the rider will not be charged.
-  const rides = legs.filter(l => l.mode !== 'WALK' && !l.onboard);
+  const rides = legs.filter(l => !isStreetMode(l.mode as string) && !l.onboard);
   const { total: fareTotal, coveredByTransfer } = journeyFare(rides as unknown as PricedRide[]);
   rides.forEach((ride, i) => {
     if (coveredByTransfer.has(i)) ride.fareCoveredByTransfer = true;
@@ -194,7 +194,7 @@ function transformItinerary(itin: MotisItinerary) {
   };
 }
 
-function transformMotisResponse(motisData: MotisPlanResponse, includeDirect: boolean) {
+function transformMotisResponse(motisData: MotisPlanResponse, includeDirect: boolean, scooter: boolean) {
   const seen = new Set<string>();
   // Direct (walk-only) itineraries are not part of the time-paged sequence —
   // MOTIS repeats them on every page, so merge them only into the first page.
@@ -210,7 +210,7 @@ function transformMotisResponse(motisData: MotisPlanResponse, includeDirect: boo
       seen.add(fp);
       return true;
     })
-    .map(transformItinerary);
+    .map(itin => transformItinerary(itin, scooter));
   return {
     itineraries,
     previousPageCursor: motisData.previousPageCursor,
@@ -224,11 +224,11 @@ function transformMotisResponse(motisData: MotisPlanResponse, includeDirect: boo
 // with the earliest second-half connection it can catch (mirrored for
 // arrive-by searches).
 
-function isWalkOnly(itin: MotisItinerary): boolean {
-  return (itin.legs || []).every(leg => !leg.mode || leg.mode === 'WALK');
+function isStreetOnly(itin: MotisItinerary): boolean {
+  return (itin.legs || []).every(leg => isStreetMode(leg.mode));
 }
 
-// Walk-only itineraries are schedule-independent — MOTIS just anchors them to
+// Street-only itineraries (a walk, or a scooter ride) are schedule-independent — MOTIS just anchors them to
 // the query time — so they can be re-anchored to line up with the other half.
 function shiftItinerary(itin: MotisItinerary, deltaMs: number): MotisItinerary {
   const shift = (iso?: string) => {
@@ -250,7 +250,7 @@ function shiftItinerary(itin: MotisItinerary, deltaMs: number): MotisItinerary {
 
 function combineItineraries(first: MotisItinerary, second: MotisItinerary): MotisItinerary {
   const legs = [...(first.legs || []), ...(second.legs || [])];
-  const transitLegCount = legs.filter(leg => leg.mode && leg.mode !== 'WALK').length;
+  const transitLegCount = legs.filter(leg => !isStreetMode(leg.mode)).length;
   return {
     startTime: first.startTime,
     endTime: second.endTime,
@@ -270,7 +270,8 @@ async function planHalf(
   time: string,
   arriveBy: boolean,
   transitModes: string[] | null,
-  maxWalkSeconds: number
+  streetCapSeconds: number,
+  scooter: boolean
 ): Promise<MotisItinerary[]> {
   const params = new URLSearchParams({
     fromPlace,
@@ -281,8 +282,11 @@ async function planHalf(
     pedestrianSpeed: PEDESTRIAN_SPEED,
   });
   if (transitModes) params.set('transitModes', transitModes.join(','));
-  params.set('maxPreTransitTime', String(maxWalkSeconds));
-  params.set('maxPostTransitTime', String(maxWalkSeconds));
+  params.set('maxPreTransitTime', String(streetCapSeconds));
+  params.set('maxPostTransitTime', String(streetCapSeconds));
+  if (scooter) {
+    for (const [k, v] of Object.entries(scooterPlanParams(streetCapSeconds))) params.set(k, v);
+  }
   const response = await fetch(`${MOTIS_BASE}/api/v1/plan?${params}`, {
     signal: AbortSignal.timeout(15000),
   });
@@ -300,24 +304,25 @@ async function planViaTrip(
   time: string,
   arriveBy: boolean,
   transitModes: string[] | null,
-  maxWalkSeconds: number
+  streetCapSeconds: number,
+  scooter: boolean
 ): Promise<MotisItinerary[]> {
   const combined: MotisItinerary[] = [];
   if (!arriveBy) {
-    const firstHalves = await planHalf(fromPlace, viaPlace, time, false, transitModes, maxWalkSeconds);
+    const firstHalves = await planHalf(fromPlace, viaPlace, time, false, transitModes, streetCapSeconds, scooter);
     const arrivals = firstHalves.map(itin => Date.parse(itin.endTime || '')).filter(ms => !isNaN(ms));
     if (arrivals.length === 0) return [];
     // Query the second half once, from the earliest possible arrival at the
     // via point; later first halves pick a later departure out of the same set.
     const earliestArrival = new Date(Math.min(...arrivals)).toISOString();
-    const secondHalves = await planHalf(viaPlace, toPlace, earliestArrival, false, transitModes, maxWalkSeconds);
+    const secondHalves = await planHalf(viaPlace, toPlace, earliestArrival, false, transitModes, streetCapSeconds, scooter);
     for (const first of firstHalves) {
       const arriveVia = Date.parse(first.endTime || '');
       if (isNaN(arriveVia)) continue;
       let best: MotisItinerary | null = null;
       let bestEnd = Infinity;
       for (const second of secondHalves) {
-        const candidate = isWalkOnly(second)
+        const candidate = isStreetOnly(second)
           ? shiftItinerary(second, arriveVia - Date.parse(second.startTime || ''))
           : second;
         const depart = Date.parse(candidate.startTime || '');
@@ -334,18 +339,18 @@ async function planViaTrip(
   }
   // Arrive-by: plan the second half backwards from the target time, then the
   // first half backwards from the latest usable via departure.
-  const secondHalves = await planHalf(viaPlace, toPlace, time, true, transitModes, maxWalkSeconds);
+  const secondHalves = await planHalf(viaPlace, toPlace, time, true, transitModes, streetCapSeconds, scooter);
   const departures = secondHalves.map(itin => Date.parse(itin.startTime || '')).filter(ms => !isNaN(ms));
   if (departures.length === 0) return [];
   const latestDeparture = new Date(Math.max(...departures)).toISOString();
-  const firstHalves = await planHalf(fromPlace, viaPlace, latestDeparture, true, transitModes, maxWalkSeconds);
+  const firstHalves = await planHalf(fromPlace, viaPlace, latestDeparture, true, transitModes, streetCapSeconds, scooter);
   for (const second of secondHalves) {
     const departVia = Date.parse(second.startTime || '');
     if (isNaN(departVia)) continue;
     let best: MotisItinerary | null = null;
     let bestStart = -Infinity;
     for (const first of firstHalves) {
-      const candidate = isWalkOnly(first)
+      const candidate = isStreetOnly(first)
         ? shiftItinerary(first, departVia - Date.parse(first.endTime || ''))
         : first;
       const start = Date.parse(candidate.startTime || '');
@@ -364,12 +369,15 @@ async function planViaTrip(
 // Direct street itineraries (one per requested mode) come back unordered and
 // occasionally with more than one option per mode; keep only the fastest
 // bike and car route, tagged with the mode and total street distance.
-function extractAlternatives(direct: MotisItinerary[]) {
+function extractAlternatives(direct: MotisItinerary[], scooter: boolean) {
   const best = new Map<'BIKE' | 'CAR', MotisItinerary>();
   for (const itin of direct) {
     const legModes = (itin.legs || []).map(leg => leg.mode);
     const mode = legModes.includes('CAR') ? 'CAR' : legModes.includes('BIKE') ? 'BIKE' : null;
     if (!mode) continue;
+    // A scooter rider's direct ride is already among the itineraries (see
+    // scooterPlanParams), so the comparison strip offers only the car.
+    if (scooter && mode === 'BIKE') continue;
     const current = best.get(mode);
     if (!current || (itin.duration || 0) < (current.duration || 0)) {
       best.set(mode, itin);
@@ -381,7 +389,7 @@ function extractAlternatives(direct: MotisItinerary[]) {
       distance: Math.round(
         (itin.legs || []).reduce((sum, leg) => sum + (leg.distance || 0), 0)
       ),
-      itinerary: transformItinerary(itin),
+      itinerary: transformItinerary(itin, scooter),
     }))
     .sort((a, b) => a.itinerary.duration - b.itinerary.duration);
 }
@@ -396,9 +404,18 @@ export async function GET(request: NextRequest) {
   const pageCursor = searchParams.get('pageCursor');
   const modesParam = searchParams.get('modes');
   const maxWalkParam = searchParams.get('maxWalk');
+  const maxRideParam = searchParams.get('maxRide');
   // The rider is on this line now; `from` is where the bus is. See lib/onboard.ts.
   const onLine = searchParams.get('onLine')?.trim() || null;
   const headingParam = searchParams.get('heading');
+  // The rider has an e-scooter that travels with them — see scooterPlanParams.
+  const scooter = parseScooterParam(searchParams.get('scooter'));
+  if (scooter === null) {
+    return NextResponse.json(
+      { error: 'Invalid scooter parameter. Expected 1 or 0.' },
+      { status: 400 }
+    );
+  }
 
   let transitModes: string[] | null = null;
   if (modesParam !== null) {
@@ -413,16 +430,33 @@ export async function GET(request: NextRequest) {
     transitModes = [...new Set(keys.flatMap(k => MODE_GROUPS[k]))];
   }
 
-  let maxWalkSeconds = UNCAPPED_WALK_SECONDS;
-  if (maxWalkParam !== null) {
-    const minutes = Number(maxWalkParam);
+  // The first/last-mile cap, in minutes: how far the rider will walk to a stop —
+  // or, with a scooter, ride. They are separate parameters so a request cannot
+  // carry a walk limit for a rider who is not walking anywhere; with a scooter
+  // the same cap also bounds the direct ride (see scooterPlanParams).
+  if (scooter && maxWalkParam !== null) {
+    return NextResponse.json(
+      { error: 'maxWalk does not apply with scooter=1 — send maxRide instead.' },
+      { status: 400 }
+    );
+  }
+  if (!scooter && maxRideParam !== null) {
+    return NextResponse.json(
+      { error: 'maxRide requires scooter=1.' },
+      { status: 400 }
+    );
+  }
+  const capParam = scooter ? maxRideParam : maxWalkParam;
+  let streetCapSeconds = UNCAPPED_WALK_SECONDS;
+  if (capParam !== null) {
+    const minutes = Number(capParam);
     if (!Number.isInteger(minutes) || minutes < 1 || minutes > 60) {
       return NextResponse.json(
-        { error: 'Invalid maxWalk parameter. Expected whole minutes between 1 and 60.' },
+        { error: `Invalid ${scooter ? 'maxRide' : 'maxWalk'} parameter. Expected whole minutes between 1 and 60.` },
         { status: 400 }
       );
     }
-    maxWalkSeconds = minutes * 60;
+    streetCapSeconds = minutes * 60;
   }
 
   if (!from || !to) {
@@ -490,10 +524,13 @@ export async function GET(request: NextRequest) {
             arriveBy: 'false',
             numItineraries: '3',
             pedestrianSpeed: PEDESTRIAN_SPEED,
-            maxPreTransitTime: String(maxWalkSeconds),
-            maxPostTransitTime: String(maxWalkSeconds),
+            maxPreTransitTime: String(streetCapSeconds),
+            maxPostTransitTime: String(streetCapSeconds),
           });
           if (transitModes) params.set('transitModes', transitModes.join(','));
+          if (scooter) {
+            for (const [k, v] of Object.entries(scooterPlanParams(streetCapSeconds))) params.set(k, v);
+          }
           const response = await fetch(`${MOTIS_BASE}/api/v1/plan?${params}`, {
             signal: AbortSignal.timeout(15000),
           });
@@ -502,7 +539,7 @@ export async function GET(request: NextRequest) {
         },
       });
       return NextResponse.json({
-        itineraries: itineraries.slice(0, 6).map(itin => transformItinerary(itin as MotisItinerary)),
+        itineraries: itineraries.slice(0, 6).map(itin => transformItinerary(itin as MotisItinerary, scooter)),
         riding,
       });
     } catch (error) {
@@ -531,7 +568,7 @@ export async function GET(request: NextRequest) {
         { status: 400 }
       );
     }
-    const viaCacheKey = `via|${from}|${via}|${to}|${timeBucket}|${isArriveBy}|${transitModes?.join(',') || ''}|${maxWalkSeconds}`;
+    const viaCacheKey = `via|${from}|${via}|${to}|${timeBucket}|${isArriveBy}|${transitModes?.join(',') || ''}|${streetCapSeconds}|${scooter ? 'scooter' : 'walk'}`;
     const viaCached = getCachedRoute(viaCacheKey);
     if (viaCached) {
       return NextResponse.json(viaCached);
@@ -545,7 +582,8 @@ export async function GET(request: NextRequest) {
         routeTime,
         isArriveBy,
         transitModes,
-        maxWalkSeconds
+        streetCapSeconds,
+        scooter
       );
       const seen = new Set<string>();
       const itineraries = combined
@@ -560,7 +598,7 @@ export async function GET(request: NextRequest) {
           return true;
         })
         .slice(0, 6)
-        .map(transformItinerary);
+        .map(itin => transformItinerary(itin, scooter));
       const result = { itineraries };
       setCachedRoute(viaCacheKey, result);
       return NextResponse.json(result);
@@ -574,7 +612,7 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  const cacheKey = `${from}|${to}|${timeBucket}|${isArriveBy}|${pageCursor || ''}|${transitModes?.join(',') || ''}|${maxWalkSeconds}`;
+  const cacheKey = `${from}|${to}|${timeBucket}|${isArriveBy}|${pageCursor || ''}|${transitModes?.join(',') || ''}|${streetCapSeconds}|${scooter ? 'scooter' : 'walk'}`;
 
   const cached = getCachedRoute(cacheKey);
   if (cached) {
@@ -594,8 +632,11 @@ export async function GET(request: NextRequest) {
     });
     if (pageCursor) params.set('pageCursor', pageCursor);
     if (transitModes) params.set('transitModes', transitModes.join(','));
-    params.set('maxPreTransitTime', String(maxWalkSeconds));
-    params.set('maxPostTransitTime', String(maxWalkSeconds));
+    params.set('maxPreTransitTime', String(streetCapSeconds));
+    params.set('maxPostTransitTime', String(streetCapSeconds));
+    if (scooter) {
+      for (const [k, v] of Object.entries(scooterPlanParams(streetCapSeconds))) params.set(k, v);
+    }
 
     // Bike/car comparison routes are fetched with a second, direct-only plan
     // call rather than by adding directModes to the transit call: MOTIS uses
@@ -623,7 +664,7 @@ export async function GET(request: NextRequest) {
         throw new Error(`MOTIS direct-route request returned ${directResponse.status}`);
       }
       const directData: MotisPlanResponse = await directResponse.json();
-      return extractAlternatives(directData.direct || []);
+      return extractAlternatives(directData.direct || [], scooter);
     };
 
     const [response, alternatives] = await Promise.all([
@@ -642,7 +683,7 @@ export async function GET(request: NextRequest) {
 
     const motisData = await response.json();
     const result = {
-      ...transformMotisResponse(motisData, !pageCursor),
+      ...transformMotisResponse(motisData, !pageCursor, scooter),
       ...(alternatives !== undefined ? { alternatives } : {}),
     };
     setCachedRoute(cacheKey, result);

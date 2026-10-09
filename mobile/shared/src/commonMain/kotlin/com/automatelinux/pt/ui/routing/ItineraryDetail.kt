@@ -23,6 +23,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.DirectionsBike
 import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
+import androidx.compose.material.icons.filled.ElectricScooter
 import androidx.compose.material.icons.filled.Accessible
 import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.DirectionsBoat
@@ -65,6 +66,7 @@ import com.automatelinux.pt.data.model.Itinerary
 import com.automatelinux.pt.data.model.Place
 import com.automatelinux.pt.data.model.RouteLeg
 import com.automatelinux.pt.data.model.TransitMode
+import com.automatelinux.pt.data.model.isStreet
 import com.automatelinux.pt.data.model.WheelchairAccess
 import com.automatelinux.pt.data.model.access
 import com.automatelinux.pt.ui.map.getModeColorWithRoute
@@ -103,6 +105,7 @@ private fun modeIcon(mode: TransitMode): ImageVector = when (mode) {
     TransitMode.FERRY -> Icons.Default.DirectionsBoat
     TransitMode.BIKE -> Icons.AutoMirrored.Filled.DirectionsBike
     TransitMode.CAR -> Icons.Default.DirectionsCar
+    TransitMode.SCOOTER -> Icons.Default.ElectricScooter
 }
 
 @Composable
@@ -405,7 +408,7 @@ private fun LegSegment(
     val strings = LocalAppStrings.current
     var showStops by remember { mutableStateOf(false) }
     var showLegMenu by remember { mutableStateOf(false) }
-    val isTransit = leg.mode != TransitMode.WALK
+    val isTransit = !leg.mode.isStreet
     val editable = onLegAsStart != null && onLegAsEnd != null
     val color = legSpineColor(leg)
 
@@ -439,7 +442,7 @@ private fun LegSegment(
                     .width(SpineWidth)
                     .fillMaxHeight()
                     .drawBehind {
-                        drawSpineSegment(color, !isTransit, 0f, size.height)
+                        drawSpineSegment(color, leg.mode == TransitMode.WALK, 0f, size.height)
                     }
             )
             Spacer(Modifier.width(10.dp))
@@ -451,9 +454,9 @@ private fun LegSegment(
                 if (!isTransit) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
-                            Icons.AutoMirrored.Filled.DirectionsWalk,
+                            modeIcon(leg.mode),
                             contentDescription = null,
-                            tint = WalkSpineColor,
+                            tint = if (leg.mode == TransitMode.WALK) WalkSpineColor else color,
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(Modifier.width(4.dp))
@@ -461,8 +464,8 @@ private fun LegSegment(
                             // "Walk 6 min" does not say whether that is around the corner
                             // or across a junction; both Moovit and Maps print the metres.
                             text = leg.distanceMeters
-                                ?.let { "${strings.walkMode} ${strings.walkDistance(it)} · ${strings.formatDuration(leg.duration)}" }
-                                ?: "${strings.walkMode} ${strings.formatDuration(leg.duration)}",
+                                ?.let { "${getModeLabel(leg.mode, strings)} ${strings.walkDistance(it)} · ${strings.formatDuration(leg.duration)}" }
+                                ?: "${getModeLabel(leg.mode, strings)} ${strings.formatDuration(leg.duration)}",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )

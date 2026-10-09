@@ -886,6 +886,8 @@ fun MainScreen(
                                     onShowAllModes = { routingViewModel.showAllModes() },
                                     onRidingClick = onRidingClick,
                                     onMaxWalkChange = { routingViewModel.setMaxWalk(it) },
+                                    onScooterChange = { routingViewModel.setScooter(it) },
+                                    onMaxRideChange = { routingViewModel.setMaxRide(it) },
                                     onEarlier = { routingViewModel.searchEarlier() },
                                     onLater = { routingViewModel.searchLater() },
                                     homePlace = settingsStore.homePlace,

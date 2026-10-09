@@ -11,6 +11,7 @@ interface ModeStyle {
 const MODE_STYLES: Record<TransitMode, ModeStyle> = {
   WALK: { color: '#888888', dashArray: '6 8', icon: 'walk' },
   BIKE: { color: '#00ACC1', icon: 'bike' },
+  SCOOTER: { color: '#00897B', icon: 'scooter' },
   CAR: { color: '#546E7A', icon: 'car' },
   BUS: { color: '#4CAF50', icon: 'bus' },
   RAIL: { color: '#2196F3', icon: 'train' },
@@ -18,9 +19,18 @@ const MODE_STYLES: Record<TransitMode, ModeStyle> = {
   SUBWAY: { color: '#9C27B0', icon: 'subway' },
 }
 
+/**
+ * Legs the rider moves themself — on foot, on a scooter, by bike or car — as
+ * opposed to a vehicle they board. "Not a walk" used to mean "a ride"; a scooter
+ * leg inside a transit itinerary is neither, so every such test asks this instead.
+ */
+export function isStreetMode(mode: TransitMode): boolean {
+  return mode === 'WALK' || mode === 'SCOOTER' || mode === 'BIKE' || mode === 'CAR'
+}
+
 export function getModeStyle(mode: TransitMode, routeColor?: string): ModeStyle {
   const base = MODE_STYLES[mode] || MODE_STYLES.WALK
-  if (routeColor && mode !== 'WALK') {
+  if (routeColor && !isStreetMode(mode)) {
     return { ...base, color: routeColor.startsWith('#') ? routeColor : `#${routeColor}` }
   }
   return base

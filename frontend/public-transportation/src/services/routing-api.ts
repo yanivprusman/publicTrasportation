@@ -5,6 +5,10 @@ export interface RouteQueryOptions {
   modes?: string
   /** Longest acceptable first/last walk in minutes. Omit for the server default. */
   maxWalk?: number
+  /** The rider has an e-scooter that travels with them; street legs are rides. */
+  scooter?: boolean
+  /** Longest acceptable scooter ride to/from a stop in minutes; only with scooter. */
+  maxRide?: number
 }
 
 export async function searchRoute(
@@ -26,6 +30,8 @@ export async function searchRoute(
   if (pageCursor) params.set('pageCursor', pageCursor)
   if (options?.modes) params.set('modes', options.modes)
   if (options?.maxWalk) params.set('maxWalk', String(options.maxWalk))
+  if (options?.scooter) params.set('scooter', '1')
+  if (options?.maxRide) params.set('maxRide', String(options.maxRide))
 
   const res = await fetch(`/api/route?${params}`)
   if (!res.ok) {
@@ -58,6 +64,8 @@ export async function fetchDayOverview(
   })
   if (options?.modes) params.set('modes', options.modes)
   if (options?.maxWalk) params.set('maxWalk', String(options.maxWalk))
+  if (options?.scooter) params.set('scooter', '1')
+  if (options?.maxRide) params.set('maxRide', String(options.maxRide))
 
   const res = await fetch(`/api/day-overview?${params}`)
   if (!res.ok) {

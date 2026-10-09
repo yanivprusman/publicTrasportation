@@ -189,6 +189,14 @@ data class RoutingState(
     val enabledModes: Set<TransitFilter> = TransitFilter.entries.toSet(),
     val maxWalkMinutes: Int? = null,
     /**
+     * The rider has an e-scooter that travels with them: they ride to the first stop and
+     * from the last, and the bus is only for the stretch the scooter can't do. The server
+     * plans street legs as rides and drops bus combinations slower than riding all the way.
+     */
+    val scooter: Boolean = false,
+    /** Longest scooter ride to or from a stop, in minutes; null is the server's ceiling. */
+    val maxRideMinutes: Int? = null,
+    /**
      * The line the rider says they are on. While set, the origin is the bus itself:
      * each search plans from the latest GPS fix on that line, not from a stop.
      */
@@ -250,3 +258,11 @@ data class RoutingState(
  */
 fun liveBoardingKey(stopCode: String, line: String, scheduledStart: String): String =
     "$stopCode|$line|$scheduledStart"
+
+/** What a search sends as the walk cap: nothing for a scooter rider, who walks to no stop. */
+val RoutingState.walkCapForQuery: Int?
+    get() = if (scooter) null else maxWalkMinutes
+
+/** What a search sends as the ride cap: only a scooter rider has one. */
+val RoutingState.rideCapForQuery: Int?
+    get() = if (scooter) maxRideMinutes else null

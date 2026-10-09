@@ -92,6 +92,16 @@ class SettingsStore(private val prefs: Settings) {
         get() = prefs.getInt("max_walk_minutes", 0)
         set(value) { prefs.putInt("max_walk_minutes", value) }
 
+    /** The rider has an e-scooter that travels with them; see RoutingState.scooter. */
+    var scooterMode: Boolean
+        get() = prefs.getBoolean("scooter_mode", false)
+        set(value) { prefs.putBoolean("scooter_mode", value) }
+
+    /** Persisted max scooter ride to/from a stop in minutes; 0 means no limit. */
+    var maxRideMinutes: Int
+        get() = prefs.getInt("max_ride_minutes", 0)
+        set(value) { prefs.putInt("max_ride_minutes", value) }
+
     /**
      * Whether a journey may sound and buzz before the rider's stop. Off by default:
      * a phone that makes noise on its own is a thing the rider has to have opted into,

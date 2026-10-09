@@ -1,5 +1,6 @@
 package com.automatelinux.pt.ui.viewmodel
 
+import com.automatelinux.pt.data.model.isStreet
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.automatelinux.pt.data.api.PtApi
@@ -40,7 +41,9 @@ class RoutingViewModel(
 
     private val _state = MutableStateFlow(RoutingState(
         enabledModes = restoreModes(settingsStore),
-        maxWalkMinutes = settingsStore.maxWalkMinutes.takeIf { it in 1..60 }
+        maxWalkMinutes = settingsStore.maxWalkMinutes.takeIf { it in 1..60 },
+        scooter = settingsStore.scooterMode,
+        maxRideMinutes = settingsStore.maxRideMinutes.takeIf { it in 1..60 }
     ))
     val state: StateFlow<RoutingState> = _state.asStateFlow()
     private var trackingJob: Job? = null
@@ -129,6 +132,18 @@ class RoutingViewModel(
     fun setMaxWalk(minutes: Int?) {
         settingsStore.maxWalkMinutes = minutes ?: 0
         _state.value = _state.value.copy(maxWalkMinutes = minutes)
+        researchIfSearched()
+    }
+
+    fun setScooter(on: Boolean) {
+        settingsStore.scooterMode = on
+        _state.value = _state.value.copy(scooter = on)
+        researchIfSearched()
+    }
+
+    fun setMaxRide(minutes: Int?) {
+        settingsStore.maxRideMinutes = minutes ?: 0
+        _state.value = _state.value.copy(maxRideMinutes = minutes)
         researchIfSearched()
     }
 
@@ -381,7 +396,8 @@ class RoutingViewModel(
                     from = "${origin.lat},${origin.lon}",
                     to = "${destination.lat},${destination.lon}",
                     start = start.toString(),
-                    end = end.toString()
+                    end = end.toString(),
+                    scooter = s.scooter, maxRide = s.rideCapForQuery
                 )
                 _state.value = _state.value.copy(dayOverview = result, dayLoading = false)
             } catch (e: Exception) {
@@ -689,13 +705,13 @@ class RoutingViewModel(
                     val fix = checkNotNull(riderFix) { "Riding without a GPS fix" }
                     api.searchRoute(
                         from = "${fix.lat},${fix.lon}", to = to,
-                        modes = modes, maxWalk = s.maxWalkMinutes,
+                        modes = modes, maxWalk = s.walkCapForQuery, scooter = s.scooter, maxRide = s.rideCapForQuery,
                         onLine = riding, heading = fix.heading
                     )
                 } else {
                     api.searchRoute(
                         from = from, to = to, via = via, time = time, arriveBy = arriveBy,
-                        modes = modes, maxWalk = s.maxWalkMinutes
+                        modes = modes, maxWalk = s.walkCapForQuery, scooter = s.scooter, maxRide = s.rideCapForQuery
                     )
                 }
                 // A stitched via trip has no name at the seam between its two halves —
@@ -755,7 +771,7 @@ class RoutingViewModel(
             val found = mutableMapOf<Int, List<String>>()
             itinerary.legs.forEachIndexed { index, leg ->
                 val line = leg.routeShortName?.takeIf {
-                    it.isNotBlank() && leg.mode != com.automatelinux.pt.data.model.TransitMode.WALK
+                    it.isNotBlank() && !leg.mode.isStreet
                 } ?: return@forEachIndexed
                 val ridden = runCatching { Instant.parse(leg.startTime) }.getOrNull()
                     ?: return@forEachIndexed

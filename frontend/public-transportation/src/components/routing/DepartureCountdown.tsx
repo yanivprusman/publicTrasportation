@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { Itinerary } from '../../types'
 import { formatTime } from '../../utils/time-format'
-import { getModeLabel } from '../../utils/mode-colors'
+import { getModeLabel, isStreetMode } from '../../utils/mode-colors'
 import { useI18n } from '../../i18n'
 import styles from './DepartureCountdown.module.css'
 
@@ -49,7 +49,7 @@ export default function DepartureCountdown({ itinerary }: DepartureCountdownProp
 
   // The ride the countdown is really about: the first non-walk leg. Walk-only
   // itineraries have no vehicle to catch, so the sub-line describes the walk.
-  const firstRide = itinerary.legs.find((l) => l.mode !== 'WALK')
+  const firstRide = itinerary.legs.find((l) => !isStreetMode(l.mode))
 
   if (remaining <= 0) {
     return (

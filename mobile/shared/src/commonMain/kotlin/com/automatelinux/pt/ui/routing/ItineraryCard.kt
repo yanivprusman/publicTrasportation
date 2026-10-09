@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Sensors
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
+import androidx.compose.material.icons.filled.ElectricScooter
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -222,10 +223,11 @@ fun ItineraryCard(
                             .background(color, RoundedCornerShape(5.dp)),
                         contentAlignment = Alignment.Center
                     ) {
-                        if (isWalk) {
+                        if (isWalk || leg.mode == TransitMode.SCOOTER) {
                             Icon(
-                                Icons.AutoMirrored.Filled.DirectionsWalk,
-                                contentDescription = strings.walkMode,
+                                if (isWalk) Icons.AutoMirrored.Filled.DirectionsWalk
+                                else Icons.Default.ElectricScooter,
+                                contentDescription = if (isWalk) strings.walkMode else strings.scooterMode,
                                 tint = Color.White.copy(alpha = 0.9f),
                                 modifier = Modifier.size(14.dp)
                             )
@@ -502,4 +504,5 @@ fun getModeLabel(mode: TransitMode, strings: AppStrings): String = when (mode) {
     TransitMode.FERRY -> strings.ferryMode
     TransitMode.BIKE -> strings.bikeMode
     TransitMode.CAR -> strings.carMode
+    TransitMode.SCOOTER -> strings.scooterMode
 }

@@ -1,7 +1,7 @@
 // Shared MOTIS↔app mode vocabulary, used by every API route that talks to
 // MOTIS so filtering and rendering always agree on what counts as bus/train/tram.
 
-export type NormalizedMode = 'WALK' | 'BIKE' | 'CAR' | 'BUS' | 'RAIL' | 'TRAM' | 'SUBWAY';
+export type NormalizedMode = 'WALK' | 'BIKE' | 'SCOOTER' | 'CAR' | 'BUS' | 'RAIL' | 'TRAM' | 'SUBWAY';
 
 // The app's TransitMode union is WALK | BUS | RAIL | TRAM | SUBWAY, and
 // utils/mode-colors styles only those five. MOTIS v2 reports finer-grained
@@ -36,11 +36,68 @@ export const MODE_GROUPS: Record<string, string[]> = {
   tram: ['TRAM', 'SUBWAY', 'METRO'],
 };
 
-export function normalizeMode(mode: string | undefined): NormalizedMode {
+export function normalizeMode(mode: string | undefined, scooter = false): NormalizedMode {
   if (!mode) return 'WALK';
+  // A scooter rider's street legs come back from MOTIS as BIKE (see
+  // scooterPlanParams); they are reported as what the rider is actually on.
+  if (scooter && mode === 'BIKE') return 'SCOOTER';
   // Any unrecognized transit mode is still a vehicle leg, not a walk — render
   // it as BUS (solid colored line) rather than the grey dashed walk style.
   return MODE_MAP[mode] ?? 'BUS';
+}
+
+// Legs the rider moves themself — on foot, on a scooter, by bike or car — as
+// opposed to a vehicle they board. Covers MOTIS's raw modes and the normalized
+// ones alike, so the test reads the same before and after transformation. A
+// missing mode is a walk, as in normalizeMode.
+const STREET_MODES: ReadonlySet<string> = new Set(['WALK', 'BIKE', 'SCOOTER', 'CAR']);
+
+export function isStreetMode(mode: string | undefined): boolean {
+  return !mode || STREET_MODES.has(mode);
+}
+
+/**
+ * Plan parameters for a rider with an e-scooter (?scooter=1).
+ *
+ * The scooter travels with the rider — folded on the bus, in the marked car on the
+ * train — so they ride to the first stop and from the last one, and there is nothing
+ * to park or return. MOTIS has no scooter profile; its bike profile (bike lanes and
+ * roads, ~15 km/h) is the closest fit and conservative for a 25 km/h scooter, so the
+ * ride legs it prices are, if anything, a little long.
+ *
+ * Measured 2026-10-09 against the walk-only plan: Midreshet Ben-Gurion → Beer Sheva
+ * 57 → 52 min, Florentin → Herzliya 45 → 36 min, Meitar → Tel Aviv 191 → 147 min.
+ * The gain comes from stops the rider could never walk to: MOTIS treats every stop
+ * within the ride cap as a place to board or get off, so it skips the meandering
+ * part of a line and boards where the line is already going the rider's way.
+ *
+ * Two things are deliberately NOT here:
+ * - `requireBikeTransport`: the Israeli GTFS carries no bikes_allowed data, so with
+ *   it MOTIS finds nothing at all (measured the same day).
+ * - WALK next to BIKE for the first/last mile: measured identical results — a rider
+ *   with a scooter rides, and a 50 m "ride" is harmless.
+ *
+ * `directModes` IS set, unlike in the bike/car comparison query: MOTIS uses the
+ * fastest direct connection as a cut-off, so a bus combination slower than simply
+ * riding the whole way is dropped. That is the rule a scooter rider plans by — the
+ * bus is for the long stretch the scooter can't do — and the ride itself comes back
+ * in `direct` as an itinerary of its own. The direct search shares the ride cap, so
+ * a trip too long to ride prunes nothing.
+ */
+export function scooterPlanParams(maxRideSeconds: number): Record<string, string> {
+  return {
+    preTransitModes: 'BIKE',
+    postTransitModes: 'BIKE',
+    directModes: 'BIKE',
+    maxDirectTime: String(maxRideSeconds),
+  };
+}
+
+/** Parses ?scooter=; null when the value is not a recognised boolean. */
+export function parseScooterParam(value: string | null): boolean | null {
+  if (value === null || value === '' || value === '0' || value === 'false') return false;
+  if (value === '1' || value === 'true') return true;
+  return null;
 }
 
 // Meters per second assumed for first/last-mile walking, sent as ?pedestrianSpeed=

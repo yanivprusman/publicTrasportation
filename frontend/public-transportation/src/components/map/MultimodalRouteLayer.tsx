@@ -3,7 +3,7 @@ import { Polyline, CircleMarker, Tooltip, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import type { Itinerary } from '../../types'
 import { decodePolyline } from '../../utils/polyline-decoder'
-import { getModeStyle } from '../../utils/mode-colors'
+import { getModeStyle, isStreetMode } from '../../utils/mode-colors'
 
 interface MultimodalRouteLayerProps {
   itinerary: Itinerary | null
@@ -33,7 +33,7 @@ export default function MultimodalRouteLayer({ itinerary }: MultimodalRouteLayer
   // boundary (the old behavior) drew dark "transfer" dots at the boarding and
   // alighting stops of ordinary walk<->transit trips, showing 2 transfers for a
   // walk/bus/walk itinerary whose itinerary.transfers is 0.
-  const transitLegs = itinerary.legs.filter(leg => leg.mode !== 'WALK')
+  const transitLegs = itinerary.legs.filter(leg => !isStreetMode(leg.mode))
   const transferPoints: [number, number][] = transitLegs
     .slice(0, -1)
     .map(leg => [leg.to.lat, leg.to.lon])
@@ -58,7 +58,7 @@ export default function MultimodalRouteLayer({ itinerary }: MultimodalRouteLayer
         )
       })}
       {itinerary.legs.map((leg, i) => {
-        if (leg.mode === 'WALK') return null
+        if (isStreetMode(leg.mode)) return null
         const style = getModeStyle(leg.mode, leg.routeColor)
         const stops: { lat: number; lon: number; name: string }[] = []
         if (leg.from?.name) stops.push(leg.from)

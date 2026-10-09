@@ -1,6 +1,6 @@
 import type { Itinerary } from '../../types'
 import { departureDayLabel, formatDuration, formatTime, nextDayOffset } from '../../utils/time-format'
-import { getModeStyle, getModeLabel, onColorFor } from '../../utils/mode-colors'
+import { getModeStyle, getModeLabel, isStreetMode, onColorFor } from '../../utils/mode-colors'
 import { itineraryFare, formatFare } from '../../utils/fare'
 import { useI18n } from '../../i18n'
 import styles from './ItineraryCard.module.css'
@@ -47,7 +47,7 @@ export default function ItineraryCard({ itinerary, selected, onClick, now, later
   const dayLabel = departureDayLabel(itinerary.startTime, now)
   const overnightDays = nextDayOffset(itinerary.startTime, itinerary.endTime)
 
-  const boardingLeg = itinerary.legs.find(leg => leg.mode !== 'WALK')
+  const boardingLeg = itinerary.legs.find(leg => !isStreetMode(leg.mode))
   const boardingMs = boardingLeg ? new Date(boardingLeg.startTime).getTime() : NaN
   const remainingMs = boardingMs - now
   const countdown = !Number.isFinite(boardingMs)
@@ -122,7 +122,7 @@ export default function ItineraryCard({ itinerary, selected, onClick, now, later
           // pill label, so fall back to the mode label and keep the full name
           // in the tooltip/aria text.
           const pillName = leg.routeShortName && leg.routeShortName.length <= 8 ? leg.routeShortName : null
-          const label = isWalk ? '\u{1F6B6}' : (pillName || getModeLabel(leg.mode))
+          const label = isWalk ? '\u{1F6B6}' : leg.mode === 'SCOOTER' ? '\u{1F6F4}' : (pillName || getModeLabel(leg.mode))
           const what = `${getModeLabel(leg.mode)}${leg.routeShortName ? ` ${leg.routeShortName}` : ''}`
           return (
             <div

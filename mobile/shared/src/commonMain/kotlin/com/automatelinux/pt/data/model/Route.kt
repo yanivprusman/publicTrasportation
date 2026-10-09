@@ -26,7 +26,7 @@ object TransitModeSerializer : KSerializer<TransitMode> {
 
 @Serializable(with = TransitModeSerializer::class)
 enum class TransitMode {
-    WALK, BUS, RAIL, TRAM, SUBWAY, FERRY, BIKE, CAR;
+    WALK, BUS, RAIL, TRAM, SUBWAY, FERRY, BIKE, CAR, SCOOTER;
 
     companion object {
         fun fromString(s: String): TransitMode = when {
@@ -38,11 +38,21 @@ enum class TransitMode {
             s.equals("FERRY", ignoreCase = true) -> FERRY
             s.equals("BIKE", ignoreCase = true) -> BIKE
             s.equals("CAR", ignoreCase = true) -> CAR
+            s.equals("SCOOTER", ignoreCase = true) -> SCOOTER
             s.contains("RAIL", ignoreCase = true) -> RAIL
             else -> WALK
         }
     }
 }
+
+/**
+ * Legs the rider moves themself — on foot, on a scooter, by bike or car — as opposed
+ * to a vehicle they board. "Not a walk" used to mean "a ride"; a scooter leg inside a
+ * transit itinerary is neither, so every such test asks this instead.
+ */
+val TransitMode.isStreet: Boolean
+    get() = this == TransitMode.WALK || this == TransitMode.SCOOTER ||
+        this == TransitMode.BIKE || this == TransitMode.CAR
 
 @Serializable
 data class RouteLeg(
@@ -149,7 +159,7 @@ data class Itinerary(
 
     /** The first ride of the journey — the one you can miss. */
     val firstRide: RouteLeg?
-        get() = legs.firstOrNull { it.mode != TransitMode.WALK }
+        get() = legs.firstOrNull { !it.mode.isStreet }
 }
 
 enum class RouteSortMode {

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { Itinerary, RouteLeg, TransitMode } from '../../types'
 import { formatDuration, formatTime } from '../../utils/time-format'
-import { getModeStyle, getModeLabel } from '../../utils/mode-colors'
+import { getModeStyle, getModeLabel, isStreetMode } from '../../utils/mode-colors'
 import { useI18n } from '../../i18n'
 import type { TranslateParams } from '../../i18n'
 import type { TranslationKey } from '../../i18n/translations'
@@ -15,6 +15,7 @@ interface JourneyNavigatorProps {
 const MODE_ICONS: Record<TransitMode, string> = {
   WALK: '\u{1F6B6}',
   BIKE: '\u{1F6B4}',
+  SCOOTER: '\u{1F6F4}',
   CAR: '\u{1F697}',
   BUS: '\u{1F68C}',
   RAIL: '\u{1F686}',
@@ -51,7 +52,13 @@ type Translate = (key: TranslationKey, params?: TranslateParams) => string
  * both nameless — printing what MOTIS calls them put the literal word END on the
  * step card — so only a walk that genuinely ends somewhere gets a name.
  */
-function walkHeadline(leg: RouteLeg, isLast: boolean, t: Translate): string {
+function streetHeadline(leg: RouteLeg, isLast: boolean, t: Translate): string {
+  // A scooter rider rides every street leg; the wording follows the leg's mode.
+  if (leg.mode === 'SCOOTER') {
+    if (isLast) return t('journey.rideToDest')
+    if (!leg.to.name) return t('journey.rideOn')
+    return t('journey.rideTo', { place: leg.to.name })
+  }
   if (isLast) return t('journey.walkToDest')
   if (!leg.to.name) return t('journey.walkOn')
   return t('journey.walkTo', { place: leg.to.name })
@@ -59,10 +66,10 @@ function walkHeadline(leg: RouteLeg, isLast: boolean, t: Translate): string {
 
 /** Turn one leg into the human instruction shown big on the step card. */
 function instructionFor(leg: RouteLeg, isLast: boolean, t: Translate): StepInstruction {
-  if (leg.mode === 'WALK') {
+  if (isStreetMode(leg.mode)) {
     return {
-      headline: walkHeadline(leg, isLast, t),
-      detail: t('journey.onFoot', { d: formatDuration(leg.duration) }),
+      headline: streetHeadline(leg, isLast, t),
+      detail: t(leg.mode === 'SCOOTER' ? 'journey.onScooter' : 'journey.onFoot', { d: formatDuration(leg.duration) }),
       getOff: null,
     }
   }
@@ -155,8 +162,8 @@ export default function JourneyNavigator({ itinerary, onClose }: JourneyNavigato
             <span className={styles.upNextLabel}>{t('journey.upNext')}</span>
             <span className={styles.upNextIcon} aria-hidden="true">{MODE_ICONS[nextLeg.mode]}</span>
             <span className={styles.upNextText}>
-              {nextLeg.mode === 'WALK'
-                ? walkHeadline(nextLeg, stepIndex + 1 === legs.length - 1, t)
+              {isStreetMode(nextLeg.mode)
+                ? streetHeadline(nextLeg, stepIndex + 1 === legs.length - 1, t)
                 : `${getModeLabel(nextLeg.mode)}${nextLeg.routeShortName ? ` ${nextLeg.routeShortName}` : ''} → ${nextLeg.to.name}`}
             </span>
           </div>
@@ -212,7 +219,7 @@ function StepCard({ leg, isLast, nowMs, stepNumber, totalSteps }: StepCardProps)
   const startMs = new Date(leg.startTime).getTime()
   const hasTime = !Number.isNaN(startMs)
   const remaining = hasTime ? startMs - nowMs : NaN
-  const verb = leg.mode === 'WALK' ? t('journey.leave') : t('journey.departs')
+  const verb = isStreetMode(leg.mode) ? t('journey.leave') : t('journey.departs')
 
   return (
     <section className={styles.stepCard} style={{ '--leg-color': style.color } as React.CSSProperties}>
@@ -220,7 +227,7 @@ function StepCard({ leg, isLast, nowMs, stepNumber, totalSteps }: StepCardProps)
         <span className={styles.stepIcon} aria-hidden="true">{MODE_ICONS[leg.mode]}</span>
       </div>
       <div className={styles.stepHeadline} data-id="journey-step-headline">{headline}</div>
-      {leg.mode !== 'WALK' && (
+      {!isStreetMode(leg.mode) && (
         <div className={styles.boardAt}>{t('journey.boardAt')} <strong>{leg.from.name}</strong></div>
       )}
       {detail && <div className={styles.stepDetail}>{detail}</div>}

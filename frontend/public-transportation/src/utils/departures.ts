@@ -1,5 +1,6 @@
 import type { Itinerary } from '../types'
 import { formatTime, nextDayOffset } from './time-format'
+import { isStreetMode } from './mode-colors'
 
 /**
  * The next departures of the SAME line from the SAME stop, taken from the other
@@ -11,11 +12,11 @@ import { formatTime, nextDayOffset } from './time-format'
  * number leaves two different poles in this country.
  */
 export function laterDeparturesOf(target: Itinerary, all: Itinerary[], limit = 2): string[] {
-  const ride = target.legs.find(l => l.mode !== 'WALK')
+  const ride = target.legs.find(l => !isStreetMode(l.mode))
   if (!ride) return []
   const stop = ride.fromStopCode || ride.from.name
   const times = all
-    .map(it => it.legs.find(l => l.mode !== 'WALK'))
+    .map(it => it.legs.find(l => !isStreetMode(l.mode)))
     .filter((l): l is NonNullable<typeof l> => !!l)
     .filter(l => l.routeShortName === ride.routeShortName)
     .filter(l => (l.fromStopCode || l.from.name) === stop)

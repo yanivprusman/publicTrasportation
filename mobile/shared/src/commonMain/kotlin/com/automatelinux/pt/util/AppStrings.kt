@@ -58,6 +58,11 @@ interface AppStrings {
     val ferryMode: String
     val bikeMode: String
     val carMode: String
+    val scooterMode: String
+    /** The route-options toggle: the rider has an e-scooter that travels with them. */
+    val scooterOption: String
+    val scooterHint: String
+    val maxRideLabel: String
     val compareTransit: String
     val directBikeTitle: String
     val directCarTitle: String
@@ -259,6 +264,9 @@ interface AppStrings {
     val journeyWalkTo: (String) -> String
     val journeyWalkToDest: String
     val journeyOnFoot: (String) -> String
+    val journeyRideTo: (String) -> String
+    val journeyRideToDest: String
+    val journeyOnScooter: (String) -> String
     val journeyTake: (String) -> String
     val journeyBoardAt: String
     val journeyGetOffAt: String
@@ -436,6 +444,10 @@ val EnStrings: AppStrings = object : AppStrings {
     override val ferryMode: String = "Ferry"
     override val bikeMode: String = "Bike"
     override val carMode: String = "Car"
+    override val scooterMode: String = "Scooter"
+    override val scooterOption: String = "I ride a scooter"
+    override val scooterHint: String = "Rides to and from the stops; folded on the bus, in the marked car on the train"
+    override val maxRideLabel: String = "Max ride"
     override val compareTransit: String = "Transit"
     override val directBikeTitle: String = "Bike route"
     override val directCarTitle: String = "Car route"
@@ -629,6 +641,9 @@ val EnStrings: AppStrings = object : AppStrings {
     override val journeyWalkTo: (String) -> String = { place -> "Walk to $place" }
     override val journeyWalkToDest: String = "Walk to your destination"
     override val journeyOnFoot: (String) -> String = { d -> "$d on foot" }
+    override val journeyRideTo: (String) -> String = { place -> "Ride to $place" }
+    override val journeyRideToDest: String = "Ride to your destination"
+    override val journeyOnScooter: (String) -> String = { d -> "$d on the scooter" }
     override val journeyTake: (String) -> String = { ride -> "Take $ride" }
     override val journeyBoardAt: String = "Board at"
     override val journeyGetOffAt: String = "Get off at"
@@ -811,6 +826,10 @@ val HeStrings: AppStrings = object : AppStrings {
     override val ferryMode: String = "מעבורת"
     override val bikeMode: String = "אופניים"
     override val carMode: String = "רכב"
+    override val scooterMode: String = "קורקינט"
+    override val scooterOption: String = "אני עם קורקינט"
+    override val scooterHint: String = "נסיעה אל התחנות ומהן; מקופל באוטובוס, בקרון המסומן ברכבת"
+    override val maxRideLabel: String = "נסיעה מרבית"
     override val compareTransit: String = "תחב\"צ"
     override val directBikeTitle: String = "מסלול אופניים"
     override val directCarTitle: String = "מסלול ברכב"
@@ -999,6 +1018,9 @@ val HeStrings: AppStrings = object : AppStrings {
     override val journeyWalkTo: (String) -> String = { place -> "לך אל $place" }
     override val journeyWalkToDest: String = "לך אל היעד הסופי"
     override val journeyOnFoot: (String) -> String = { d -> "$d ברגל" }
+    override val journeyRideTo: (String) -> String = { place -> "סע בקורקינט אל $place" }
+    override val journeyRideToDest: String = "סע בקורקינט אל היעד"
+    override val journeyOnScooter: (String) -> String = { d -> "$d בקורקינט" }
     override val journeyTake: (String) -> String = { ride -> "עלה על $ride" }
     override val journeyBoardAt: String = "עלה בתחנת"
     override val journeyGetOffAt: String = "רד בתחנת"

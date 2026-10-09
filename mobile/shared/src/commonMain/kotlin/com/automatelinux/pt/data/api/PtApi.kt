@@ -53,6 +53,9 @@ class PtApi(private val client: HttpClient) {
         arriveBy: Boolean? = null,
         modes: String? = null,
         maxWalk: Int? = null,
+        /** The rider has an e-scooter that travels with them; [maxWalk] is then not sent and [maxRide] caps the ride. */
+        scooter: Boolean? = null,
+        maxRide: Int? = null,
         /** The line the rider is on now; [from] is then where the bus is. */
         onLine: String? = null,
         /** Degrees the rider is moving, when the phone knows — tells a line's two directions apart. */
@@ -62,6 +65,7 @@ class PtApi(private val client: HttpClient) {
         params = mapOf(
             "from" to from, "to" to to, "via" to via, "time" to time,
             "arriveBy" to arriveBy, "modes" to modes, "maxWalk" to maxWalk,
+            "scooter" to scooter?.takeIf { it }, "maxRide" to maxRide,
             "onLine" to onLine, "heading" to heading
         )
     )
@@ -74,10 +78,15 @@ class PtApi(private val client: HttpClient) {
         from: String,
         to: String,
         start: String,
-        end: String
+        end: String,
+        scooter: Boolean? = null,
+        maxRide: Int? = null
     ): DayOverviewResult = fetch(
         "/api/day-overview",
-        params = mapOf("from" to from, "to" to to, "start" to start, "end" to end)
+        params = mapOf(
+            "from" to from, "to" to to, "start" to start, "end" to end,
+            "scooter" to scooter?.takeIf { it }, "maxRide" to maxRide
+        )
     )
 
     suspend fun geocode(text: String, near: String? = null): List<GeocodeSuggestion> =

@@ -37,8 +37,11 @@ object JourneyText {
             // A named target goes in the sentence; a nameless one gets its own
             // sentence. Putting "your destination" through the {place} slot is how
             // you get "Walk to Walk to your destination".
-            JourneyPhase.WALKING ->
+            JourneyPhase.WALKING -> if (p.leg?.mode == TransitMode.SCOOTER) {
+                p.targetName?.let { strings.journeyRideTo(it) } ?: strings.journeyRideToDest
+            } else {
                 p.targetName?.let { strings.journeyWalkTo(it) } ?: strings.journeyWalkToDest
+            }
         }
     }
 
@@ -131,7 +134,8 @@ object JourneyText {
         // interchange still reads "1 min", never "0 min" — and coerceIn(60, 35) is an
         // empty range, which threw on exactly those legs.
         val left = (total * (1.0 - p.legFraction())).toLong().coerceIn(60L, maxOf(total, 60L))
-        return strings.journeyOnFoot(strings.formatDuration(left))
+        val d = strings.formatDuration(left)
+        return if (p.leg?.mode == TransitMode.SCOOTER) strings.journeyOnScooter(d) else strings.journeyOnFoot(d)
     }
 
     /**

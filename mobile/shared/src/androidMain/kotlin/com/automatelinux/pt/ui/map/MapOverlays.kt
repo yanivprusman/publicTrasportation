@@ -8,6 +8,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.graphics.toArgb
 import com.automatelinux.pt.data.model.Itinerary
 import com.automatelinux.pt.data.model.TransitMode
+import com.automatelinux.pt.data.model.isStreet
 import com.automatelinux.pt.data.model.VehicleMarker
 import com.automatelinux.pt.util.PolylineDecoder
 import org.osmdroid.util.GeoPoint
@@ -63,8 +64,7 @@ fun RouteOverlay(
 
             // Stop dots only make sense on transit legs; street legs (walk/bike/car)
             // have no boarding points to mark.
-            val isStreet = leg.mode == TransitMode.WALK ||
-                leg.mode == TransitMode.BIKE || leg.mode == TransitMode.CAR
+            val isStreet = leg.mode.isStreet
             if (!isStreet) {
                 val stops = mutableListOf<GeoPoint>()
                 stops.add(GeoPoint(leg.from.lat, leg.from.lon))
