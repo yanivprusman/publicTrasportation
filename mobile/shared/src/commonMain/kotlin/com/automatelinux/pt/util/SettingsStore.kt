@@ -1,5 +1,6 @@
 package com.automatelinux.pt.util
 
+import com.automatelinux.pt.data.model.FavoriteRoute
 import com.automatelinux.pt.data.model.GeocodeSuggestion
 import com.automatelinux.pt.data.model.SyncedState
 import com.russhwolf.settings.Settings
@@ -9,6 +10,8 @@ import kotlinx.serialization.builtins.PairSerializer
 import kotlinx.serialization.builtins.SetSerializer
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
+
+private const val MAX_FAVORITE_ROUTES = 20
 
 // Multiplatform settings store. The platform supplies a `Settings` (SharedPreferences on
 // Android, NSUserDefaults on iOS). JSON blobs use kotlinx-serialization.
@@ -176,6 +179,40 @@ class SettingsStore(private val prefs: Settings) {
 
     fun isStationFavorite(code: String): Boolean = getFavoriteStations().any { it.first == code }
 
+    private val routeListSerializer = ListSerializer(FavoriteRoute.serializer())
+
+    /** Starred origin→destination pairs, most recently starred first. */
+    fun getFavoriteRoutes(): List<FavoriteRoute> {
+        val s = prefs.getStringOrNull("favorite_routes") ?: return emptyList()
+        return try { json.decodeFromString(routeListSerializer, s) } catch (_: Exception) { emptyList() }
+    }
+
+    fun isFavoriteRoute(origin: GeocodeSuggestion, destination: GeocodeSuggestion): Boolean =
+        getFavoriteRoutes().any { it.matches(origin, destination) }
+
+    /** Stars the pair, or unstars it if already starred. Returns true when it was added. */
+    fun toggleFavoriteRoute(origin: GeocodeSuggestion, destination: GeocodeSuggestion): Boolean {
+        val current = getFavoriteRoutes().toMutableList()
+        val existing = current.indexOfFirst { it.matches(origin, destination) }
+        val added = if (existing >= 0) {
+            current.removeAt(existing); false
+        } else {
+            current.add(0, FavoriteRoute(origin, destination)); true
+        }
+        prefs.putString("favorite_routes", json.encodeToString(routeListSerializer, current.take(MAX_FAVORITE_ROUTES)))
+        markStateEdited()
+        return added
+    }
+
+    // By place, not by label: the same corner is "אלרום 6" from one search and
+    // "Current location" from another, and a star must recognise it either way.
+    // ~10 m of slack, so a re-geocoded address still counts as the same end.
+    private fun FavoriteRoute.matches(o: GeocodeSuggestion, d: GeocodeSuggestion): Boolean =
+        samePlace(origin, o) && samePlace(destination, d)
+
+    private fun samePlace(a: GeocodeSuggestion, b: GeocodeSuggestion): Boolean =
+        kotlin.math.abs(a.lat - b.lat) < 0.0001 && kotlin.math.abs(a.lon - b.lon) < 0.0001
+
     // --- Account-synced state ---
     // Favourites and the pricing acknowledgement belong to the account, not the
     // handset: they are pushed to the server and pulled back after a reinstall.
@@ -206,6 +243,10 @@ class SettingsStore(private val prefs: Settings) {
             "favorite_lines",
             json.encodeToString(lineSetSerializer, state.favoriteLines.toSet())
         )
+        prefs.putString(
+            "favorite_routes",
+            json.encodeToString(routeListSerializer, state.favoriteRoutes)
+        )
         prefs.putBoolean("pricing_notice_ack", state.pricingNoticeAck)
         // Deliberately assigned, not bumped to now: adopting someone else's
         // write is not an edit, and stamping it as one would make this device
@@ -217,7 +258,8 @@ class SettingsStore(private val prefs: Settings) {
     fun collectSyncedState(): SyncedState = SyncedState(
         favoriteStations = getFavoriteStations().map { listOf(it.first, it.second) },
         favoriteLines = getFavoriteLines().toList(),
-        pricingNoticeAck = pricingNoticeAcknowledged
+        pricingNoticeAck = pricingNoticeAcknowledged,
+        favoriteRoutes = getFavoriteRoutes()
     )
 
     // --- Anonymous analytics ---

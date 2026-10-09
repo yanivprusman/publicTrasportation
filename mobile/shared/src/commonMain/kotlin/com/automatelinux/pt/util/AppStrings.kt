@@ -240,6 +240,9 @@ interface AppStrings {
     val timetable: String
     val commonLines: String
     val saveAs: String
+    val savedRoutes: String
+    val saveRoute: String
+    val unsaveRoute: String
     val home: String
     val work: String
     val setHome: String
@@ -606,6 +609,9 @@ val EnStrings: AppStrings = object : AppStrings {
     override val timetable: String = "Timetable"
     override val commonLines: String = "Common Lines"
     override val saveAs: String = "Save as"
+    override val savedRoutes: String = "Saved routes"
+    override val saveRoute: String = "Save route"
+    override val unsaveRoute: String = "Remove from saved routes"
     override val home: String = "Home"
     override val work: String = "Work"
     override val setHome: String = "Set home"
@@ -969,6 +975,9 @@ val HeStrings: AppStrings = object : AppStrings {
     override val timetable: String = "לוח זמנים"
     override val commonLines: String = "קווים נפוצים"
     override val saveAs: String = "שמור בתור"
+    override val savedRoutes: String = "מסלולים שמורים"
+    override val saveRoute: String = "שמור מסלול"
+    override val unsaveRoute: String = "הסר מהמסלולים השמורים"
     override val home: String = "בית"
     override val work: String = "עבודה"
     override val setHome: String = "הגדר בית"

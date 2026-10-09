@@ -209,6 +209,7 @@ fun MainScreen(
     var currentMapCornerMeters by remember { mutableStateOf(0.0) }
     var favoriteLines by remember { mutableStateOf(settingsStore.getFavoriteLines()) }
     var favoriteStations by remember { mutableStateOf(settingsStore.getFavoriteStations()) }
+    var favoriteRoutes by remember { mutableStateOf(settingsStore.getFavoriteRoutes()) }
     var reminderLegIndex by remember { mutableStateOf<Int?>(null) }
     var reminderJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
     var selectedLine by remember { mutableStateOf<String?>(null) }
@@ -903,6 +904,27 @@ fun MainScreen(
                                     },
                                     onSavePlace = { savePlaceTarget = it },
                                     onSetHome = { showSetHomeDialog = true },
+                                    favoriteRoutes = favoriteRoutes,
+                                    // Rides the endpoint auto-search, like onQuickRoute.
+                                    onPickFavoriteRoute = { route ->
+                                        routingViewModel.setOrigin(route.origin)
+                                        routingViewModel.setDestination(route.destination)
+                                        scope.launch { bottomSheetState.expand() }
+                                    },
+                                    isCurrentRouteFavorite = remember(favoriteRoutes, routingState.origin, routingState.destination) {
+                                        val o = routingState.origin
+                                        val d = routingState.destination
+                                        o != null && d != null && settingsStore.isFavoriteRoute(o, d)
+                                    },
+                                    onToggleFavoriteRoute = {
+                                        val o = routingState.origin
+                                        val d = routingState.destination
+                                        if (o != null && d != null) {
+                                            settingsStore.toggleFavoriteRoute(o, d)
+                                            favoriteRoutes = settingsStore.getFavoriteRoutes()
+                                            onSyncedStateChanged()
+                                        }
+                                    },
                                     onTrackBus = { legIndex, leg ->
                                         if (routingState.trackedBus?.legIndex == legIndex) {
                                             routingViewModel.stopTracking()

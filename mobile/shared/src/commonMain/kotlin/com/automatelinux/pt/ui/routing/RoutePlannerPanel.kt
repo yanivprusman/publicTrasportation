@@ -1,6 +1,8 @@
 package com.automatelinux.pt.ui.routing
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -21,11 +23,16 @@ import androidx.compose.material.icons.filled.DirectionsBus
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.RemoveCircleOutline
+import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.outlined.Circle
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material.icons.filled.Work
 import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedButton
@@ -47,6 +54,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.automatelinux.pt.data.model.FavoriteRoute
 import com.automatelinux.pt.data.model.GeocodeSuggestion
 import com.automatelinux.pt.data.model.Place
 import com.automatelinux.pt.data.model.RouteLeg
@@ -100,6 +108,11 @@ fun RoutePlannerPanel(
     onQuickDestination: ((GeocodeSuggestion) -> Unit)? = null,
     onSavePlace: ((GeocodeSuggestion) -> Unit)? = null,
     onSetHome: (() -> Unit)? = null,
+    /** Starred From→To pairs; tapping one fills both ends and searches. */
+    favoriteRoutes: List<FavoriteRoute> = emptyList(),
+    onPickFavoriteRoute: ((FavoriteRoute) -> Unit)? = null,
+    isCurrentRouteFavorite: Boolean = false,
+    onToggleFavoriteRoute: (() -> Unit)? = null,
     onTrackBus: ((Int, RouteLeg) -> Unit)? = null,
     trackedLegIndex: Int? = null,
     onSetReminder: ((RouteLeg) -> Unit)? = null,
@@ -136,7 +149,9 @@ fun RoutePlannerPanel(
             CollapsedSearchSummary(
                 state = state,
                 onExpand = { formCollapsed = false },
-                onSwap = onSwap
+                onSwap = onSwap,
+                isFavorite = isCurrentRouteFavorite,
+                onToggleFavorite = onToggleFavoriteRoute?.takeIf { state.canStarRoute }
             )
             Spacer(Modifier.height(8.dp))
         } else {
@@ -146,6 +161,11 @@ fun RoutePlannerPanel(
                 workPlace = workPlace,
                 onQuickRoute = onQuickRoute
             )
+            Spacer(Modifier.height(8.dp))
+        }
+
+        if (favoriteRoutes.isNotEmpty() && onPickFavoriteRoute != null && state.results == null) {
+            SavedRoutesStrip(routes = favoriteRoutes, onPick = onPickFavoriteRoute)
             Spacer(Modifier.height(8.dp))
         }
 
@@ -293,6 +313,22 @@ fun RoutePlannerPanel(
             }
         }
 
+        if (onToggleFavoriteRoute != null && state.canStarRoute) {
+            FilterChip(
+                selected = isCurrentRouteFavorite,
+                onClick = onToggleFavoriteRoute,
+                label = { Text(if (isCurrentRouteFavorite) strings.unsaveRoute else strings.saveRoute) },
+                leadingIcon = {
+                    Icon(
+                        if (isCurrentRouteFavorite) Icons.Default.Star else Icons.Default.StarBorder,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            )
+        }
+
         Spacer(Modifier.height(8.dp))
 
         // On a bus the only departure time is now.
@@ -438,6 +474,8 @@ private fun CollapsedSearchSummary(
     state: RoutingState,
     onExpand: () -> Unit,
     onSwap: () -> Unit,
+    isFavorite: Boolean,
+    onToggleFavorite: (() -> Unit)?,
 ) {
     val strings = LocalAppStrings.current
     val timeText = state.departureTime?.let { t ->
@@ -498,6 +536,15 @@ private fun CollapsedSearchSummary(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
+            }
+            if (onToggleFavorite != null) {
+                IconButton(onClick = onToggleFavorite) {
+                    Icon(
+                        if (isFavorite) Icons.Default.Star else Icons.Default.StarBorder,
+                        contentDescription = if (isFavorite) strings.unsaveRoute else strings.saveRoute,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
             }
             IconButton(onClick = onSwap) {
                 Icon(
@@ -603,3 +650,83 @@ fun FrequentRouteCard(
         }
     }
 }
+
+/**
+ * The starred trips, one card each, side by side. Unstarring happens on the star
+ * of the search itself — pick the route, tap the filled star — so a card here is
+ * only ever a shortcut, never a place to lose a route by a stray tap.
+ */
+@Composable
+private fun SavedRoutesStrip(
+    routes: List<FavoriteRoute>,
+    onPick: (FavoriteRoute) -> Unit
+) {
+    val strings = LocalAppStrings.current
+    Column(Modifier.fillMaxWidth()) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                Icons.Default.Star,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(14.dp)
+            )
+            Text(
+                strings.savedRoutes,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 4.dp)
+            )
+        }
+        Spacer(Modifier.height(4.dp))
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())
+        ) {
+            routes.forEach { route ->
+                Card(
+                    onClick = { onPick(route) },
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                    ),
+                    modifier = Modifier.width(200.dp)
+                ) {
+                    Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+                        SavedRouteEnd(route.origin.name, LocationMarker.ORIGIN)
+                        SavedRouteEnd(route.destination.name, LocationMarker.DESTINATION)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SavedRouteEnd(name: String, marker: LocationMarker) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(
+            if (marker == LocationMarker.ORIGIN) Icons.Outlined.Circle else Icons.Default.Place,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
+            modifier = Modifier.size(14.dp)
+        )
+        Text(
+            name,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Medium,
+            color = MaterialTheme.colorScheme.onPrimaryContainer,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(start = 6.dp)
+        )
+    }
+}
+
+/**
+ * Whether this search is one worth starring. Not from a bus — the origin is a moving
+ * vehicle — and not with "my location" at either end: the star would freeze today's
+ * GPS fix under that label and route from it forever after.
+ */
+private val RoutingState.canStarRoute: Boolean
+    get() = origin != null && destination != null && ridingLine == null &&
+        !originIsCurrentLocation && !destinationIsCurrentLocation

@@ -15,7 +15,15 @@ import kotlinx.serialization.Serializable
 data class SyncedState(
     val favoriteStations: List<List<String>> = emptyList(),
     val favoriteLines: List<String> = emptyList(),
-    val pricingNoticeAck: Boolean = false
+    val pricingNoticeAck: Boolean = false,
+    val favoriteRoutes: List<FavoriteRoute> = emptyList()
+)
+
+/** A starred trip: both ends, so one tap fills From and To and searches. */
+@Serializable
+data class FavoriteRoute(
+    val origin: GeocodeSuggestion,
+    val destination: GeocodeSuggestion
 )
 
 /** Wire shape of GET/POST /api/app/state. */
