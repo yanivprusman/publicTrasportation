@@ -195,6 +195,7 @@ class SettingsStore(private val prefs: Settings) {
         origin: GeocodeSuggestion,
         destination: GeocodeSuggestion,
         timeOfDay: String? = null,
+        dayOfWeek: Int? = null,
         arriveBy: Boolean = false
     ): Boolean {
         val current = getFavoriteRoutes().toMutableList()
@@ -202,7 +203,11 @@ class SettingsStore(private val prefs: Settings) {
         val added = if (existing >= 0) {
             current.removeAt(existing); false
         } else {
-            current.add(0, FavoriteRoute(origin, destination, timeOfDay, arriveBy && timeOfDay != null)); true
+            current.add(0, FavoriteRoute(
+                origin, destination, timeOfDay,
+                dayOfWeek?.takeIf { timeOfDay != null },
+                arriveBy && timeOfDay != null
+            )); true
         }
         prefs.putString("favorite_routes", json.encodeToString(routeListSerializer, current.take(MAX_FAVORITE_ROUTES)))
         markStateEdited()

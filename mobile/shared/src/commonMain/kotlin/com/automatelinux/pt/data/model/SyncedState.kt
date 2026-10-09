@@ -22,15 +22,18 @@ data class SyncedState(
 /**
  * A starred trip: both ends, so one tap fills From and To and searches.
  *
- * timeOfDay ("HH:mm", local) is the clock time the route was saved with — only the
- * time, never the date: a trip saved for Sunday 06:00 is the 06:00 trip, and picking
- * it searches the next 06:00 to come. Null means it was saved with "Now".
+ * timeOfDay ("HH:mm", local) and dayOfWeek (ISO 1=Mon … 7=Sun) are when the route
+ * was saved for, kept as a weekly slot rather than a date: a trip saved for Sunday
+ * 06:00 searches the next Sunday 06:00, so it never points at a day already gone.
+ * dayOfWeek null = every day (routes saved before the weekday was kept); timeOfDay
+ * null = saved with "Now".
  */
 @Serializable
 data class FavoriteRoute(
     val origin: GeocodeSuggestion,
     val destination: GeocodeSuggestion,
     val timeOfDay: String? = null,
+    val dayOfWeek: Int? = null,
     val arriveBy: Boolean = false
 )
 

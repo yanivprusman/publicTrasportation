@@ -73,6 +73,7 @@ import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.minus
+import kotlinx.datetime.isoDayNumber
 import kotlinx.datetime.toLocalDateTime
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
@@ -918,11 +919,16 @@ fun MainScreen(
                                         val o = routingState.origin
                                         val d = routingState.destination
                                         if (o != null && d != null) {
-                                            // Only the clock time is kept — see FavoriteRoute.
-                                            val timeOfDay = routingState.departureTime
+                                            // Kept as a weekly slot (weekday + clock time),
+                                            // not a date — see FavoriteRoute.
+                                            val at = routingState.departureTime
                                                 ?.toLocalDateTime(TimeZone.currentSystemDefault())
-                                                ?.time?.toString()?.take(5)
-                                            settingsStore.toggleFavoriteRoute(o, d, timeOfDay, routingState.arriveBy)
+                                            settingsStore.toggleFavoriteRoute(
+                                                o, d,
+                                                timeOfDay = at?.time?.toString()?.take(5),
+                                                dayOfWeek = at?.dayOfWeek?.isoDayNumber,
+                                                arriveBy = routingState.arriveBy
+                                            )
                                             favoriteRoutes = settingsStore.getFavoriteRoutes()
                                             onSyncedStateChanged()
                                         }

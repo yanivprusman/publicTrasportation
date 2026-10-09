@@ -25,6 +25,7 @@ import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atTime
+import kotlinx.datetime.isoDayNumber
 import kotlinx.datetime.plus
 import kotlinx.datetime.toInstant
 import kotlinx.datetime.toLocalDateTime
@@ -234,7 +235,7 @@ class RoutingViewModel(
      * would then never fire, and the new time would sit there unsearched.
      */
     fun applySavedRoute(route: FavoriteRoute) {
-        val time = route.timeOfDay?.let { nextOccurrence(it) }
+        val time = route.timeOfDay?.let { nextOccurrence(it, route.dayOfWeek) }
         _state.value = _state.value.copy(
             origin = route.origin,
             originIsCurrentLocation = false,
@@ -253,14 +254,21 @@ class RoutingViewModel(
         search()
     }
 
-    /** The next instant the local clock reads hh:mm — today if still ahead, else tomorrow. */
-    private fun nextOccurrence(hhmm: String): Instant? {
+    /**
+     * The next instant the local clock reads hh:mm, on [isoWeekday] when given (else
+     * any day). Today counts while the time is still ahead; a slot already passed
+     * today rolls a whole week (or, with no weekday, to tomorrow).
+     */
+    private fun nextOccurrence(hhmm: String, isoWeekday: Int?): Instant? {
         val t = try { LocalTime.parse(hhmm) } catch (_: Exception) { return null }
         val tz = TimeZone.currentSystemDefault()
         val now = Clock.System.now()
         val today = now.toLocalDateTime(tz).date
-        val candidate = today.atTime(t).toInstant(tz)
-        return if (candidate > now) candidate else today.plus(1, DateTimeUnit.DAY).atTime(t).toInstant(tz)
+        return (0..7).asSequence()
+            .map { today.plus(it, DateTimeUnit.DAY) }
+            .filter { isoWeekday == null || it.dayOfWeek.isoDayNumber == isoWeekday }
+            .map { it.atTime(t).toInstant(tz) }
+            .first { it > now }
     }
 
     fun setDepartureTime(time: Instant?) {

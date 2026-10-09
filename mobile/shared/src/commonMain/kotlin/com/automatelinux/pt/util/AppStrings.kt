@@ -114,6 +114,8 @@ interface AppStrings {
     val dayYesterday: String
     /** Past tomorrow, name the date: (day of month, month 1-12, ISO weekday 1=Mon). */
     val formatShortDate: (Int, Int, Int) -> String
+    /** A weekday on its own, ISO 1=Mon … 7=Sun — the day a saved route repeats on. */
+    val weekdayName: (Int) -> String
     /** The number printed on the pole, which is what other apps and signs use. */
     val stopCodeLabel: (String) -> String
     /** A walk leg's length, which "4 min" does not tell you. */
@@ -489,6 +491,9 @@ val EnStrings: AppStrings = object : AppStrings {
         ).getOrNull(month - 1)
         if (weekday != null && monthName != null) "$weekday $day $monthName" else "$day/$month"
     }
+    override val weekdayName: (Int) -> String = { isoWeekday ->
+        listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun").getOrNull(isoWeekday - 1).orEmpty()
+    }
     override val runningLate: (String, String) -> String = { late, scheduled -> "$late late · timetabled $scheduled" }
     override val runningEarly: (String, String) -> String = { early, scheduled -> "$early early · timetabled $scheduled" }
     override val stopCodeLabel: (String) -> String = { code -> "stop $code" }
@@ -857,6 +862,10 @@ val HeStrings: AppStrings = object : AppStrings {
         val weekday = listOf("ב׳", "ג׳", "ד׳", "ה׳", "ו׳", "שבת", "א׳")
             .getOrNull(isoWeekday - 1)
         if (weekday != null) "יום $weekday $day.$month" else "$day.$month"
+    }
+    override val weekdayName: (Int) -> String = { isoWeekday ->
+        listOf("ב׳", "ג׳", "ד׳", "ה׳", "ו׳", "שבת", "א׳").getOrNull(isoWeekday - 1)
+            ?.let { "יום $it" }.orEmpty()
     }
     override val runningLate: (String, String) -> String = { late, scheduled -> "$late באיחור · בלוח $scheduled" }
     override val runningEarly: (String, String) -> String = { early, scheduled -> "$early מוקדם · בלוח $scheduled" }

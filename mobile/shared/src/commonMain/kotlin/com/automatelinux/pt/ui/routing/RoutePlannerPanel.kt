@@ -695,8 +695,10 @@ private fun SavedRoutesStrip(
                         SavedRouteEnd(route.origin.name, LocationMarker.ORIGIN)
                         SavedRouteEnd(route.destination.name, LocationMarker.DESTINATION)
                         Text(
-                            route.timeOfDay?.let {
-                                "${if (route.arriveBy) strings.arriveBy else strings.departAt} $it"
+                            route.timeOfDay?.let { time ->
+                                val day = route.dayOfWeek?.let { strings.weekdayName(it) }
+                                val slot = if (day.isNullOrEmpty()) time else "$day $time"
+                                "${if (route.arriveBy) strings.arriveBy else strings.departAt} $slot"
                             } ?: strings.now,
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
