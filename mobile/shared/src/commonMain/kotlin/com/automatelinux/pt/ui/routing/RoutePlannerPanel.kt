@@ -102,6 +102,7 @@ fun RoutePlannerPanel(
     onMaxWalkChange: ((Int?) -> Unit)? = null,
     onScooterChange: ((Boolean) -> Unit)? = null,
     onMaxRideChange: ((Int?) -> Unit)? = null,
+    onScooterSpeedChange: ((Int) -> Unit)? = null,
     onEarlier: (() -> Unit)? = null,
     onLater: (() -> Unit)? = null,
     homePlace: GeocodeSuggestion? = null,
@@ -344,7 +345,7 @@ fun RoutePlannerPanel(
         }
 
         if (onToggleModeFilter != null && onMaxWalkChange != null &&
-            onScooterChange != null && onMaxRideChange != null
+            onScooterChange != null && onMaxRideChange != null && onScooterSpeedChange != null
         ) {
             Spacer(Modifier.height(4.dp))
             RouteOptionsSection(
@@ -352,10 +353,12 @@ fun RoutePlannerPanel(
                 maxWalkMinutes = state.maxWalkMinutes,
                 scooter = state.scooter,
                 maxRideMinutes = state.maxRideMinutes,
+                scooterSpeedKmh = state.scooterSpeedKmh,
                 onToggleMode = onToggleModeFilter,
                 onMaxWalkChange = onMaxWalkChange,
                 onScooterChange = onScooterChange,
-                onMaxRideChange = onMaxRideChange
+                onMaxRideChange = onMaxRideChange,
+                onScooterSpeedChange = onScooterSpeedChange
             )
         }
 

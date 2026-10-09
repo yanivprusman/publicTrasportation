@@ -62,8 +62,11 @@ export function isStreetMode(mode: string | undefined): boolean {
  * The scooter travels with the rider — folded on the bus, in the marked car on the
  * train — so they ride to the first stop and from the last one, and there is nothing
  * to park or return. MOTIS has no scooter profile; its bike profile (bike lanes and
- * roads, ~15 km/h) is the closest fit and conservative for a 25 km/h scooter, so the
- * ride legs it prices are, if anything, a little long.
+ * roads) is the closest fit, and `cyclingSpeed` sets the pace to the rider's own.
+ * That matters more than it sounds: the profile's default is a cyclist's ~15 km/h,
+ * and a scooter that does 40 (the user's, 2026-10-09) is undervalued almost three to
+ * one at that pace — a 14 km ride priced at 59 minutes that takes 22. The pace
+ * decides which rides beat which buses, not only how the minutes read.
  *
  * Measured 2026-10-09 against the walk-only plan: Midreshet Ben-Gurion → Beer Sheva
  * 57 → 52 min, Florentin → Herzliya 45 → 36 min, Meitar → Tel Aviv 191 → 147 min.
@@ -84,13 +87,32 @@ export function isStreetMode(mode: string | undefined): boolean {
  * in `direct` as an itinerary of its own. The direct search shares the ride cap, so
  * a trip too long to ride prunes nothing.
  */
-export function scooterPlanParams(maxRideSeconds: number): Record<string, string> {
+export function scooterPlanParams(maxRideSeconds: number, speedKmh: number): Record<string, string> {
   return {
     preTransitModes: 'BIKE',
     postTransitModes: 'BIKE',
     directModes: 'BIKE',
     maxDirectTime: String(maxRideSeconds),
+    // Metres per second, as MOTIS takes it. Supported by the 2.11.2 binary in use
+    // (verified live 2026-10-09) even though its release notes never mention it.
+    cyclingSpeed: (speedKmh / 3.6).toFixed(3),
   };
+}
+
+export const MIN_SCOOTER_SPEED_KMH = 10;
+export const MAX_SCOOTER_SPEED_KMH = 50;
+/** Israel's legal e-scooter limit — what a scooter request that names no speed plans with. */
+export const DEFAULT_SCOOTER_SPEED_KMH = 25;
+
+/**
+ * Parses ?scooterSpeed= (average km/h on the road); the legal limit when absent,
+ * null when the value is not a whole number in range.
+ */
+export function parseScooterSpeedParam(value: string | null): number | null {
+  if (value === null || value === '') return DEFAULT_SCOOTER_SPEED_KMH;
+  const n = Number(value);
+  if (!Number.isInteger(n) || n < MIN_SCOOTER_SPEED_KMH || n > MAX_SCOOTER_SPEED_KMH) return null;
+  return n;
 }
 
 /** Parses ?scooter=; null when the value is not a recognised boolean. */

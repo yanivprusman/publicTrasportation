@@ -63,6 +63,8 @@ interface AppStrings {
     val scooterOption: String
     val scooterHint: String
     val maxRideLabel: String
+    val scooterSpeedLabel: String
+    val speedKmhChip: (Int) -> String
     val compareTransit: String
     val directBikeTitle: String
     val directCarTitle: String
@@ -448,6 +450,8 @@ val EnStrings: AppStrings = object : AppStrings {
     override val scooterOption: String = "I ride a scooter"
     override val scooterHint: String = "Rides to and from the stops; folded on the bus, in the marked car on the train"
     override val maxRideLabel: String = "Max ride"
+    override val scooterSpeedLabel: String = "Scooter speed"
+    override val speedKmhChip: (Int) -> String = { v -> "$v km/h" }
     override val compareTransit: String = "Transit"
     override val directBikeTitle: String = "Bike route"
     override val directCarTitle: String = "Car route"
@@ -830,6 +834,8 @@ val HeStrings: AppStrings = object : AppStrings {
     override val scooterOption: String = "אני עם קורקינט"
     override val scooterHint: String = "נסיעה אל התחנות ומהן; מקופל באוטובוס, בקרון המסומן ברכבת"
     override val maxRideLabel: String = "נסיעה מרבית"
+    override val scooterSpeedLabel: String = "מהירות הקורקינט"
+    override val speedKmhChip: (Int) -> String = { v -> "$v קמ\"ש" }
     override val compareTransit: String = "תחב\"צ"
     override val directBikeTitle: String = "מסלול אופניים"
     override val directCarTitle: String = "מסלול ברכב"

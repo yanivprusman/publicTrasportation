@@ -23,6 +23,12 @@ export interface RouteOptionsState {
   scooter: boolean
   /** Longest acceptable scooter ride to/from a stop, in minutes. Only used with scooter. */
   maxRideMinutes: number
+  /**
+   * The scooter's average speed on the road, in km/h. The router prices every ride
+   * with it, so it decides which rides beat which buses — not only how the minutes
+   * read. The default is Israel's legal limit; a faster scooter says so here.
+   */
+  scooterSpeedKmh: number
 }
 
 export const WALK_MINUTE_CHOICES = [5, 10, 15, 20, 30]
@@ -30,6 +36,7 @@ export const WALK_MINUTE_CHOICES = [5, 10, 15, 20, 30]
 // router's bike speed — and that reach is the whole point of the option, so the
 // choices start where the walk ones end.
 export const RIDE_MINUTE_CHOICES = [10, 20, 30, 45, 60]
+export const SCOOTER_SPEED_CHOICES = [15, 20, 25, 30, 40]
 
 // 15 minutes mirrors the MOTIS server default, so "defaults" means the exact
 // query the app sent before options existed.
@@ -38,6 +45,7 @@ export const DEFAULT_OPTIONS: RouteOptionsState = {
   maxWalkMinutes: 15,
   scooter: false,
   maxRideMinutes: 30,
+  scooterSpeedKmh: 25,
 }
 
 function loadOptions(): RouteOptionsState {
@@ -57,10 +65,13 @@ function loadOptions(): RouteOptionsState {
     const maxRideMinutes = RIDE_MINUTE_CHOICES.includes(parsed?.maxRideMinutes)
       ? parsed.maxRideMinutes
       : DEFAULT_OPTIONS.maxRideMinutes
+    const scooterSpeedKmh = SCOOTER_SPEED_CHOICES.includes(parsed?.scooterSpeedKmh)
+      ? parsed.scooterSpeedKmh
+      : DEFAULT_OPTIONS.scooterSpeedKmh
     // A stored state with every mode off can't produce any route — treat it
     // as corrupt and fall back to all modes on.
-    if (!modes.bus && !modes.train && !modes.tram) return { ...DEFAULT_OPTIONS, maxWalkMinutes, scooter, maxRideMinutes }
-    return { modes, maxWalkMinutes, scooter, maxRideMinutes }
+    if (!modes.bus && !modes.train && !modes.tram) return { ...DEFAULT_OPTIONS, maxWalkMinutes, scooter, maxRideMinutes, scooterSpeedKmh }
+    return { modes, maxWalkMinutes, scooter, maxRideMinutes, scooterSpeedKmh }
   } catch {
     return DEFAULT_OPTIONS
   }
@@ -79,17 +90,26 @@ export function isDefaultOptions(state: RouteOptionsState): boolean {
  * - `modes`: app-level keys (bus,train,tram) — omitted when all modes are on,
  *   so default searches stay byte-identical to pre-options queries.
  * - `maxWalk`: minutes — omitted at the 15-minute server default.
- * - `scooter` + `maxRide`: a scooter rider walks to no stop, so the walk cap is
- *   not sent at all (the server refuses the pair); the ride cap always is, since
- *   the server's own ceiling (60 min) is not this UI's default.
+ * - `scooter` + `maxRide` + `scooterSpeed`: a scooter rider walks to no stop, so the
+ *   walk cap is not sent at all (the server refuses the pair); the ride cap and the
+ *   speed always are, since the server's own ceiling (60 min) is not this UI's default.
  */
-export function toRouteQueryOptions(state: RouteOptionsState): { modes?: string; maxWalk?: number; scooter?: boolean; maxRide?: number } {
-  const out: { modes?: string; maxWalk?: number; scooter?: boolean; maxRide?: number } = {}
+export interface RouteQueryParams {
+  modes?: string
+  maxWalk?: number
+  scooter?: boolean
+  maxRide?: number
+  scooterSpeed?: number
+}
+
+export function toRouteQueryOptions(state: RouteOptionsState): RouteQueryParams {
+  const out: RouteQueryParams = {}
   const active = (['bus', 'train', 'tram'] as TransitModeKey[]).filter(k => state.modes[k])
   if (active.length < 3) out.modes = active.join(',')
   if (state.scooter) {
     out.scooter = true
     out.maxRide = state.maxRideMinutes
+    out.scooterSpeed = state.scooterSpeedKmh
   } else if (state.maxWalkMinutes !== DEFAULT_OPTIONS.maxWalkMinutes) {
     out.maxWalk = state.maxWalkMinutes
   }
@@ -103,6 +123,7 @@ export interface UseRouteOptionsReturn {
   setMaxWalkMinutes: (minutes: number) => void
   toggleScooter: () => void
   setMaxRideMinutes: (minutes: number) => void
+  setScooterSpeedKmh: (kmh: number) => void
   isDefault: boolean
 }
 
@@ -137,5 +158,10 @@ export function useRouteOptions(): UseRouteOptionsReturn {
     setOptions(prev => ({ ...prev, maxRideMinutes: minutes }))
   }, [])
 
-  return { options, toggleMode, setMaxWalkMinutes, toggleScooter, setMaxRideMinutes, isDefault: isDefaultOptions(options) }
+  const setScooterSpeedKmh = useCallback((kmh: number) => {
+    if (!SCOOTER_SPEED_CHOICES.includes(kmh)) return
+    setOptions(prev => ({ ...prev, scooterSpeedKmh: kmh }))
+  }, [])
+
+  return { options, toggleMode, setMaxWalkMinutes, toggleScooter, setMaxRideMinutes, setScooterSpeedKmh, isDefault: isDefaultOptions(options) }
 }

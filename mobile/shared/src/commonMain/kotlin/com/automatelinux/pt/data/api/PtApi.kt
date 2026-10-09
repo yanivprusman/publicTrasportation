@@ -56,6 +56,8 @@ class PtApi(private val client: HttpClient) {
         /** The rider has an e-scooter that travels with them; [maxWalk] is then not sent and [maxRide] caps the ride. */
         scooter: Boolean? = null,
         maxRide: Int? = null,
+        /** The scooter's average road speed in km/h; only with [scooter]. */
+        scooterSpeed: Int? = null,
         /** The line the rider is on now; [from] is then where the bus is. */
         onLine: String? = null,
         /** Degrees the rider is moving, when the phone knows — tells a line's two directions apart. */
@@ -65,7 +67,7 @@ class PtApi(private val client: HttpClient) {
         params = mapOf(
             "from" to from, "to" to to, "via" to via, "time" to time,
             "arriveBy" to arriveBy, "modes" to modes, "maxWalk" to maxWalk,
-            "scooter" to scooter?.takeIf { it }, "maxRide" to maxRide,
+            "scooter" to scooter?.takeIf { it }, "maxRide" to maxRide, "scooterSpeed" to scooterSpeed,
             "onLine" to onLine, "heading" to heading
         )
     )
@@ -80,12 +82,13 @@ class PtApi(private val client: HttpClient) {
         start: String,
         end: String,
         scooter: Boolean? = null,
-        maxRide: Int? = null
+        maxRide: Int? = null,
+        scooterSpeed: Int? = null
     ): DayOverviewResult = fetch(
         "/api/day-overview",
         params = mapOf(
             "from" to from, "to" to to, "start" to start, "end" to end,
-            "scooter" to scooter?.takeIf { it }, "maxRide" to maxRide
+            "scooter" to scooter?.takeIf { it }, "maxRide" to maxRide, "scooterSpeed" to scooterSpeed
         )
     )
 

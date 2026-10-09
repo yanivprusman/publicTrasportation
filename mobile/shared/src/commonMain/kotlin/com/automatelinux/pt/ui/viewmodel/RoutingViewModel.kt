@@ -43,7 +43,9 @@ class RoutingViewModel(
         enabledModes = restoreModes(settingsStore),
         maxWalkMinutes = settingsStore.maxWalkMinutes.takeIf { it in 1..60 },
         scooter = settingsStore.scooterMode,
-        maxRideMinutes = settingsStore.maxRideMinutes.takeIf { it in 1..60 }
+        maxRideMinutes = settingsStore.maxRideMinutes.takeIf { it in 1..60 },
+        scooterSpeedKmh = settingsStore.scooterSpeedKmh.takeIf { it in SCOOTER_SPEED_CHOICES }
+            ?: DEFAULT_SCOOTER_SPEED_KMH
     ))
     val state: StateFlow<RoutingState> = _state.asStateFlow()
     private var trackingJob: Job? = null
@@ -144,6 +146,13 @@ class RoutingViewModel(
     fun setMaxRide(minutes: Int?) {
         settingsStore.maxRideMinutes = minutes ?: 0
         _state.value = _state.value.copy(maxRideMinutes = minutes)
+        researchIfSearched()
+    }
+
+    fun setScooterSpeed(kmh: Int) {
+        if (kmh !in SCOOTER_SPEED_CHOICES) return
+        settingsStore.scooterSpeedKmh = kmh
+        _state.value = _state.value.copy(scooterSpeedKmh = kmh)
         researchIfSearched()
     }
 
@@ -397,7 +406,7 @@ class RoutingViewModel(
                     to = "${destination.lat},${destination.lon}",
                     start = start.toString(),
                     end = end.toString(),
-                    scooter = s.scooter, maxRide = s.rideCapForQuery
+                    scooter = s.scooter, maxRide = s.rideCapForQuery, scooterSpeed = s.scooterSpeedForQuery
                 )
                 _state.value = _state.value.copy(dayOverview = result, dayLoading = false)
             } catch (e: Exception) {
@@ -705,13 +714,13 @@ class RoutingViewModel(
                     val fix = checkNotNull(riderFix) { "Riding without a GPS fix" }
                     api.searchRoute(
                         from = "${fix.lat},${fix.lon}", to = to,
-                        modes = modes, maxWalk = s.walkCapForQuery, scooter = s.scooter, maxRide = s.rideCapForQuery,
+                        modes = modes, maxWalk = s.walkCapForQuery, scooter = s.scooter, maxRide = s.rideCapForQuery, scooterSpeed = s.scooterSpeedForQuery,
                         onLine = riding, heading = fix.heading
                     )
                 } else {
                     api.searchRoute(
                         from = from, to = to, via = via, time = time, arriveBy = arriveBy,
-                        modes = modes, maxWalk = s.walkCapForQuery, scooter = s.scooter, maxRide = s.rideCapForQuery
+                        modes = modes, maxWalk = s.walkCapForQuery, scooter = s.scooter, maxRide = s.rideCapForQuery, scooterSpeed = s.scooterSpeedForQuery
                     )
                 }
                 // A stitched via trip has no name at the seam between its two halves —

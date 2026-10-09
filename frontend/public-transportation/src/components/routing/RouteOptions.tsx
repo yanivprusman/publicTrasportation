@@ -1,5 +1,5 @@
 import type { UseRouteOptionsReturn } from '../../hooks/useRouteOptions'
-import { RIDE_MINUTE_CHOICES, WALK_MINUTE_CHOICES, type TransitModeKey } from '../../hooks/useRouteOptions'
+import { RIDE_MINUTE_CHOICES, SCOOTER_SPEED_CHOICES, WALK_MINUTE_CHOICES, type TransitModeKey } from '../../hooks/useRouteOptions'
 import { useI18n } from '../../i18n'
 import type { TranslationKey } from '../../i18n/translations'
 import styles from './RouteOptions.module.css'
@@ -16,7 +16,7 @@ interface RouteOptionsProps {
 
 export default function RouteOptions({ routeOptions }: RouteOptionsProps) {
   const { t } = useI18n()
-  const { options, toggleMode, setMaxWalkMinutes, toggleScooter, setMaxRideMinutes } = routeOptions
+  const { options, toggleMode, setMaxWalkMinutes, toggleScooter, setMaxRideMinutes, setScooterSpeedKmh } = routeOptions
   // With a scooter the first/last mile is ridden, not walked: the cap row keeps
   // its place but asks about the ride, with choices sized for one.
   const capChoices = options.scooter ? RIDE_MINUTE_CHOICES : WALK_MINUTE_CHOICES
@@ -80,6 +80,27 @@ export default function RouteOptions({ routeOptions }: RouteOptionsProps) {
           <span className={styles.walkUnit}>{t('options.min')}</span>
         </div>
       </div>
+      {options.scooter && (
+        <div className={styles.walkRow}>
+          <span className={styles.walkLabel}>{t('options.scooterSpeed')}</span>
+          <div className={styles.walkChoices}>
+            {SCOOTER_SPEED_CHOICES.map(kmh => (
+              <button
+                key={kmh}
+                type="button"
+                className={`${styles.walkBtn} ${options.scooterSpeedKmh === kmh ? styles.walkBtnActive : ''}`}
+                onClick={() => setScooterSpeedKmh(kmh)}
+                aria-pressed={options.scooterSpeedKmh === kmh}
+                title={t('options.scooterSpeedTitle')}
+                data-id={`set-scooter-speed-${kmh}`}
+              >
+                {kmh}
+              </button>
+            ))}
+            <span className={styles.walkUnit}>{t('options.kmh')}</span>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

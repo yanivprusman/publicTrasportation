@@ -14,6 +14,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
 import androidx.compose.material.icons.filled.DirectionsBus
 import androidx.compose.material.icons.filled.ElectricScooter
+import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Train
 import androidx.compose.material.icons.filled.Tram
 import androidx.compose.material3.FilterChip
@@ -26,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import com.automatelinux.pt.ui.viewmodel.SCOOTER_SPEED_CHOICES
 import com.automatelinux.pt.ui.viewmodel.TransitFilter
 import com.automatelinux.pt.util.AppStrings
 import com.automatelinux.pt.util.LocalAppStrings
@@ -55,10 +57,12 @@ fun RouteOptionsSection(
     maxWalkMinutes: Int?,
     scooter: Boolean,
     maxRideMinutes: Int?,
+    scooterSpeedKmh: Int,
     onToggleMode: (TransitFilter) -> Unit,
     onMaxWalkChange: (Int?) -> Unit,
     onScooterChange: (Boolean) -> Unit,
     onMaxRideChange: (Int?) -> Unit,
+    onScooterSpeedChange: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val strings = LocalAppStrings.current
@@ -143,6 +147,34 @@ fun RouteOptionsSection(
                     label = strings.walkMinutesChip(minutes),
                     onClick = { onCapChange(minutes) }
                 )
+            }
+        }
+
+        // The router prices every ride at this speed, so it decides which rides beat
+        // which buses — a 40 km/h scooter priced at a cyclist's 15 loses to buses it
+        // would beat. The default is the legal limit; a faster scooter says so.
+        if (scooter) {
+            Spacer(Modifier.height(4.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Icon(
+                    Icons.Default.Speed,
+                    contentDescription = strings.scooterSpeedLabel,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(18.dp)
+                )
+                SCOOTER_SPEED_CHOICES.forEach { kmh ->
+                    WalkChip(
+                        selected = scooterSpeedKmh == kmh,
+                        label = strings.speedKmhChip(kmh),
+                        onClick = { onScooterSpeedChange(kmh) }
+                    )
+                }
             }
         }
 

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ensureMotis } from '@/lib/motis-manager';
-import { MODE_GROUPS, isStreetMode, normalizeMode, parseScooterParam, scooterPlanParams, PEDESTRIAN_SPEED, UNCAPPED_WALK_SECONDS } from '@/lib/motis-modes';
+import { MODE_GROUPS, isStreetMode, normalizeMode, parseScooterParam, parseScooterSpeedParam, scooterPlanParams, MIN_SCOOTER_SPEED_KMH, MAX_SCOOTER_SPEED_KMH, PEDESTRIAN_SPEED, UNCAPPED_WALK_SECONDS } from '@/lib/motis-modes';
 import { tripWheelchairAccess } from '@/lib/gtfs-trips';
 import { stopIdentity } from '@/lib/gtfs-stops';
 import { rideFare } from '@/lib/gtfs-fares';
@@ -279,7 +279,8 @@ async function planHalf(
   arriveBy: boolean,
   transitModes: string[] | null,
   streetCapSeconds: number,
-  scooter: boolean
+  scooter: boolean,
+  scooterSpeedKmh: number
 ): Promise<MotisItinerary[]> {
   const params = new URLSearchParams({
     fromPlace,
@@ -293,7 +294,7 @@ async function planHalf(
   params.set('maxPreTransitTime', String(streetCapSeconds));
   params.set('maxPostTransitTime', String(streetCapSeconds));
   if (scooter) {
-    for (const [k, v] of Object.entries(scooterPlanParams(streetCapSeconds))) params.set(k, v);
+    for (const [k, v] of Object.entries(scooterPlanParams(streetCapSeconds, scooterSpeedKmh))) params.set(k, v);
   }
   const response = await fetch(`${MOTIS_BASE}/api/v1/plan?${params}`, {
     signal: AbortSignal.timeout(15000),
@@ -313,17 +314,18 @@ async function planViaTrip(
   arriveBy: boolean,
   transitModes: string[] | null,
   streetCapSeconds: number,
-  scooter: boolean
+  scooter: boolean,
+  scooterSpeedKmh: number
 ): Promise<MotisItinerary[]> {
   const combined: MotisItinerary[] = [];
   if (!arriveBy) {
-    const firstHalves = await planHalf(fromPlace, viaPlace, time, false, transitModes, streetCapSeconds, scooter);
+    const firstHalves = await planHalf(fromPlace, viaPlace, time, false, transitModes, streetCapSeconds, scooter, scooterSpeedKmh);
     const arrivals = firstHalves.map(itin => Date.parse(itin.endTime || '')).filter(ms => !isNaN(ms));
     if (arrivals.length === 0) return [];
     // Query the second half once, from the earliest possible arrival at the
     // via point; later first halves pick a later departure out of the same set.
     const earliestArrival = new Date(Math.min(...arrivals)).toISOString();
-    const secondHalves = await planHalf(viaPlace, toPlace, earliestArrival, false, transitModes, streetCapSeconds, scooter);
+    const secondHalves = await planHalf(viaPlace, toPlace, earliestArrival, false, transitModes, streetCapSeconds, scooter, scooterSpeedKmh);
     for (const first of firstHalves) {
       const arriveVia = Date.parse(first.endTime || '');
       if (isNaN(arriveVia)) continue;
@@ -347,11 +349,11 @@ async function planViaTrip(
   }
   // Arrive-by: plan the second half backwards from the target time, then the
   // first half backwards from the latest usable via departure.
-  const secondHalves = await planHalf(viaPlace, toPlace, time, true, transitModes, streetCapSeconds, scooter);
+  const secondHalves = await planHalf(viaPlace, toPlace, time, true, transitModes, streetCapSeconds, scooter, scooterSpeedKmh);
   const departures = secondHalves.map(itin => Date.parse(itin.startTime || '')).filter(ms => !isNaN(ms));
   if (departures.length === 0) return [];
   const latestDeparture = new Date(Math.max(...departures)).toISOString();
-  const firstHalves = await planHalf(fromPlace, viaPlace, latestDeparture, true, transitModes, streetCapSeconds, scooter);
+  const firstHalves = await planHalf(fromPlace, viaPlace, latestDeparture, true, transitModes, streetCapSeconds, scooter, scooterSpeedKmh);
   for (const second of secondHalves) {
     const departVia = Date.parse(second.startTime || '');
     if (isNaN(departVia)) continue;
@@ -421,6 +423,21 @@ export async function GET(request: NextRequest) {
   if (scooter === null) {
     return NextResponse.json(
       { error: 'Invalid scooter parameter. Expected 1 or 0.' },
+      { status: 400 }
+    );
+  }
+  const scooterSpeedParam = searchParams.get('scooterSpeed');
+  if (!scooter && scooterSpeedParam !== null) {
+    return NextResponse.json(
+      { error: 'scooterSpeed requires scooter=1.' },
+      { status: 400 }
+    );
+  }
+  // The scooter's average road speed; it decides which rides beat which buses.
+  const scooterSpeedKmh = parseScooterSpeedParam(scooterSpeedParam);
+  if (scooterSpeedKmh === null) {
+    return NextResponse.json(
+      { error: `Invalid scooterSpeed parameter. Expected whole km/h between ${MIN_SCOOTER_SPEED_KMH} and ${MAX_SCOOTER_SPEED_KMH}.` },
       { status: 400 }
     );
   }
@@ -537,7 +554,7 @@ export async function GET(request: NextRequest) {
           });
           if (transitModes) params.set('transitModes', transitModes.join(','));
           if (scooter) {
-            for (const [k, v] of Object.entries(scooterPlanParams(streetCapSeconds))) params.set(k, v);
+            for (const [k, v] of Object.entries(scooterPlanParams(streetCapSeconds, scooterSpeedKmh))) params.set(k, v);
           }
           const response = await fetch(`${MOTIS_BASE}/api/v1/plan?${params}`, {
             signal: AbortSignal.timeout(15000),
@@ -576,7 +593,7 @@ export async function GET(request: NextRequest) {
         { status: 400 }
       );
     }
-    const viaCacheKey = `via|${from}|${via}|${to}|${timeBucket}|${isArriveBy}|${transitModes?.join(',') || ''}|${streetCapSeconds}|${scooter ? 'scooter' : 'walk'}`;
+    const viaCacheKey = `via|${from}|${via}|${to}|${timeBucket}|${isArriveBy}|${transitModes?.join(',') || ''}|${streetCapSeconds}|${scooter ? `scooter${scooterSpeedKmh}` : 'walk'}`;
     const viaCached = getCachedRoute(viaCacheKey);
     if (viaCached) {
       return NextResponse.json(viaCached);
@@ -591,7 +608,8 @@ export async function GET(request: NextRequest) {
         isArriveBy,
         transitModes,
         streetCapSeconds,
-        scooter
+        scooter,
+        scooterSpeedKmh
       );
       const seen = new Set<string>();
       const itineraries = combined
@@ -620,7 +638,7 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  const cacheKey = `${from}|${to}|${timeBucket}|${isArriveBy}|${pageCursor || ''}|${transitModes?.join(',') || ''}|${streetCapSeconds}|${scooter ? 'scooter' : 'walk'}`;
+  const cacheKey = `${from}|${to}|${timeBucket}|${isArriveBy}|${pageCursor || ''}|${transitModes?.join(',') || ''}|${streetCapSeconds}|${scooter ? `scooter${scooterSpeedKmh}` : 'walk'}`;
 
   const cached = getCachedRoute(cacheKey);
   if (cached) {
@@ -643,7 +661,7 @@ export async function GET(request: NextRequest) {
     params.set('maxPreTransitTime', String(streetCapSeconds));
     params.set('maxPostTransitTime', String(streetCapSeconds));
     if (scooter) {
-      for (const [k, v] of Object.entries(scooterPlanParams(streetCapSeconds))) params.set(k, v);
+      for (const [k, v] of Object.entries(scooterPlanParams(streetCapSeconds, scooterSpeedKmh))) params.set(k, v);
     }
 
     // Bike/car comparison routes are fetched with a second, direct-only plan
@@ -705,7 +723,7 @@ export async function GET(request: NextRequest) {
           maxPostTransitTime: String(streetCapSeconds),
         });
         if (transitModes) hopParams.set('transitModes', transitModes.join(','));
-        for (const [k, v] of Object.entries(scooterPlanParams(streetCapSeconds))) hopParams.set(k, v);
+        for (const [k, v] of Object.entries(scooterPlanParams(streetCapSeconds, scooterSpeedKmh))) hopParams.set(k, v);
         const hopResponse = await fetch(`${MOTIS_BASE}/api/v1/plan?${hopParams}`, {
           signal: AbortSignal.timeout(15000),
         });

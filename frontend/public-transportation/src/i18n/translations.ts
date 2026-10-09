@@ -51,6 +51,9 @@ const en = {
   'options.scooterTitle': 'Plan with an e-scooter that rides to the stop and comes along on the bus',
   'options.scooterNote': 'Rides to and from the stops; folded on the bus, in the marked car on the train',
   'options.maxRide': 'Max ride',
+  'options.scooterSpeed': 'Scooter speed',
+  'options.scooterSpeedTitle': 'Your average speed on the road — it decides which rides beat which buses',
+  'options.kmh': 'km/h',
 
   // Transit modes
   'modes.WALK': 'Walk',
@@ -464,6 +467,9 @@ const he: Record<keyof typeof en, string> = {
   'options.scooterTitle': 'תכנון עם קורקינט חשמלי שנוסע לתחנה ועולה איתך לאוטובוס',
   'options.scooterNote': 'נסיעה אל התחנות ומהן; מקופל באוטובוס, בקרון המסומן ברכבת',
   'options.maxRide': 'נסיעה מרבית',
+  'options.scooterSpeed': 'מהירות הקורקינט',
+  'options.scooterSpeedTitle': 'המהירות הממוצעת שלך בדרך — היא קובעת אילו נסיעות עדיפות על אוטובוס',
+  'options.kmh': 'קמ"ש',
 
   'modes.WALK': 'הליכה',
   'modes.BIKE': 'אופניים',

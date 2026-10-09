@@ -888,6 +888,7 @@ fun MainScreen(
                                     onMaxWalkChange = { routingViewModel.setMaxWalk(it) },
                                     onScooterChange = { routingViewModel.setScooter(it) },
                                     onMaxRideChange = { routingViewModel.setMaxRide(it) },
+                                    onScooterSpeedChange = { routingViewModel.setScooterSpeed(it) },
                                     onEarlier = { routingViewModel.searchEarlier() },
                                     onLater = { routingViewModel.searchLater() },
                                     homePlace = settingsStore.homePlace,

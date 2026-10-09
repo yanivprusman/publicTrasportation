@@ -197,6 +197,12 @@ data class RoutingState(
     /** Longest scooter ride to or from a stop, in minutes; null is the server's ceiling. */
     val maxRideMinutes: Int? = null,
     /**
+     * The scooter's average speed on the road, in km/h. The router prices every ride with
+     * it, so it decides which rides beat which buses — not only how the minutes read. The
+     * default is Israel's legal limit; a faster scooter says so here.
+     */
+    val scooterSpeedKmh: Int = DEFAULT_SCOOTER_SPEED_KMH,
+    /**
      * The line the rider says they are on. While set, the origin is the bus itself:
      * each search plans from the latest GPS fix on that line, not from a stop.
      */
@@ -266,3 +272,11 @@ val RoutingState.walkCapForQuery: Int?
 /** What a search sends as the ride cap: only a scooter rider has one. */
 val RoutingState.rideCapForQuery: Int?
     get() = if (scooter) maxRideMinutes else null
+
+/** Israel's legal e-scooter limit. */
+const val DEFAULT_SCOOTER_SPEED_KMH = 25
+val SCOOTER_SPEED_CHOICES = listOf(15, 20, 25, 30, 40)
+
+/** What a search sends as the scooter's speed: only a scooter rider has one. */
+val RoutingState.scooterSpeedForQuery: Int?
+    get() = if (scooter) scooterSpeedKmh else null

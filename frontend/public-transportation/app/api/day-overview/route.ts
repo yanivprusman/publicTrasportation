@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ensureMotis } from '@/lib/motis-manager';
-import { MODE_GROUPS, isStreetMode, normalizeMode, parseScooterParam, scooterPlanParams, PEDESTRIAN_SPEED, UNCAPPED_WALK_SECONDS, type NormalizedMode } from '@/lib/motis-modes';
+import { MODE_GROUPS, isStreetMode, normalizeMode, parseScooterParam, parseScooterSpeedParam, scooterPlanParams, MIN_SCOOTER_SPEED_KMH, MAX_SCOOTER_SPEED_KMH, PEDESTRIAN_SPEED, UNCAPPED_WALK_SECONDS, type NormalizedMode } from '@/lib/motis-modes';
 
 const MOTIS_PORT = process.env.MOTIS_PORT || '3504';
 const MOTIS_BASE = `http://localhost:${MOTIS_PORT}`;
@@ -102,6 +102,21 @@ export async function GET(request: NextRequest) {
       { status: 400 }
     );
   }
+  const scooterSpeedParam = searchParams.get('scooterSpeed');
+  if (!scooter && scooterSpeedParam !== null) {
+    return NextResponse.json(
+      { error: 'scooterSpeed requires scooter=1.' },
+      { status: 400 }
+    );
+  }
+  // The scooter's average road speed; it decides which rides beat which buses.
+  const scooterSpeedKmh = parseScooterSpeedParam(scooterSpeedParam);
+  if (scooterSpeedKmh === null) {
+    return NextResponse.json(
+      { error: `Invalid scooterSpeed parameter. Expected whole km/h between ${MIN_SCOOTER_SPEED_KMH} and ${MAX_SCOOTER_SPEED_KMH}.` },
+      { status: 400 }
+    );
+  }
 
   if (!from || !to) {
     return NextResponse.json(
@@ -176,7 +191,7 @@ export async function GET(request: NextRequest) {
     streetCapSeconds = minutes * 60;
   }
 
-  const cacheKey = `${from}|${to}|${new Date(startMs).toISOString()}|${new Date(endMs).toISOString()}|${transitModes?.join(',') || ''}|${streetCapSeconds}|${scooter ? 'scooter' : 'walk'}`;
+  const cacheKey = `${from}|${to}|${new Date(startMs).toISOString()}|${new Date(endMs).toISOString()}|${transitModes?.join(',') || ''}|${streetCapSeconds}|${scooter ? `scooter${scooterSpeedKmh}` : 'walk'}`;
   const cached = getCachedDay(cacheKey);
   if (cached) {
     return NextResponse.json(cached);
@@ -212,7 +227,7 @@ export async function GET(request: NextRequest) {
       params.set('maxPreTransitTime', String(streetCapSeconds));
       params.set('maxPostTransitTime', String(streetCapSeconds));
       if (scooter) {
-        for (const [k, v] of Object.entries(scooterPlanParams(streetCapSeconds))) params.set(k, v);
+        for (const [k, v] of Object.entries(scooterPlanParams(streetCapSeconds, scooterSpeedKmh))) params.set(k, v);
       }
 
       const response = await fetch(`${MOTIS_BASE}/api/v1/plan?${params}`, {
