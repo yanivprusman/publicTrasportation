@@ -694,6 +694,14 @@ private fun SavedRoutesStrip(
                     Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
                         SavedRouteEnd(route.origin.name, LocationMarker.ORIGIN)
                         SavedRouteEnd(route.destination.name, LocationMarker.DESTINATION)
+                        Text(
+                            route.timeOfDay?.let {
+                                "${if (route.arriveBy) strings.arriveBy else strings.departAt} $it"
+                            } ?: strings.now,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
+                            modifier = Modifier.padding(top = 2.dp)
+                        )
                     }
                 }
             }

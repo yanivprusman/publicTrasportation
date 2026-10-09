@@ -905,10 +905,8 @@ fun MainScreen(
                                     onSavePlace = { savePlaceTarget = it },
                                     onSetHome = { showSetHomeDialog = true },
                                     favoriteRoutes = favoriteRoutes,
-                                    // Rides the endpoint auto-search, like onQuickRoute.
                                     onPickFavoriteRoute = { route ->
-                                        routingViewModel.setOrigin(route.origin)
-                                        routingViewModel.setDestination(route.destination)
+                                        routingViewModel.applySavedRoute(route)
                                         scope.launch { bottomSheetState.expand() }
                                     },
                                     isCurrentRouteFavorite = remember(favoriteRoutes, routingState.origin, routingState.destination) {
@@ -920,7 +918,11 @@ fun MainScreen(
                                         val o = routingState.origin
                                         val d = routingState.destination
                                         if (o != null && d != null) {
-                                            settingsStore.toggleFavoriteRoute(o, d)
+                                            // Only the clock time is kept — see FavoriteRoute.
+                                            val timeOfDay = routingState.departureTime
+                                                ?.toLocalDateTime(TimeZone.currentSystemDefault())
+                                                ?.time?.toString()?.take(5)
+                                            settingsStore.toggleFavoriteRoute(o, d, timeOfDay, routingState.arriveBy)
                                             favoriteRoutes = settingsStore.getFavoriteRoutes()
                                             onSyncedStateChanged()
                                         }

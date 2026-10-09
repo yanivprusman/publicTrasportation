@@ -19,11 +19,19 @@ data class SyncedState(
     val favoriteRoutes: List<FavoriteRoute> = emptyList()
 )
 
-/** A starred trip: both ends, so one tap fills From and To and searches. */
+/**
+ * A starred trip: both ends, so one tap fills From and To and searches.
+ *
+ * timeOfDay ("HH:mm", local) is the clock time the route was saved with — only the
+ * time, never the date: a trip saved for Sunday 06:00 is the 06:00 trip, and picking
+ * it searches the next 06:00 to come. Null means it was saved with "Now".
+ */
 @Serializable
 data class FavoriteRoute(
     val origin: GeocodeSuggestion,
-    val destination: GeocodeSuggestion
+    val destination: GeocodeSuggestion,
+    val timeOfDay: String? = null,
+    val arriveBy: Boolean = false
 )
 
 /** Wire shape of GET/POST /api/app/state. */

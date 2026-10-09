@@ -191,13 +191,18 @@ class SettingsStore(private val prefs: Settings) {
         getFavoriteRoutes().any { it.matches(origin, destination) }
 
     /** Stars the pair, or unstars it if already starred. Returns true when it was added. */
-    fun toggleFavoriteRoute(origin: GeocodeSuggestion, destination: GeocodeSuggestion): Boolean {
+    fun toggleFavoriteRoute(
+        origin: GeocodeSuggestion,
+        destination: GeocodeSuggestion,
+        timeOfDay: String? = null,
+        arriveBy: Boolean = false
+    ): Boolean {
         val current = getFavoriteRoutes().toMutableList()
         val existing = current.indexOfFirst { it.matches(origin, destination) }
         val added = if (existing >= 0) {
             current.removeAt(existing); false
         } else {
-            current.add(0, FavoriteRoute(origin, destination)); true
+            current.add(0, FavoriteRoute(origin, destination, timeOfDay, arriveBy && timeOfDay != null)); true
         }
         prefs.putString("favorite_routes", json.encodeToString(routeListSerializer, current.take(MAX_FAVORITE_ROUTES)))
         markStateEdited()

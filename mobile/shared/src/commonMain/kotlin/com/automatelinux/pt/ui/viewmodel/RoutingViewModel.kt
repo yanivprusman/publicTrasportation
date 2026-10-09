@@ -3,6 +3,7 @@ package com.automatelinux.pt.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.automatelinux.pt.data.api.PtApi
+import com.automatelinux.pt.data.model.FavoriteRoute
 import com.automatelinux.pt.data.model.GeocodeSuggestion
 import com.automatelinux.pt.data.model.Itinerary
 import com.automatelinux.pt.data.model.RouteResult
@@ -21,6 +22,7 @@ import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.Instant
+import kotlinx.datetime.LocalTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atTime
 import kotlinx.datetime.plus
@@ -223,6 +225,42 @@ class RoutingViewModel(
         _state.value = s.copy(via = null, viaFieldVisible = false, results = null, error = null)
         clearDayOverview()
         autoSearchIfReady()
+    }
+
+    /**
+     * Loads a starred trip: both ends, its time, and one search. Done as one state
+     * write rather than through setOrigin/setDestination because picking the route
+     * already on screen leaves the coordinates unchanged — the endpoint auto-search
+     * would then never fire, and the new time would sit there unsearched.
+     */
+    fun applySavedRoute(route: FavoriteRoute) {
+        val time = route.timeOfDay?.let { nextOccurrence(it) }
+        _state.value = _state.value.copy(
+            origin = route.origin,
+            originIsCurrentLocation = false,
+            destination = route.destination,
+            destinationIsCurrentLocation = false,
+            via = null,
+            viaFieldVisible = false,
+            ridingLine = null,
+            departureTime = time,
+            arriveBy = time != null && route.arriveBy,
+            results = null,
+            error = null
+        )
+        clearDayOverview()
+        syncNearbyBoard()
+        search()
+    }
+
+    /** The next instant the local clock reads hh:mm — today if still ahead, else tomorrow. */
+    private fun nextOccurrence(hhmm: String): Instant? {
+        val t = try { LocalTime.parse(hhmm) } catch (_: Exception) { return null }
+        val tz = TimeZone.currentSystemDefault()
+        val now = Clock.System.now()
+        val today = now.toLocalDateTime(tz).date
+        val candidate = today.atTime(t).toInstant(tz)
+        return if (candidate > now) candidate else today.plus(1, DateTimeUnit.DAY).atTime(t).toInstant(tz)
     }
 
     fun setDepartureTime(time: Instant?) {
