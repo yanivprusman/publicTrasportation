@@ -1075,7 +1075,7 @@ class RoutingViewModel(
         }
     }
 
-    suspend fun getLineShape(line: String): Map<String, List<List<Double>>> {
+    suspend fun getLineShape(line: String): com.automatelinux.pt.data.model.LineShapeResponse {
         return api.getLineShape(line)
     }
 

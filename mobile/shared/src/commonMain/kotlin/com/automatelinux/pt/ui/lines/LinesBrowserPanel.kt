@@ -28,6 +28,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -54,9 +55,25 @@ private val TRAIN_LINES = listOf("Israel Railways")
 
 data class LineShapeData(
     val directions: Map<String, List<List<Double>>> = emptyMap(),
+    /** route_long_name per direction, for naming where each direction goes. */
+    val headsigns: Map<String, String> = emptyMap(),
     val loading: Boolean = false,
     val error: String? = null
 )
+
+/**
+ * Where a direction ends, from GTFS's "origin-city<->destination-city-N#": the
+ * destination stop, with its city only when the stop's name does not already say it.
+ * Null when the long name is not in that shape — the caller then numbers the direction.
+ */
+fun lineDestination(headsign: String?): String? {
+    val to = headsign?.substringAfter("<->", "")?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+    val trimmed = to.replace(Regex("-\\d+#?$"), "")
+    val stop = trimmed.substringBeforeLast('-').trim()
+    val city = trimmed.substringAfterLast('-', "").trim()
+    if (stop.isEmpty()) return trimmed
+    return if (city.isEmpty() || stop.contains(city)) stop else "$stop, $city"
+}
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -64,6 +81,8 @@ fun LinesBrowserPanel(
     selectedLine: String?,
     lineShapeData: LineShapeData,
     onSelectLine: (String) -> Unit,
+    /** Show one direction of [selectedLine] on the map, full screen. */
+    onShowDirection: (String) -> Unit,
     favoriteLines: Set<String> = emptySet(),
     modifier: Modifier = Modifier
 ) {
@@ -178,21 +197,28 @@ fun LinesBrowserPanel(
                         )
                     } else if (lineShapeData.directions.isNotEmpty()) {
                         for ((direction, _) in lineShapeData.directions) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
+                            // GTFS numbers directions from 0; people don't.
+                            val label = lineDestination(lineShapeData.headsigns[direction])
+                                ?.let { strings.lineTowards(it) }
+                                ?: strings.direction(direction.toIntOrNull()?.plus(1)?.toString() ?: direction)
+                            // The route is drawn under this sheet, so a line read off a
+                            // list could not actually be looked at. Each direction opens
+                            // the map with that direction alone on it.
+                            OutlinedButton(
+                                onClick = { onShowDirection(direction) },
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp)
+                            ) {
                                 Icon(
-                                    Icons.Default.DirectionsBus,
+                                    Icons.Default.Map,
                                     contentDescription = null,
-                                    modifier = Modifier.size(16.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    modifier = Modifier.size(18.dp)
                                 )
-                                Spacer(Modifier.width(4.dp))
+                                Spacer(Modifier.width(8.dp))
                                 Text(
-                                    // GTFS numbers directions from 0; people don't.
-                                    text = strings.direction(
-                                        direction.toIntOrNull()?.plus(1)?.toString() ?: direction
-                                    ),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    text = label,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    maxLines = 2,
+                                    modifier = Modifier.weight(1f)
                                 )
                             }
                         }

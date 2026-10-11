@@ -246,6 +246,9 @@ interface AppStrings {
     val direction: (String) -> String
     val lineShape: String
     val noShapeData: String
+    val lineTowards: (String) -> String
+    val lineOtherDirection: String
+    val lineBackToLines: String
     val timetable: String
     val commonLines: String
     val saveAs: String
@@ -627,6 +630,9 @@ val EnStrings: AppStrings = object : AppStrings {
     override val direction: (String) -> String = { d -> "Direction $d" }
     override val lineShape: String = "Line Route"
     override val noShapeData: String = "No route data available"
+    override val lineTowards: (String) -> String = { to -> "To $to" }
+    override val lineOtherDirection: String = "Other direction"
+    override val lineBackToLines: String = "Back"
     override val timetable: String = "Timetable"
     override val commonLines: String = "Common Lines"
     override val saveAs: String = "Save as"
@@ -1006,6 +1012,9 @@ val HeStrings: AppStrings = object : AppStrings {
     override val direction: (String) -> String = { d -> "כיוון $d" }
     override val lineShape: String = "מסלול קו"
     override val noShapeData: String = "אין נתוני מסלול"
+    override val lineTowards: (String) -> String = { to -> "אל $to" }
+    override val lineOtherDirection: String = "כיוון שני"
+    override val lineBackToLines: String = "חזרה"
     override val timetable: String = "לוח זמנים"
     override val commonLines: String = "קווים נפוצים"
     override val saveAs: String = "שמור בתור"

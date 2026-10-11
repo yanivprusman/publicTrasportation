@@ -1,6 +1,7 @@
 package com.automatelinux.pt.ui
 
 import android.Manifest
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import com.automatelinux.pt.BuildConfig
@@ -10,6 +11,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -50,7 +53,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.SmallFloatingActionButton
+import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -105,6 +111,7 @@ import com.automatelinux.pt.ui.components.PreSuggestion
 import com.automatelinux.pt.ui.lines.LineShapeData
 import com.automatelinux.pt.ui.lines.LineStopsSheet
 import com.automatelinux.pt.ui.lines.LinesBrowserPanel
+import com.automatelinux.pt.ui.lines.lineDestination
 import com.automatelinux.pt.map.LatLng
 import com.automatelinux.pt.ui.map.MapStyles
 import com.automatelinux.pt.ui.map.PtMap
@@ -215,6 +222,9 @@ fun MainScreen(
     var reminderJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
     var selectedLine by remember { mutableStateOf<String?>(null) }
     var lineShapeData by remember { mutableStateOf(LineShapeData()) }
+    // The one direction of [selectedLine] being looked at full screen, or null while
+    // the Lines sheet is the view.
+    var lineOnMap by remember { mutableStateOf<String?>(null) }
     // A journey outlives this screen — it is owned by JourneySession and, while it is
     // live, by a foreground service. The UI only observes it, so leaving the app (or
     // searching for something else mid-ride) no longer ends the trip.
@@ -634,6 +644,20 @@ fun MainScreen(
         }
     }
 
+    // Looking at one line on the map is the same kind of screen: the sheet goes away
+    // and comes back when the rider is done. Leaving the tab or picking another line
+    // ends it — the direction belongs to the line it was opened from.
+    LaunchedEffect(activeTab, selectedLine) { lineOnMap = null }
+    val lineOnMapShown = lineOnMap != null
+    LaunchedEffect(lineOnMapShown) {
+        if (lineOnMapShown) {
+            bottomSheetState.hide()
+        } else if (!isTracking && bottomSheetState.currentValue == SheetValue.Hidden) {
+            bottomSheetState.partialExpand()
+        }
+    }
+    BackHandler(enabled = lineOnMapShown) { lineOnMap = null }
+
     LaunchedEffect(Unit) {
         // A trip arriving via a shared link supplies the origin — GPS must not overwrite it.
         if (routingState.origin == null && sharedTrip == null) {
@@ -1039,12 +1063,16 @@ fun MainScreen(
                                         scope.launch {
                                             try {
                                                 val shape = routingViewModel.getLineShape(line)
-                                                lineShapeData = LineShapeData(directions = shape)
+                                                lineShapeData = LineShapeData(
+                                                    directions = shape.directions,
+                                                    headsigns = shape.headsigns
+                                                )
                                             } catch (e: Exception) {
                                                 lineShapeData = LineShapeData(error = e.message ?: "Failed to load")
                                             }
                                         }
                                     },
+                                    onShowDirection = { lineOnMap = it },
                                     favoriteLines = favoriteLines
                                 )
                             }
@@ -1184,7 +1212,11 @@ fun MainScreen(
                         lineShape = routingState.trackedBus?.shape
                             ?.takeIf { it.isNotEmpty() }
                             ?.let { mapOf("trip" to it) }
-                            ?: if (activeTab == ActiveTab.LINES) lineShapeData.directions else null,
+                            ?: if (activeTab == ActiveTab.LINES) {
+                                lineOnMap?.let { dir ->
+                                    lineShapeData.directions[dir]?.let { mapOf(dir to it) }
+                                } ?: lineShapeData.directions
+                            } else null,
                         lineShapeFitsCamera = routingState.trackedBus?.shape?.isEmpty() != false,
                         // On a live journey the bus being waited for is drawn the same
                         // way a tracked bus is: watching it crawl the map toward your
@@ -1269,6 +1301,55 @@ fun MainScreen(
                         }
                     }
                 )
+
+                // A line's direction looked at the way a tracked bus is: the sheet steps
+                // aside so the whole route is on screen, and this card is the way back.
+                val shownDirection = lineOnMap
+                if (shownDirection != null && activeTab == ActiveTab.LINES &&
+                    routingState.trackedBus == null
+                ) {
+                    val towards = lineDestination(lineShapeData.headsigns[shownDirection])
+                        ?.let { strings.lineTowards(it) }
+                        ?: strings.direction(
+                            shownDirection.toIntOrNull()?.plus(1)?.toString() ?: shownDirection
+                        )
+                    val otherDirection = lineShapeData.directions.keys
+                        .firstOrNull { it != shownDirection }
+                    Surface(
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .navigationBarsPadding()
+                            .padding(start = 12.dp, end = 12.dp, bottom = 24.dp)
+                            .fillMaxWidth(),
+                        color = MaterialTheme.colorScheme.surface,
+                        shape = RoundedCornerShape(16.dp),
+                        shadowElevation = 6.dp
+                    ) {
+                        Column(modifier = Modifier.padding(14.dp)) {
+                            Text(
+                                text = "${strings.lineShape} ${selectedLine.orEmpty()}",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = towards,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(Modifier.height(10.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                if (otherDirection != null) {
+                                    OutlinedButton(onClick = { lineOnMap = otherDirection }) {
+                                        Text(strings.lineOtherDirection)
+                                    }
+                                }
+                                Button(onClick = { lineOnMap = null }) {
+                                    Text(strings.lineBackToLines)
+                                }
+                            }
+                        }
+                    }
+                }
 
                 // Tracking takes the screen rather than perching on it: the sheet steps
                 // aside (below), the map is the whole view, and the card sits at the

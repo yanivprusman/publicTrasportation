@@ -119,6 +119,14 @@ data class RouteLeg(
     val onboard: Boolean = false
 )
 
+/** `/api/line-shape?meta=full`: each GTFS direction's geometry and its route_long_name. */
+@Serializable
+data class LineShapeResponse(
+    val directions: Map<String, List<List<Double>>> = emptyMap(),
+    /** "origin-city<->destination-city-N#", as GTFS spells route_long_name. */
+    val headsigns: Map<String, String> = emptyMap()
+)
+
 @Serializable
 data class TripShapeResponse(
     val shapeId: String = "",
