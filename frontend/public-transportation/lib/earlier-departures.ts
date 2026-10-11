@@ -17,9 +17,11 @@ import type { HopItinerary, HopLeg, HopStop, PlanFromStop } from './scooter-hops
  * each itinerary, the first ride's line is looked up at its boarding stop for
  * earlier trips the rider can reach in time; each one is ridden to the same
  * alighting stop and a fresh plan from there finishes the journey. A candidate is
- * kept when it arrives sooner than the itinerary it came from and no shown journey
- * goes the same way and arrives as soon — a different line tying it is exactly the
- * case this exists for, so it does not count.
+ * kept when it arrives no later than the itinerary it came from — including when it
+ * arrives at the SAME time, having waited at the transfer for the same onward bus.
+ * The rider standing at the stop as the earlier bus pulls in wants to know it is
+ * theirs; the wait is on the card. A different line tying it is exactly the case
+ * this exists for, so only a shown journey on the very same trips makes it a repeat.
  */
 
 export interface LineStop extends HopStop {
@@ -37,6 +39,11 @@ export interface LineLeg extends HopLeg {
 
 export interface LineItinerary extends HopItinerary {
   legs?: LineLeg[]
+  /**
+   * Set on every journey this module adds. It may go the same way as a shown one,
+   * only on an earlier bus, so the route's one-card-per-way dedupe must not merge them.
+   */
+  earlierDeparture?: boolean
 }
 
 /** Departures from [stopId] from [timeIso] on, as MOTIS /api/v1/stoptimes returns them. */
@@ -50,8 +57,6 @@ export type TripById = (tripId: string) => Promise<LineItinerary>
 
 /** Leaving the bus and crossing to the next one — what MOTIS itself allows for a change. */
 const TRANSFER_MS = 2 * 60_000
-/** An earlier bus must buy real time over the one already shown. */
-const MIN_GAIN_MS = 60_000
 /** Earlier trips tried per line; a third earlier bus the rider can still reach is rare. */
 const MAX_TRIPS_PER_LINE = 3
 const MAX_RESULTS = 3
@@ -216,10 +221,11 @@ export async function expandEarlierDepartures(
               duration: Math.round((ms(endTime) - ms(startTime)) / 1000),
               transfers: Math.max(0, legs.filter(l => !isStreetMode(l.mode)).length - 1),
               legs,
+              earlierDeparture: true,
             }
             if (!best || ms(candidate.endTime) < ms(best.endTime)) best = candidate
           }
-          if (best && ms(best.endTime) <= ms(src.itin.endTime) - MIN_GAIN_MS) out.push(best)
+          if (best && ms(best.endTime) <= ms(src.itin.endTime)) out.push(best)
         } catch (error) {
           console.error('earlier departure plan failed:', error instanceof Error ? error.message : String(error))
         }
@@ -228,17 +234,21 @@ export async function expandEarlierDepartures(
     })
   )
 
-  // One journey per way of going, the earliest; none that a shown journey going the
-  // same way already gets there as soon as.
+  // One journey per way of going: the earliest arrival, and on a tie the earliest
+  // bus — the one that may be pulling in now. None the results already hold trip
+  // for trip.
   const byWay = new Map<string, LineItinerary>()
   for (const c of perSource.flat()) {
     const key = way(c)
     const held = byWay.get(key)
-    if (!held || ms(c.endTime) < ms(held.endTime)) byWay.set(key, c)
+    if (!held || ms(c.endTime) < ms(held.endTime) || (ms(c.endTime) === ms(held.endTime) && ms(c.startTime) < ms(held.startTime))) {
+      byWay.set(key, c)
+    }
   }
-  const shown = (c: LineItinerary) => itineraries.some(o => way(o) === way(c) && ms(o.endTime) <= ms(c.endTime))
+  const trips = (itin: LineItinerary) => transitLegs(itin).map(l => l.tripId || '').join('|')
+  const shown = (c: LineItinerary) => itineraries.some(o => trips(o) === trips(c))
   return [...byWay.values()]
     .filter(c => !shown(c))
-    .sort((a, b) => ms(a.endTime) - ms(b.endTime))
+    .sort((a, b) => ms(a.endTime) - ms(b.endTime) || ms(a.startTime) - ms(b.startTime))
     .slice(0, MAX_RESULTS)
 }

@@ -90,6 +90,8 @@ interface MotisItinerary {
   endTime?: string;
   transfers?: number;
   legs?: MotisLeg[];
+  // Added by lib/earlier-departures.ts: an earlier bus of a shown way, not a repeat of it.
+  earlierDeparture?: boolean;
 }
 
 interface MotisPlanResponse {
@@ -213,8 +215,9 @@ function transformMotisResponse(motisData: MotisPlanResponse, includeDirect: boo
   ];
   const itineraries = allItineraries
     .filter(itin => {
-      const fp = itineraryFingerprint(itin);
-      if (!fp) return true; // walk-only routes are always unique
+      const way = itineraryFingerprint(itin);
+      if (!way) return true; // walk-only routes are always unique
+      const fp = itin.earlierDeparture ? `${way}@${itin.startTime}` : way;
       if (seen.has(fp)) return false;
       seen.add(fp);
       return true;
