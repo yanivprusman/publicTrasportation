@@ -7,6 +7,7 @@ import { rideFare } from '@/lib/gtfs-fares';
 import { journeyFare, PricedRide } from '@/lib/journey-fare';
 import { NotOnLineError, planFromOnboard } from '@/lib/onboard';
 import { expandScooterHops } from '@/lib/scooter-hops';
+import { expandEarlierDepartures, LineItinerary } from '@/lib/earlier-departures';
 
 const MOTIS_PORT = process.env.MOTIS_PORT || '3504';
 const MOTIS_BASE = `http://localhost:${MOTIS_PORT}`;
@@ -708,28 +709,66 @@ export async function GET(request: NextRequest) {
     }
 
     const motisData: MotisPlanResponse = await response.json();
+    // A plan from a stop partway through the journey, with the search's own modes
+    // and street limits. Both the scooter hops and the earlier departures finish
+    // their journeys with it.
+    const planFromStop = async (lat: number, lon: number, timeIso: string) => {
+      const hopParams = new URLSearchParams({
+        fromPlace: `${lat},${lon}`,
+        toPlace: `${toLat},${toLon}`,
+        time: timeIso,
+        arriveBy: 'false',
+        numItineraries: '3',
+        pedestrianSpeed: PEDESTRIAN_SPEED,
+        maxPreTransitTime: String(streetCapSeconds),
+        maxPostTransitTime: String(streetCapSeconds),
+      });
+      if (transitModes) hopParams.set('transitModes', transitModes.join(','));
+      if (scooter) {
+        for (const [k, v] of Object.entries(scooterPlanParams(streetCapSeconds, scooterSpeedKmh))) hopParams.set(k, v);
+      }
+      const hopResponse = await fetch(`${MOTIS_BASE}/api/v1/plan?${hopParams}`, {
+        signal: AbortSignal.timeout(15000),
+      });
+      if (!hopResponse.ok) throw new Error(`MOTIS returned ${hopResponse.status}`);
+      return hopResponse.json();
+    };
+    if (!pageCursor && !isArriveBy) {
+      // MOTIS drops a line's earlier bus when another line ties it; a rider shown
+      // the line still wants it. See lib/earlier-departures.ts.
+      const earlier = await expandEarlierDepartures(
+        (motisData.itineraries || []) as LineItinerary[],
+        routeTime,
+        async (stopId, timeIso) => {
+          const stParams = new URLSearchParams({ stopId, time: timeIso, n: '30' });
+          const stResponse = await fetch(`${MOTIS_BASE}/api/v1/stoptimes?${stParams}`, {
+            signal: AbortSignal.timeout(15000),
+          });
+          if (!stResponse.ok) throw new Error(`MOTIS stoptimes returned ${stResponse.status}`);
+          return (await stResponse.json()).stopTimes || [];
+        },
+        async tripId => {
+          const tripResponse = await fetch(`${MOTIS_BASE}/api/v1/trip?${new URLSearchParams({ tripId })}`, {
+            signal: AbortSignal.timeout(15000),
+          });
+          if (!tripResponse.ok) throw new Error(`MOTIS trip returned ${tripResponse.status}`);
+          return tripResponse.json();
+        },
+        planFromStop
+      );
+      // Each goes in departure order, ahead of the later bus it came from — the
+      // fingerprint dedupe below keeps the first of a way, which must be this one.
+      const list = motisData.itineraries || [];
+      for (const itin of earlier as MotisItinerary[]) {
+        const at = list.findIndex(o => Date.parse(o.startTime || '') > Date.parse(itin.startTime || ''));
+        list.splice(at < 0 ? list.length : at, 0, itin);
+      }
+      motisData.itineraries = list;
+    }
     if (scooter) {
       // MOTIS rides only at the trip's two ends; the hop in the middle — off the
       // bus early, ride to the train — is planned here. See lib/scooter-hops.ts.
-      const hops = await expandScooterHops(motisData.itineraries || [], async (lat, lon, timeIso) => {
-        const hopParams = new URLSearchParams({
-          fromPlace: `${lat},${lon}`,
-          toPlace: `${toLat},${toLon}`,
-          time: timeIso,
-          arriveBy: 'false',
-          numItineraries: '3',
-          pedestrianSpeed: PEDESTRIAN_SPEED,
-          maxPreTransitTime: String(streetCapSeconds),
-          maxPostTransitTime: String(streetCapSeconds),
-        });
-        if (transitModes) hopParams.set('transitModes', transitModes.join(','));
-        for (const [k, v] of Object.entries(scooterPlanParams(streetCapSeconds, scooterSpeedKmh))) hopParams.set(k, v);
-        const hopResponse = await fetch(`${MOTIS_BASE}/api/v1/plan?${hopParams}`, {
-          signal: AbortSignal.timeout(15000),
-        });
-        if (!hopResponse.ok) throw new Error(`MOTIS returned ${hopResponse.status}`);
-        return hopResponse.json();
-      });
+      const hops = await expandScooterHops(motisData.itineraries || [], planFromStop);
       motisData.itineraries = [...(motisData.itineraries || []), ...(hops as MotisItinerary[])];
     }
     const result = {
