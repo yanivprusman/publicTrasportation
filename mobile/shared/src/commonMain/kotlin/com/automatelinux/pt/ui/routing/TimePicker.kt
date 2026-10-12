@@ -28,9 +28,6 @@ import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.LocalTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
-import kotlinx.datetime.format.DayOfWeekNames
-import kotlinx.datetime.format.MonthNames
-import kotlinx.datetime.format.Padding
 import kotlinx.datetime.toInstant
 import kotlinx.datetime.toLocalDateTime
 import kotlinx.datetime.todayIn
@@ -39,18 +36,13 @@ enum class TimeMode { NOW, DEPART, ARRIVE }
 
 private val sysTz get() = TimeZone.currentSystemDefault()
 
-// Equivalent of the old DateTimeFormatter pattern "EEE, MMM d  HH:mm" (e.g. "Wed, Jun 3  14:30").
-private val departureLabelFormat = LocalDateTime.Format {
-    dayOfWeek(DayOfWeekNames.ENGLISH_ABBREVIATED)
-    chars(", ")
-    monthName(MonthNames.ENGLISH_ABBREVIATED)
-    chars(" ")
-    dayOfMonth(Padding.NONE)
-    chars("  ")
-    hour()
-    chars(":")
-    minute()
-}
+// Material 3's DatePicker counts days in UTC: the millis it takes and gives back
+// are UTC midnights. Seeding it with a LOCAL midnight (21:00 UTC the evening
+// before, in Israel) made it highlight yesterday and hand yesterday back on
+// confirm, so "depart at" with the date untouched searched the previous day
+// (found 2026-10-12: results stamped אתמול / כבר יצא). The date crosses this
+// boundary in UTC both ways; only the final LocalDateTime → Instant is local.
+private val pickerTz = TimeZone.UTC
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -106,8 +98,13 @@ fun TimePickerSection(
         }
 
         if (departureTime != null) {
+            // Same words as the folded summary — "מחר 06:46", "אתמול 06:46", or just the
+            // time for today — not an English "Sun, Oct 11" in the middle of a Hebrew form.
+            val local = departureTime.toLocalDateTime(sysTz)
+            val hm = local.time.toString().take(5)
+            val day = departureDayLabel(departureTime.toString(), Clock.System.now(), strings)
             Text(
-                text = departureLabelFormat.format(departureTime.toLocalDateTime(sysTz)),
+                text = if (day != null) "$day $hm" else hm,
                 modifier = Modifier.padding(top = 4.dp),
                 style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
                 color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant
@@ -117,14 +114,14 @@ fun TimePickerSection(
 
     if (showDatePicker) {
         val datePickerState = rememberDatePickerState(
-            initialSelectedDateMillis = selectedDate.atStartOfDayIn(sysTz).toEpochMilliseconds()
+            initialSelectedDateMillis = selectedDate.atStartOfDayIn(pickerTz).toEpochMilliseconds()
         )
         DatePickerDialog(
             onDismissRequest = { showDatePicker = false },
             confirmButton = {
                 TextButton(onClick = {
                     datePickerState.selectedDateMillis?.let { millis ->
-                        selectedDate = Instant.fromEpochMilliseconds(millis).toLocalDateTime(sysTz).date
+                        selectedDate = Instant.fromEpochMilliseconds(millis).toLocalDateTime(pickerTz).date
                     }
                     showDatePicker = false
                     showTimePicker = true

@@ -95,7 +95,8 @@ fun RoutePlannerPanel(
     sortMode: RouteSortMode = RouteSortMode.ARRIVES_FIRST,
     onSortChange: ((RouteSortMode) -> Unit)? = null,
     onTravelModeChange: ((TravelMode) -> Unit)? = null,
-    onToggleModeFilter: ((TransitFilter) -> Unit)? = null,
+    /** The mode row: all, or one. Tapping the lone mode again returns to all. */
+    onSelectMode: ((TransitFilter) -> Unit)? = null,
     onShowAllModes: (() -> Unit)? = null,
     /** "On a bus?" — the rider says which line they are on and plans from it. */
     onRidingClick: (() -> Unit)? = null,
@@ -157,6 +158,12 @@ fun RoutePlannerPanel(
                 onToggleFavorite = onToggleFavoriteRoute?.takeIf { state.canStarRoute }
             )
             Spacer(Modifier.height(8.dp))
+            // A mode filter is the one option a rider changes while reading results, and
+            // the folded form hides the row that set it. Keep it in sight until cleared.
+            if (onSelectMode != null && state.enabledModes.size < TransitFilter.entries.size) {
+                TransitModeRow(enabledModes = state.enabledModes, onSelectMode = onSelectMode)
+                Spacer(Modifier.height(8.dp))
+            }
         } else {
         if (homePlace != null && workPlace != null && onQuickRoute != null && state.results == null) {
             FrequentRouteCard(
@@ -344,7 +351,7 @@ fun RoutePlannerPanel(
             )
         }
 
-        if (onToggleModeFilter != null && onMaxWalkChange != null &&
+        if (onSelectMode != null && onMaxWalkChange != null &&
             onScooterChange != null && onMaxRideChange != null && onScooterSpeedChange != null
         ) {
             Spacer(Modifier.height(4.dp))
@@ -354,7 +361,7 @@ fun RoutePlannerPanel(
                 scooter = state.scooter,
                 maxRideMinutes = state.maxRideMinutes,
                 scooterSpeedKmh = state.scooterSpeedKmh,
-                onToggleMode = onToggleModeFilter,
+                onSelectMode = onSelectMode,
                 onMaxWalkChange = onMaxWalkChange,
                 onScooterChange = onScooterChange,
                 onMaxRideChange = onMaxRideChange,
@@ -502,6 +509,10 @@ private fun CollapsedSearchSummary(
         val when_ = if (day != null) "$day $hm" else hm
         if (state.arriveBy) "${strings.arriveBy} $when_" else "${strings.departAt} $when_"
     } ?: strings.now
+    // "עכשיו · רכבת בלבד": the folded form is the only thing on screen that says the
+    // results are filtered, so it says which way.
+    val modeText = state.enabledModes.singleOrNull()?.let { strings.onlyMode(it.label(strings)) }
+    val subtitle = if (modeText != null) "$timeText · $modeText" else timeText
     Card(
         onClick = onExpand,
         shape = RoundedCornerShape(12.dp),
@@ -541,7 +552,7 @@ private fun CollapsedSearchSummary(
                 }
                 val via = state.via
                 Text(
-                    if (via != null) "$timeText · ${strings.stopAlongTheWay}: ${via.name}" else timeText,
+                    if (via != null) "$subtitle · ${strings.stopAlongTheWay}: ${via.name}" else subtitle,
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,

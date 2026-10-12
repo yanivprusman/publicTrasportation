@@ -51,11 +51,15 @@ class RoutingViewModel(
     private var trackingJob: Job? = null
     private var trackSeq = 0
 
-    fun toggleModeFilter(filter: TransitFilter) {
+    /**
+     * The mode row is "all, or one": tapping a mode shows that mode alone, tapping the
+     * mode that is already alone goes back to all. It used to be three exclude-toggles
+     * that all started "on", so a rider tapping Bus to see buses lost the buses — and
+     * could not tell why, because the form folded over the chips (2026-10-12).
+     */
+    fun selectOnlyMode(filter: TransitFilter) {
         val current = _state.value.enabledModes
-        // The last enabled mode can't be turned off — an all-off filter means "no routes".
-        if (current == setOf(filter)) return
-        val updated = if (filter in current) current - filter else current + filter
+        val updated = if (current == setOf(filter)) TransitFilter.entries.toSet() else setOf(filter)
         settingsStore.routeModes = updated.map { it.apiKey }.toSet()
         _state.value = _state.value.copy(enabledModes = updated)
         researchIfSearched()
@@ -501,7 +505,9 @@ class RoutingViewModel(
         private fun restoreModes(store: SettingsStore): Set<TransitFilter> {
             val saved = store.routeModes
             val restored = TransitFilter.entries.filter { it.apiKey in saved }.toSet()
-            return restored.ifEmpty { TransitFilter.entries.toSet() }
+            // The row offers all or one. A two-mode set is what the old exclude-toggles
+            // could save; no chip would show it, so it opens as all.
+            return if (restored.size == 1) restored else TransitFilter.entries.toSet()
         }
     }
 

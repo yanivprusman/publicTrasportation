@@ -4,7 +4,6 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -47,7 +46,7 @@ fun TransitFilter.label(strings: AppStrings): String = when (this) {
 }
 
 /**
- * Route options: which transit modes to route with, whether the rider has a scooter
+ * Route options: which transit mode to route with (all, or one), whether the rider has a scooter
  * that travels with them, and how far they will walk — or ride — to a stop. Changing
  * anything re-runs the active search.
  */
@@ -58,7 +57,7 @@ fun RouteOptionsSection(
     scooter: Boolean,
     maxRideMinutes: Int?,
     scooterSpeedKmh: Int,
-    onToggleMode: (TransitFilter) -> Unit,
+    onSelectMode: (TransitFilter) -> Unit,
     onMaxWalkChange: (Int?) -> Unit,
     onScooterChange: (Boolean) -> Unit,
     onMaxRideChange: (Int?) -> Unit,
@@ -68,29 +67,7 @@ fun RouteOptionsSection(
     val strings = LocalAppStrings.current
 
     Column(modifier = modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            ModeChip(
-                filter = TransitFilter.BUS,
-                icon = Icons.Default.DirectionsBus,
-                enabledModes = enabledModes,
-                onToggleMode = onToggleMode
-            )
-            ModeChip(
-                filter = TransitFilter.TRAIN,
-                icon = Icons.Default.Train,
-                enabledModes = enabledModes,
-                onToggleMode = onToggleMode
-            )
-            ModeChip(
-                filter = TransitFilter.TRAM,
-                icon = Icons.Default.Tram,
-                enabledModes = enabledModes,
-                onToggleMode = onToggleMode
-            )
-        }
+        TransitModeRow(enabledModes = enabledModes, onSelectMode = onSelectMode)
 
         Spacer(Modifier.height(4.dp))
 
@@ -177,34 +154,57 @@ fun RouteOptionsSection(
                 }
             }
         }
+    }
+}
 
-        if (enabledModes.size < TransitFilter.entries.size) {
-            Spacer(Modifier.height(2.dp))
-            Text(
-                text = strings.filteredModesHint,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.tertiary
-            )
-        }
+/**
+ * The mode row: [all] [bus] [train] [light rail], one selected at a time. "All" is
+ * the default and visibly the selected chip, so the first tap on Bus reads as "bus
+ * only", never as "hide buses". Shown in the search form, and again above the
+ * results while anything but "all" is selected, so the filter can be cleared
+ * without unfolding the form.
+ */
+@Composable
+fun TransitModeRow(
+    enabledModes: Set<TransitFilter>,
+    onSelectMode: (TransitFilter) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val strings = LocalAppStrings.current
+    val all = enabledModes.size == TransitFilter.entries.size
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        FilterChip(
+            selected = all,
+            onClick = { if (!all) onSelectMode(enabledModes.first()) },
+            label = { Text(strings.allModes, maxLines = 1) }
+        )
+        ModeChip(TransitFilter.BUS, Icons.Default.DirectionsBus, enabledModes, onSelectMode)
+        ModeChip(TransitFilter.TRAIN, Icons.Default.Train, enabledModes, onSelectMode)
+        ModeChip(TransitFilter.TRAM, Icons.Default.Tram, enabledModes, onSelectMode)
     }
 }
 
 @Composable
-private fun RowScope.ModeChip(
+private fun ModeChip(
     filter: TransitFilter,
     icon: ImageVector,
     enabledModes: Set<TransitFilter>,
-    onToggleMode: (TransitFilter) -> Unit
+    onSelectMode: (TransitFilter) -> Unit
 ) {
-    val selected = filter in enabledModes
+    // Lit only when this mode is the one selected — with "all" on, no mode chip is.
+    val selected = enabledModes == setOf(filter)
     FilterChip(
         selected = selected,
-        onClick = { onToggleMode(filter) },
+        onClick = { onSelectMode(filter) },
         label = { Text(filter.label(LocalAppStrings.current), maxLines = 1) },
         leadingIcon = {
             Icon(icon, contentDescription = null, modifier = Modifier.size(FilterChipDefaults.IconSize))
-        },
-        modifier = Modifier.weight(1f)
+        }
     )
 }
 

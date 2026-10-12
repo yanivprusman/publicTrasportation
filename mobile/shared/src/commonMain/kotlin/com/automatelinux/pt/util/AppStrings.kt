@@ -165,7 +165,10 @@ interface AppStrings {
     val maxWalkLabel: String
     val noWalkLimit: String
     val walkMinutesChip: (Int) -> String
-    val filteredModesHint: String
+    /** The mode row's first chip: every mode, the default. */
+    val allModes: String
+    /** The folded search summary's note that one mode is selected: "רכבת בלבד". */
+    val onlyMode: (String) -> String
     val noRoutesWithModes: (String) -> String
     val showAllModes: String
     val onABus: String
@@ -557,7 +560,8 @@ val EnStrings: AppStrings = object : AppStrings {
     override val maxWalkLabel: String = "Max walk"
     override val noWalkLimit: String = "No limit"
     override val walkMinutesChip: (Int) -> String = { m -> "$m min" }
-    override val filteredModesHint: String = "Mode filter is on — some routes are hidden"
+    override val allModes: String = "All"
+    override val onlyMode: (String) -> String = { mode -> "$mode only" }
     override val noRoutesWithModes: (String) -> String = { modes -> "No route with $modes only — the mode filter is hiding the rest." }
     override val showAllModes: String = "Show all modes"
     override val onABus: String = "On a bus?"
@@ -944,7 +948,8 @@ val HeStrings: AppStrings = object : AppStrings {
     override val maxWalkLabel: String = "הליכה מקסימלית"
     override val noWalkLimit: String = "ללא הגבלה"
     override val walkMinutesChip: (Int) -> String = { m -> "$m דק׳" }
-    override val filteredModesHint: String = "סינון אמצעי נסיעה פעיל — חלק מהמסלולים מוסתרים"
+    override val allModes: String = "הכל"
+    override val onlyMode: (String) -> String = { mode -> "$mode בלבד" }
     override val noRoutesWithModes: (String) -> String = { modes -> "אין מסלול עם $modes בלבד — סינון אמצעי הנסיעה מסתיר את השאר." }
     override val showAllModes: String = "הצגת כל אמצעי הנסיעה"
     override val onABus: String = "באוטובוס?"
