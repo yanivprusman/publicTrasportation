@@ -68,9 +68,11 @@ function loadOptions(): RouteOptionsState {
     const scooterSpeedKmh = SCOOTER_SPEED_CHOICES.includes(parsed?.scooterSpeedKmh)
       ? parsed.scooterSpeedKmh
       : DEFAULT_OPTIONS.scooterSpeedKmh
-    // A stored state with every mode off can't produce any route — treat it
-    // as corrupt and fall back to all modes on.
-    if (!modes.bus && !modes.train && !modes.tram) return { ...DEFAULT_OPTIONS, maxWalkMinutes, scooter, maxRideMinutes, scooterSpeedKmh }
+    // The row offers all or one. A stored set of two is what the old exclude-toggles
+    // could save (no chip would show it), and all-off can't produce a route; both
+    // open as all modes on.
+    const on = [modes.bus, modes.train, modes.tram].filter(Boolean).length
+    if (on !== 1) return { ...DEFAULT_OPTIONS, maxWalkMinutes, scooter, maxRideMinutes, scooterSpeedKmh }
     return { modes, maxWalkMinutes, scooter, maxRideMinutes, scooterSpeedKmh }
   } catch {
     return DEFAULT_OPTIONS
@@ -118,8 +120,14 @@ export function toRouteQueryOptions(state: RouteOptionsState): RouteQueryParams 
 
 export interface UseRouteOptionsReturn {
   options: RouteOptionsState
-  /** Toggles a mode chip. Ignores the click that would turn off the last active mode. */
-  toggleMode: (mode: TransitModeKey) => void
+  /**
+   * The mode row is all, or one: 'all' turns every mode on; a mode shows that mode
+   * alone, and selecting the mode that is already alone returns to all. (Three
+   * exclude-toggles that all started on made the first click on Bus hide buses.)
+   */
+  selectMode: (mode: TransitModeKey | 'all') => void
+  /** The one selected mode, or null when every mode is on. */
+  onlyMode: TransitModeKey | null
   setMaxWalkMinutes: (minutes: number) => void
   toggleScooter: () => void
   setMaxRideMinutes: (minutes: number) => void
@@ -136,11 +144,11 @@ export function useRouteOptions(): UseRouteOptionsReturn {
     } catch {}
   }, [options])
 
-  const toggleMode = useCallback((mode: TransitModeKey) => {
+  const selectMode = useCallback((mode: TransitModeKey | 'all') => {
     setOptions(prev => {
-      const next = { ...prev.modes, [mode]: !prev.modes[mode] }
-      if (!next.bus && !next.train && !next.tram) return prev
-      return { ...prev, modes: next }
+      const alone = onlyModeOf(prev.modes)
+      if (mode === 'all' || alone === mode) return { ...prev, modes: { bus: true, train: true, tram: true } }
+      return { ...prev, modes: { bus: mode === 'bus', train: mode === 'train', tram: mode === 'tram' } }
     })
   }, [])
 
@@ -163,5 +171,13 @@ export function useRouteOptions(): UseRouteOptionsReturn {
     setOptions(prev => ({ ...prev, scooterSpeedKmh: kmh }))
   }, [])
 
-  return { options, toggleMode, setMaxWalkMinutes, toggleScooter, setMaxRideMinutes, setScooterSpeedKmh, isDefault: isDefaultOptions(options) }
+  return {
+    options, selectMode, onlyMode: onlyModeOf(options.modes),
+    setMaxWalkMinutes, toggleScooter, setMaxRideMinutes, setScooterSpeedKmh, isDefault: isDefaultOptions(options),
+  }
+}
+
+export function onlyModeOf(modes: TransitModeFilter): TransitModeKey | null {
+  const on = (['bus', 'train', 'tram'] as TransitModeKey[]).filter(k => modes[k])
+  return on.length === 1 ? on[0] : null
 }

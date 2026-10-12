@@ -16,7 +16,7 @@ interface RouteOptionsProps {
 
 export default function RouteOptions({ routeOptions }: RouteOptionsProps) {
   const { t } = useI18n()
-  const { options, toggleMode, setMaxWalkMinutes, toggleScooter, setMaxRideMinutes, setScooterSpeedKmh } = routeOptions
+  const { options, selectMode, onlyMode, setMaxWalkMinutes, toggleScooter, setMaxRideMinutes, setScooterSpeedKmh } = routeOptions
   // With a scooter the first/last mile is ridden, not walked: the cap row keeps
   // its place but asks about the ride, with choices sized for one.
   const capChoices = options.scooter ? RIDE_MINUTE_CHOICES : WALK_MINUTE_CHOICES
@@ -26,19 +26,31 @@ export default function RouteOptions({ routeOptions }: RouteOptionsProps) {
 
   return (
     <div className={styles.wrapper}>
-      <div className={styles.modesRow}>
+      {/* All, or one: the lit chip is the one the results are filtered to, and
+          "all" is lit by default, so the first click on Bus reads as "bus only". */}
+      <div className={styles.modesRow} role="group" aria-label={t('options.modesLabel')}>
+        <button
+          type="button"
+          className={`${styles.modeChip} ${onlyMode === null ? styles.modeChipActive : ''}`}
+          onClick={() => selectMode('all')}
+          aria-pressed={onlyMode === null}
+          title={t('options.selectAllModes')}
+          data-id="select-mode-all"
+        >
+          {t('options.allModes')}
+        </button>
         {MODE_CHIPS.map(({ key, icon, labelKey }) => {
-          const active = options.modes[key]
+          const active = onlyMode === key
           const label = t(labelKey)
           return (
             <button
               key={key}
               type="button"
               className={`${styles.modeChip} ${active ? styles.modeChipActive : ''}`}
-              onClick={() => toggleMode(key)}
+              onClick={() => selectMode(key)}
               aria-pressed={active}
-              title={active ? t('options.excludeMode', { mode: label }) : t('options.includeMode', { mode: label })}
-              data-id={`toggle-mode-${key}`}
+              title={active ? t('options.selectAllModes') : t('options.selectOnlyMode', { mode: label })}
+              data-id={`select-mode-${key}`}
             >
               <span className={styles.modeIcon} aria-hidden="true">{icon}</span>
               {label}

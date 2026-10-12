@@ -20,6 +20,8 @@ import type { LiveBusState } from '../../hooks/useLiveBus'
 import type { Coordinates, GeocodeSuggestion } from '../../types'
 import styles from './RoutePlanner.module.css'
 
+const MODE_LABEL_KEY = { bus: 'modes.BUS', train: 'modes.RAIL', tram: 'options.tramLabel' } as const
+
 interface RoutePlannerProps {
   routing: UseRoutingReturn
   sheetState: SheetState
@@ -42,6 +44,9 @@ export default function RoutePlanner({
   const places = useSavedPlaces()
   const { theme, toggleTheme } = useTheme()
   const { lang, t, tm, toggleLanguage } = useI18n()
+  // The folded bar is all that says the results are filtered; name the mode.
+  const onlyMode = routing.routeOptions.onlyMode
+  const modeFilterNote = onlyMode === null ? '' : ` · ${t('options.onlyMode', { mode: t(MODE_LABEL_KEY[onlyMode]) })}`
 
   const handleUseAsOrigin = useCallback((place: GeocodeSuggestion) => {
     routing.setOrigin(place)
@@ -232,7 +237,7 @@ export default function RoutePlanner({
           {sheetState === 'collapsed' ? (
             <div className={styles.searchBar} onClick={handleCollapsedClick} data-id="open-route-planner">
               {routing.origin && routing.destination
-                ? `${routing.origin.name} → ${routing.destination.name}`
+                ? `${routing.origin.name} → ${routing.destination.name}${modeFilterNote}`
                 : t('planner.whereTo')}
             </div>
           ) : (

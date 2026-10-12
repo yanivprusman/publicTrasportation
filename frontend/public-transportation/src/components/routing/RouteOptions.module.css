@@ -35,17 +35,6 @@
   transform: scale(0.97);
 }
 
-/* An excluded mode reads as struck out, not merely un-highlighted, so it's
-   obvious those routes won't appear. */
-.modeChip:not(.modeChipActive) {
-  text-decoration: line-through;
-  opacity: 0.6;
-}
-
-.modeChip:not(.modeChipActive) .modeIcon {
-  filter: grayscale(1);
-}
-
 .modeChipActive {
   background: var(--accent);
   color: white;
