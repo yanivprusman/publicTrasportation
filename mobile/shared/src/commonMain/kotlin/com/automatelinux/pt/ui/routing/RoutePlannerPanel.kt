@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.BookmarkAdd
 import androidx.compose.material.icons.filled.DirectionsBus
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.RemoveCircleOutline
 import androidx.compose.material.icons.filled.Place
@@ -55,6 +56,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.automatelinux.pt.data.model.FavoriteRoute
+import com.automatelinux.pt.journey.StartedTrip
 import com.automatelinux.pt.data.model.GeocodeSuggestion
 import com.automatelinux.pt.data.model.Place
 import com.automatelinux.pt.data.model.RouteLeg
@@ -64,6 +66,8 @@ import com.automatelinux.pt.ui.viewmodel.RoutingState
 import com.automatelinux.pt.ui.viewmodel.TransitFilter
 import com.automatelinux.pt.ui.viewmodel.TravelMode
 import com.automatelinux.pt.util.LocalAppStrings
+import androidx.compose.ui.graphics.Color
+import kotlinx.datetime.isoDayNumber
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
@@ -117,6 +121,9 @@ fun RoutePlannerPanel(
     onPickFavoriteRoute: ((FavoriteRoute) -> Unit)? = null,
     isCurrentRouteFavorite: Boolean = false,
     onToggleFavoriteRoute: (() -> Unit)? = null,
+    /** Journeys the rider started, newest first — rejoined, or searched again, on tap. */
+    recentTrips: List<StartedTrip> = emptyList(),
+    onPickRecentTrip: ((StartedTrip) -> Unit)? = null,
     onTrackBus: ((Int, RouteLeg) -> Unit)? = null,
     trackedLegIndex: Int? = null,
     onSetReminder: ((RouteLeg) -> Unit)? = null,
@@ -176,6 +183,11 @@ fun RoutePlannerPanel(
 
         if (favoriteRoutes.isNotEmpty() && onPickFavoriteRoute != null && state.results == null) {
             SavedRoutesStrip(routes = favoriteRoutes, onPick = onPickFavoriteRoute)
+            Spacer(Modifier.height(8.dp))
+        }
+
+        if (recentTrips.isNotEmpty() && onPickRecentTrip != null && state.results == null) {
+            RecentTripsStrip(trips = recentTrips, onPick = onPickRecentTrip)
             Spacer(Modifier.height(8.dp))
         }
 
@@ -733,20 +745,106 @@ private fun SavedRoutesStrip(
     }
 }
 
+/**
+ * The journeys the rider started. One still running on the timetable leads the row
+ * in the strong colour and says "Continue trip" — tapping it rejoins that very bus;
+ * the rest are history, and tapping one searches the same two ends again.
+ */
 @Composable
-private fun SavedRouteEnd(name: String, marker: LocationMarker) {
+private fun RecentTripsStrip(
+    trips: List<StartedTrip>,
+    onPick: (StartedTrip) -> Unit
+) {
+    val strings = LocalAppStrings.current
+    val nowMs = Clock.System.now().toEpochMilliseconds()
+    val zone = TimeZone.currentSystemDefault()
+    val today = Instant.fromEpochMilliseconds(nowMs).toLocalDateTime(zone).date
+    Column(Modifier.fillMaxWidth()) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                Icons.Default.History,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(14.dp)
+            )
+            Text(
+                strings.recentTrips,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 4.dp)
+            )
+        }
+        Spacer(Modifier.height(4.dp))
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())
+        ) {
+            trips.forEach { trip ->
+                val running = trip.resumable(nowMs)
+                val container = if (running) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.surfaceVariant
+                val content = if (running) MaterialTheme.colorScheme.onPrimary
+                    else MaterialTheme.colorScheme.onSurfaceVariant
+                val started = Instant.fromEpochMilliseconds(trip.startedAtMs).toLocalDateTime(zone)
+                val subtitle = if (running) {
+                    val arrive = runCatching {
+                        Instant.parse(trip.itinerary.endTime).toLocalDateTime(zone).time.toString().take(5)
+                    }.getOrNull()
+                    listOfNotNull(strings.continueTrip, arrive).joinToString(" · ")
+                } else {
+                    val time = started.time.toString().take(5)
+                    if (started.date == today) time
+                    else "${strings.weekdayName(started.dayOfWeek.isoDayNumber)} ${started.date.dayOfMonth}/${started.date.monthNumber} $time"
+                }
+                Card(
+                    onClick = { onPick(trip) },
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = container),
+                    modifier = Modifier.width(200.dp)
+                ) {
+                    Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+                        SavedRouteEnd(
+                            trip.origin?.name?.ifBlank { null } ?: strings.placeYourLocation,
+                            LocationMarker.ORIGIN,
+                            content
+                        )
+                        SavedRouteEnd(
+                            trip.destination?.name?.ifBlank { null } ?: strings.placeYourDestination,
+                            LocationMarker.DESTINATION,
+                            content
+                        )
+                        Text(
+                            subtitle,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = if (running) FontWeight.Bold else null,
+                            color = content.copy(alpha = if (running) 1f else 0.7f),
+                            modifier = Modifier.padding(top = 2.dp)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SavedRouteEnd(
+    name: String,
+    marker: LocationMarker,
+    color: Color = MaterialTheme.colorScheme.onPrimaryContainer
+) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(
             if (marker == LocationMarker.ORIGIN) Icons.Outlined.Circle else Icons.Default.Place,
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
+            tint = color.copy(alpha = 0.7f),
             modifier = Modifier.size(14.dp)
         )
         Text(
             name,
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Medium,
-            color = MaterialTheme.colorScheme.onPrimaryContainer,
+            color = color,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(start = 6.dp)

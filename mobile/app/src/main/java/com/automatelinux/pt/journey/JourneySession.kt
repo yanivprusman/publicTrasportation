@@ -11,6 +11,7 @@ import com.automatelinux.pt.data.model.SharePosition
 import com.automatelinux.pt.data.model.extractVehicleMarkers
 import com.automatelinux.pt.util.AppStrings
 import com.automatelinux.pt.util.EnStrings
+import com.automatelinux.pt.util.SettingsStore
 import com.automatelinux.pt.util.TripLink
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -84,10 +85,61 @@ object JourneySession {
     @Volatile
     private var lastFix: GeoFix? = null
 
-    fun start(context: Context, itinerary: Itinerary, strings: AppStrings, live: Boolean) {
+    /** Identity of the running trip in the stored list; null when none runs. */
+    @Volatile
+    private var startedAtMs: Long? = null
+
+    // ---- the stored trips -------------------------------------------------------
+    // Written from the UI thread (start/stop) and the tick (cursor), so every
+    // read-modify-write of the list holds one lock.
+
+    private val storeLock = Any()
+
+    private fun store(): SettingsStore = GlobalContext.get().get()
+
+    private fun record(trip: StartedTrip) = synchronized(storeLock) {
+        val s = store()
+        s.setStartedTrips(
+            recordStartedTrip(s.getStartedTrips(), trip, Clock.System.now().toEpochMilliseconds())
+        )
+    }
+
+    private fun saveCursor(id: Long, c: JourneyCursor) = synchronized(storeLock) {
+        val s = store()
+        s.setStartedTrips(s.getStartedTrips().map { if (it.startedAtMs == id) it.copy(cursor = c) else it })
+    }
+
+    private fun closeRecord(id: Long) = synchronized(storeLock) {
+        val s = store()
+        val now = Clock.System.now().toEpochMilliseconds()
+        s.setStartedTrips(
+            s.getStartedTrips().map {
+                if (it.startedAtMs == id && it.endedAtMs == null) it.copy(endedAtMs = now) else it
+            }
+        )
+    }
+
+    /**
+     * Starts [itinerary], or picks up [resumeFrom] where it was left — its cursor
+     * included, so a rejoined trip neither starts over at the first leg nor calls a
+     * stop it already called.
+     *
+     * [startService] is false only for the service's own restart, which is already
+     * the service and must not ask for itself a second time.
+     */
+    fun start(
+        context: Context,
+        itinerary: Itinerary,
+        strings: AppStrings,
+        live: Boolean,
+        resumeFrom: StartedTrip? = null,
+        startService: Boolean = true
+    ) {
         this.strings = strings
         liveTracking = live
-        cursor = JourneyCursor()
+        cursor = resumeFrom?.cursor ?: JourneyCursor()
+        startedAtMs = resumeFrom?.startedAtMs ?: Clock.System.now().toEpochMilliseconds()
+        record(StartedTrip(startedAtMs!!, itinerary, cursor))
         lastFix = null
         linger?.cancel()
         linger = null
@@ -104,7 +156,7 @@ object JourneySession {
         }
         startLivePolling()
 
-        if (live) {
+        if (live && startService) {
             ContextCompat.startForegroundService(
                 context,
                 Intent(context, JourneyService::class.java).setAction(JourneyService.ACTION_START)
@@ -112,6 +164,26 @@ object JourneySession {
         }
     }
 
+    /**
+     * Rejoins the trip that was interrupted — swiped away, or killed with the phone
+     * in a pocket — if it is still running on the timetable. Returns whether it did.
+     * A trip the rider ended by hand is never rejoined behind their back; it waits
+     * in the recent trips for them to pick.
+     */
+    fun resumeInterrupted(
+        context: Context,
+        strings: AppStrings,
+        live: Boolean,
+        startService: Boolean = true
+    ): Boolean {
+        if (active) return false
+        val now = Clock.System.now().toEpochMilliseconds()
+        val trip = store().getStartedTrips().firstOrNull { it.interrupted(now) } ?: return false
+        start(context, trip.itinerary, strings, live, resumeFrom = trip, startService = startService)
+        return true
+    }
+
+    /** The rider ending the trip. It stays in the recent trips, closed. */
     fun stop(context: Context) {
         if (liveTracking) {
             context.startService(
@@ -121,8 +193,16 @@ object JourneySession {
         clear()
     }
 
-    /** Ends the trip without touching the service — the service's own way out. */
-    internal fun clear() {
+    /**
+     * Ends the trip without touching the service — the service's own way out.
+     *
+     * [finished] false is an interruption (the app swiped away): the session stops,
+     * but the stored trip stays open, so the next launch rejoins it.
+     */
+    internal fun clear(finished: Boolean = true) {
+        val started = startedAtMs
+        startedAtMs = null
+        if (finished && started != null) closeRecord(started)
         tick?.cancel()
         tick = null
         linger?.cancel()
@@ -234,7 +314,10 @@ object JourneySession {
                 ?.takeIf { it.legIndex == cursor.legIndex }
                 ?.arrivalMs
         )
-        cursor = update.cursor
+        if (update.cursor != cursor) {
+            cursor = update.cursor
+            startedAtMs?.let { saveCursor(it, update.cursor) }
+        }
         _progress.value = update.progress
         update.alerts.forEach { _alerts.emit(it) }
 

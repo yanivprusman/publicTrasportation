@@ -3,6 +3,7 @@ package com.automatelinux.pt.util
 import com.automatelinux.pt.data.model.FavoriteRoute
 import com.automatelinux.pt.data.model.GeocodeSuggestion
 import com.automatelinux.pt.data.model.SyncedState
+import com.automatelinux.pt.journey.StartedTrip
 import com.russhwolf.settings.Settings
 import kotlinx.datetime.Clock
 import kotlinx.serialization.builtins.ListSerializer
@@ -237,6 +238,22 @@ class SettingsStore(private val prefs: Settings) {
 
     private fun samePlace(a: GeocodeSuggestion, b: GeocodeSuggestion): Boolean =
         kotlin.math.abs(a.lat - b.lat) < 0.0001 && kotlin.math.abs(a.lon - b.lon) < 0.0001
+
+    // --- Started journeys ---
+    // Kept on this handset only, not synced: a journey in progress belongs to the
+    // phone in the rider's pocket, not to the account.
+
+    private val startedTripsSerializer = ListSerializer(StartedTrip.serializer())
+
+    /** Journeys the rider started, most recent first. */
+    fun getStartedTrips(): List<StartedTrip> {
+        val s = prefs.getStringOrNull("started_trips") ?: return emptyList()
+        return try { json.decodeFromString(startedTripsSerializer, s) } catch (_: Exception) { emptyList() }
+    }
+
+    fun setStartedTrips(trips: List<StartedTrip>) {
+        prefs.putString("started_trips", json.encodeToString(startedTripsSerializer, trips))
+    }
 
     // --- Account-synced state ---
     // Favourites and the pricing acknowledgement belong to the account, not the

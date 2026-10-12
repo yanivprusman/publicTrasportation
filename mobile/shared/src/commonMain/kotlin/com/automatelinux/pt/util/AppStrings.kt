@@ -262,6 +262,10 @@ interface AppStrings {
     val savedRoutes: String
     val saveRoute: String
     val unsaveRoute: String
+    /** Heads the journeys the rider started, newest first. */
+    val recentTrips: String
+    /** On a started trip still running: tap to rejoin it. */
+    val continueTrip: String
     val home: String
     val work: String
     val setHome: String
@@ -659,6 +663,8 @@ val EnStrings: AppStrings = object : AppStrings {
     override val savedRoutes: String = "Saved routes"
     override val saveRoute: String = "Save route"
     override val unsaveRoute: String = "Remove from saved routes"
+    override val recentTrips: String = "Recent trips"
+    override val continueTrip: String = "Continue trip"
     override val home: String = "Home"
     override val work: String = "Work"
     override val setHome: String = "Set home"
@@ -1049,6 +1055,8 @@ val HeStrings: AppStrings = object : AppStrings {
     override val savedRoutes: String = "מסלולים שמורים"
     override val saveRoute: String = "שמור מסלול"
     override val unsaveRoute: String = "הסר מהמסלולים השמורים"
+    override val recentTrips: String = "נסיעות אחרונות"
+    override val continueTrip: String = "המשך נסיעה"
     override val home: String = "בית"
     override val work: String = "עבודה"
     override val setHome: String = "הגדר בית"

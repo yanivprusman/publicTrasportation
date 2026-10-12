@@ -19,6 +19,8 @@ import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import com.automatelinux.pt.MainActivity
 import com.automatelinux.pt.R
+import com.automatelinux.pt.util.EnStrings
+import com.automatelinux.pt.util.HeStrings
 import com.automatelinux.pt.util.SettingsStore
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
@@ -80,7 +82,15 @@ class JourneyService : Service() {
                 return START_NOT_STICKY
             }
             ACTION_START -> Unit
-            else -> Unit
+            // A restart by the system after it killed the process: the journey in
+            // memory is gone, but the stored one is not. Rejoin it from here, without
+            // asking for this service a second time.
+            else -> if (!JourneySession.active) {
+                val strings = if (settings.language == "he") HeStrings else EnStrings
+                val live = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) ==
+                    PackageManager.PERMISSION_GRANTED
+                JourneySession.resumeInterrupted(this, strings, live, startService = false)
+            }
         }
 
         // Typed explicitly: on API 34+ an untyped promotion of a service the manifest
@@ -120,8 +130,8 @@ class JourneyService : Service() {
             JourneySession.itinerary.collectLatest { if (it == null) stopJourney() }
         }
 
-        // A journey the user swiped away, or one the system restarted with no session
-        // behind it, has nothing to navigate — do not sit in the notification shade
+        // A journey the user swiped away, or one the system restarted with nothing
+        // stored to rejoin, has nothing to navigate — do not sit in the notification shade
         // pretending otherwise.
         if (!JourneySession.active) stopJourney()
         return START_STICKY
@@ -136,14 +146,17 @@ class JourneyService : Service() {
         super.onDestroy()
     }
 
-    /** Swipe-away / task removal ends the trip rather than orphaning it. */
+    /**
+     * Swipe-away stops the trip rather than orphaning it in the shade — but only
+     * interrupts it: the stored trip stays open and the next launch rejoins it.
+     */
     override fun onTaskRemoved(rootIntent: Intent?) {
-        stopJourney()
+        stopJourney(finished = false)
         super.onTaskRemoved(rootIntent)
     }
 
-    private fun stopJourney() {
-        JourneySession.clear()
+    private fun stopJourney(finished: Boolean = true) {
+        JourneySession.clear(finished)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             stopForeground(STOP_FOREGROUND_REMOVE)
         } else {

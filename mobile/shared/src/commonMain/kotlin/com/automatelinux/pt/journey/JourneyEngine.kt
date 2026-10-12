@@ -12,6 +12,7 @@ import kotlin.math.min
 import kotlin.math.sin
 import kotlin.math.sqrt
 import kotlinx.datetime.Instant
+import kotlinx.serialization.Serializable
 
 /**
  * Where a journey actually is, decided from the rider's position and the clock.
@@ -57,6 +58,7 @@ enum class JourneyAlert {
  * How far along the journey is. Monotonic by construction — a journey never walks
  * itself backwards because a GPS fix wobbled, so the cursor only ever moves forward.
  */
+@Serializable
 data class JourneyCursor(
     val legIndex: Int = 0,
     /** Index into the current ride leg's stop list; 0 = the boarding stop. */
@@ -238,7 +240,7 @@ fun JourneyProgress.rideStopList(): List<RideStop>? {
     }
 }
 
-private fun parseMs(iso: String?): Long? =
+internal fun parseMs(iso: String?): Long? =
     iso?.let { runCatching { Instant.parse(it).toEpochMilliseconds() }.getOrNull() }
 
 /**

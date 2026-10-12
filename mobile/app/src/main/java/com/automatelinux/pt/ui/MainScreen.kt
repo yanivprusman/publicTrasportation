@@ -123,6 +123,7 @@ import com.automatelinux.pt.ui.map.PtMapState
 import com.automatelinux.pt.ui.map.PtMapStyle
 import com.automatelinux.pt.ui.map.PtUserLocationIcon
 import com.automatelinux.pt.journey.JourneySession
+import com.automatelinux.pt.journey.StartedTrip
 import com.automatelinux.pt.data.model.VehicleMarker
 import com.automatelinux.pt.ui.journey.JourneyPanel
 import com.automatelinux.pt.ui.routing.DebugSettingsDialog
@@ -258,6 +259,12 @@ fun MainScreen(
     val journeyProgress by JourneySession.progress.collectAsState()
     val journeyLive by JourneySession.live.collectAsState()
     val journeyShareToken by JourneySession.shareToken.collectAsState()
+
+    // Every journey started is kept, so a trip outlives even a swiped-away app. Read
+    // again whenever a journey starts or ends — those are the only writes that change
+    // what the strip shows.
+    var startedTrips by remember { mutableStateOf(settingsStore.getStartedTrips()) }
+    LaunchedEffect(journeyItinerary) { startedTrips = settingsStore.getStartedTrips() }
 
     // "And if I miss it?" — fetched for whichever itinerary is selected, so the
     // detail's ride rows can name the same line's later departures.
@@ -571,6 +578,26 @@ fun MainScreen(
         // the panel answers "which stop", the map answers "where am I on the line".
         if (live) followingLocation = true
         scope.launch { bottomSheetState.hide() }
+    }
+
+    // Rejoining a started trip: whatever the rider decided about location the first
+    // time stands — no permission prompt stands between them and their bus.
+    val resumeTrip: (StartedTrip) -> Unit = { trip ->
+        val live = LocationHelper.hasPermission(context)
+        JourneySession.start(context, trip.itinerary, strings, live, resumeFrom = trip)
+        if (live) followingLocation = true
+        scope.launch { bottomSheetState.hide() }
+    }
+
+    // Reopening the app mid-trip lands back in the journey. Only a trip that was
+    // interrupted (swiped away, process killed) and is still on the timetable; one
+    // ended by hand waits in the recent trips instead.
+    LaunchedEffect(Unit) {
+        val live = LocationHelper.hasPermission(context)
+        if (JourneySession.resumeInterrupted(context, strings, live)) {
+            if (live) followingLocation = true
+            bottomSheetState.hide()
+        }
     }
 
     val journeyLocationLauncher = rememberLauncherForActivityResult(
@@ -962,6 +989,26 @@ fun MainScreen(
                                     onPickFavoriteRoute = { route ->
                                         routingViewModel.applySavedRoute(route)
                                         scope.launch { bottomSheetState.expand() }
+                                    },
+                                    recentTrips = startedTrips,
+                                    // A trip still running is rejoined; a finished one
+                                    // is the same two ends searched again — its buses
+                                    // are gone. The destination is set last: setting
+                                    // the second end is what fires the search.
+                                    onPickRecentTrip = { trip ->
+                                        val from = trip.origin
+                                        val to = trip.destination
+                                        if (trip.resumable(System.currentTimeMillis())) {
+                                            resumeTrip(trip)
+                                        } else if (from != null && to != null) {
+                                            routingViewModel.setOriginFromCoords(
+                                                from.lat, from.lon, from.name.ifBlank { null }
+                                            )
+                                            routingViewModel.setDestinationFromCoords(
+                                                to.lat, to.lon, to.name.ifBlank { null }
+                                            )
+                                            scope.launch { bottomSheetState.expand() }
+                                        }
                                     },
                                     isCurrentRouteFavorite = remember(favoriteRoutes, routingState.origin, routingState.destination) {
                                         val o = routingState.origin
