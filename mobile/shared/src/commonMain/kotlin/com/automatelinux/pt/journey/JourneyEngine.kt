@@ -213,7 +213,17 @@ fun JourneyProgress.rideStopList(): List<RideStop>? {
     val stops = ride.rideStops()
     if (stops.size < 2) return null
     val here = stopsRemaining?.let { (stops.lastIndex - it).coerceIn(0, stops.lastIndex) } ?: 0
-    return stops.mapIndexed { i, place ->
+    // The feed times the intermediate stops; the two ends are timed by the leg itself.
+    // The list says when the rider gets off, which is the one time they care about.
+    val timed = stops.mapIndexed { i, place ->
+        when {
+            place.arrival != null -> place
+            i == 0 -> place.copy(arrival = ride.startTime.takeIf { it.isNotBlank() })
+            i == stops.lastIndex -> place.copy(arrival = ride.endTime.takeIf { it.isNotBlank() })
+            else -> place
+        }
+    }
+    return timed.mapIndexed { i, place ->
         RideStop(
             place = place,
             index = i,

@@ -250,6 +250,9 @@ class JourneyEngineTest {
         assertEquals(listOf(false, false, false, false, true), stops.map { it.isAlight })
         // The list counts from the same cursor as the headline.
         assertEquals(2, onBoard.progress.stopsRemaining)
+        // The alight stop is timed by the leg's end, the boarding stop by its start.
+        assertEquals(iso(30), stops.last().place.arrival)
+        assertEquals(iso(10), stops.first().place.arrival)
 
         // On foot there is no ride to list.
         val walking = stepJourney(trip, JourneyCursor(), fix = null, nowMs = t0)
