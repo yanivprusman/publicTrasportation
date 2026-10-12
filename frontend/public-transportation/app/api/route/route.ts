@@ -5,7 +5,7 @@ import { tripWheelchairAccess } from '@/lib/gtfs-trips';
 import { stopIdentity } from '@/lib/gtfs-stops';
 import { rideFare } from '@/lib/gtfs-fares';
 import { journeyFare, PricedRide } from '@/lib/journey-fare';
-import { NotOnLineError, planFromOnboard } from '@/lib/onboard';
+import { NotOnLineError, planFromOnboard, rideAhead } from '@/lib/onboard';
 import { expandScooterHops } from '@/lib/scooter-hops';
 import { expandEarlierDepartures, LineItinerary } from '@/lib/earlier-departures';
 
@@ -82,6 +82,8 @@ interface MotisLeg {
   scheduledEndTime?: string;
   // The rider is already on this vehicle (lib/onboard.ts): no boarding, no fare.
   onboard?: boolean;
+  // The whole trip the rider is on, first stop to last, not a ride from where they are.
+  wholeTrip?: boolean;
 }
 
 interface MotisItinerary {
@@ -154,6 +156,7 @@ function transformItinerary(itin: MotisItinerary, scooter: boolean) {
       transformed.realTime = leg.realTime === true;
       if (leg.scheduledStartTime) transformed.scheduledStartTime = leg.scheduledStartTime;
       if (leg.onboard) transformed.onboard = true;
+      if (leg.wholeTrip) transformed.wholeTrip = true;
       // Only transit legs can be inaccessible; a walk leg has nothing to board.
       if (!isStreetMode(leg.mode)) {
         transformed.wheelchairAccess = tripWheelchairAccess(leg.tripId);
@@ -488,7 +491,8 @@ export async function GET(request: NextRequest) {
     streetCapSeconds = minutes * 60;
   }
 
-  if (!from || !to) {
+  // From on board, `to` is optional: without it the answer is the ride itself.
+  if (!from || (!to && !onLine)) {
     return NextResponse.json(
       { error: 'Missing required parameters: from, to (format: lat,lon)' },
       { status: 400 }
@@ -496,9 +500,9 @@ export async function GET(request: NextRequest) {
   }
 
   const [fromLat, fromLon] = from.split(',').map(Number);
-  const [toLat, toLon] = to.split(',').map(Number);
+  const [toLat, toLon] = (to || '').split(',').map(Number);
 
-  if (isNaN(fromLat) || isNaN(fromLon) || isNaN(toLat) || isNaN(toLon)) {
+  if (isNaN(fromLat) || isNaN(fromLon) || (to && (isNaN(toLat) || isNaN(toLon)))) {
     return NextResponse.json(
       { error: 'Invalid coordinate format. Use: lat,lon' },
       { status: 400 }
@@ -539,6 +543,13 @@ export async function GET(request: NextRequest) {
     }
     await ensureMotis();
     try {
+      if (!to) {
+        // Nowhere chosen yet: the whole trip the rider is on, first stop to last.
+        const { itinerary, riding } = await rideAhead({
+          line: onLine, lat: fromLat, lon: fromLon, heading, nowMs: Date.now(),
+        });
+        return NextResponse.json({ itineraries: [transformItinerary(itinerary as MotisItinerary, scooter)], riding });
+      }
       const { itineraries, riding } = await planFromOnboard({
         line: onLine,
         lat: fromLat,

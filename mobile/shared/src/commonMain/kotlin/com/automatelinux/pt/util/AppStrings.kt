@@ -179,6 +179,8 @@ interface AppStrings {
     val onBusLabel: (String) -> String
     val ridingCaption: (String, String) -> String
     val getOffAt: (String, String) -> String
+    /** The last stop of the trip the rider is on, and when the bus reaches it. */
+    val lineEndsAt: (String, String) -> String
     val onBoardHere: (String) -> String
     val fareEstimate: (String) -> String
     val nearbyStops: String
@@ -567,6 +569,7 @@ val EnStrings: AppStrings = object : AppStrings {
     override val onBusLabel: (String) -> String = { line -> "On bus $line" }
     override val ridingCaption: (String, String) -> String = { headsign, next -> "To $headsign · next stop $next" }
     override val getOffAt: (String, String) -> String = { stop, time -> "Get off at $stop · $time" }
+    override val lineEndsAt: (String, String) -> String = { stop, time -> "Last stop $stop · $time" }
     override val onBoardHere: (String) -> String = { line -> "On bus $line — you are here" }
     override val fareEstimate: (String) -> String = { amount -> "~$amount" }
     override val nearbyStops: String = "Nearby Stops"
@@ -952,6 +955,7 @@ val HeStrings: AppStrings = object : AppStrings {
     override val onBusLabel: (String) -> String = { line -> "באוטובוס $line" }
     override val ridingCaption: (String, String) -> String = { headsign, next -> "לכיוון $headsign · תחנה הבאה: $next" }
     override val getOffAt: (String, String) -> String = { stop, time -> "לרדת ב$stop · $time" }
+    override val lineEndsAt: (String, String) -> String = { stop, time -> "תחנה אחרונה: $stop · $time" }
     override val onBoardHere: (String) -> String = { line -> "באוטובוס $line — אתה כאן" }
     override val fareEstimate: (String) -> String = { amount -> "~$amount" }
     override val nearbyStops: String = "תחנות קרובות"

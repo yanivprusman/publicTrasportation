@@ -116,7 +116,13 @@ data class RouteLeg(
      * stop, and there is nothing to catch or pay. Only a search from on board has one,
      * and only as its first leg.
      */
-    val onboard: Boolean = false
+    val onboard: Boolean = false,
+    /**
+     * An [onboard] leg that is the whole trip, first stop to last: what the rider sees
+     * after naming their line and before choosing a destination. It starts at the
+     * line's first stop, not where they are, and nobody gets off at its end by plan.
+     */
+    val wholeTrip: Boolean = false
 )
 
 /** `/api/line-shape?meta=full`: each GTFS direction's geometry and its route_long_name. */

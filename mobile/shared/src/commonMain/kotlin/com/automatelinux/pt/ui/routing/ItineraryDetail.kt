@@ -228,7 +228,7 @@ fun ItineraryDetail(
             TimelineNode(
                 kind = NodeKind.ORIGIN,
                 time = legs[0].startTime,
-                name = if (legs[0].onboard) strings.onBoardHere(legs[0].routeShortName ?: "")
+                name = if (legs[0].onboard && !legs[0].wholeTrip) strings.onBoardHere(legs[0].routeShortName ?: "")
                     else legs[0].from.name,
                 topLeg = null,
                 bottomLeg = legs[0],

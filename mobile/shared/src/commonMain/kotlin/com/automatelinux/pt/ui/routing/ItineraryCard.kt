@@ -436,7 +436,8 @@ private fun OnboardLine(leg: RouteLeg, textColor: Color) {
         }
         Spacer(Modifier.width(6.dp))
         Text(
-            text = strings.getOffAt(leg.to.name, formatTime(leg.endTime)),
+            text = if (leg.wholeTrip) strings.lineEndsAt(leg.to.name, formatTime(leg.endTime))
+                else strings.getOffAt(leg.to.name, formatTime(leg.endTime)),
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.SemiBold,
             color = textColor,

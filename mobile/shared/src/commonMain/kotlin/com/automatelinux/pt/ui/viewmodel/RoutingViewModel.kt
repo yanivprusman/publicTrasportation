@@ -226,7 +226,8 @@ class RoutingViewModel(
 
     private fun autoSearchIfReady() {
         val s = _state.value
-        if (s.origin != null && s.destination != null) search()
+        // On a bus there is something to show before a destination: the bus's own trip.
+        if (s.origin != null && (s.destination != null || s.ridingLine != null)) search()
     }
 
     fun showViaField() {
@@ -689,14 +690,16 @@ class RoutingViewModel(
     fun search() {
         val s = _state.value
         val origin = s.origin ?: return
-        val destination = s.destination ?: return
+        val destination = s.destination
+        if (destination == null && s.ridingLine == null) return
         val seq = ++searchSeq
 
         viewModelScope.launch {
             _state.value = _state.value.copy(loading = true, error = null)
             try {
                 val from = "${origin.lat},${origin.lon}"
-                val to = "${destination.lat},${destination.lon}"
+                // Null only on a bus: the answer is then the whole trip the rider is on.
+                val to = destination?.let { "${it.lat},${it.lon}" }
                 // Instant.toString() is ISO-8601 (UTC "Z" form); same instant the API expects.
                 val time = s.departureTime?.toString()
                 val arriveBy = if (s.arriveBy) true else null

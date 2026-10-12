@@ -95,6 +95,8 @@ export interface OnboardLeg {
   scheduledEndTime?: string
   /** The rider is already on this vehicle: there is no boarding, and nothing to pay. */
   onboard?: boolean
+  /** The whole trip the rider is on, first stop to last — see [rideAhead]. */
+  wholeTrip?: boolean
 }
 
 export interface OnboardItinerary {
@@ -379,20 +381,31 @@ async function limited<T>(tasks: (() => Promise<T>)[], limit: number): Promise<T
 
 export class NotOnLineError extends Error {}
 
+/** The trip the rider is on, where on it they are, and how to ride it to any stop ahead. */
+interface LocatedRide {
+  leg: OnboardLeg
+  /** Every stop ahead the rider may get off at, with its index on the trip. */
+  alightings: { stop: MotisStop; idx: number }[]
+  /** The ride from where the rider is to [stop], timed by the bus's delay. */
+  rideTo: (stop: MotisStop, idx: number) => OnboardLeg
+  /** Positive when the bus is behind its timetable. */
+  delayMs: number
+  riding: RiddenTrip
+}
+
 /**
- * Journeys for a rider on [line] at (lat, lon). Throws [NotOnLineError] when no trip
- * of that line is passing here now — the rider named a line that is not here, and a
- * plan for some other trip of it would be a plan for a bus they are not on.
+ * Finds the trip of [line] carrying the rider at (lat, lon). Throws [NotOnLineError]
+ * when no trip of that line is passing here now — the rider named a line that is not
+ * here, and a plan for some other trip of it would be a plan for a bus they are not on.
  */
-export async function planFromOnboard(opts: {
+async function locateRide(opts: {
   line: string
   lat: number
   lon: number
   heading: number | null
   nowMs: number
-  planFrom: PlanFrom
-}): Promise<{ itineraries: OnboardItinerary[]; riding: RiddenTrip }> {
-  const { line, lat, lon, heading, nowMs, planFrom } = opts
+}): Promise<LocatedRide> {
+  const { line, lat, lon, heading, nowMs } = opts
   const fits = await tripsCarryingRider(lat, lon, heading, nowMs)
   const ours = fits.find(f => f.line === line)
   if (!ours) {
@@ -438,6 +451,66 @@ export async function planFromOnboard(opts: {
     }
   }
 
+  return {
+    leg,
+    alightings,
+    rideTo,
+    delayMs,
+    riding: {
+      tripId: ours.tripId,
+      line,
+      headsign: leg.headsign || '',
+      nextStop: stops[nextIdx].name || '',
+      delayMinutes: Math.round(delayMs / 60_000),
+    },
+  }
+}
+
+/**
+ * The rider's whole trip with nowhere chosen yet: the bus's road from its first stop to
+ * its last, every stop timed by how late it runs. Picking a line answers "where does my
+ * bus go" before the rider has thought of a destination; the stops already behind them
+ * are kept, because the line is recognised by where it came from as much as where it goes.
+ */
+export async function rideAhead(opts: {
+  line: string
+  lat: number
+  lon: number
+  heading: number | null
+  nowMs: number
+}): Promise<{ itinerary: OnboardItinerary; riding: RiddenTrip }> {
+  const { leg, delayMs, riding } = await locateRide(opts)
+  const shift = (stop?: MotisStop): MotisStop | undefined => stop && {
+    ...stop,
+    arrival: isoPlus(stop.arrival, delayMs),
+    departure: isoPlus(stop.departure, delayMs),
+  }
+  const whole: OnboardLeg = {
+    ...leg,
+    from: shift(leg.from),
+    to: shift(leg.to),
+    startTime: isoPlus(leg.startTime, delayMs),
+    endTime: isoPlus(leg.endTime, delayMs),
+    intermediateStops: (leg.intermediateStops || []).map(s => shift(s)!),
+    realTime: false,
+    onboard: true,
+    wholeTrip: true,
+  }
+  return { itinerary: join(whole, []), riding }
+}
+
+/** Journeys for a rider on [line] at (lat, lon) — see [locateRide] for the line. */
+export async function planFromOnboard(opts: {
+  line: string
+  lat: number
+  lon: number
+  heading: number | null
+  nowMs: number
+  planFrom: PlanFrom
+}): Promise<{ itineraries: OnboardItinerary[]; riding: RiddenTrip }> {
+  const { planFrom } = opts
+  const { leg, alightings, rideTo, riding } = await locateRide(opts)
+
   const perStop = await limited(
     alightings.map(({ stop, idx }) => async () => {
       if (typeof stop.lat !== 'number' || typeof stop.lon !== 'number') return []
@@ -464,16 +537,7 @@ export async function planFromOnboard(opts: {
     PLAN_CONCURRENCY
   )
 
-  return {
-    itineraries: bestJourneys(perStop.flat()),
-    riding: {
-      tripId: ours.tripId,
-      line,
-      headsign: leg.headsign || '',
-      nextStop: stops[nextIdx].name || '',
-      delayMinutes: Math.round(delayMs / 60_000),
-    },
-  }
+  return { itineraries: bestJourneys(perStop.flat()), riding }
 }
 
 function join(onBus: OnboardLeg, onward: OnboardLeg[]): OnboardItinerary {

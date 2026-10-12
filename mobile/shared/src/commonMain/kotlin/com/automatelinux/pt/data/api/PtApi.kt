@@ -48,7 +48,8 @@ class PtApi(private val client: HttpClient) {
 
     suspend fun searchRoute(
         from: String,
-        to: String,
+        /** Null only with [onLine]: the answer is then the whole trip the rider is on. */
+        to: String?,
         via: String? = null,
         time: String? = null,
         arriveBy: Boolean? = null,
