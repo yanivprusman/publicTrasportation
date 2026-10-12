@@ -1078,8 +1078,12 @@ class RoutingViewModel(
         }
     }
 
-    suspend fun getLineShape(line: String): com.automatelinux.pt.data.model.LineShapeResponse {
-        return api.getLineShape(line)
+    suspend fun getLineShape(
+        line: String,
+        near: String? = null,
+        variant: String? = null
+    ): com.automatelinux.pt.data.model.LineShapeResponse {
+        return api.getLineShape(line, near, variant)
     }
 
     // near = "lat,lon" viewport bias: the same words mean the nearer place.

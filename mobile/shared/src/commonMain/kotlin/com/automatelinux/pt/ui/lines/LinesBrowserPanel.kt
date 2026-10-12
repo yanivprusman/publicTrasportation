@@ -45,7 +45,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.automatelinux.pt.data.model.LineVariantInfo
 import com.automatelinux.pt.util.LocalAppStrings
+import com.automatelinux.pt.util.formatDistance
 
 private val COMMON_BUS_LINES = listOf("1", "2", "3", "4", "5", "6", "7", "8", "9", "10",
     "11", "14", "17", "18", "19", "25", "26", "39", "47", "51",
@@ -57,6 +59,9 @@ data class LineShapeData(
     val directions: Map<String, List<List<Double>>> = emptyMap(),
     /** route_long_name per direction, for naming where each direction goes. */
     val headsigns: Map<String, String> = emptyMap(),
+    /** The line of this number being drawn, and every other one, nearest first. */
+    val variant: String? = null,
+    val variants: List<LineVariantInfo> = emptyList(),
     val loading: Boolean = false,
     val error: String? = null
 )
@@ -83,6 +88,8 @@ fun LinesBrowserPanel(
     onSelectLine: (String) -> Unit,
     /** Show one direction of [selectedLine] on the map, full screen. */
     onShowDirection: (String) -> Unit,
+    /** Draw another line of the same number instead — see [LineVariantInfo]. */
+    onSelectVariant: (String) -> Unit,
     favoriteLines: Set<String> = emptySet(),
     modifier: Modifier = Modifier
 ) {
@@ -180,6 +187,18 @@ fun LinesBrowserPanel(
                         )
                     }
 
+                    // Which of the country's lines of this number this is: without it,
+                    // "64" drawn in Jerusalem reads as a broken map to a rider in the Negev.
+                    val shown = lineShapeData.variants.firstOrNull { it.id == lineShapeData.variant }
+                    if (shown != null && !lineShapeData.loading) {
+                        Text(
+                            text = variantCaption(shown, strings),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(start = 28.dp)
+                        )
+                    }
+
                     Spacer(Modifier.height(8.dp))
 
                     if (lineShapeData.loading) {
@@ -223,6 +242,26 @@ fun LinesBrowserPanel(
                             }
                         }
                         // (The polyline point count was developer telemetry, not information.)
+                        val others = lineShapeData.variants.filter { it.id != lineShapeData.variant }
+                        if (others.isNotEmpty()) {
+                            Spacer(Modifier.height(12.dp))
+                            Text(
+                                text = strings.otherLinesNumbered(selectedLine),
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold
+                            )
+                            for (other in others) {
+                                Text(
+                                    text = variantCaption(other, strings),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { onSelectVariant(other.id) }
+                                        .padding(vertical = 8.dp)
+                                )
+                            }
+                        }
                     } else {
                         Text(
                             text = strings.noShapeData,
@@ -237,6 +276,14 @@ fun LinesBrowserPanel(
         Spacer(Modifier.height(200.dp))
     }
 }
+
+/** "באר שבע ↔ מצפה רמון · מטרופולין · 120 m" — where it runs, who runs it, how far. */
+private fun variantCaption(v: LineVariantInfo, strings: com.automatelinux.pt.util.AppStrings): String =
+    listOfNotNull(
+        v.label,
+        v.agency.takeIf { it.isNotBlank() },
+        v.distanceM?.let { formatDistance(it, strings) }
+    ).joinToString(" · ")
 
 @Composable
 fun LineBadgeChip(

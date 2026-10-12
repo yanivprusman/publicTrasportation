@@ -249,6 +249,8 @@ interface AppStrings {
     val lineShape: String
     val noShapeData: String
     val lineTowards: (String) -> String
+    /** Heads the list of a number's other lines elsewhere in the country. */
+    val otherLinesNumbered: (String) -> String
     val lineOtherDirection: String
     val lineBackToLines: String
     val timetable: String
@@ -634,6 +636,7 @@ val EnStrings: AppStrings = object : AppStrings {
     override val lineShape: String = "Line Route"
     override val noShapeData: String = "No route data available"
     override val lineTowards: (String) -> String = { to -> "To $to" }
+    override val otherLinesNumbered: (String) -> String = { line -> "Other lines numbered $line" }
     override val lineOtherDirection: String = "Other direction"
     override val lineBackToLines: String = "Back"
     override val timetable: String = "Timetable"
@@ -1017,6 +1020,7 @@ val HeStrings: AppStrings = object : AppStrings {
     override val lineShape: String = "מסלול קו"
     override val noShapeData: String = "אין נתוני מסלול"
     override val lineTowards: (String) -> String = { to -> "אל $to" }
+    override val otherLinesNumbered: (String) -> String = { line -> "קווי $line אחרים" }
     override val lineOtherDirection: String = "כיוון שני"
     override val lineBackToLines: String = "חזרה"
     override val timetable: String = "לוח זמנים"

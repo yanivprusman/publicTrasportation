@@ -225,6 +225,29 @@ fun MainScreen(
     // The one direction of [selectedLine] being looked at full screen, or null while
     // the Lines sheet is the view.
     var lineOnMap by remember { mutableStateOf<String?>(null) }
+    // Where the rider was when they picked [selectedLine]; ranks its lines by distance.
+    var lineNear by remember { mutableStateOf<LatLng?>(null) }
+    val loadLineShape: (String, String?) -> Unit = { line, variant ->
+        scope.launch {
+            lineShapeData = try {
+                val shape = routingViewModel.getLineShape(
+                    line,
+                    near = lineNear?.let { "${it.latitude},${it.longitude}" },
+                    variant = variant
+                )
+                LineShapeData(
+                    directions = shape.directions,
+                    headsigns = shape.headsigns,
+                    variant = shape.variant,
+                    variants = shape.variants
+                )
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                LineShapeData(error = e.message ?: "Failed to load")
+            }
+        }
+    }
     // A journey outlives this screen — it is owned by JourneySession and, while it is
     // live, by a foreground service. The UI only observes it, so leaving the app (or
     // searching for something else mid-ride) no longer ends the trip.
@@ -1060,19 +1083,33 @@ fun MainScreen(
                                     onSelectLine = { line ->
                                         selectedLine = line
                                         lineShapeData = LineShapeData(loading = true)
-                                        scope.launch {
-                                            try {
-                                                val shape = routingViewModel.getLineShape(line)
-                                                lineShapeData = LineShapeData(
-                                                    directions = shape.directions,
-                                                    headsigns = shape.headsigns
-                                                )
-                                            } catch (e: Exception) {
-                                                lineShapeData = LineShapeData(error = e.message ?: "Failed to load")
-                                            }
+                                        // A number is ten lines across the country; where the
+                                        // rider is picks theirs. Without a fix the server keeps
+                                        // its order and the panel still lists them all.
+                                        if (LocationHelper.hasPermission(context)) {
+                                            LocationHelper.fetchLocation(
+                                                fusedLocationClient = fusedLocationClient,
+                                                onLocation = { loc ->
+                                                    lineNear = LatLng(loc.latitude, loc.longitude)
+                                                    loadLineShape(line, null)
+                                                },
+                                                onFailure = {
+                                                    lineNear = null
+                                                    loadLineShape(line, null)
+                                                }
+                                            )
+                                        } else {
+                                            lineNear = null
+                                            loadLineShape(line, null)
                                         }
                                     },
                                     onShowDirection = { lineOnMap = it },
+                                    onSelectVariant = { variant ->
+                                        selectedLine?.let { line ->
+                                            lineShapeData = lineShapeData.copy(loading = true)
+                                            loadLineShape(line, variant)
+                                        }
+                                    },
                                     favoriteLines = favoriteLines
                                 )
                             }

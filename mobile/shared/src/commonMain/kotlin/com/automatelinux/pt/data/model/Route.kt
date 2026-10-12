@@ -130,7 +130,25 @@ data class RouteLeg(
 data class LineShapeResponse(
     val directions: Map<String, List<List<Double>>> = emptyMap(),
     /** "origin-city<->destination-city-N#", as GTFS spells route_long_name. */
-    val headsigns: Map<String, String> = emptyMap()
+    val headsigns: Map<String, String> = emptyMap(),
+    /** Which line of this number [directions] draws — see [LineVariantInfo]. */
+    val variant: String? = null,
+    /** Every line of this number in the country, nearest first when a place was given. */
+    val variants: List<LineVariantInfo> = emptyList()
+)
+
+/**
+ * One line of a number. Numbers repeat nationwide — there are ten 64s — and GTFS tells
+ * them apart by line code, so "64" alone is not a line until it is one of these.
+ */
+@Serializable
+data class LineVariantInfo(
+    val id: String,
+    /** "באר שבע ↔ מצפה רמון", or one city for a line inside it. */
+    val label: String,
+    val agency: String = "",
+    /** From the place asked about; null when none was given. */
+    val distanceM: Int? = null
 )
 
 @Serializable

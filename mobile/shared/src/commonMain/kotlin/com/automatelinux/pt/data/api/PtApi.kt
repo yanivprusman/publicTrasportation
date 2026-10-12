@@ -130,8 +130,12 @@ class PtApi(private val client: HttpClient) {
         params = mapOf("station" to station, "detail" to detail, "line" to line)
     )
 
-    suspend fun getLineShape(line: String): LineShapeResponse =
-        fetch("/api/line-shape", params = mapOf("line" to line, "meta" to "full"))
+    /** One line numbered [line]: [variant] when given, else the one nearest [near] ("lat,lon"). */
+    suspend fun getLineShape(line: String, near: String? = null, variant: String? = null): LineShapeResponse =
+        fetch(
+            "/api/line-shape",
+            params = mapOf("line" to line, "meta" to "full", "near" to near, "variant" to variant)
+        )
 
     /** The ordered stop list of one route; routeId is SIRI's LineRef. */
     suspend fun getRouteStops(routeId: String): RouteStopsResponse =
