@@ -632,6 +632,16 @@ private fun LegSegment(
                                                 .background(color.copy(alpha = 0.7f), RoundedCornerShape(3.dp))
                                         )
                                         Spacer(Modifier.width(8.dp))
+                                        // When the bus calls there, from the same timetable
+                                        // the leg's ends are printed from.
+                                        stop.arrival?.takeIf { it.isNotBlank() }?.let { iso ->
+                                            Text(
+                                                text = formatTime(iso),
+                                                modifier = Modifier.width(40.dp),
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                                            )
+                                        }
                                         Text(
                                             text = stop.name,
                                             modifier = if (onStopClick != null) Modifier

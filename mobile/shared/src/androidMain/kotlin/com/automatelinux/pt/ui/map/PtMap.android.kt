@@ -64,6 +64,7 @@ actual fun PtMap(
             // whenever the route redraws or the route's polylines would cover them.
             redrawKey = overlays.itinerary
         )
+        JourneyStopsOverlay(mapView, overlays.journeyRide)
         VehicleMarkerOverlay(
             mapView, overlays.vehicles, overlays.vehiclesVisible, onVehicleTap,
             overlays.itinerary, overlays.staleVehicleRefs

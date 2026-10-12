@@ -299,7 +299,10 @@ function LegSegment({ leg }: { leg: RouteLeg }) {
             {stopsOpen && stopCount > 0 && (
               <ul className={styles.stopsList}>
                 {leg.intermediateStops!.map((s, j) => (
-                  <li key={j} className={styles.stop}>{s.name}</li>
+                  <li key={j} className={styles.stop}>
+                    {s.arrival && <span className={styles.stopTime}>{formatTime(s.arrival)}</span>}
+                    {s.name}
+                  </li>
                 ))}
               </ul>
             )}

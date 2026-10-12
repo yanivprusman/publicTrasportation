@@ -356,6 +356,13 @@
   line-height: 1.3;
 }
 
+.stopTime {
+  display: inline-block;
+  min-width: 40px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-tertiary, var(--text-secondary));
+}
+
 .stop::before {
   content: '';
   position: absolute;

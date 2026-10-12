@@ -12,7 +12,9 @@ import kotlinx.serialization.encoding.Encoder
 data class Place(
     val name: String,
     val lat: Double,
-    val lon: Double
+    val lon: Double,
+    /** ISO time the vehicle calls here; the server sets it on a ride's intermediate stops. */
+    val arrival: String? = null
 )
 
 // Preserves the lenient mapping the old Gson TypeAdapter did (METRO->SUBWAY, *RAIL*->RAIL,

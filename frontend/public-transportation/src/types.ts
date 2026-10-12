@@ -66,6 +66,8 @@ export interface Place {
   name: string
   lat: number
   lon: number
+  /** ISO time the vehicle calls here; set on a ride's intermediate stops. */
+  arrival?: string
 }
 
 export interface RouteLeg {

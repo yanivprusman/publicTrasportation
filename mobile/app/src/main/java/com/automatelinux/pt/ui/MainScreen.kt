@@ -116,6 +116,9 @@ import com.automatelinux.pt.map.LatLng
 import com.automatelinux.pt.ui.map.MapStyles
 import com.automatelinux.pt.ui.map.PtMap
 import com.automatelinux.pt.ui.map.PtMapOverlays
+import com.automatelinux.pt.ui.map.JourneyRideMarks
+import com.automatelinux.pt.journey.RideStopState
+import com.automatelinux.pt.journey.rideStopList
 import com.automatelinux.pt.ui.map.PtMapState
 import com.automatelinux.pt.ui.map.PtMapStyle
 import com.automatelinux.pt.ui.map.PtUserLocationIcon
@@ -1218,6 +1221,13 @@ fun MainScreen(
                         // A running journey owns the map: its route stays drawn even
                         // if the planner below has moved on to another search.
                         itinerary = mapItinerary,
+                        journeyRide = journeyProgress?.rideStopList()?.let { stops ->
+                            JourneyRideMarks(
+                                next = stops.firstOrNull { it.state == RideStopState.NEXT }
+                                    ?.let { LatLng(it.place.lat, it.place.lon) },
+                                alight = stops.last().let { LatLng(it.place.lat, it.place.lon) }
+                            )
+                        },
                         origin = routingState.origin?.let { LatLng(it.lat, it.lon) },
                         destination = routingState.destination?.let { LatLng(it.lat, it.lon) },
                         via = routingState.via?.let { LatLng(it.lat, it.lon) },
@@ -1861,6 +1871,12 @@ fun MainScreen(
                     onFocusVehicle = { lat, lon ->
                         followingLocation = false
                         mapState.animateTo(LatLng(lat, lon), 15.0)
+                    },
+                    // A tapped stop is the rider asking "where is that one": close
+                    // enough to tell its corner, so the camera stops chasing the dot.
+                    onFocusStop = { lat, lon ->
+                        followingLocation = false
+                        mapState.animateTo(LatLng(lat, lon), 16.5)
                     },
                     // A long-pressed step edits the trip around itself: its boarding
                     // point becomes the new origin (or its alighting point the new

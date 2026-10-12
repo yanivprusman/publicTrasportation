@@ -177,6 +177,57 @@ fun RouteLeg.rideStops(): List<Place> = buildList {
     add(to)
 }
 
+/** What a stop on the ride being travelled is to the rider right now. */
+enum class RideStopState {
+    /** Already called at. */
+    PASSED,
+    /** The stop the vehicle has reached — or, before it leaves, the one it is standing at. */
+    HERE,
+    /** The one it calls at next. */
+    NEXT,
+    /** Still to come after that. */
+    AHEAD
+}
+
+data class RideStop(
+    val place: Place,
+    /** Index into the leg's rideStops(): 0 is the boarding stop. */
+    val index: Int,
+    val state: RideStopState,
+    /** The rider's own stop — always the last one. */
+    val isAlight: Boolean
+)
+
+/**
+ * Every stop of the ride being travelled (or waited for), each marked by where the
+ * rider is among them; null off a ride, or when the feed sent no stops.
+ *
+ * Derived from the same cursor the "N stops to go" headline counts from, so the list
+ * and the headline can never disagree about which stop is next. Until 2026-10-12 the
+ * panel showed only that count and the next stop's name; a rider asked why they could
+ * not see the stops they were passing. The engine had them all along.
+ */
+fun JourneyProgress.rideStopList(): List<RideStop>? {
+    if (phase != JourneyPhase.RIDING && phase != JourneyPhase.WAITING) return null
+    val ride = leg?.takeIf { it.isRide } ?: return null
+    val stops = ride.rideStops()
+    if (stops.size < 2) return null
+    val here = stopsRemaining?.let { (stops.lastIndex - it).coerceIn(0, stops.lastIndex) } ?: 0
+    return stops.mapIndexed { i, place ->
+        RideStop(
+            place = place,
+            index = i,
+            state = when {
+                i < here -> RideStopState.PASSED
+                i == here -> RideStopState.HERE
+                i == here + 1 -> RideStopState.NEXT
+                else -> RideStopState.AHEAD
+            },
+            isAlight = i == stops.lastIndex
+        )
+    }
+}
+
 private fun parseMs(iso: String?): Long? =
     iso?.let { runCatching { Instant.parse(it).toEpochMilliseconds() }.getOrNull() }
 

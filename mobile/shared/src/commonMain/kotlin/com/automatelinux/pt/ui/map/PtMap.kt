@@ -51,7 +51,19 @@ data class PtMapOverlays(
      */
     val showUserLocation: Boolean = false,
     /** Which marker to draw for the device's position; a user-facing setting. */
-    val userLocationIcon: PtUserLocationIcon = PtUserLocationIcon.DOT
+    val userLocationIcon: PtUserLocationIcon = PtUserLocationIcon.DOT,
+    /** On a ride: the next stop and the rider's own, drawn over the route's stop dots. */
+    val journeyRide: JourneyRideMarks? = null
+)
+
+/**
+ * The two stops of a live ride worth marking on the map: the one the vehicle calls at
+ * next, and the one the rider gets off at. The route overlay draws every stop the
+ * same, which answers "where does this bus go" but not "which of these is mine".
+ */
+data class JourneyRideMarks(
+    val next: LatLng?,
+    val alight: LatLng
 )
 
 /**

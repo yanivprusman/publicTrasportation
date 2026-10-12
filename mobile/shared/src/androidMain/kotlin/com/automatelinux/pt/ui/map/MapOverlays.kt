@@ -165,6 +165,42 @@ fun OriginDestinationMarkers(
     }
 }
 
+private const val TAG_JOURNEY_STOP = "journeyStop"
+
+/** The amber the journey panel turns when the rider has to act; the alight stop wears it on the map too. */
+private const val JOURNEY_ALIGHT_COLOR = 0xFFFFB74D.toInt()
+
+/**
+ * On a ride, the stop the vehicle calls at next (a white dot ringed in amber) and the
+ * rider's own stop (a solid amber dot ringed in white), on top of the route's plain
+ * stop dots — so a glance at the map says which of the dots ahead is theirs.
+ */
+@Composable
+fun JourneyStopsOverlay(map: MapView, marks: JourneyRideMarks?) {
+    LaunchedEffect(marks) {
+        map.overlays.removeAll { (it as? Marker)?.id == TAG_JOURNEY_STOP }
+        if (marks != null) {
+            marks.next?.let { next ->
+                map.overlays.add(Marker(map).apply {
+                    id = TAG_JOURNEY_STOP
+                    position = next.toGeoPoint()
+                    setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+                    icon = createCircleDrawable(Color.WHITE, 8, JOURNEY_ALIGHT_COLOR, 3f)
+                    setInfoWindow(null)
+                })
+            }
+            map.overlays.add(Marker(map).apply {
+                id = TAG_JOURNEY_STOP
+                position = marks.alight.toGeoPoint()
+                setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+                icon = createCircleDrawable(JOURNEY_ALIGHT_COLOR, 12, Color.WHITE, 3f)
+                setInfoWindow(null)
+            })
+        }
+        map.invalidate()
+    }
+}
+
 /** How faded a bus the latest poll did not report is drawn. */
 private const val STALE_VEHICLE_ALPHA = 0.4f
 

@@ -4,6 +4,7 @@ import com.automatelinux.pt.data.model.Itinerary
 import com.automatelinux.pt.data.model.Place
 import com.automatelinux.pt.data.model.RouteLeg
 import com.automatelinux.pt.data.model.TransitMode
+import kotlin.test.assertNotNull
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -232,5 +233,26 @@ class JourneyEngineTest {
     fun `haversine matches a known distance`() {
         val meters = haversineMeters(at(0), lon, at(1), lon)
         assertTrue(meters in 580.0..620.0, "expected ~600 m, got $meters")
+    }
+
+    @Test
+    fun rideStopList_marksPassedHereNextAndTheAlightStop() {
+        // On the bus, two stops called at (A, B), standing at C: no fix, so the cursor
+        // is exactly what was handed in.
+        val onBoard = stepJourney(trip, JourneyCursor(legIndex = 1, stopIndex = 2), fix = null, nowMs = t0 + 15 * 60_000L)
+        val stops = onBoard.progress.rideStopList()
+        assertNotNull(stops)
+        assertEquals(listOf("stop A", "stop B", "stop C", "stop D", "stop E"), stops.map { it.place.name })
+        assertEquals(
+            listOf(RideStopState.PASSED, RideStopState.PASSED, RideStopState.HERE, RideStopState.NEXT, RideStopState.AHEAD),
+            stops.map { it.state }
+        )
+        assertEquals(listOf(false, false, false, false, true), stops.map { it.isAlight })
+        // The list counts from the same cursor as the headline.
+        assertEquals(2, onBoard.progress.stopsRemaining)
+
+        // On foot there is no ride to list.
+        val walking = stepJourney(trip, JourneyCursor(), fix = null, nowMs = t0)
+        assertNull(walking.progress.rideStopList())
     }
 }

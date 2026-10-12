@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -35,6 +36,7 @@ import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -61,6 +63,9 @@ import com.automatelinux.pt.journey.JourneyLiveInfo
 import com.automatelinux.pt.journey.JourneyPhase
 import com.automatelinux.pt.journey.JourneyProgress
 import com.automatelinux.pt.journey.legFraction
+import com.automatelinux.pt.journey.RideStop
+import com.automatelinux.pt.journey.RideStopState
+import com.automatelinux.pt.journey.rideStopList
 import com.automatelinux.pt.journey.JourneyText
 import com.automatelinux.pt.ui.map.getModeColorWithRoute
 import com.automatelinux.pt.util.formatTime
@@ -105,6 +110,8 @@ fun JourneyPanel(
     onLegAsEnd: ((Int) -> Unit)? = null,
     /** Fly the map to the live bus itself; wired to a tap on the live banner. */
     onFocusVehicle: ((Double, Double) -> Unit)? = null,
+    /** Fly the map to a stop of the ride; every row of the stop list answers a tap. */
+    onFocusStop: ((Double, Double) -> Unit)? = null,
     /** Hand out a link that shows this journey live. Green while somebody can watch. */
     onShare: (() -> Unit)? = null,
     sharing: Boolean = false,
@@ -113,9 +120,13 @@ fun JourneyPanel(
 ) {
     val strings = LocalAppStrings.current
     var expanded by remember { mutableStateOf(false) }
-    // One leg means the step list can only repeat the headline word for word, so
-    // there is nothing to expand into.
-    val hasSteps = itinerary.legs.size > 1
+    // The ride's stops, marked by where the rider is among them — the half of "where
+    // am I" that a count cannot give. Null on foot or when the feed sent no stops.
+    val rideStops = progress?.rideStopList()
+    val riding = progress?.phase == JourneyPhase.RIDING
+    // One leg means the step list can only repeat the headline word for word; but a
+    // ride's stop list is always something to open.
+    val hasSteps = itinerary.legs.size > 1 || rideStops != null
     // Ending a live journey is one tap from the arrival time, and the tap that ends
     // it cannot be taken back — the trip has to be started again from the results.
     // So the first tap arms and the second ends, and it disarms itself rather than
@@ -321,6 +332,13 @@ fun JourneyPanel(
                 }
             }
 
+            // Folded: the next stop, how many follow it, and the rider's own — the
+            // three facts a passenger glances for between stops. Opened, the full list
+            // below replaces it.
+            if (!expanded && riding && rideStops != null) {
+                StopLadder(stops = rideStops, accent = accent, onFocusStop = onFocusStop)
+            }
+
             Spacer(Modifier.height(10.dp))
             LegPips(itinerary = itinerary, progress = progress, accent = accent)
 
@@ -330,11 +348,20 @@ fun JourneyPanel(
                 var legMenuFor by remember { mutableStateOf<Int?>(null) }
                 Column(
                     modifier = Modifier
-                        .heightIn(max = 260.dp)
+                        .heightIn(max = 340.dp)
                         .verticalScroll(rememberScrollState())
                         .padding(top = 12.dp)
                 ) {
-                    itinerary.legs.forEachIndexed { index, leg ->
+                    if (rideStops != null) {
+                        RideStopList(stops = rideStops, accent = accent, onFocusStop = onFocusStop)
+                        if (itinerary.legs.size > 1) {
+                            HorizontalDivider(
+                                modifier = Modifier.padding(vertical = 8.dp),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f)
+                            )
+                        }
+                    }
+                    if (itinerary.legs.size > 1) itinerary.legs.forEachIndexed { index, leg ->
                         val done = (progress?.legIndex ?: 0) > index
                         val current = progress?.legIndex == index
                         val editable = onLegAsStart != null && onLegAsEnd != null
@@ -462,6 +489,185 @@ fun JourneyPanel(
                     }
                 }
             }
+        }
+    }
+}
+
+/**
+ * The folded panel's view of the ride: the next stop, a rung for the stops between it
+ * and the rider's, and the rider's own stop with "get off here" on it. Three rows at
+ * most, so the map stays in view; the opened list has every stop.
+ */
+@Composable
+private fun StopLadder(
+    stops: List<RideStop>,
+    accent: Color,
+    onFocusStop: ((Double, Double) -> Unit)?
+) {
+    val strings = LocalAppStrings.current
+    val next = stops.firstOrNull { it.state == RideStopState.NEXT } ?: return
+    val alight = stops.last()
+    val between = stops.count { it.state == RideStopState.AHEAD && !it.isAlight }
+
+    Spacer(Modifier.height(8.dp))
+    Column {
+        StopRow(stop = next, accent = accent, onFocusStop = onFocusStop, inLadder = true)
+        if (next.index != alight.index) {
+            if (between > 0) {
+                Row(
+                    modifier = Modifier.padding(vertical = 2.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    LadderRail(accent = accent, dashed = true)
+                    Spacer(Modifier.width(10.dp))
+                    Text(
+                        text = strings.journeyMoreStops(between),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            StopRow(stop = alight, accent = accent, onFocusStop = onFocusStop, inLadder = true)
+        }
+    }
+}
+
+/** The opened panel's list: a line for the stops behind, then every stop from here on. */
+@Composable
+private fun RideStopList(
+    stops: List<RideStop>,
+    accent: Color,
+    onFocusStop: ((Double, Double) -> Unit)?
+) {
+    val strings = LocalAppStrings.current
+    val passed = stops.count { it.state == RideStopState.PASSED }
+    Text(
+        text = strings.journeyStopsOnRide.uppercase(),
+        style = MaterialTheme.typography.labelSmall,
+        fontWeight = FontWeight.Bold,
+        letterSpacing = 1.sp,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+    Spacer(Modifier.height(4.dp))
+    if (passed > 0) {
+        Text(
+            text = strings.journeyStopsPassed(passed),
+            modifier = Modifier.padding(start = 26.dp, bottom = 2.dp),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+        )
+    }
+    stops.filter { it.state != RideStopState.PASSED }.forEach { stop ->
+        StopRow(stop = stop, accent = accent, onFocusStop = onFocusStop, inLadder = false)
+    }
+}
+
+/**
+ * One stop: a mark on the rail, the time the vehicle calls there, its name, and what it
+ * is to the rider. The alight stop wears the accent and says "get off here"; the next
+ * one is bold; the one the vehicle stands at says so; the rest are plain.
+ */
+@Composable
+private fun StopRow(
+    stop: RideStop,
+    accent: Color,
+    onFocusStop: ((Double, Double) -> Unit)?,
+    inLadder: Boolean
+) {
+    val strings = LocalAppStrings.current
+    val emphasised = stop.isAlight || stop.state == RideStopState.NEXT
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .let { m -> if (onFocusStop != null) m.clickable { onFocusStop(stop.place.lat, stop.place.lon) } else m }
+            .padding(vertical = if (inLadder) 4.dp else 5.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // The mark: a ring for the rider's stop, a filled dot for the next one, a
+        // small dot for the rest.
+        Box(
+            modifier = Modifier.width(16.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            when {
+                stop.isAlight -> Box(
+                    modifier = Modifier
+                        .size(14.dp)
+                        .border(3.dp, accent, RoundedCornerShape(7.dp))
+                )
+                stop.state == RideStopState.NEXT -> Box(
+                    modifier = Modifier
+                        .size(10.dp)
+                        .background(accent, RoundedCornerShape(5.dp))
+                )
+                stop.state == RideStopState.HERE -> Box(
+                    modifier = Modifier
+                        .size(10.dp)
+                        .background(MaterialTheme.colorScheme.onSurfaceVariant, RoundedCornerShape(5.dp))
+                )
+                else -> Box(
+                    modifier = Modifier
+                        .size(6.dp)
+                        .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f), RoundedCornerShape(3.dp))
+                )
+            }
+        }
+        Spacer(Modifier.width(10.dp))
+        Text(
+            // A stop with no timetabled call keeps its column so the names line up.
+            text = stop.place.arrival?.takeIf { it.isNotBlank() }?.let { formatTime(it) } ?: "",
+            modifier = Modifier.width(44.dp),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1
+        )
+        Text(
+            text = stop.place.name,
+            modifier = Modifier.weight(1f),
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = if (emphasised) FontWeight.Bold else FontWeight.Normal,
+            color = if (emphasised) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        when {
+            stop.isAlight -> Text(
+                text = strings.journeyGetOffHere,
+                modifier = Modifier
+                    .padding(start = 8.dp)
+                    .background(accent.copy(alpha = 0.18f), RoundedCornerShape(6.dp))
+                    .padding(horizontal = 6.dp, vertical = 2.dp),
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                color = accent,
+                maxLines = 1
+            )
+            stop.state == RideStopState.HERE -> Text(
+                text = strings.journeyHereStop,
+                modifier = Modifier.padding(start = 8.dp),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1
+            )
+        }
+    }
+}
+
+/** The rung between ladder rows: a short dashed rail where the skipped stops would be. */
+@Composable
+private fun LadderRail(accent: Color, dashed: Boolean) {
+    Column(
+        modifier = Modifier.width(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(2.dp)
+    ) {
+        repeat(if (dashed) 3 else 1) {
+            Box(
+                modifier = Modifier
+                    .size(width = 2.dp, height = 4.dp)
+                    .background(accent.copy(alpha = 0.5f), RoundedCornerShape(1.dp))
+            )
         }
     }
 }

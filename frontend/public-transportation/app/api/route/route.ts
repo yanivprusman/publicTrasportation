@@ -180,11 +180,15 @@ function transformItinerary(itin: MotisItinerary, scooter: boolean) {
         if (fare !== null) transformed.fare = fare;
       }
       if (leg.intermediateStops && leg.intermediateStops.length > 0) {
-        transformed.intermediateStops = leg.intermediateStops.map(stop => ({
-          name: stop.name || '',
-          lat: stop.lat || 0,
-          lon: stop.lon || 0,
-        }));
+        transformed.intermediateStops = leg.intermediateStops.map(stop => {
+          const place: { name: string; lat: number; lon: number; arrival?: string } =
+            { name: stop.name || '', lat: stop.lat || 0, lon: stop.lon || 0 };
+          // When the bus calls there — the journey panel's stop list prints it next to
+          // each stop still ahead. Live when the feed has it, timetabled otherwise.
+          const arrival = stop.arrival || stop.scheduledArrival;
+          if (arrival) place.arrival = arrival;
+          return place;
+        });
       }
       return transformed;
   });

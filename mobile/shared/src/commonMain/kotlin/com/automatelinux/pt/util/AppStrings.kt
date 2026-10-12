@@ -337,6 +337,16 @@ interface AppStrings {
     val deleteAccountFailed: String
     val journeyLiveNeedsLocation: String
     val journeyAllSteps: String
+    /** Section label over the ride's stop list in the opened panel. */
+    val journeyStopsOnRide: String
+    /** Row label on the stop the vehicle is at. */
+    val journeyHereStop: String
+    /** Chip on the rider's own stop, in the list and the ladder. */
+    val journeyGetOffHere: String
+    /** The ladder's middle rung: stops between the next one and the rider's own. */
+    val journeyMoreStops: (Int) -> String
+    /** The dim first line of the opened list: stops already called at. */
+    val journeyStopsPassed: (Int) -> String
     /** Long-press menu on a journey step: re-plan the trip around that leg. */
     val journeyStartFrom: (String) -> String
     val journeyStartHere: String
@@ -724,6 +734,11 @@ val EnStrings: AppStrings = object : AppStrings {
     override val journeyLiveNeedsLocation: String =
         "Location is off, so stops can't be counted — the journey will follow the timetable."
     override val journeyAllSteps: String = "All steps"
+    override val journeyStopsOnRide: String = "Stops on this ride"
+    override val journeyHereStop: String = "you are here"
+    override val journeyGetOffHere: String = "get off here"
+    override val journeyMoreStops: (Int) -> String = { n -> if (n == 1) "1 more stop" else "$n more stops" }
+    override val journeyStopsPassed: (Int) -> String = { n -> if (n == 1) "1 stop passed" else "$n stops passed" }
     override val journeyStartFrom: (String) -> String = { place -> "Start from $place" }
     override val journeyStartHere: String = "Start from here"
     override val journeyEndAt: (String) -> String = { place -> "End at $place" }
@@ -1107,6 +1122,11 @@ val HeStrings: AppStrings = object : AppStrings {
     override val journeyLiveNeedsLocation: String =
         "המיקום כבוי, אז אי אפשר לספור תחנות — הנסיעה תעקוב אחרי לוח הזמנים."
     override val journeyAllSteps: String = "כל השלבים"
+    override val journeyStopsOnRide: String = "התחנות בנסיעה"
+    override val journeyHereStop: String = "אתם כאן"
+    override val journeyGetOffHere: String = "לרדת כאן"
+    override val journeyMoreStops: (Int) -> String = { n -> if (n == 1) "עוד תחנה אחת" else "עוד $n תחנות" }
+    override val journeyStopsPassed: (Int) -> String = { n -> if (n == 1) "תחנה אחת מאחור" else "$n תחנות מאחור" }
     override val journeyStartFrom: (String) -> String = { place -> "התחל מ$place" }
     override val journeyStartHere: String = "התחל מכאן"
     override val journeyEndAt: (String) -> String = { place -> "סיים ב$place" }
