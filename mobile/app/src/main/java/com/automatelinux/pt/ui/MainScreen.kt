@@ -1913,11 +1913,6 @@ fun MainScreen(
         }
 
         journeyItinerary?.let { trip ->
-            // A live journey is never ended by a stray edge swipe: back sends the app
-            // to the background with the journey still running (it keeps talking from
-            // the notification) and reopening lands right back in it. An expanded step
-            // list, registered inside the panel, folds first.
-            BackHandler { (context as? android.app.Activity)?.moveTaskToBack(true) }
             Box(modifier = Modifier.fillMaxSize()) {
                 JourneyPanel(
                     itinerary = trip,

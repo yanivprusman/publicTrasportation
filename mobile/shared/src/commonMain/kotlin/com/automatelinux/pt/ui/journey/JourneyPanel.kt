@@ -121,9 +121,6 @@ fun JourneyPanel(
 ) {
     val strings = LocalAppStrings.current
     var expanded by remember { mutableStateOf(false) }
-    // Back folds the step list. It never ends the journey — that is a two-tap
-    // decision below, not something an edge swipe should take.
-    PlatformBackHandler(enabled = expanded) { expanded = false }
     // The ride's stops, marked by where the rider is among them — the half of "where
     // am I" that a count cannot give. Null on foot or when the feed sent no stops.
     val rideStops = progress?.rideStopList()
@@ -142,6 +139,16 @@ fun JourneyPanel(
         if (confirmEnd) {
             delay(CONFIRM_END_TIMEOUT_MS)
             confirmEnd = false
+        }
+    }
+    // Back steps out of the journey the same way the end button does: an open step
+    // list folds first, the next back arms the end (the confirm label shows, and
+    // disarms itself), and a back while armed ends it and returns to the planner.
+    PlatformBackHandler {
+        when {
+            expanded -> expanded = false
+            confirmEnd -> onEnd()
+            else -> confirmEnd = true
         }
     }
     val urgent = progress?.alightImminent == true
