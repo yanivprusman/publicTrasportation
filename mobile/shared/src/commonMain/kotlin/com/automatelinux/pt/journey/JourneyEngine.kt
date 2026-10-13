@@ -336,9 +336,19 @@ fun stepJourney(
     // "walking", and the only number that matters there is when it leaves. Carried as
     // the departure instant rather than a flag, so the countdown cannot be read from
     // a different leg than the one that set it.
+    //
+    // The clock alone never puts the rider on board. A rider still standing at the
+    // pole after the timetabled departure is waiting for a late bus, not riding it —
+    // telling them "27 stops to go" from the bus stop is the navigator lying. Boarding
+    // is evidence: the bus has left the pole — on the timetable AND on the live feed —
+    // and no fix still puts the rider at that pole. A later stop already called at
+    // (stopIndex > 0) settles it outright.
     val waitingUntilMs = legStartMs?.takeIf {
-        leg.isRide && nowMs < it &&
-            (usable == null || haversineMeters(usable.lat, usable.lon, leg.from.lat, leg.from.lon) <= STOP_HIT_METERS)
+        leg.isRide && c.stopIndex == 0 && (
+            nowMs < max(it, liveBoardingArrivalMs ?: it) ||
+                (usable != null &&
+                    haversineMeters(usable.lat, usable.lon, leg.from.lat, leg.from.lon) <= STOP_HIT_METERS)
+            )
     }
     val waiting = waitingUntilMs != null
 

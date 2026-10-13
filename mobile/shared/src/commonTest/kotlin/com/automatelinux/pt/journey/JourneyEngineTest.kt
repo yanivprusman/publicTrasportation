@@ -141,6 +141,29 @@ class JourneyEngineTest {
     }
 
     @Test
+    fun `still at the pole after the timetabled departure is waiting for a late bus, not riding`() {
+        val update = stepJourney(trip, JourneyCursor(legIndex = 1), fixAt(1, 14), t0 + 14 * 60_000L)
+        assertEquals(JourneyPhase.WAITING, update.progress.phase)
+        assertFalse(update.progress.alightImminent)
+    }
+
+    @Test
+    fun `leaving the pole after departure is boarding`() {
+        val between = GeoFix(lat = (at(1) + at(2)) / 2, lon = lon, accuracyMeters = 8.0, atMs = t0 + 12 * 60_000L)
+        val update = stepJourney(trip, JourneyCursor(legIndex = 1), between, t0 + 12 * 60_000L)
+        assertEquals(JourneyPhase.RIDING, update.progress.phase)
+    }
+
+    @Test
+    fun `without a fix a bus the feed still has on its way keeps the rider waiting`() {
+        val late = t0 + 15 * 60_000L
+        val waiting = stepJourney(trip, JourneyCursor(legIndex = 1), null, t0 + 12 * 60_000L, liveBoardingArrivalMs = late)
+        assertEquals(JourneyPhase.WAITING, waiting.progress.phase)
+        val gone = stepJourney(trip, JourneyCursor(legIndex = 1), null, t0 + 16 * 60_000L, liveBoardingArrivalMs = late)
+        assertEquals(JourneyPhase.RIDING, gone.progress.phase)
+    }
+
+    @Test
     fun `once aboard an early bus is not an alert`() {
         val sighting = LineSighting(legIndex = 1, arrivalMs = t0 + 6 * 60_000L)
         val aboard = JourneyCursor(legIndex = 1, stopIndex = 2)
