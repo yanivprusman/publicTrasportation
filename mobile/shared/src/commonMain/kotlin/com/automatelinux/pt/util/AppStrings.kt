@@ -274,6 +274,15 @@ interface AppStrings {
     // than inventing one. These are what stands where a stop name would.
     val placeYourLocation: String
     val placeYourDestination: String
+    // Asked when a recent trip with a GPS end is picked: the place then, or the rider now.
+    val gpsChooseStart: String
+    val gpsChooseDestination: String
+    val gpsChooseBoth: String
+    val gpsTripExplain: String
+    val gpsWhereIAmNow: String
+    val gpsWhereIWas: (String) -> String
+    val gpsPermissionOff: String
+    val gpsPlan: String
     val startJourney: String
     val journeyLabel: String
     val journeyExit: String
@@ -679,6 +688,14 @@ val EnStrings: AppStrings = object : AppStrings {
     override val selectedLocation: String = "Selected location"
     override val placeYourLocation: String = "Your location"
     override val placeYourDestination: String = "Your destination"
+    override val gpsChooseStart: String = "Start from where?"
+    override val gpsChooseDestination: String = "Go to where?"
+    override val gpsChooseBoth: String = "Which places?"
+    override val gpsTripExplain: String = "This trip used your GPS location."
+    override val gpsWhereIAmNow: String = "Where I am now"
+    override val gpsWhereIWas: (String) -> String = { "Where I was: $it" }
+    override val gpsPermissionOff: String = "Location permission is off"
+    override val gpsPlan: String = "Plan"
     override val startJourney: String = "Start Journey"
     override val journeyLabel: String = "Journey"
     override val journeyExit: String = "Exit journey"
@@ -1077,6 +1094,14 @@ val HeStrings: AppStrings = object : AppStrings {
     override val selectedLocation: String = "מיקום נבחר"
     override val placeYourLocation: String = "המיקום שלך"
     override val placeYourDestination: String = "היעד שלך"
+    override val gpsChooseStart: String = "לצאת מאיפה?"
+    override val gpsChooseDestination: String = "לנסוע לאן?"
+    override val gpsChooseBoth: String = "אילו מקומות?"
+    override val gpsTripExplain: String = "בנסיעה הזו נעשה שימוש במיקום ה-GPS שלך."
+    override val gpsWhereIAmNow: String = "איפה שאני עכשיו"
+    override val gpsWhereIWas: (String) -> String = { "איפה שהייתי: $it" }
+    override val gpsPermissionOff: String = "הרשאת המיקום כבויה"
+    override val gpsPlan: String = "תכנון"
     override val startJourney: String = "צא לדרך"
     override val journeyLabel: String = "מסע"
     override val journeyExit: String = "יציאה מהמסע"

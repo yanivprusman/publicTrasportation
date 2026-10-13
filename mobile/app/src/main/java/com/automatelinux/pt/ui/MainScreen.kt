@@ -100,6 +100,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.content.ContextCompat
+import com.automatelinux.pt.data.model.GeocodeSuggestion
 import com.automatelinux.pt.data.model.Itinerary
 import com.automatelinux.pt.data.model.RouteLeg
 import com.automatelinux.pt.data.model.StopResult
@@ -124,6 +125,7 @@ import com.automatelinux.pt.ui.map.PtMapStyle
 import com.automatelinux.pt.ui.map.PtUserLocationIcon
 import com.automatelinux.pt.journey.JourneySession
 import com.automatelinux.pt.journey.StartedTrip
+import com.automatelinux.pt.journey.TripEnds
 import com.automatelinux.pt.data.model.VehicleMarker
 import com.automatelinux.pt.ui.journey.JourneyPanel
 import com.automatelinux.pt.ui.routing.DebugSettingsDialog
@@ -572,8 +574,69 @@ fun MainScreen(
 
     var pendingJourney by remember { mutableStateOf<Itinerary?>(null) }
 
+    /** A finished trip with a GPS end, waiting for the rider to say which place they mean. */
+    var gpsChoiceTrip by remember { mutableStateOf<StartedTrip?>(null) }
+
+    // Searches a finished trip's two ends again. An end marked "now" is the phone's
+    // fresh fix instead of the recorded one. That end is set last, after the GPS
+    // answers: setting the second end is what fires the search, so the other field
+    // is cleared first rather than searching once with a stale pair.
+    val searchRecentTrip: (StartedTrip, Boolean, Boolean) -> Unit = { trip, originNow, destinationNow ->
+        val from = trip.origin
+        val to = trip.destination
+        if (from != null && to != null) {
+            when {
+                originNow && destinationNow -> {
+                    // Both ends were GPS, and "now" for both is one point: nothing to route.
+                }
+                originNow -> {
+                    routingViewModel.setOrigin(null)
+                    routingViewModel.setDestinationFromCoords(to.lat, to.lon, trip.destinationLabel,
+                        isCurrentLocation = false)
+                    fetchCurrentLocation()
+                }
+                destinationNow -> {
+                    routingViewModel.setDestination(null)
+                    routingViewModel.setOriginFromCoords(from.lat, from.lon, trip.originLabel,
+                        isCurrentLocation = false)
+                    fetchCurrentLocationForDestination()
+                }
+                else -> {
+                    routingViewModel.setOriginFromCoords(from.lat, from.lon, trip.originLabel)
+                    routingViewModel.setDestinationFromCoords(to.lat, to.lon, trip.destinationLabel)
+                }
+            }
+            scope.launch { bottomSheetState.expand() }
+        }
+    }
+
+    gpsChoiceTrip?.let { trip ->
+        GpsEndChoiceDialog(
+            trip = trip,
+            canUseGps = LocationHelper.hasPermission(context),
+            onChoose = { originNow, destinationNow ->
+                gpsChoiceTrip = null
+                searchRecentTrip(trip, originNow, destinationNow)
+            },
+            onDismiss = { gpsChoiceTrip = null }
+        )
+    }
+
     val beginJourney: (Itinerary, Boolean) -> Unit = { trip, live ->
-        JourneySession.start(context, trip, strings, live)
+        // The fields' names, not the itinerary's: the server leaves the rider's own
+        // pins nameless. A placeholder ("My location" before the street resolved) is
+        // not a name and is not kept as one.
+        val placeholders = setOf(strings.myLocation, strings.selectedLocation, "Selected location")
+        fun nameOf(s: GeocodeSuggestion?) = s?.name?.ifBlank { null }?.takeUnless { it in placeholders }
+        JourneySession.start(
+            context, trip, strings, live,
+            ends = TripEnds(
+                originName = nameOf(routingState.origin),
+                destinationName = nameOf(routingState.destination),
+                originFromGps = routingState.originIsCurrentLocation,
+                destinationFromGps = routingState.destinationIsCurrentLocation
+            )
+        )
         // The sheet gets out of the way, and the map starts following the rider —
         // the panel answers "which stop", the map answers "where am I on the line".
         if (live) followingLocation = true
@@ -1014,18 +1077,14 @@ fun MainScreen(
                                     // are gone. The destination is set last: setting
                                     // the second end is what fires the search.
                                     onPickRecentTrip = { trip ->
-                                        val from = trip.origin
-                                        val to = trip.destination
                                         if (trip.resumable(System.currentTimeMillis())) {
                                             resumeTrip(trip)
-                                        } else if (from != null && to != null) {
-                                            routingViewModel.setOriginFromCoords(
-                                                from.lat, from.lon, from.name.ifBlank { null }
-                                            )
-                                            routingViewModel.setDestinationFromCoords(
-                                                to.lat, to.lon, to.name.ifBlank { null }
-                                            )
-                                            scope.launch { bottomSheetState.expand() }
+                                        } else if (trip.originFromGps || trip.destinationFromGps) {
+                                            // "Where I was then" or "where I am now" is
+                                            // the rider's call — see GpsEndChoiceDialog.
+                                            gpsChoiceTrip = trip
+                                        } else {
+                                            searchRecentTrip(trip, false, false)
                                         }
                                     },
                                     isCurrentRouteFavorite = remember(favoriteRoutes, routingState.origin, routingState.destination) {

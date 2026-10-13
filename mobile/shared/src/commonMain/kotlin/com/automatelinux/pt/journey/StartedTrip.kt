@@ -23,10 +23,29 @@ data class StartedTrip(
      * interrupted — the app swiped away, the process killed — without anyone saying
      * the trip was over, and that is the one the app rejoins by itself on launch.
      */
-    val endedAtMs: Long? = null
+    val endedAtMs: Long? = null,
+    /**
+     * What the planner's fields said at the two ends when the trip started. The
+     * itinerary cannot say it: the server sends the rider's own two pins nameless,
+     * so without these every recent trip read "Your location → Your destination".
+     * Null when the field held only a placeholder (no address resolved).
+     */
+    val originName: String? = null,
+    val destinationName: String? = null,
+    /**
+     * The end was the phone's GPS fix, not a place the rider named. Such an end
+     * means "where I was then", which is rarely where they are when they pick the
+     * trip again — so searching it again asks which of the two they mean.
+     */
+    val originFromGps: Boolean = false,
+    val destinationFromGps: Boolean = false
 ) {
     val origin: Place? get() = itinerary.legs.firstOrNull()?.from
     val destination: Place? get() = itinerary.legs.lastOrNull()?.to
+
+    /** The name to show for each end: the planner's, else the itinerary's; null if neither has one. */
+    val originLabel: String? get() = originName?.ifBlank { null } ?: origin?.name?.ifBlank { null }
+    val destinationLabel: String? get() = destinationName?.ifBlank { null } ?: destination?.name?.ifBlank { null }
 
     /**
      * Whether there is still a journey to rejoin: not arrived, and the timetable has
@@ -72,3 +91,11 @@ private fun sameEnds(a: StartedTrip, b: StartedTrip): Boolean {
 // ~10 m of slack, the same tolerance a starred route uses to recognise its ends.
 private fun samePlace(a: Place, b: Place): Boolean =
     kotlin.math.abs(a.lat - b.lat) < 0.0001 && kotlin.math.abs(a.lon - b.lon) < 0.0001
+
+/** The planner's two ends as the rider saw them when the trip started — see [StartedTrip.originName]. */
+data class TripEnds(
+    val originName: String? = null,
+    val destinationName: String? = null,
+    val originFromGps: Boolean = false,
+    val destinationFromGps: Boolean = false
+)

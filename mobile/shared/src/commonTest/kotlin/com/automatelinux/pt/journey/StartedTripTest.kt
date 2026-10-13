@@ -103,4 +103,29 @@ class StartedTripTest {
         val s = json.encodeToString(ListSerializer(StartedTrip.serializer()), listOf(t))
         assertEquals(listOf(t), json.decodeFromString(ListSerializer(StartedTrip.serializer()), s))
     }
+
+    @Test
+    fun labelsPreferThePlannersNamesOverTheNamelessItinerary() {
+        val nameless = trip(0).let { t ->
+            t.copy(itinerary = t.itinerary.copy(legs = t.itinerary.legs.map {
+                it.copy(from = it.from.copy(name = ""), to = it.to.copy(name = ""))
+            }))
+        }
+        assertNull(nameless.originLabel)
+        val named = nameless.copy(originName = "Paran 2, Yavne", destinationName = "Beersheba Central")
+        assertEquals("Paran 2, Yavne", named.originLabel)
+        assertEquals("Beersheba Central", named.destinationLabel)
+        assertEquals("A", trip(0).originLabel)
+    }
+
+    @Test
+    fun aTripStoredBeforeNamesAndGpsFlagsStillLoads() {
+        val json = Json { ignoreUnknownKeys = true }
+        val old = json.encodeToString(ListSerializer(StartedTrip.serializer()), listOf(trip(0)))
+            .replace(Regex(",?\"(originName|destinationName|originFromGps|destinationFromGps)\":[^,}]*"), "")
+        val loaded = json.decodeFromString(ListSerializer(StartedTrip.serializer()), old).single()
+        assertNull(loaded.originName)
+        assertFalse(loaded.originFromGps)
+        assertFalse(loaded.destinationFromGps)
+    }
 }

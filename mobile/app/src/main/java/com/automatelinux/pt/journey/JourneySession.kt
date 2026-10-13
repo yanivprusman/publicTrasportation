@@ -133,13 +133,24 @@ object JourneySession {
         strings: AppStrings,
         live: Boolean,
         resumeFrom: StartedTrip? = null,
-        startService: Boolean = true
+        startService: Boolean = true,
+        ends: TripEnds = TripEnds()
     ) {
         this.strings = strings
         liveTracking = live
         cursor = resumeFrom?.cursor ?: JourneyCursor()
         startedAtMs = resumeFrom?.startedAtMs ?: Clock.System.now().toEpochMilliseconds()
-        record(StartedTrip(startedAtMs!!, itinerary, cursor))
+        // A rejoined trip keeps what it was recorded with; only a new one takes [ends].
+        record(
+            resumeFrom?.copy(itinerary = itinerary, cursor = cursor)
+                ?: StartedTrip(
+                    startedAtMs!!, itinerary, cursor,
+                    originName = ends.originName,
+                    destinationName = ends.destinationName,
+                    originFromGps = ends.originFromGps,
+                    destinationFromGps = ends.destinationFromGps
+                )
+        )
         lastFix = null
         linger?.cancel()
         linger = null

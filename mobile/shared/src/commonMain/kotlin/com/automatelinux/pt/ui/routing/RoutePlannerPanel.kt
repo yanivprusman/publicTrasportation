@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.RemoveCircleOutline
+import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.Circle
@@ -811,14 +812,16 @@ private fun RecentTripsStrip(
                 ) {
                     Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
                         SavedRouteEnd(
-                            trip.origin?.name?.ifBlank { null } ?: strings.placeYourLocation,
+                            trip.originLabel ?: strings.placeYourLocation,
                             LocationMarker.ORIGIN,
-                            content
+                            content,
+                            fromGps = trip.originFromGps
                         )
                         SavedRouteEnd(
-                            trip.destination?.name?.ifBlank { null } ?: strings.placeYourDestination,
+                            trip.destinationLabel ?: strings.placeYourDestination,
                             LocationMarker.DESTINATION,
-                            content
+                            content,
+                            fromGps = trip.destinationFromGps
                         )
                         Text(
                             subtitle,
@@ -838,11 +841,17 @@ private fun RecentTripsStrip(
 private fun SavedRouteEnd(
     name: String,
     marker: LocationMarker,
-    color: Color = MaterialTheme.colorScheme.onPrimaryContainer
+    color: Color = MaterialTheme.colorScheme.onPrimaryContainer,
+    /** The end was the phone's GPS fix: the crosshair says so, the name says where it was. */
+    fromGps: Boolean = false
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(
-            if (marker == LocationMarker.ORIGIN) Icons.Outlined.Circle else Icons.Default.Place,
+            when {
+                fromGps -> Icons.Default.MyLocation
+                marker == LocationMarker.ORIGIN -> Icons.Outlined.Circle
+                else -> Icons.Default.Place
+            },
             contentDescription = null,
             tint = color.copy(alpha = 0.7f),
             modifier = Modifier.size(14.dp)
