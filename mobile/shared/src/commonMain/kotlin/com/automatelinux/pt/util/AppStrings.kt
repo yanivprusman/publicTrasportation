@@ -311,6 +311,10 @@ interface AppStrings {
     /** The live banner: what the feed says about the bus being waited for. */
     val journeyBusArrivesIn: (String, String) -> String
     val journeyBusDueNow: (String) -> String
+    /** Early-bus alert title: line, how early ("64 is 4 min early"). */
+    val journeyBusEarly: (String, String) -> String
+    /** Early-bus alert body: stop, live time, timetabled time. */
+    val journeyBusEarlyAt: (String, String, String) -> String
     val journeyThenIn: (String) -> String
     val journeyLiveTag: String
     val journeyShareLive: String
@@ -708,6 +712,10 @@ val EnStrings: AppStrings = object : AppStrings {
     override val journeyScheduleOnly: String = "Following the timetable — no location"
     override val journeyBusArrivesIn: (String, String) -> String = { line, d -> "$line arrives in $d" }
     override val journeyBusDueNow: (String) -> String = { line -> "$line is arriving" }
+    override val journeyBusEarly: (String, String) -> String = { line, by -> "$line is $by early" }
+    override val journeyBusEarlyAt: (String, String, String) -> String = { stop, live, planned ->
+        "Reaches $stop at $live, not $planned"
+    }
     override val journeyThenIn: (String) -> String = { d -> "then $d" }
     override val journeyLiveTag: String = "Live"
     override val journeyShareLive: String = "Share live journey"
@@ -1100,6 +1108,10 @@ val HeStrings: AppStrings = object : AppStrings {
     override val journeyScheduleOnly: String = "לפי לוח הזמנים — בלי מיקום"
     override val journeyBusArrivesIn: (String, String) -> String = { line, d -> "$line מגיע בעוד $d" }
     override val journeyBusDueNow: (String) -> String = { line -> "$line מגיע עכשיו" }
+    override val journeyBusEarly: (String, String) -> String = { line, by -> "$line מקדים ב-$by" }
+    override val journeyBusEarlyAt: (String, String, String) -> String = { stop, live, planned ->
+        "מגיע ל$stop ב-$live במקום ב-$planned"
+    }
     override val journeyThenIn: (String) -> String = { d -> "אחריו בעוד $d" }
     override val journeyLiveTag: String = "בזמן אמת"
     override val journeyShareLive: String = "שיתוף מסע חי"

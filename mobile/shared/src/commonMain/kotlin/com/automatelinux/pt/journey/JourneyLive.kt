@@ -3,7 +3,10 @@ package com.automatelinux.pt.journey
 import com.automatelinux.pt.data.model.Itinerary
 import com.automatelinux.pt.data.model.RouteLeg
 import com.automatelinux.pt.data.model.VehicleMarker
+import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.Instant
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.plus
 
 /**
  * The live half of a journey: where the actual bus is, against the timetable the
@@ -26,7 +29,16 @@ data class JourneyLiveInfo(
     /** Where that next bus is right now, for showing it on the map. */
     val vehicle: VehicleMarker? = null,
     /** When this was fetched; the panel hides a report that has gone stale. */
-    val fetchedAtMs: Long
+    val fetchedAtMs: Long,
+    /**
+     * When the rider's OWN trip — the one the itinerary was planned on — reaches the
+     * boarding stop, epoch ms. Null when the feed is not reporting that trip.
+     *
+     * Not the same as [arrivalMs]: the first bus of the line may be the one before
+     * ours running late, and calling that "your bus is early" would send the rider
+     * running for a bus that was never theirs. Only this one may say the bus is early.
+     */
+    val ownTripArrivalMs: Long? = null
 )
 
 object JourneyLive {
@@ -86,9 +98,46 @@ object JourneyLive {
             arrivalMs = first.first,
             nextArrivalMs = arrivals.getOrNull(1)?.first,
             vehicle = first.second,
-            fetchedAtMs = nowMs
+            fetchedAtMs = nowMs,
+            ownTripArrivalMs = arrivals.firstOrNull { (_, marker) -> isOwnTrip(leg, marker) }?.first
         )
     }
+
+    /**
+     * Whether [marker] is the very trip [leg] was planned on.
+     *
+     * The feed's DatedVehicleJourneyRef is not the GTFS trip_id (2026-10-13: none of
+     * a sample of them appear in trips.txt), so the trip is named the way both sides
+     * can: the route, plus the wall-clock time it was timetabled to leave its first
+     * stop. MOTIS writes exactly that into its trip id
+     * ("20261013_06:00_israel_22818921_131026"); SIRI reports it as
+     * OriginAimedDepartureTime ("2026-10-13T06:00:00+03:00"). Both are local time.
+     */
+    fun isOwnTrip(leg: RouteLeg, marker: VehicleMarker): Boolean {
+        if (leg.routeId == null || marker.lineRef != leg.routeId) return false
+        val planned = leg.tripId?.let { tripOrigin(it) } ?: return false
+        val aimed = marker.originAimedDeparture ?: return false
+        // "2026-10-13T06:00:00+03:00" -> "2026-10-13T06:00"
+        return aimed.length >= 16 && aimed.substring(0, 16) == planned
+    }
+
+    /**
+     * The local "yyyy-MM-ddTHH:mm" a MOTIS trip id says its trip leaves its first
+     * stop, or null for an id not in that shape. A GTFS time past midnight (25:10 on
+     * the service day) is rolled onto the next calendar day, which is how SIRI
+     * prints it.
+     */
+    fun tripOrigin(tripId: String): String? {
+        val m = TRIP_ID_ORIGIN.find(tripId) ?: return null
+        val (y, mo, d, hh, mm) = m.destructured
+        val hour = hh.toInt()
+        val date = runCatching { LocalDate(y.toInt(), mo.toInt(), d.toInt()) }.getOrNull()
+            ?: return null
+        val day = if (hour >= 24) date.plus(DatePeriod(days = 1)) else date
+        return "${day}T${(hour % 24).toString().padStart(2, '0')}:$mm"
+    }
+
+    private val TRIP_ID_ORIGIN = Regex("""^(\d{4})(\d{2})(\d{2})_(\d{2}):(\d{2})_""")
 
     /**
      * Whether [marker] is a bus of [leg]'s line: by route id when both carry one (it

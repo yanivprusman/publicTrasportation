@@ -9,6 +9,7 @@ import com.automatelinux.pt.util.EnStrings
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 import kotlinx.datetime.Instant
 
 /**
@@ -150,5 +151,59 @@ class JourneyLiveTest {
             "64 arrives in 6 min · then 41 min",
             JourneyText.liveBanner(live, trip, t0, EnStrings)
         )
+    }
+
+    // ── Own trip: the bus the itinerary was planned on, not just any bus of the line ──
+
+    /** Planned on the 64 that left its first stop at 11:40 local (Israel, +03:00). */
+    private val plannedRide = ride.copy(tripId = "20260815_11:40_israel_22818921_150826")
+
+    private fun tripMarker(arrivalMinutes: Int, originAimed: String) =
+        marker(arrivalMinutes).copy(originAimedDeparture = originAimed)
+
+    @Test
+    fun `a MOTIS trip id names the local minute its trip leaves the first stop`() {
+        assertEquals("2026-08-15T11:40", JourneyLive.tripOrigin("20260815_11:40_israel_22818921_150826"))
+        // GTFS counts past midnight on the service day; SIRI prints the calendar day.
+        assertEquals("2026-08-16T01:10", JourneyLive.tripOrigin("20260815_25:10_israel_1_150826"))
+        assertNull(JourneyLive.tripOrigin("not-a-motis-id"))
+    }
+
+    @Test
+    fun `the earlier bus running late is not our bus running early`() {
+        // The 11:20 trip, 12 min late, reaches the stop first. Ours, the 11:40, is
+        // reported later — that is the one the early warning may read.
+        val info = JourneyLive.infoFrom(
+            legIndex = 1, leg = plannedRide, nowMs = t0,
+            markers = listOf(
+                tripMarker(4, "2026-08-15T11:20:00+03:00"),
+                tripMarker(8, "2026-08-15T11:40:00+03:00")
+            )
+        )!!
+        assertEquals(t0 + 4 * 60_000L, info.arrivalMs)
+        assertEquals(t0 + 8 * 60_000L, info.ownTripArrivalMs)
+    }
+
+    @Test
+    fun `no own trip when the feed is not reporting it`() {
+        val info = JourneyLive.infoFrom(
+            legIndex = 1, leg = plannedRide, nowMs = t0,
+            markers = listOf(tripMarker(4, "2026-08-15T11:20:00+03:00"), marker(6))
+        )!!
+        assertNull(info.ownTripArrivalMs)
+    }
+
+    @Test
+    fun `the early alert names the line, how early, and both times`() {
+        val trip2 = trip.copy(legs = listOf(walk, plannedRide))
+        val info = JourneyLiveInfo(
+            legIndex = 1, arrivalMs = t0 + 6 * 60_000L, fetchedAtMs = t0,
+            ownTripArrivalMs = t0 + 6 * 60_000L
+        )
+        val (title, body) = JourneyText.alertText(
+            JourneyAlert.BUS_EARLY, null, EnStrings, itinerary = trip2, live = info
+        )!!
+        assertEquals("64 is ${EnStrings.formatDuration(4 * 60)} early", title)
+        assertTrue(body.startsWith("Reaches stop A at "), body)
     }
 }

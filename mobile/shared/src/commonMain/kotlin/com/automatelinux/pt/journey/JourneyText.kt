@@ -5,6 +5,7 @@ import com.automatelinux.pt.data.model.TransitMode
 import com.automatelinux.pt.util.AppStrings
 import com.automatelinux.pt.util.formatDistance
 import com.automatelinux.pt.util.formatTime
+import kotlinx.datetime.Instant
 
 /**
  * One voice for the journey.
@@ -199,7 +200,10 @@ object JourneyText {
     fun alertText(
         alert: JourneyAlert,
         progress: JourneyProgress?,
-        strings: AppStrings
+        strings: AppStrings,
+        /** Needed by [JourneyAlert.BUS_EARLY] only: the trip and the sighting that raised it. */
+        itinerary: Itinerary? = null,
+        live: JourneyLiveInfo? = null
     ): Pair<String, String>? = when (alert) {
         JourneyAlert.PREPARE_TO_ALIGHT -> strings.journeyGetOffNext to
             (progress?.targetName?.let { "${strings.journeyGetOffAt} $it" } ?: strings.journeyLabel)
@@ -209,6 +213,31 @@ object JourneyText {
                 (progress?.leg?.from?.name?.let { "${strings.journeyBoardAt} $it" } ?: strings.journeyLabel)
         }
         JourneyAlert.ARRIVED -> strings.journeyYouArrived to strings.journeyLabel
+        JourneyAlert.BUS_EARLY -> busEarlyText(itinerary, live, strings)
+    }
+
+    /**
+     * "64 is 4 min early" / "Reaches מדרשת בן גוריון at 05:30, not 05:34".
+     *
+     * Names the ride the sighting is about, not the leg in progress — while walking
+     * to the stop, the leg in progress is the walk. Null (no alert) when the sighting
+     * is gone by the time it is worded: an alert without the numbers is just noise.
+     */
+    private fun busEarlyText(
+        itinerary: Itinerary?,
+        live: JourneyLiveInfo?,
+        strings: AppStrings
+    ): Pair<String, String>? {
+        val info = live ?: return null
+        val arrivalMs = info.ownTripArrivalMs ?: return null
+        val ride = itinerary?.legs?.getOrNull(info.legIndex) ?: return null
+        val plannedMs = parseMs(ride.startTime) ?: return null
+        val earlyMin = (plannedMs - arrivalMs) / 60_000L
+        if (earlyMin < 1) return null
+        val line = rideName(ride.routeShortName, ride.mode, strings)
+        val liveAt = formatTime(Instant.fromEpochMilliseconds(arrivalMs).toString())
+        val body = strings.journeyBusEarlyAt(ride.from.name, liveAt, formatTime(ride.startTime))
+        return strings.journeyBusEarly(line, strings.formatDuration(earlyMin * 60)) to body
     }
 
     /** "64", or the mode's name when the service has no short name worth printing. */

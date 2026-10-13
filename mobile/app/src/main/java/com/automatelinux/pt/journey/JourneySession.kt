@@ -304,15 +304,19 @@ object JourneySession {
 
     private suspend fun advance() {
         val trip = _itinerary.value ?: return
+        val nowMs = Clock.System.now().toEpochMilliseconds()
         val update = stepJourney(
             itinerary = trip,
             cursor = cursor,
             fix = lastFix,
-            nowMs = Clock.System.now().toEpochMilliseconds(),
+            nowMs = nowMs,
             // Only a sighting of THIS leg's bus may move its board call.
             liveBoardingArrivalMs = _live.value
                 ?.takeIf { it.legIndex == cursor.legIndex }
-                ?.arrivalMs
+                ?.arrivalMs,
+            ownTrip = _live.value
+                ?.takeIf { !with(JourneyLive) { it.isStale(nowMs) } }
+                ?.let { info -> info.ownTripArrivalMs?.let { OwnTripSighting(info.legIndex, it) } }
         )
         if (update.cursor != cursor) {
             cursor = update.cursor

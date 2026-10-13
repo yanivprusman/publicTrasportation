@@ -56,6 +56,15 @@ export interface NormalisedVehicle {
   lineRef: string | null
   destinationRef: string | null
   /**
+   * When this trip was timetabled to leave its first stop — SIRI's
+   * OriginAimedDepartureTime, ISO-8601 with offset. Together with [lineRef] it names
+   * one scheduled trip: the feed's own DatedVehicleJourneyRef is NOT the GTFS
+   * trip_id (measured 2026-10-13, none of them appear in trips.txt), but a route and
+   * an origin departure is exactly what MOTIS encodes in its trip id. This is what
+   * tells the rider's own bus running early apart from the one before it running late.
+   */
+  originAimedDeparture: string | null
+  /**
    * The destination stop's name, resolved here from GTFS. Empty when unknown — never the
    * raw code, which reads as a destination called "15657" once a client puts it after an
    * arrow.
@@ -149,6 +158,7 @@ export function normaliseVehicles(
         stopCode: visit.MonitoringRef != null ? String(visit.MonitoringRef) : null,
         lineRef: journey.LineRef != null ? String(journey.LineRef) : null,
         destinationRef,
+        originAimedDeparture: journey.OriginAimedDepartureTime != null ? String(journey.OriginAimedDepartureTime) : null,
         destinationName: (destinationRef && stopNames[destinationRef]) || '',
         upcomingCalls,
       })

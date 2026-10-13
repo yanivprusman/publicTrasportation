@@ -51,7 +51,12 @@ enum class JourneyAlert {
     /** The ride is here / it is time to get on. */
     BOARD_NOW,
     /** Destination reached. */
-    ARRIVED
+    ARRIVED,
+    /**
+     * The rider's own bus is running ahead of its timetable — they have less time
+     * than the plan said, and may need to hurry to the stop.
+     */
+    BUS_EARLY
 }
 
 /**
@@ -67,6 +72,8 @@ data class JourneyCursor(
     val alightAlerted: Set<Int> = emptySet(),
     /** Legs whose boarding call has already been given. */
     val boardAlerted: Set<Int> = emptySet(),
+    /** Legs whose "your bus is early" warning has already been given. */
+    val earlyAlerted: Set<Int> = emptySet(),
     val arrived: Boolean = false
 )
 
@@ -153,6 +160,15 @@ private const val SCHEDULE_GRACE_MS = 30_000L
 
 /** Board call this long before a ride is due to leave. */
 private const val BOARD_CALL_LEAD_MS = 120_000L
+
+/**
+ * A bus this far ahead of its timetable is worth interrupting for. The feed reports
+ * whole minutes, so one minute is rounding; two is a bus the rider can miss.
+ */
+const val EARLY_ALERT_MS = 120_000L
+
+/** A live sighting of the rider's own trip: which ride leg, and when it reaches the boarding stop. */
+data class OwnTripSighting(val legIndex: Int, val arrivalMs: Long)
 
 fun haversineMeters(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
     val r = 6_371_000.0
@@ -262,7 +278,13 @@ fun stepJourney(
      * call reads it: a bus running early must buzz the rider early, because the
      * timetabled instant arrives after the bus has left.
      */
-    liveBoardingArrivalMs: Long? = null
+    liveBoardingArrivalMs: Long? = null,
+    /**
+     * The live feed's sighting of the very trip the plan rides next, when it has one.
+     * Read only for the early-bus warning — never another trip of the line, which
+     * may be the previous bus running late.
+     */
+    ownTrip: OwnTripSighting? = null
 ): JourneyUpdate {
     val legs = itinerary.legs
     val usable = fix?.takeIf { nowMs - it.atMs <= FIX_STALE_MS }
@@ -345,6 +367,11 @@ fun stepJourney(
         c = c.copy(boardAlerted = c.boardAlerted + c.legIndex)
     }
 
+    if (ownTrip != null && busEarly(legs, c, ownTrip, nowMs)) {
+        alerts += JourneyAlert.BUS_EARLY
+        c = c.copy(earlyAlerted = c.earlyAlerted + ownTrip.legIndex)
+    }
+
     return JourneyUpdate(
         cursor = c,
         progress = JourneyProgress(
@@ -364,6 +391,36 @@ fun stepJourney(
         ),
         alerts = alerts
     )
+}
+
+/**
+ * Whether [sighting] says the next ride is coming early enough to warn about, and
+ * the warning has not been given yet.
+ *
+ * Only a ride still ahead of the rider counts — the one being waited for, or the one
+ * at the end of the walk under way. Once aboard, early is good news, not an alert.
+ * Once per leg: the live banner keeps the countdown current after that, and a phone
+ * that buzzes again for every minute the bus gains is one the rider silences.
+ */
+private fun busEarly(
+    legs: List<RouteLeg>,
+    c: JourneyCursor,
+    sighting: OwnTripSighting,
+    nowMs: Long
+): Boolean {
+    val i = sighting.legIndex
+    if (i in c.earlyAlerted) return false
+    val ride = legs.getOrNull(i)?.takeIf { it.isRide } ?: return false
+    val ahead = when (i) {
+        c.legIndex -> c.stopIndex == 0
+        c.legIndex + 1 -> !legs[c.legIndex].isRide
+        else -> false
+    }
+    if (!ahead) return false
+    // A bus already gone is not a warning anyone can act on.
+    if (sighting.arrivalMs < nowMs) return false
+    val scheduledMs = parseMs(ride.startTime) ?: return false
+    return scheduledMs - sighting.arrivalMs >= EARLY_ALERT_MS
 }
 
 /**

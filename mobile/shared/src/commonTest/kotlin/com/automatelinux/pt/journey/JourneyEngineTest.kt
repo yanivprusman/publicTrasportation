@@ -120,6 +120,32 @@ class JourneyEngineTest {
     }
 
     @Test
+    fun `our bus running early warns the rider while they walk to the stop, once`() {
+        // Timetabled at the stop at t0+10; the feed has our trip there at t0+6.
+        val now = t0 + 60_000L
+        val sighting = OwnTripSighting(legIndex = 1, arrivalMs = t0 + 6 * 60_000L)
+        val first = stepJourney(trip, JourneyCursor(), fixAt(0, 1), now, ownTrip = sighting)
+        assertTrue(JourneyAlert.BUS_EARLY in first.alerts)
+        val again = stepJourney(trip, first.cursor, fixAt(0, 1), now + 20_000L, ownTrip = sighting)
+        assertFalse(JourneyAlert.BUS_EARLY in again.alerts)
+    }
+
+    @Test
+    fun `a bus a minute early is rounding, not news`() {
+        val sighting = OwnTripSighting(legIndex = 1, arrivalMs = t0 + 9 * 60_000L)
+        val update = stepJourney(trip, JourneyCursor(), fixAt(0, 1), t0 + 60_000L, ownTrip = sighting)
+        assertFalse(JourneyAlert.BUS_EARLY in update.alerts)
+    }
+
+    @Test
+    fun `once aboard an early bus is not an alert`() {
+        val sighting = OwnTripSighting(legIndex = 1, arrivalMs = t0 + 6 * 60_000L)
+        val aboard = JourneyCursor(legIndex = 1, stopIndex = 2)
+        val update = stepJourney(trip, aboard, fixAt(3, 7), t0 + 7 * 60_000L, ownTrip = sighting)
+        assertFalse(JourneyAlert.BUS_EARLY in update.alerts)
+    }
+
+    @Test
     fun `stops remaining counts down as the bus calls at each stop`() {
         var cursor = JourneyCursor(legIndex = 1)
         val seen = mutableListOf<Int>()

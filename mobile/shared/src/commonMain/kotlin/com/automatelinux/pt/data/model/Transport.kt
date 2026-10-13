@@ -113,6 +113,13 @@ data class VehicleMarker(
     /** SIRI LineRef, i.e. the GTFS route_id — draws the correct line. */
     val lineRef: String? = null,
     val destinationRef: String? = null,
+    /**
+     * When this trip was timetabled to leave its first stop (SIRI
+     * OriginAimedDepartureTime), ISO-8601 with offset. With [lineRef] it names one
+     * scheduled trip — the same pair a MOTIS trip id carries — so a journey can pick
+     * out its own bus rather than whichever bus of the line comes first.
+     */
+    val originAimedDeparture: String? = null,
     /** Resolved from GTFS by the server. Empty when unknown — never the raw stop code. */
     val destinationName: String = "",
     /**

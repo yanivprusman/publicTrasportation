@@ -263,7 +263,11 @@ class JourneyService : Service() {
         if (settings.journeyAlertsEnabled) {
             val strings = JourneySession.strings
             val progress = JourneySession.progress.value
-            JourneyText.alertText(alert, progress, strings)?.let { (title, body) ->
+            JourneyText.alertText(
+                alert, progress, strings,
+                itinerary = JourneySession.itinerary.value,
+                live = JourneySession.live.value
+            )?.let { (title, body) ->
                 notifier().notify(
                     ALERT_ID,
                     NotificationCompat.Builder(this, CHANNEL_ALERT)
