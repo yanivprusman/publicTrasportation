@@ -314,9 +314,9 @@ object JourneySession {
             liveBoardingArrivalMs = _live.value
                 ?.takeIf { it.legIndex == cursor.legIndex }
                 ?.arrivalMs,
-            ownTrip = _live.value
+            nextBus = _live.value
                 ?.takeIf { !with(JourneyLive) { it.isStale(nowMs) } }
-                ?.let { info -> info.ownTripArrivalMs?.let { OwnTripSighting(info.legIndex, it) } }
+                ?.let { LineSighting(it.legIndex, it.arrivalMs) }
         )
         if (update.cursor != cursor) {
             cursor = update.cursor

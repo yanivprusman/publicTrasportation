@@ -34,9 +34,9 @@ data class JourneyLiveInfo(
      * When the rider's OWN trip — the one the itinerary was planned on — reaches the
      * boarding stop, epoch ms. Null when the feed is not reporting that trip.
      *
-     * Not the same as [arrivalMs]: the first bus of the line may be the one before
-     * ours running late, and calling that "your bus is early" would send the rider
-     * running for a bus that was never theirs. Only this one may say the bus is early.
+     * Not always [arrivalMs]: the first bus of the line may be the one before ours
+     * running late. Both are worth catching; this tells the early-bus alert which to
+     * say — "your 64 is early" or "an earlier 64 comes first".
      */
     val ownTripArrivalMs: Long? = null
 )

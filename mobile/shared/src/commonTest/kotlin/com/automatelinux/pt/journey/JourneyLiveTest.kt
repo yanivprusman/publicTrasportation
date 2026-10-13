@@ -206,4 +206,17 @@ class JourneyLiveTest {
         assertEquals("64 is ${EnStrings.formatDuration(4 * 60)} early", title)
         assertTrue(body.startsWith("Reaches stop A at "), body)
     }
+
+    @Test
+    fun `an earlier bus running late is announced as the earlier bus`() {
+        val trip2 = trip.copy(legs = listOf(walk, plannedRide))
+        val info = JourneyLiveInfo(
+            legIndex = 1, arrivalMs = t0 + 9 * 60_000L + 30_000L, fetchedAtMs = t0,
+            ownTripArrivalMs = t0 + 12 * 60_000L
+        )
+        val (title, _) = JourneyText.alertText(
+            JourneyAlert.BUS_EARLY, null, EnStrings, itinerary = trip2, live = info
+        )!!
+        assertEquals("An earlier 64 comes 30 sec sooner", title)
+    }
 }

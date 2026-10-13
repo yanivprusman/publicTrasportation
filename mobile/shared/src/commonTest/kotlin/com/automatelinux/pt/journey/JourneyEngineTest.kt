@@ -123,25 +123,28 @@ class JourneyEngineTest {
     fun `our bus running early warns the rider while they walk to the stop, once`() {
         // Timetabled at the stop at t0+10; the feed has our trip there at t0+6.
         val now = t0 + 60_000L
-        val sighting = OwnTripSighting(legIndex = 1, arrivalMs = t0 + 6 * 60_000L)
-        val first = stepJourney(trip, JourneyCursor(), fixAt(0, 1), now, ownTrip = sighting)
+        val sighting = LineSighting(legIndex = 1, arrivalMs = t0 + 6 * 60_000L)
+        val first = stepJourney(trip, JourneyCursor(), fixAt(0, 1), now, nextBus = sighting)
         assertTrue(JourneyAlert.BUS_EARLY in first.alerts)
-        val again = stepJourney(trip, first.cursor, fixAt(0, 1), now + 20_000L, ownTrip = sighting)
+        val again = stepJourney(trip, first.cursor, fixAt(0, 1), now + 20_000L, nextBus = sighting)
         assertFalse(JourneyAlert.BUS_EARLY in again.alerts)
     }
 
     @Test
-    fun `a bus a minute early is rounding, not news`() {
-        val sighting = OwnTripSighting(legIndex = 1, arrivalMs = t0 + 9 * 60_000L)
-        val update = stepJourney(trip, JourneyCursor(), fixAt(0, 1), t0 + 60_000L, ownTrip = sighting)
-        assertFalse(JourneyAlert.BUS_EARLY in update.alerts)
+    fun `even 15 seconds early is worth telling`() {
+        val early = LineSighting(legIndex = 1, arrivalMs = t0 + 10 * 60_000L - 15_000L)
+        val update = stepJourney(trip, JourneyCursor(), fixAt(0, 1), t0 + 60_000L, nextBus = early)
+        assertTrue(JourneyAlert.BUS_EARLY in update.alerts)
+        val onTime = LineSighting(legIndex = 1, arrivalMs = t0 + 10 * 60_000L)
+        val quiet = stepJourney(trip, JourneyCursor(), fixAt(0, 1), t0 + 60_000L, nextBus = onTime)
+        assertFalse(JourneyAlert.BUS_EARLY in quiet.alerts)
     }
 
     @Test
     fun `once aboard an early bus is not an alert`() {
-        val sighting = OwnTripSighting(legIndex = 1, arrivalMs = t0 + 6 * 60_000L)
+        val sighting = LineSighting(legIndex = 1, arrivalMs = t0 + 6 * 60_000L)
         val aboard = JourneyCursor(legIndex = 1, stopIndex = 2)
-        val update = stepJourney(trip, aboard, fixAt(3, 7), t0 + 7 * 60_000L, ownTrip = sighting)
+        val update = stepJourney(trip, aboard, fixAt(3, 7), t0 + 7 * 60_000L, nextBus = sighting)
         assertFalse(JourneyAlert.BUS_EARLY in update.alerts)
     }
 

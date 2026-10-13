@@ -53,8 +53,10 @@ enum class JourneyAlert {
     /** Destination reached. */
     ARRIVED,
     /**
-     * The rider's own bus is running ahead of its timetable — they have less time
-     * than the plan said, and may need to hurry to the stop.
+     * A bus of the line being walked to or waited for reaches the boarding stop
+     * before the planned one was timetabled to — the rider's own bus running early,
+     * or an earlier bus of the line running late. Either one takes them, and either
+     * way they have less time than the plan said.
      */
     BUS_EARLY
 }
@@ -162,13 +164,17 @@ private const val SCHEDULE_GRACE_MS = 30_000L
 private const val BOARD_CALL_LEAD_MS = 120_000L
 
 /**
- * A bus this far ahead of its timetable is worth interrupting for. The feed reports
- * whole minutes, so one minute is rounding; two is a bus the rider can miss.
+ * Any lead over the timetable is worth telling — the rider asked for "even 15 seconds
+ * early" (2026-10-13). In practice the feed reports whole minutes, so the smallest
+ * lead that ever fires is a minute.
  */
-const val EARLY_ALERT_MS = 120_000L
+const val EARLY_ALERT_MS = 15_000L
 
-/** A live sighting of the rider's own trip: which ride leg, and when it reaches the boarding stop. */
-data class OwnTripSighting(val legIndex: Int, val arrivalMs: Long)
+/**
+ * A live sighting of the line about to be ridden: which ride leg, and when the first
+ * bus of that line reaches its boarding stop.
+ */
+data class LineSighting(val legIndex: Int, val arrivalMs: Long)
 
 fun haversineMeters(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
     val r = 6_371_000.0
@@ -280,11 +286,11 @@ fun stepJourney(
      */
     liveBoardingArrivalMs: Long? = null,
     /**
-     * The live feed's sighting of the very trip the plan rides next, when it has one.
-     * Read only for the early-bus warning — never another trip of the line, which
-     * may be the previous bus running late.
+     * The live feed's first bus of the line the plan rides next, when it has one.
+     * Read only for the early-bus warning. Deliberately any trip of the line, not just
+     * the planned one: the bus before it running late is a bus the rider can take.
      */
-    ownTrip: OwnTripSighting? = null
+    nextBus: LineSighting? = null
 ): JourneyUpdate {
     val legs = itinerary.legs
     val usable = fix?.takeIf { nowMs - it.atMs <= FIX_STALE_MS }
@@ -367,9 +373,9 @@ fun stepJourney(
         c = c.copy(boardAlerted = c.boardAlerted + c.legIndex)
     }
 
-    if (ownTrip != null && busEarly(legs, c, ownTrip, nowMs)) {
+    if (nextBus != null && busEarly(legs, c, nextBus, nowMs)) {
         alerts += JourneyAlert.BUS_EARLY
-        c = c.copy(earlyAlerted = c.earlyAlerted + ownTrip.legIndex)
+        c = c.copy(earlyAlerted = c.earlyAlerted + nextBus.legIndex)
     }
 
     return JourneyUpdate(
@@ -405,7 +411,7 @@ fun stepJourney(
 private fun busEarly(
     legs: List<RouteLeg>,
     c: JourneyCursor,
-    sighting: OwnTripSighting,
+    sighting: LineSighting,
     nowMs: Long
 ): Boolean {
     val i = sighting.legIndex

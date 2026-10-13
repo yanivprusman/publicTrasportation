@@ -217,7 +217,9 @@ object JourneyText {
     }
 
     /**
-     * "64 is 4 min early" / "Reaches מדרשת בן גוריון at 05:30, not 05:34".
+     * "64 is 4 min early" when it is the planned bus, "An earlier 64 comes 4 min
+     * sooner" when it is the one before it running late — then
+     * "Reaches מדרשת בן גוריון at 05:30, not 05:34".
      *
      * Names the ride the sighting is about, not the leg in progress — while walking
      * to the stop, the leg in progress is the walk. Null (no alert) when the sighting
@@ -229,15 +231,19 @@ object JourneyText {
         strings: AppStrings
     ): Pair<String, String>? {
         val info = live ?: return null
-        val arrivalMs = info.ownTripArrivalMs ?: return null
         val ride = itinerary?.legs?.getOrNull(info.legIndex) ?: return null
         val plannedMs = parseMs(ride.startTime) ?: return null
-        val earlyMin = (plannedMs - arrivalMs) / 60_000L
-        if (earlyMin < 1) return null
+        val earlySec = (plannedMs - info.arrivalMs) / 1000L
+        if (earlySec <= 0) return null
+        val by = if (earlySec < 60) strings.secondsShort(earlySec) else strings.formatDuration(earlySec)
         val line = rideName(ride.routeShortName, ride.mode, strings)
-        val liveAt = formatTime(Instant.fromEpochMilliseconds(arrivalMs).toString())
-        val body = strings.journeyBusEarlyAt(ride.from.name, liveAt, formatTime(ride.startTime))
-        return strings.journeyBusEarly(line, strings.formatDuration(earlyMin * 60)) to body
+        val title = if (info.ownTripArrivalMs == info.arrivalMs) {
+            strings.journeyBusEarly(line, by)
+        } else {
+            strings.journeyEarlierBus(line, by)
+        }
+        val liveAt = formatTime(Instant.fromEpochMilliseconds(info.arrivalMs).toString())
+        return title to strings.journeyBusEarlyAt(ride.from.name, liveAt, formatTime(ride.startTime))
     }
 
     /** "64", or the mode's name when the service has no short name worth printing. */

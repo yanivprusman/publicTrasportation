@@ -313,6 +313,10 @@ interface AppStrings {
     val journeyBusDueNow: (String) -> String
     /** Early-bus alert title: line, how early ("64 is 4 min early"). */
     val journeyBusEarly: (String, String) -> String
+    /** Early-bus alert title when it is the bus before the planned one, running late. */
+    val journeyEarlierBus: (String, String) -> String
+    /** A lead under a minute: "30 sec". */
+    val secondsShort: (Long) -> String
     /** Early-bus alert body: stop, live time, timetabled time. */
     val journeyBusEarlyAt: (String, String, String) -> String
     val journeyThenIn: (String) -> String
@@ -713,6 +717,8 @@ val EnStrings: AppStrings = object : AppStrings {
     override val journeyBusArrivesIn: (String, String) -> String = { line, d -> "$line arrives in $d" }
     override val journeyBusDueNow: (String) -> String = { line -> "$line is arriving" }
     override val journeyBusEarly: (String, String) -> String = { line, by -> "$line is $by early" }
+    override val journeyEarlierBus: (String, String) -> String = { line, by -> "An earlier $line comes $by sooner" }
+    override val secondsShort: (Long) -> String = { s -> "$s sec" }
     override val journeyBusEarlyAt: (String, String, String) -> String = { stop, live, planned ->
         "Reaches $stop at $live, not $planned"
     }
@@ -1109,6 +1115,8 @@ val HeStrings: AppStrings = object : AppStrings {
     override val journeyBusArrivesIn: (String, String) -> String = { line, d -> "$line מגיע בעוד $d" }
     override val journeyBusDueNow: (String) -> String = { line -> "$line מגיע עכשיו" }
     override val journeyBusEarly: (String, String) -> String = { line, by -> "$line מקדים ב-$by" }
+    override val journeyEarlierBus: (String, String) -> String = { line, by -> "$line מוקדם יותר מגיע $by לפני המתוכנן" }
+    override val secondsShort: (Long) -> String = { s -> "$s שנ׳" }
     override val journeyBusEarlyAt: (String, String, String) -> String = { stop, live, planned ->
         "מגיע ל$stop ב-$live במקום ב-$planned"
     }
