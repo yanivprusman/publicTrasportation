@@ -56,6 +56,8 @@ kotlin {
             // signature rather than this working implementation being rewritten.
             implementation(libs.osmdroid)
             implementation(libs.play.services.location)
+            // The system back gesture (PlatformBackHandler's Android half).
+            implementation(libs.activity.compose)
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)

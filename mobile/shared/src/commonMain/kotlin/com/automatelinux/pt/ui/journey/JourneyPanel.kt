@@ -71,6 +71,7 @@ import com.automatelinux.pt.ui.map.getModeColorWithRoute
 import com.automatelinux.pt.util.formatTime
 import com.automatelinux.pt.util.LocalAppStrings
 import kotlinx.coroutines.delay
+import com.automatelinux.pt.ui.util.PlatformBackHandler
 import kotlinx.datetime.Clock
 
 /** The colour of "get ready, this is you" — the same amber the cards use for urgency. */
@@ -120,6 +121,9 @@ fun JourneyPanel(
 ) {
     val strings = LocalAppStrings.current
     var expanded by remember { mutableStateOf(false) }
+    // Back folds the step list. It never ends the journey — that is a two-tap
+    // decision below, not something an edge swipe should take.
+    PlatformBackHandler(enabled = expanded) { expanded = false }
     // The ride's stops, marked by where the rider is among them — the half of "where
     // am I" that a count cannot give. Null on foot or when the feed sent no stops.
     val rideStops = progress?.rideStopList()

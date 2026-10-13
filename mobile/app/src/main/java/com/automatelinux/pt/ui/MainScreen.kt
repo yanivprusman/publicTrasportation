@@ -711,6 +711,24 @@ fun MainScreen(
     }
     BackHandler(enabled = lineOnMapShown) { lineOnMap = null }
 
+    // The edge-swipe back gesture steps out one level at a time instead of closing
+    // the app. Composed before the sheet, so anything open inside it (a result card,
+    // the reopened search form) outranks this and closes first; screens that cover
+    // the sheet (tracking, a journey) register their own handlers after it. Only
+    // with nothing left to step out of does back leave the app.
+    val sheetExpanded = bottomSheetState.currentValue == SheetValue.Expanded
+    val lineOpen = activeTab == ActiveTab.LINES && selectedLine != null
+    BackHandler(enabled = sheetExpanded || lineOpen || activeTab != ActiveTab.ROUTE) {
+        when {
+            sheetExpanded -> scope.launch { bottomSheetState.partialExpand() }
+            lineOpen -> {
+                selectedLine = null
+                lineShapeData = LineShapeData()
+            }
+            else -> activeTab = ActiveTab.ROUTE
+        }
+    }
+
     LaunchedEffect(Unit) {
         // A trip arriving via a shared link supplies the origin — GPS must not overwrite it.
         if (routingState.origin == null && sharedTrip == null) {
@@ -1888,7 +1906,18 @@ fun MainScreen(
             }
         }
 
+        // Tracking hides the sheet, so back ends it rather than reaching into the
+        // hidden sheet. Composed after the sheet so it outranks the sheet's handlers.
+        BackHandler(enabled = isTracking && journeyItinerary == null) {
+            routingViewModel.stopTracking()
+        }
+
         journeyItinerary?.let { trip ->
+            // A live journey is never ended by a stray edge swipe: back sends the app
+            // to the background with the journey still running (it keeps talking from
+            // the notification) and reopening lands right back in it. An expanded step
+            // list, registered inside the panel, folds first.
+            BackHandler { (context as? android.app.Activity)?.moveTaskToBack(true) }
             Box(modifier = Modifier.fillMaxSize()) {
                 JourneyPanel(
                     itinerary = trip,

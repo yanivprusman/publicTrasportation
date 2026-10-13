@@ -72,6 +72,7 @@ import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import com.automatelinux.pt.ui.util.PlatformBackHandler
 
 @Composable
 fun RoutePlannerPanel(
@@ -154,6 +155,12 @@ fun RoutePlannerPanel(
     LaunchedEffect(state.results) {
         formCollapsed = state.results?.itineraries?.isNotEmpty() == true
     }
+    // Reopened to edit, back folds the form over the results again. An open result
+    // card (RouteResults, composed later) outranks this and closes first.
+    PlatformBackHandler(
+        enabled = !formCollapsed && state.results?.itineraries?.isNotEmpty() == true &&
+            state.origin != null && state.destination != null
+    ) { formCollapsed = true }
 
     Column(modifier = modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
         if (formCollapsed && state.origin != null && state.destination != null) {

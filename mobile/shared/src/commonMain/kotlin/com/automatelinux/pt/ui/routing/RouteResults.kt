@@ -37,6 +37,7 @@ import com.automatelinux.pt.data.model.RouteSortMode
 import com.automatelinux.pt.ui.viewmodel.LiveBoarding
 import com.automatelinux.pt.util.LocalAppStrings
 import kotlinx.coroutines.delay
+import com.automatelinux.pt.ui.util.PlatformBackHandler
 import kotlinx.datetime.Clock
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
@@ -80,6 +81,8 @@ fun RouteResults(
     // a card is closed. -1 = the clean list, which is what a fresh search deserves.
     var expandedIndex by rememberSaveable { mutableIntStateOf(-1) }
     LaunchedEffect(sortedItineraries) { expandedIndex = -1 }
+    // Back closes the open card, not the app.
+    PlatformBackHandler(enabled = expandedIndex != -1) { expandedIndex = -1 }
 
     // Opening a card near the bottom of the sheet grows content the user cannot see.
     // The requester rides the open card and pulls it — with its timeline — into view.
