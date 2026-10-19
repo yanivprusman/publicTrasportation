@@ -52,6 +52,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.remember
@@ -61,6 +62,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.layout.onPlaced
+import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -137,30 +140,6 @@ fun JourneyPanel(
     onPay: (() -> Unit)? = null
 ) {
     val strings = LocalAppStrings.current
-    // The panel opens and shuts the way the planner's sheet does: the step list
-    // follows the finger, settles open or shut on release, and the handle or the
-    // chevron toggles it. [reveal] is how much of the list shows, 0..1; [expanded] is
-    // where it is settling, which is what back and the chevron act on. Before this
-    // the panel was a card with a chevron — it looked like the sheet it replaces and
-    // ignored the drag every other bottom surface in the app answers.
-    var expanded by remember { mutableStateOf(false) }
-    var reveal by remember { mutableFloatStateOf(0f) }
-    // The list's natural height, written during layout and read only by the drag —
-    // a plain holder, so measuring it never recomposes the panel.
-    val stepsHeightPx = remember { intArrayOf(0) }
-    val scope = rememberCoroutineScope()
-    var settle by remember { mutableStateOf<Job?>(null) }
-    val settleTo: (Boolean) -> Unit = { open ->
-        expanded = open
-        settle?.cancel()
-        settle = scope.launch {
-            animate(reveal, if (open) 1f else 0f, animationSpec = spring()) { v, _ -> reveal = v }
-        }
-    }
-    val dragState = rememberDraggableState { delta ->
-        val full = stepsHeightPx[0]
-        if (full > 0) reveal = (reveal - delta / full).coerceIn(0f, 1f)
-    }
     // The ride's stops, marked by where the rider is among them — the half of "where
     // am I" that a count cannot give. Null on foot or when the feed sent no stops.
     val rideStops = progress?.rideStopList()
@@ -168,6 +147,38 @@ fun JourneyPanel(
     // One leg means the step list can only repeat the headline word for word; but a
     // ride's stop list is always something to open.
     val hasSteps = itinerary.legs.size > 1 || rideStops != null
+    // The panel moves the way the planner's sheet does, between three rests: tucked
+    // (-1, only the handle and the ETA row peek above the screen's edge, so the map
+    // gets the screen), folded (0) and, when there are steps, opened (1). [reveal]
+    // follows the finger continuously across all three and settles on release;
+    // [target] is where it is settling, which back, the handle and the chevron act
+    // on. Before the tucked rest a drag down did nothing — and on a one-leg trip,
+    // which has no steps to open, the panel ignored dragging altogether (2026-10-19).
+    var target by remember { mutableIntStateOf(0) }
+    val expanded = target == 1
+    var reveal by remember { mutableFloatStateOf(0f) }
+    // Heights written during layout and read only by the drag — plain holders, so
+    // measuring them never recomposes the panel: the step list's natural height, and
+    // how much of the folded panel tucking hides.
+    val stepsHeightPx = remember { intArrayOf(0) }
+    val tuckablePx = remember { intArrayOf(0) }
+    // Bottom of the ETA row inside the panel — the part that stays when tucked.
+    val peekPx = remember { intArrayOf(0) }
+    val scope = rememberCoroutineScope()
+    var settle by remember { mutableStateOf<Job?>(null) }
+    val settleTo: (Int) -> Unit = { rest ->
+        target = rest
+        settle?.cancel()
+        settle = scope.launch {
+            animate(reveal, rest.toFloat(), animationSpec = spring()) { v, _ -> reveal = v }
+        }
+    }
+    val maxRest = if (hasSteps) 1 else 0
+    val dragState = rememberDraggableState { delta ->
+        // Above folded the finger moves the step list; below it, the tuck.
+        val span = if (reveal > 0f || (reveal == 0f && delta < 0f)) stepsHeightPx[0] else tuckablePx[0]
+        if (span > 0) reveal = (reveal - delta / span).coerceIn(-1f, maxRest.toFloat())
+    }
     // Ending a live journey is one tap from the arrival time, and the tap that ends
     // it cannot be taken back — the trip has to be started again from the results.
     // So the first tap arms and the second ends, and it disarms itself rather than
@@ -186,7 +197,7 @@ fun JourneyPanel(
     // disarms itself), and a back while armed ends it and returns to the planner.
     PlatformBackHandler {
         when {
-            expanded -> settleTo(false)
+            expanded -> settleTo(0)
             confirmEnd -> onEnd()
             else -> confirmEnd = true
         }
@@ -200,42 +211,68 @@ fun JourneyPanel(
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .let { m ->
-                if (!hasSteps) m else m.draggable(
-                    state = dragState,
-                    orientation = Orientation.Vertical,
-                    onDragStarted = { settle?.cancel() },
-                    onDragStopped = { velocity ->
-                        settleTo(
-                            when {
-                                velocity < -FLING_VELOCITY_PX -> true
-                                velocity > FLING_VELOCITY_PX -> false
-                                else -> reveal > 0.5f
-                            }
-                        )
-                    }
-                )
-            },
+            .draggable(
+                state = dragState,
+                orientation = Orientation.Vertical,
+                onDragStarted = { settle?.cancel() },
+                onDragStopped = { velocity ->
+                    // A fling moves one rest in its direction; a slow release settles
+                    // on the nearest.
+                    settleTo(
+                        when {
+                            velocity < -FLING_VELOCITY_PX ->
+                                (-1..maxRest).firstOrNull { it > reveal + 0.01f } ?: maxRest
+                            velocity > FLING_VELOCITY_PX ->
+                                (-1..maxRest).lastOrNull { it < reveal - 0.01f } ?: -1
+                            else -> reveal.roundToInt().coerceIn(-1, maxRest)
+                        }
+                    )
+                }
+            ),
         shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
         color = MaterialTheme.colorScheme.surface,
         tonalElevation = 6.dp,
         shadowElevation = 12.dp
     ) {
+        // Tucking slides the panel down past the screen's edge: the content keeps its
+        // folded layout and is cut off from the bottom, so nothing reflows under the
+        // finger. The navigation-bar inset stays outside the cut, so the peeking row
+        // never sits behind the gesture bar.
+        Box(
+            modifier = Modifier
+                .navigationBarsPadding()
+                .clipToBounds()
+                .layout { measurable, constraints ->
+                    val placeable = measurable.measure(constraints.copy(minHeight = 0))
+                    val peek = (peekPx[0] + 10.dp.roundToPx()).coerceAtMost(placeable.height)
+                    if (reveal <= 0f) tuckablePx[0] = placeable.height - peek
+                    val hidden = if (reveal < 0f) ((placeable.height - peek) * -reveal).roundToInt() else 0
+                    layout(placeable.width, placeable.height - hidden) { placeable.place(0, 0) }
+                }
+        ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .navigationBarsPadding()
                 .padding(start = 16.dp, end = 16.dp, bottom = 12.dp)
         ) {
             // The same handle the planner's sheet wears, so the panel reads as the
-            // sheet it stands in for. A tap on it toggles, for anyone who does not drag.
+            // sheet it stands in for. A tap on it moves it, for anyone who does not
+            // drag: a tucked panel comes back, otherwise the steps open or shut — or,
+            // with no steps to open, the panel tucks.
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .let { m ->
-                        if (hasSteps) m.clickable(onClickLabel = strings.journeyAllSteps) {
-                            settleTo(!expanded)
-                        } else m
+                    .clickable(
+                        onClickLabel = if (target == -1 || !hasSteps) strings.expandBottomSheet
+                        else strings.journeyAllSteps
+                    ) {
+                        settleTo(
+                            when {
+                                target == -1 -> 0
+                                hasSteps -> if (expanded) 0 else 1
+                                else -> -1
+                            }
+                        )
                     },
                 contentAlignment = Alignment.Center
             ) {
@@ -251,7 +288,12 @@ fun JourneyPanel(
             )
             Spacer(Modifier.height(10.dp))
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                modifier = Modifier.onPlaced {
+                    peekPx[0] = (it.positionInParent().y + it.size.height).roundToInt()
+                },
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Text(
                     text = strings.journeyLabel.uppercase(),
                     style = MaterialTheme.typography.labelSmall,
@@ -404,7 +446,7 @@ fun JourneyPanel(
                     }
                 }
                 if (hasSteps) {
-                    IconButton(onClick = { settleTo(!expanded) }) {
+                    IconButton(onClick = { settleTo(if (expanded) 0 else 1) }) {
                         Icon(
                             imageVector = if (expanded) Icons.Default.ExpandMore else Icons.Default.ExpandLess,
                             contentDescription = strings.journeyAllSteps,
@@ -434,7 +476,7 @@ fun JourneyPanel(
                             constraints.copy(minHeight = 0, maxHeight = Constraints.Infinity)
                         )
                         stepsHeightPx[0] = placeable.height
-                        layout(placeable.width, (placeable.height * reveal).roundToInt()) {
+                        layout(placeable.width, (placeable.height * reveal.coerceAtLeast(0f)).roundToInt()) {
                             placeable.place(0, 0)
                         }
                     }
@@ -586,6 +628,7 @@ fun JourneyPanel(
                     }
                 }
             }
+        }
         }
     }
 }
