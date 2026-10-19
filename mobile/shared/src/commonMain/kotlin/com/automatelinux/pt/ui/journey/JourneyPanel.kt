@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -35,6 +36,7 @@ import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.DirectionsBus
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.LocationOff
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Share
@@ -46,6 +48,8 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SmallFloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -61,9 +65,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.layout
-import androidx.compose.ui.layout.onPlaced
-import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -148,8 +151,9 @@ fun JourneyPanel(
     // ride's stop list is always something to open.
     val hasSteps = itinerary.legs.size > 1 || rideStops != null
     // The panel moves the way the planner's sheet does, between three rests: tucked
-    // (-1, only the handle and the ETA row peek above the screen's edge, so the map
-    // gets the screen), folded (0) and, when there are steps, opened (1). [reveal]
+    // (-1, gone below the screen's edge with only the planner's own restore chevron
+    // left, so the map gets the screen), folded (0) and, when there are steps,
+    // opened (1). [reveal]
     // follows the finger continuously across all three and settles on release;
     // [target] is where it is settling, which back, the handle and the chevron act
     // on. Before the tucked rest a drag down did nothing — and on a one-leg trip,
@@ -159,11 +163,9 @@ fun JourneyPanel(
     var reveal by remember { mutableFloatStateOf(0f) }
     // Heights written during layout and read only by the drag — plain holders, so
     // measuring them never recomposes the panel: the step list's natural height, and
-    // how much of the folded panel tucking hides.
+    // the folded panel's, which is the distance tucking travels.
     val stepsHeightPx = remember { intArrayOf(0) }
     val tuckablePx = remember { intArrayOf(0) }
-    // Bottom of the ETA row inside the panel — the part that stays when tucked.
-    val peekPx = remember { intArrayOf(0) }
     val scope = rememberCoroutineScope()
     var settle by remember { mutableStateOf<Job?>(null) }
     val settleTo: (Int) -> Unit = { rest ->
@@ -208,27 +210,50 @@ fun JourneyPanel(
         label = "journeyAccent"
     )
 
-    Surface(
-        modifier = modifier
-            .fillMaxWidth()
-            .draggable(
-                state = dragState,
-                orientation = Orientation.Vertical,
-                onDragStarted = { settle?.cancel() },
-                onDragStopped = { velocity ->
-                    // A fling moves one rest in its direction; a slow release settles
-                    // on the nearest.
-                    settleTo(
-                        when {
-                            velocity < -FLING_VELOCITY_PX ->
-                                (-1..maxRest).firstOrNull { it > reveal + 0.01f } ?: maxRest
-                            velocity > FLING_VELOCITY_PX ->
-                                (-1..maxRest).lastOrNull { it < reveal - 0.01f } ?: -1
-                            else -> reveal.roundToInt().coerceIn(-1, maxRest)
-                        }
-                    )
+    val dragToRest = Modifier.draggable(
+        state = dragState,
+        orientation = Orientation.Vertical,
+        onDragStarted = { settle?.cancel() },
+        onDragStopped = { velocity ->
+            // A fling moves one rest in its direction; a slow release settles
+            // on the nearest.
+            settleTo(
+                when {
+                    velocity < -FLING_VELOCITY_PX ->
+                        (-1..maxRest).firstOrNull { it > reveal + 0.01f } ?: maxRest
+                    velocity > FLING_VELOCITY_PX ->
+                        (-1..maxRest).lastOrNull { it < reveal - 0.01f } ?: -1
+                    else -> reveal.roundToInt().coerceIn(-1, maxRest)
                 }
-            ),
+            )
+        }
+    )
+
+    Box(modifier = modifier.fillMaxWidth()) {
+    // Tucked, the panel leaves exactly what the planner's sheet leaves when dragged
+    // away: a small chevron button over the map (feedback-lib's DismissibleSheet, the
+    // same size, colour and place), which brings it back on a tap or an upward drag.
+    if (target == -1 && reveal < -0.5f) {
+        SmallFloatingActionButton(
+            onClick = { settleTo(0) },
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .systemBarsPadding()
+                .padding(bottom = 16.dp)
+                .then(dragToRest),
+            containerColor = MaterialTheme.colorScheme.surface,
+            elevation = FloatingActionButtonDefaults.elevation(4.dp)
+        ) {
+            Icon(Icons.Default.KeyboardArrowUp, contentDescription = strings.expandBottomSheet)
+        }
+    }
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(dragToRest)
+            // Fully tucked it is zero high; without this its shadow would still
+            // draw a line along the screen's edge.
+            .graphicsLayer { alpha = if (reveal <= -0.999f) 0f else 1f },
         shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
         color = MaterialTheme.colorScheme.surface,
         tonalElevation = 6.dp,
@@ -236,23 +261,21 @@ fun JourneyPanel(
     ) {
         // Tucking slides the panel down past the screen's edge: the content keeps its
         // folded layout and is cut off from the bottom, so nothing reflows under the
-        // finger. The navigation-bar inset stays outside the cut, so the peeking row
-        // never sits behind the gesture bar.
+        // finger.
         Box(
             modifier = Modifier
-                .navigationBarsPadding()
                 .clipToBounds()
                 .layout { measurable, constraints ->
                     val placeable = measurable.measure(constraints.copy(minHeight = 0))
-                    val peek = (peekPx[0] + 10.dp.roundToPx()).coerceAtMost(placeable.height)
-                    if (reveal <= 0f) tuckablePx[0] = placeable.height - peek
-                    val hidden = if (reveal < 0f) ((placeable.height - peek) * -reveal).roundToInt() else 0
+                    if (reveal <= 0f) tuckablePx[0] = placeable.height
+                    val hidden = if (reveal < 0f) (placeable.height * -reveal).roundToInt() else 0
                     layout(placeable.width, placeable.height - hidden) { placeable.place(0, 0) }
                 }
         ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .navigationBarsPadding()
                 .padding(start = 16.dp, end = 16.dp, bottom = 12.dp)
         ) {
             // The same handle the planner's sheet wears, so the panel reads as the
@@ -288,12 +311,7 @@ fun JourneyPanel(
             )
             Spacer(Modifier.height(10.dp))
 
-            Row(
-                modifier = Modifier.onPlaced {
-                    peekPx[0] = (it.positionInParent().y + it.size.height).roundToInt()
-                },
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = strings.journeyLabel.uppercase(),
                     style = MaterialTheme.typography.labelSmall,
@@ -630,6 +648,7 @@ fun JourneyPanel(
             }
         }
         }
+    }
     }
 }
 
