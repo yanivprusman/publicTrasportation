@@ -885,6 +885,21 @@ fun MainScreen(
     val navBarHeight = with(density) {
         WindowInsets.navigationBars.getBottom(this).toDp()
     }
+    // A running journey docks its panel at the bottom, which is exactly where the map's
+    // own cards (a tapped bus, a line's direction) sit. Drawn after them, the panel hid
+    // all of a tracked bus's card but its top strip. While a journey runs those cards
+    // stack on top of the panel instead, following it as it is dragged open or shut.
+    var journeyPanelHeightPx by remember { mutableIntStateOf(0) }
+    val mapCardSlot: Modifier = if (journeyItinerary != null) {
+        Modifier.padding(
+            start = 12.dp, end = 12.dp,
+            bottom = with(density) { journeyPanelHeightPx.toDp() } + 12.dp
+        )
+    } else {
+        Modifier
+            .navigationBarsPadding()
+            .padding(start = 12.dp, end = 12.dp, bottom = 24.dp)
+    }
 
     // Auto-search means results can arrive while the sheet is peeking (the keyboard
     // closed when the endpoint was picked). Surface them — that is the moment the
@@ -1489,8 +1504,7 @@ fun MainScreen(
                     Surface(
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
-                            .navigationBarsPadding()
-                            .padding(start = 12.dp, end = 12.dp, bottom = 24.dp)
+                            .then(mapCardSlot)
                             .fillMaxWidth(),
                         color = MaterialTheme.colorScheme.surface,
                         shape = RoundedCornerShape(16.dp),
@@ -1528,8 +1542,7 @@ fun MainScreen(
                 routingState.trackedBus?.let { tracked ->
                     val bottomSlot = Modifier
                         .align(Alignment.BottomCenter)
-                        .navigationBarsPadding()
-                        .padding(start = 12.dp, end = 12.dp, bottom = 24.dp)
+                        .then(mapCardSlot)
                     val lineStops = routingState.lineStops
                     if (lineStops != null) {
                         // The stop list takes the card's slot rather than stacking on
@@ -1980,7 +1993,9 @@ fun MainScreen(
                         JourneySession.stop(context)
                         scope.launch { bottomSheetState.partialExpand() }
                     },
-                    modifier = Modifier.align(Alignment.BottomCenter),
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .onGloballyPositioned { journeyPanelHeightPx = it.size.height },
                     live = journeyLive,
                     onFocusLeg = { index ->
                         trip.legs.getOrNull(index)?.let { leg ->

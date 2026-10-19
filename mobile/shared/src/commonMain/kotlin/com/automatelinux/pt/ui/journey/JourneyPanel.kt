@@ -1,12 +1,16 @@
 package com.automatelinux.pt.ui.journey
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animate
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,7 +38,9 @@ import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.LocationOff
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -45,12 +51,17 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -70,7 +81,10 @@ import com.automatelinux.pt.journey.JourneyText
 import com.automatelinux.pt.ui.map.getModeColorWithRoute
 import com.automatelinux.pt.util.formatTime
 import com.automatelinux.pt.util.LocalAppStrings
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 import com.automatelinux.pt.ui.util.PlatformBackHandler
 import kotlinx.datetime.Clock
 
@@ -83,6 +97,9 @@ private val LIVE_GREEN = Color(0xFF66BB6A)
 /** How long the end-journey button stays armed before it goes back to being an ✕. */
 private const val CONFIRM_END_TIMEOUT_MS = 4_000L
 
+/** A fling faster than this (px/s) decides open or shut whatever the distance dragged. */
+private const val FLING_VELOCITY_PX = 800f
+
 /**
  * The live journey, docked at the bottom over the map.
  *
@@ -91,7 +108,7 @@ private const val CONFIRM_END_TIMEOUT_MS = 4_000L
  * it. What this panel owns is the half a map cannot show: which stop is yours, and how
  * many are left before it.
  */
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun JourneyPanel(
     itinerary: Itinerary,
@@ -120,7 +137,30 @@ fun JourneyPanel(
     onPay: (() -> Unit)? = null
 ) {
     val strings = LocalAppStrings.current
+    // The panel opens and shuts the way the planner's sheet does: the step list
+    // follows the finger, settles open or shut on release, and the handle or the
+    // chevron toggles it. [reveal] is how much of the list shows, 0..1; [expanded] is
+    // where it is settling, which is what back and the chevron act on. Before this
+    // the panel was a card with a chevron — it looked like the sheet it replaces and
+    // ignored the drag every other bottom surface in the app answers.
     var expanded by remember { mutableStateOf(false) }
+    var reveal by remember { mutableFloatStateOf(0f) }
+    // The list's natural height, written during layout and read only by the drag —
+    // a plain holder, so measuring it never recomposes the panel.
+    val stepsHeightPx = remember { intArrayOf(0) }
+    val scope = rememberCoroutineScope()
+    var settle by remember { mutableStateOf<Job?>(null) }
+    val settleTo: (Boolean) -> Unit = { open ->
+        expanded = open
+        settle?.cancel()
+        settle = scope.launch {
+            animate(reveal, if (open) 1f else 0f, animationSpec = spring()) { v, _ -> reveal = v }
+        }
+    }
+    val dragState = rememberDraggableState { delta ->
+        val full = stepsHeightPx[0]
+        if (full > 0) reveal = (reveal - delta / full).coerceIn(0f, 1f)
+    }
     // The ride's stops, marked by where the rider is among them — the half of "where
     // am I" that a count cannot give. Null on foot or when the feed sent no stops.
     val rideStops = progress?.rideStopList()
@@ -146,7 +186,7 @@ fun JourneyPanel(
     // disarms itself), and a back while armed ends it and returns to the planner.
     PlatformBackHandler {
         when {
-            expanded -> expanded = false
+            expanded -> settleTo(false)
             confirmEnd -> onEnd()
             else -> confirmEnd = true
         }
@@ -158,7 +198,24 @@ fun JourneyPanel(
     )
 
     Surface(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .let { m ->
+                if (!hasSteps) m else m.draggable(
+                    state = dragState,
+                    orientation = Orientation.Vertical,
+                    onDragStarted = { settle?.cancel() },
+                    onDragStopped = { velocity ->
+                        settleTo(
+                            when {
+                                velocity < -FLING_VELOCITY_PX -> true
+                                velocity > FLING_VELOCITY_PX -> false
+                                else -> reveal > 0.5f
+                            }
+                        )
+                    }
+                )
+            },
         shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
         color = MaterialTheme.colorScheme.surface,
         tonalElevation = 6.dp,
@@ -168,8 +225,22 @@ fun JourneyPanel(
             modifier = Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
-                .padding(horizontal = 16.dp, vertical = 12.dp)
+                .padding(start = 16.dp, end = 16.dp, bottom = 12.dp)
         ) {
+            // The same handle the planner's sheet wears, so the panel reads as the
+            // sheet it stands in for. A tap on it toggles, for anyone who does not drag.
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .let { m ->
+                        if (hasSteps) m.clickable(onClickLabel = strings.journeyAllSteps) {
+                            settleTo(!expanded)
+                        } else m
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                BottomSheetDefaults.DragHandle(width = 56.dp, height = 5.dp)
+            }
             // A band of colour that goes amber the moment the rider has to act. It is
             // the one part of the panel readable from arm's length on a moving bus.
             Box(
@@ -333,7 +404,7 @@ fun JourneyPanel(
                     }
                 }
                 if (hasSteps) {
-                    IconButton(onClick = { expanded = !expanded }) {
+                    IconButton(onClick = { settleTo(!expanded) }) {
                         Icon(
                             imageVector = if (expanded) Icons.Default.ExpandMore else Icons.Default.ExpandLess,
                             contentDescription = strings.journeyAllSteps,
@@ -346,17 +417,32 @@ fun JourneyPanel(
             // Folded: the next stop, how many follow it, and the rider's own — the
             // three facts a passenger glances for between stops. Opened, the full list
             // below replaces it.
-            if (!expanded && riding && rideStops != null) {
+            if (reveal < 0.5f && riding && rideStops != null) {
                 StopLadder(stops = rideStops, accent = accent, onFocusStop = onFocusStop)
             }
 
             Spacer(Modifier.height(10.dp))
             LegPips(itinerary = itinerary, progress = progress, accent = accent)
 
-            AnimatedVisibility(visible = expanded && hasSteps) {
+            if (hasSteps) Box(
+                modifier = Modifier
+                    .clipToBounds()
+                    // Measured at its full height, shown at [reveal] of it: the list
+                    // slides out under the finger rather than popping in on release.
+                    .layout { measurable, constraints ->
+                        val placeable = measurable.measure(
+                            constraints.copy(minHeight = 0, maxHeight = Constraints.Infinity)
+                        )
+                        stepsHeightPx[0] = placeable.height
+                        layout(placeable.width, (placeable.height * reveal).roundToInt()) {
+                            placeable.place(0, 0)
+                        }
+                    }
+            ) {
                 // Which step's long-press menu is open, if any. Lives with the list:
                 // collapsing the steps takes the menu down with them.
                 var legMenuFor by remember { mutableStateOf<Int?>(null) }
+                LaunchedEffect(expanded) { if (!expanded) legMenuFor = null }
                 Column(
                     modifier = Modifier
                         .heightIn(max = 340.dp)
