@@ -380,6 +380,12 @@ private fun BoardingLine(
             } else if (live != null && live.deltaSeconds <= -60) {
                 add(strings.runningEarly(strings.formatDuration(-live.deltaSeconds), formatTime(leg.startTime)))
             }
+            // Which way, and for how long: "64 departs 17:17" is read as the 64 the
+            // rider wants unless the card says it is heading the other way for one stop.
+            leg.headsign?.replace('_', ' ')?.takeIf { it.isNotBlank() }?.let {
+                add(strings.boardingTowards(it))
+            }
+            leg.intermediateStops?.let { add(strings.journeyStopsCount(it.size + 1)) }
             if (leg.from.name.isNotBlank()) add(strings.boardingFrom(leg.from.name))
             if (laterDepartures.isNotEmpty()) {
                 add(strings.thenDepartures(laterDepartures.joinToString(" · ")))
@@ -390,7 +396,7 @@ private fun BoardingLine(
                 text = boarding.joinToString(" · "),
                 style = MaterialTheme.typography.bodySmall,
                 color = secondaryTextColor,
-                maxLines = 1,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(top = 2.dp)
             )

@@ -107,6 +107,12 @@ interface AppStrings {
     val departureLive: String
     /** "from Midreshet Ben-Gurion" — the stop this ride is caught at. */
     val boardingFrom: (String) -> String
+    /**
+     * "to מצפה רמון מרכז" — which way the ride is signed. A line number alone does not
+     * say it: a 64 leaving the same pole the other way, ridden one stop to a transfer,
+     * reads as the direct 64 an hour early.
+     */
+    val boardingTowards: (String) -> String
     /** "8 min late · timetabled 15:39" — the feed against the timetable. */
     val runningLate: (String, String) -> String
     val runningEarly: (String, String) -> String
@@ -536,6 +542,7 @@ val EnStrings: AppStrings = object : AppStrings {
     override val departureTimetable: String = "timetable"
     override val departureLive: String = "live"
     override val boardingFrom: (String) -> String = { stop -> "from $stop" }
+    override val boardingTowards: (String) -> String = { headsign -> "to $headsign" }
     override val thenDepartures: (String) -> String = { times -> "then $times" }
     override val dayTomorrow: String = "Tomorrow"
     override val dayYesterday: String = "Yesterday"
@@ -947,6 +954,7 @@ val HeStrings: AppStrings = object : AppStrings {
     override val departureTimetable: String = "לפי לוח זמנים"
     override val departureLive: String = "בזמן אמת"
     override val boardingFrom: (String) -> String = { stop -> "מתחנת $stop" }
+    override val boardingTowards: (String) -> String = { headsign -> "לכיוון $headsign" }
     override val thenDepartures: (String) -> String = { times -> "אח״כ $times" }
     override val dayTomorrow: String = "מחר"
     override val dayYesterday: String = "אתמול"
