@@ -164,7 +164,12 @@ function transformItinerary(itin: MotisItinerary, scooter: boolean) {
         // trip's geometry. Resolving by line number instead draws another city's
         // line of the same number.
         if (leg.tripId) transformed.tripId = leg.tripId;
-        if (leg.routeId) transformed.routeId = leg.routeId;
+        // MOTIS prefixes ids with its feed tag ("israel_11751"); everything the
+        // client matches it against — SIRI's LineRef, /api/route-stops,
+        // /api/trip-shape — uses the bare GTFS route_id ("11751"). Passed through
+        // prefixed, no live sighting ever matched a card or a journey: every ride
+        // showed the timetable, and a bus 15 minutes early went unreported.
+        if (leg.routeId) transformed.routeId = leg.routeId.replace(/^[a-z0-9]+_/i, '');
 
         // The stop code is what is printed on the pole and what every other app
         // shows, so it is the only stop identifier a passenger can act on.
