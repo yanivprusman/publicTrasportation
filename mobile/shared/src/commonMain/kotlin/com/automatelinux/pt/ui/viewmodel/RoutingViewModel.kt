@@ -1017,8 +1017,20 @@ class RoutingViewModel(
      * Open the tracked line's stop list. Fetched fresh each open rather than
      * cached: it is one small request, and the server holds the cache.
      */
-    fun showLineStops(routeId: String) {
+    fun showLineStops(routeId: String, withShape: Boolean = false) {
         _state.value = _state.value.copy(lineStops = LineStopsUi(routeId = routeId))
+        if (withShape) viewModelScope.launch {
+            val points = try {
+                api.getRouteShape(routeId).points
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                emptyList()
+            }
+            val current = _state.value.lineStops
+            if (current?.routeId != routeId || points.isEmpty()) return@launch
+            _state.value = _state.value.copy(lineStops = current.copy(shape = points))
+        }
         viewModelScope.launch {
             val result = try {
                 api.getRouteStops(routeId)

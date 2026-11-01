@@ -88,7 +88,13 @@ data class LineStopsUi(
     val headsign: String = "",
     val stops: List<com.automatelinux.pt.data.model.RouteStopItem> = emptyList(),
     val loading: Boolean = true,
-    val error: Boolean = false
+    val error: Boolean = false,
+    /**
+     * The whole line's geometry, [lat, lon] pairs. Fetched only when the list was
+     * opened from a journey: there the map draws just the stretch being ridden, so
+     * "the full route" has to bring its own line. A tracked bus already draws one.
+     */
+    val shape: List<List<Double>> = emptyList()
 )
 
 data class TrackedBus(

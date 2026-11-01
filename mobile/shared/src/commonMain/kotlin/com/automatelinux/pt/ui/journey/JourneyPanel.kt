@@ -1,5 +1,8 @@
 package com.automatelinux.pt.ui.journey
 
+import androidx.compose.ui.platform.testTag
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.material3.TextButton
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.spring
@@ -39,6 +42,7 @@ import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.LocationOff
 import androidx.compose.material.icons.filled.MyLocation
+import androidx.compose.material.icons.filled.Route
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.DropdownMenu
@@ -140,7 +144,13 @@ fun JourneyPanel(
     onShare: (() -> Unit)? = null,
     sharing: Boolean = false,
     /** Hands the fare off to the payment app, without leaving the live journey. */
-    onPay: (() -> Unit)? = null
+    onPay: (() -> Unit)? = null,
+    /**
+     * Open the whole line a ride leg is on — every stop, the full shape. The row's
+     * own tap frames only the stretch being ridden, which cannot answer "where
+     * else does this bus go".
+     */
+    onShowLineRoute: ((Int) -> Unit)? = null
 ) {
     val strings = LocalAppStrings.current
     // The ride's stops, marked by where the rider is among them — the half of "where
@@ -583,6 +593,28 @@ fun JourneyPanel(
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
+                                if (onShowLineRoute != null && leg.routeId != null &&
+                                    leg.mode != TransitMode.WALK && leg.mode != TransitMode.SCOOTER
+                                ) {
+                                    TextButton(
+                                        onClick = { onShowLineRoute(index) },
+                                        modifier = Modifier.testTag("journey-full-route-$index"),
+                                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Route,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(16.dp),
+                                            tint = color
+                                        )
+                                        Spacer(Modifier.width(4.dp))
+                                        Text(
+                                            text = strings.journeyFullRoute,
+                                            style = MaterialTheme.typography.labelMedium,
+                                            color = color
+                                        )
+                                    }
+                                }
                             }
                             if (editable) {
                                 DropdownMenu(

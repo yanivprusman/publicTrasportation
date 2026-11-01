@@ -889,6 +889,11 @@ fun MainScreen(
     // own cards (a tapped bus, a line's direction) sit. Drawn after them, the panel hid
     // all of a tracked bus's card but its top strip. While a journey runs those cards
     // stack on top of the panel instead, following it as it is dragged open or shut.
+    // The full line a ride leg is on, opened from its step row. It takes the journey
+    // panel's slot rather than stacking on it, as it does over a tracked bus — two
+    // cards deep leaves no map, and the drawn line is the point.
+    val journeyLineStops = routingState.lineStops
+        ?.takeIf { journeyItinerary != null && routingState.trackedBus == null }
     var journeyPanelHeightPx by remember { mutableIntStateOf(0) }
     val mapCardSlot: Modifier = if (journeyItinerary != null) {
         Modifier.padding(
@@ -1398,6 +1403,10 @@ fun MainScreen(
                         lineShape = routingState.trackedBus?.shape
                             ?.takeIf { it.isNotEmpty() }
                             ?.let { mapOf("trip" to it) }
+                            // A journey's "full route": the whole line, not the stretch.
+                            ?: journeyLineStops?.shape
+                                ?.takeIf { it.isNotEmpty() }
+                                ?.let { mapOf("line" to it) }
                             ?: if (activeTab == ActiveTab.LINES) {
                                 lineOnMap?.let { dir ->
                                     lineShapeData.directions[dir]?.let { mapOf(dir to it) }
@@ -1984,13 +1993,41 @@ fun MainScreen(
             routingViewModel.stopTracking()
         }
 
+        BackHandler(enabled = journeyLineStops != null) { routingViewModel.hideLineStops() }
+
         journeyItinerary?.let { trip ->
             Box(modifier = Modifier.fillMaxSize()) {
-                JourneyPanel(
+                if (journeyLineStops != null) {
+                    // "your stop" is where this trip boards the line: the leg's
+                    // from-point carries no stop code, so it is the line's stop
+                    // standing on it.
+                    val boardAt = trip.legs.firstOrNull { it.routeId == journeyLineStops.routeId }?.from
+                    LineStopsSheet(
+                        state = journeyLineStops,
+                        onClose = { routingViewModel.hideLineStops() },
+                        onStopTap = { lat, lon ->
+                            followingLocation = false
+                            mapState.animateTo(LatLng(lat, lon), 15.0)
+                        },
+                        boardingStopCode = boardAt?.let { from ->
+                            journeyLineStops.stops
+                                .map { it to metersBetween(from.lat, from.lon, it.lat, it.lon) }
+                                .minByOrNull { it.second }
+                                ?.takeIf { it.second <= 150.0 }
+                                ?.first?.stopCode
+                        },
+                        // Not mapCardSlot: that sits above the panel, which this replaces.
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .navigationBarsPadding()
+                            .padding(start = 12.dp, end = 12.dp, bottom = 16.dp)
+                    )
+                } else JourneyPanel(
                     itinerary = trip,
                     progress = journeyProgress,
                     onEnd = {
                         JourneySession.stop(context)
+                        routingViewModel.hideLineStops()
                         scope.launch { bottomSheetState.partialExpand() }
                     },
                     modifier = Modifier
@@ -2085,7 +2122,13 @@ fun MainScreen(
                         }
                     },
                     sharing = journeyShareToken != null,
-                    onPay = payWithHopOn
+                    onPay = payWithHopOn,
+                    onShowLineRoute = { index ->
+                        trip.legs.getOrNull(index)?.routeId?.let { routeId ->
+                            followingLocation = false
+                            routingViewModel.showLineStops(routeId, withShape = true)
+                        }
+                    }
                 )
             }
         }

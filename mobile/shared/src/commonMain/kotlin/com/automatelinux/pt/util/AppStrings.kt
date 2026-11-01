@@ -342,6 +342,8 @@ interface AppStrings {
     /** "also at 14:05 · 15:09" — the same line's later departures. */
     val alsoAt: (String) -> String
     val payFare: String
+    /** The step row's way to the whole line it rides, not only the ridden stretch. */
+    val journeyFullRoute: String
     /** Chip-sized versions of the same two states: it fits where a sentence cannot. */
     val journeyFollowing: String
     val journeyNoLocation: String
@@ -752,6 +754,7 @@ val EnStrings: AppStrings = object : AppStrings {
     override val journeyStopCode: (String) -> String = { code -> "stop $code" }
     override val alsoAt: (String) -> String = { times -> "also at $times" }
     override val payFare: String = "Pay fare (HopOn)"
+    override val journeyFullRoute: String = "Full route"
     override val journeyFollowing: String = "Live"
     override val journeyNoLocation: String = "Timetable"
     override val journeyLocating: String = "Finding you…"
@@ -1159,6 +1162,7 @@ val HeStrings: AppStrings = object : AppStrings {
     override val journeyStopCode: (String) -> String = { code -> "תחנה $code" }
     override val alsoAt: (String) -> String = { times -> "גם ב־$times" }
     override val payFare: String = "תשלום נסיעה (HopOn)"
+    override val journeyFullRoute: String = "כל המסלול"
     override val journeyFollowing: String = "עוקב"
     override val journeyNoLocation: String = "לוח זמנים"
     override val journeyLocating: String = "מאתר אותך…"
