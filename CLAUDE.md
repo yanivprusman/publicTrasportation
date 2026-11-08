@@ -182,8 +182,8 @@ choosing one (tap, or "take B") starts the ordinary journey tracker (live bus, b
   `find_place`, `plan_trip`, which call this server's own `/api/geocode` and `/api/route`). Every trip plan_trip
   shows is filed in the conversation's `options.json` under a letter; the model's structured answer names letters,
   and `GET /api/ai` returns those exact `/api/route` itineraries with a server-written one-line summary — the model
-  never writes times or lines the app shows. Off-topic message ⇒ the domain guard blocks it, emails the owner
-  (`+ptguard`), and the conversation is closed (`ended`).
+  never writes times or lines the app shows. Off-topic message ⇒ the domain guard blocks it, alerts the owner in the
+  claudeGuard phone app, and the conversation is closed (`ended`).
 - **On/off**: offered exactly when `PT_AI_DATA_DIR` is set (`.env.local`, gitignored); then `PT_AI_TOKEN` (bearer,
   every message runs Claude on the owner's account) and `PT_AI_CLAUDE_BIN` are required. Dev on the desktop only
   today; prod has none of it.
