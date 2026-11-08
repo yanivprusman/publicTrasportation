@@ -172,3 +172,21 @@ d deployToProd --app pt --commit X   # specific commit
 ```
 
 Never develop in the prod directory.
+
+## AI navigator (dev) — `lib/ai/`, `/api/ai`, Android `ui/ai/AiScreen.kt`
+
+A rider says where they want to go ("I want to go to Be'er Sheva"); the answer is their options as plain text, and
+choosing one (tap, or "take B") starts the ordinary journey tracker (live bus, bus early, board now, get off next).
+- **Server** (`lib/ai/navigator.ts`): each conversation is ONE Claude session limited to the automateLinux `pt`
+  domain (`claudeWithContext none,domain:pt`, `--tools ''`, plus exactly one MCP server, `lib/ai/pt-mcp.mjs`:
+  `find_place`, `plan_trip`, which call this server's own `/api/geocode` and `/api/route`). Every trip plan_trip
+  shows is filed in the conversation's `options.json` under a letter; the model's structured answer names letters,
+  and `GET /api/ai` returns those exact `/api/route` itineraries with a server-written one-line summary — the model
+  never writes times or lines the app shows. Off-topic message ⇒ the domain guard blocks it, emails the owner
+  (`+ptguard`), and the conversation is closed (`ended`).
+- **On/off**: offered exactly when `PT_AI_DATA_DIR` is set (`.env.local`, gitignored); then `PT_AI_TOKEN` (bearer,
+  every message runs Claude on the owner's account) and `PT_AI_CLAUDE_BIN` are required. Dev on the desktop only
+  today; prod has none of it.
+- **Android**: the "AI" chip opens a full-screen, text-only screen (text field + mic). Dev flavor only, from the
+  gitignored `mobile/ai.properties` (`server=http://10.7.0.2:3003`, `token=`). It talks to that ONE server, never
+  through PtApi's peer failover: a conversation lives on the server that started it.
