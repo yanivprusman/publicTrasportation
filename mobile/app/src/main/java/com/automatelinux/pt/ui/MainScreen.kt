@@ -126,6 +126,7 @@ import com.automatelinux.pt.ui.map.PtUserLocationIcon
 import com.automatelinux.pt.journey.JourneySession
 import com.automatelinux.pt.journey.StartedTrip
 import com.automatelinux.pt.journey.TripEnds
+import androidx.compose.runtime.saveable.rememberSaveable
 import com.automatelinux.pt.data.model.VehicleMarker
 import com.automatelinux.pt.ui.journey.JourneyPanel
 import com.automatelinux.pt.ui.routing.DebugSettingsDialog
@@ -274,6 +275,15 @@ fun MainScreen(
         routingState.selectedItinerary?.let { routingViewModel.loadNextDepartures(it) }
     }
     var boardMode by remember { mutableStateOf(false) }
+    // AI navigator (dev builds that carry its server and token): a full-screen, text-only mode.
+    val aiApi = remember {
+        if (BuildConfig.PT_AI_TOKEN.isEmpty()) null
+        else com.automatelinux.pt.data.api.PtAiApi(
+            org.koin.core.context.GlobalContext.get().get(), BuildConfig.PT_AI_SERVER, BuildConfig.PT_AI_TOKEN
+        )
+    }
+    var aiMode by rememberSaveable { mutableStateOf(false) }
+    var aiConversationId by rememberSaveable { mutableStateOf<String?>(null) }
     var shareTripLink by remember { mutableStateOf<String?>(null) }
     var mapStyle by remember { mutableStateOf(settingsStore.mapStyle) }
     var showMapStyleMenu by remember { mutableStateOf(false) }
@@ -573,6 +583,9 @@ fun MainScreen(
     }
 
     var pendingJourney by remember { mutableStateOf<Itinerary?>(null) }
+    // Where a trip started outside the planner (the AI navigator) begins and ends;
+    // null: the planner's own fields name them.
+    var pendingEnds by remember { mutableStateOf<TripEnds?>(null) }
 
     /** A finished trip with a GPS end, waiting for the rider to say which place they mean. */
     var gpsChoiceTrip by remember { mutableStateOf<StartedTrip?>(null) }
@@ -630,13 +643,14 @@ fun MainScreen(
         fun nameOf(s: GeocodeSuggestion?) = s?.name?.ifBlank { null }?.takeUnless { it in placeholders }
         JourneySession.start(
             context, trip, strings, live,
-            ends = TripEnds(
+            ends = pendingEnds ?: TripEnds(
                 originName = nameOf(routingState.origin),
                 destinationName = nameOf(routingState.destination),
                 originFromGps = routingState.originIsCurrentLocation,
                 destinationFromGps = routingState.destinationIsCurrentLocation
             )
         )
+        pendingEnds = null
         // The sheet gets out of the way, and the map starts following the rider —
         // the panel answers "which stop", the map answers "where am I on the line".
         if (live) followingLocation = true
@@ -975,7 +989,16 @@ fun MainScreen(
                             settingsStore.journeyAlertsEnabled = enabled
                             journeyAlertsEnabled = enabled
                         },
-                        onDeleteAccount = { showDeleteAccount = true }
+                        onDeleteAccount = { showDeleteAccount = true },
+                        onOpenAi = aiApi?.let {
+                            {
+                                aiMode = true
+                                // "From here" is the navigator's default; ask once, up front.
+                                if (!LocationHelper.hasPermission(context)) {
+                                    journeyLocationLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+                                }
+                            }
+                        }
                     )
 
                     Column(
@@ -2131,6 +2154,38 @@ fun MainScreen(
                     }
                 )
             }
+        }
+
+        if (aiMode && aiApi != null) {
+            com.automatelinux.pt.ui.ai.AiScreen(
+                api = aiApi,
+                strings = strings,
+                language = settingsStore.language,
+                conversationId = aiConversationId,
+                onConversationId = { aiConversationId = it },
+                getLocation = {
+                    if (!LocationHelper.hasPermission(context)) null
+                    // A current fix, not lastLocation: a cached position from another town
+                    // would plan the whole trip from there.
+                    else kotlinx.coroutines.suspendCancellableCoroutine { cont ->
+                        @android.annotation.SuppressLint("MissingPermission")
+                        val task = fusedLocationClient.getCurrentLocation(
+                            com.google.android.gms.location.Priority.PRIORITY_HIGH_ACCURACY,
+                            com.google.android.gms.tasks.CancellationTokenSource().token
+                        )
+                        task.addOnSuccessListener { l -> if (cont.isActive) cont.resumeWith(Result.success(l?.let { it.latitude to it.longitude })) }
+                            .addOnFailureListener { if (cont.isActive) cont.resumeWith(Result.success(null)) }
+                    }
+                },
+                onStartTrip = { trip ->
+                    pendingEnds = TripEnds(
+                        destinationName = trip.legs.lastOrNull()?.to?.name?.ifBlank { null },
+                        originFromGps = true
+                    )
+                    startJourney(trip)
+                },
+                onClose = { aiMode = false }
+            )
         }
 
         if (boardMode) {

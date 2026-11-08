@@ -24,3 +24,6 @@ feedback-lib/
 # Convention plugin (bind-mounted from addnewfeature)
 build-logic/
 oauth.properties
+
+# The AI navigator server + bearer token (dev builds only)
+ai.properties

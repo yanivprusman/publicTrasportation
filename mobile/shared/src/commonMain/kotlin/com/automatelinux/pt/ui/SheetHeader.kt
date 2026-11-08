@@ -89,7 +89,9 @@ fun SheetTabRow(
     onLanguageChange: (String) -> Unit,
     journeyAlertsEnabled: Boolean,
     onJourneyAlertsChange: (Boolean) -> Unit,
-    onDeleteAccount: () -> Unit
+    onDeleteAccount: () -> Unit,
+    /** Opens the AI navigator; null hides its chip (a build without the AI server). */
+    onOpenAi: (() -> Unit)? = null
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
 
@@ -116,6 +118,14 @@ fun SheetTabRow(
             label = { Text(strings.linesBrowser) },
             modifier = Modifier.padding(start = 8.dp)
         )
+        if (onOpenAi != null) {
+            FilterChip(
+                selected = false,
+                onClick = onOpenAi,
+                label = { Text(strings.aiChip) },
+                modifier = Modifier.padding(start = 8.dp)
+            )
+        }
         Spacer(Modifier.weight(1f))
         Box {
             IconButton(onClick = { menuExpanded = true }) {

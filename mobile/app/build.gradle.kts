@@ -38,6 +38,13 @@ val oauthProps = Properties().apply {
 }
 val webClientId: String = oauthProps.getProperty("webClientId") ?: ""
 
+// The AI navigator (dev only): the one server that hosts its conversations and the
+// bearer token it requires. Gitignored; without it the AI chip is not shown.
+val aiPropsFile = rootProject.file("ai.properties")
+val aiProps = Properties().apply {
+    if (aiPropsFile.exists()) aiPropsFile.inputStream().use { load(it) }
+}
+
 android {
     namespace = "com.automatelinux.pt"
     compileSdk = 36
@@ -57,6 +64,8 @@ android {
             buildConfigField("int", "SERVER_PORT", "3003")
             // Probe the WireGuard peers — local development only.
             buildConfigField("boolean", "PEER_SERVERS_ENABLED", "true")
+            buildConfigField("String", "PT_AI_SERVER", "\"${aiProps.getProperty("server") ?: ""}\"")
+            buildConfigField("String", "PT_AI_TOKEN", "\"${aiProps.getProperty("token") ?: ""}\"")
         }
         getByName("prod") {
             buildConfigField("int", "SERVER_PORT", "3002")
@@ -64,6 +73,8 @@ android {
             // addresses are unreachable from a user's phone, so probing them
             // would stall startup behind connect timeouts on every launch.
             buildConfigField("boolean", "PEER_SERVERS_ENABLED", "false")
+            buildConfigField("String", "PT_AI_SERVER", "\"\"")
+            buildConfigField("String", "PT_AI_TOKEN", "\"\"")
         }
     }
 

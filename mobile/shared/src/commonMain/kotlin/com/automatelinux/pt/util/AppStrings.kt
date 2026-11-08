@@ -252,6 +252,20 @@ interface AppStrings {
     val reminderNotification: (String, String) -> String
     val minutesBefore: (Int) -> String
     val linesBrowser: String
+    // AI navigator (dev): a plain-text screen
+    val aiChip: String
+    val aiPlaceholder: String
+    val aiEmptyHint: String
+    val aiThinking: String
+    val aiNew: String
+    val aiClose: String
+    val aiSend: String
+    val aiSpeak: String
+    val aiError: String
+    val aiUnreachable: String
+    val aiEnded: String
+    val aiFollowing: String
+    val aiStopFollowing: String
     val searchLine: String
     val viewLine: String
     val direction: (String) -> String
@@ -674,6 +688,19 @@ val EnStrings: AppStrings = object : AppStrings {
     override val reminderNotification: (String, String) -> String = { line, time -> "Bus $line departs at $time" }
     override val minutesBefore: (Int) -> String = { m -> "${m}min before" }
     override val linesBrowser: String = "Lines"
+    override val aiChip: String = "AI"
+    override val aiPlaceholder: String = "Where to?"
+    override val aiEmptyHint: String = "Say where you want to go."
+    override val aiThinking: String = "Checking…"
+    override val aiNew: String = "New"
+    override val aiClose: String = "Close"
+    override val aiSend: String = "Send"
+    override val aiSpeak: String = "Speak"
+    override val aiError: String = "That didn't work. Try again."
+    override val aiUnreachable: String = "Can't reach the AI server."
+    override val aiEnded: String = "This conversation has ended."
+    override val aiFollowing: String = "Following your trip"
+    override val aiStopFollowing: String = "Stop"
     override val searchLine: String = "Search line number"
     override val viewLine: String = "View"
     override val direction: (String) -> String = { d -> "Direction $d" }
@@ -1082,6 +1109,19 @@ val HeStrings: AppStrings = object : AppStrings {
     override val reminderNotification: (String, String) -> String = { line, time -> "אוטובוס $line יוצא ב-$time" }
     override val minutesBefore: (Int) -> String = { m -> "$m דק׳ לפני" }
     override val linesBrowser: String = "קווים"
+    override val aiChip: String = "AI"
+    override val aiPlaceholder: String = "לאן?"
+    override val aiEmptyHint: String = "תגיד לאן אתה רוצה להגיע."
+    override val aiThinking: String = "בודק…"
+    override val aiNew: String = "חדש"
+    override val aiClose: String = "סגור"
+    override val aiSend: String = "שלח"
+    override val aiSpeak: String = "דבר"
+    override val aiError: String = "זה לא הצליח. נסה שוב."
+    override val aiUnreachable: String = "אין חיבור לשרת ה-AI."
+    override val aiEnded: String = "השיחה הזו הסתיימה."
+    override val aiFollowing: String = "עוקב אחרי הנסיעה"
+    override val aiStopFollowing: String = "הפסק"
     override val searchLine: String = "חפש מספר קו"
     override val viewLine: String = "הצג"
     override val direction: (String) -> String = { d -> "כיוון $d" }
