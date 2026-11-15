@@ -2,6 +2,7 @@ package com.automatelinux.pt.ui
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Settings
@@ -101,32 +103,42 @@ fun SheetTabRow(
             .padding(horizontal = 12.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        // The chips scroll sideways as a group and never wrap their labels: on a
+        // narrow phone four chips + the gear don't fit, and Compose used to squeeze
+        // the last chip until "AI" broke onto two lines and the gear left the screen.
+        // The gear sits outside the scroller so it is always reachable.
+        Row(
+            modifier = Modifier
+                .weight(1f)
+                .horizontalScroll(rememberScrollState()),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
         FilterChip(
             selected = activeTab == ActiveTab.ROUTE,
             onClick = { onTabChange(ActiveTab.ROUTE) },
-            label = { Text(strings.routePlanner) },
+            label = { Text(strings.routePlanner, maxLines = 1, softWrap = false) },
             modifier = Modifier.padding(end = 8.dp)
         )
         FilterChip(
             selected = activeTab == ActiveTab.ARRIVALS,
             onClick = { onTabChange(ActiveTab.ARRIVALS) },
-            label = { Text(strings.stationArrivals) }
+            label = { Text(strings.stationArrivals, maxLines = 1, softWrap = false) }
         )
         FilterChip(
             selected = activeTab == ActiveTab.LINES,
             onClick = { onTabChange(ActiveTab.LINES) },
-            label = { Text(strings.linesBrowser) },
+            label = { Text(strings.linesBrowser, maxLines = 1, softWrap = false) },
             modifier = Modifier.padding(start = 8.dp)
         )
         if (onOpenAi != null) {
             FilterChip(
                 selected = false,
                 onClick = onOpenAi,
-                label = { Text(strings.aiChip) },
+                label = { Text(strings.aiChip, maxLines = 1, softWrap = false) },
                 modifier = Modifier.padding(start = 8.dp)
             )
         }
-        Spacer(Modifier.weight(1f))
+        }
         Box {
             IconButton(onClick = { menuExpanded = true }) {
                 Icon(
