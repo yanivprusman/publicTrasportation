@@ -5,6 +5,8 @@ import android.graphics.DashPathEffect
 import android.graphics.Paint
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.graphics.toArgb
 import com.automatelinux.pt.data.model.Itinerary
 import com.automatelinux.pt.data.model.TransitMode
@@ -115,8 +117,11 @@ fun OriginDestinationMarkers(
     via: GeoPoint? = null,
     // Re-append the markers when the drawn route changes, so they stay above
     // RouteOverlay's polylines and transfer dots (osmdroid draws in list order).
-    redrawKey: Any? = null
+    redrawKey: Any? = null,
+    onMarkerTap: ((PtMapMarker) -> Unit)? = null
 ) {
+    // Read at tap time, so a new lambda on recomposition never needs the markers rebuilt.
+    val onTap by rememberUpdatedState(onMarkerTap)
     LaunchedEffect(origin, destination, via, redrawKey) {
         (map.overlays.firstOrNull { (it as? Marker)?.id == "origin" }
             as? Marker)?.let { m ->
@@ -133,6 +138,7 @@ fun OriginDestinationMarkers(
                 setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
                 icon = createCircleDrawable(Color.parseColor("#FF9800"), 11, Color.WHITE, 3f)
                 setInfoWindow(null)
+                tapReports(PtMapMarker.VIA) { onTap }
             }
             map.overlays.add(marker)
         }
@@ -145,6 +151,7 @@ fun OriginDestinationMarkers(
                 setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
                 icon = AnimatedOriginDrawable(density, map)
                 setInfoWindow(null)
+                tapReports(PtMapMarker.ORIGIN) { onTap }
             }
             map.overlays.add(marker)
         }
@@ -157,6 +164,7 @@ fun OriginDestinationMarkers(
                 setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
                 icon = createDiamondPinDrawable(density)
                 setInfoWindow(null)
+                tapReports(PtMapMarker.DESTINATION) { onTap }
             }
             map.overlays.add(marker)
         }
@@ -167,6 +175,18 @@ fun OriginDestinationMarkers(
 
 private const val TAG_JOURNEY_STOP = "journeyStop"
 
+/**
+ * A tap on this marker reports [kind] to whatever handler is current at tap time. With no
+ * handler the tap is consumed anyway: osmdroid's default would pan the map to the marker,
+ * which reads as "something happened" while telling the rider nothing.
+ */
+private fun Marker.tapReports(kind: PtMapMarker, handler: () -> ((PtMapMarker) -> Unit)?) {
+    setOnMarkerClickListener { _, _ ->
+        handler()?.invoke(kind)
+        true
+    }
+}
+
 /** The amber the journey panel turns when the rider has to act; the alight stop wears it on the map too. */
 private const val JOURNEY_ALIGHT_COLOR = 0xFFFFB74D.toInt()
 
@@ -176,7 +196,12 @@ private const val JOURNEY_ALIGHT_COLOR = 0xFFFFB74D.toInt()
  * stop dots — so a glance at the map says which of the dots ahead is theirs.
  */
 @Composable
-fun JourneyStopsOverlay(map: MapView, marks: JourneyRideMarks?) {
+fun JourneyStopsOverlay(
+    map: MapView,
+    marks: JourneyRideMarks?,
+    onMarkerTap: ((PtMapMarker) -> Unit)? = null
+) {
+    val onTap by rememberUpdatedState(onMarkerTap)
     LaunchedEffect(marks) {
         map.overlays.removeAll { (it as? Marker)?.id == TAG_JOURNEY_STOP }
         if (marks != null) {
@@ -187,6 +212,7 @@ fun JourneyStopsOverlay(map: MapView, marks: JourneyRideMarks?) {
                     setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
                     icon = createCircleDrawable(Color.WHITE, 8, JOURNEY_ALIGHT_COLOR, 3f)
                     setInfoWindow(null)
+                    tapReports(PtMapMarker.NEXT_STOP) { onTap }
                 })
             }
             map.overlays.add(Marker(map).apply {
@@ -195,6 +221,7 @@ fun JourneyStopsOverlay(map: MapView, marks: JourneyRideMarks?) {
                 setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
                 icon = createCircleDrawable(JOURNEY_ALIGHT_COLOR, 12, Color.WHITE, 3f)
                 setInfoWindow(null)
+                tapReports(PtMapMarker.ALIGHT_STOP) { onTap }
             })
         }
         map.invalidate()

@@ -6,11 +6,14 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.automatelinux.pt.data.model.StopResult
 import com.automatelinux.pt.data.model.VehicleMarker
 import com.automatelinux.pt.map.LatLng
+import android.graphics.Point
+import android.view.MotionEvent
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 
@@ -33,7 +36,8 @@ actual fun PtMap(
     onUserPan: (() -> Unit)?,
     onCameraChanged: ((PtMapViewport) -> Unit)?,
     onStopTap: ((StopResult) -> Unit)?,
-    onVehicleTap: ((VehicleMarker) -> Unit)?
+    onVehicleTap: ((VehicleMarker) -> Unit)?,
+    onMarkerTap: ((PtMapMarker) -> Unit)?
 ) {
     var map by remember { mutableStateOf<MapView?>(null) }
 
@@ -62,9 +66,10 @@ actual fun PtMap(
             via = overlays.via?.toGeoPoint(),
             // osmdroid draws overlays in list order, so these must be re-appended
             // whenever the route redraws or the route's polylines would cover them.
-            redrawKey = overlays.itinerary
+            redrawKey = overlays.itinerary,
+            onMarkerTap = onMarkerTap
         )
-        JourneyStopsOverlay(mapView, overlays.journeyRide)
+        JourneyStopsOverlay(mapView, overlays.journeyRide, onMarkerTap)
         VehicleMarkerOverlay(
             mapView, overlays.vehicles, overlays.vehiclesVisible, onVehicleTap,
             overlays.itinerary, overlays.staleVehicleRefs
@@ -81,6 +86,7 @@ actual fun PtMap(
     // down when the map goes away, the icon changes, or the caller stops asking for it —
     // leaving it running would keep GPS active behind a screen that is no longer visible.
     val currentMap = map
+    val onMyLocationTap by rememberUpdatedState(onMarkerTap)
     if (overlays.showUserLocation && currentMap != null) {
         DisposableEffect(currentMap, overlays.userLocationIcon) {
             // Clear any previous marker first: re-adding without removing would stack
@@ -88,7 +94,21 @@ actual fun PtMap(
             currentMap.overlays.filterIsInstance<MyLocationNewOverlay>().forEach { it.disableMyLocation() }
             currentMap.overlays.removeAll { it is MyLocationNewOverlay }
 
-            val overlay = MyLocationNewOverlay(currentMap)
+            // The blue dot answers "what is this?" like every other marker. osmdroid gives
+            // the overlay no click listener, so the tap is hit-tested against the fix here.
+            val overlay = object : MyLocationNewOverlay(currentMap) {
+                override fun onSingleTapConfirmed(e: MotionEvent, mapView: MapView): Boolean {
+                    val handler = onMyLocationTap ?: return false
+                    val fix = myLocation ?: return false
+                    val p = mapView.projection.toPixels(fix, Point())
+                    val dx = e.x - p.x
+                    val dy = e.y - p.y
+                    val radius = 24f * mapView.resources.displayMetrics.density
+                    if (dx * dx + dy * dy > radius * radius) return false
+                    handler(PtMapMarker.MY_LOCATION)
+                    return true
+                }
+            }
             if (overlays.userLocationIcon == PtUserLocationIcon.DOT) {
                 val dot = GpsLocationOverlay.createBlueDotBitmap(currentMap.resources.displayMetrics.density)
                 overlay.setPersonIcon(dot)

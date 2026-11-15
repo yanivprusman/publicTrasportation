@@ -157,6 +157,17 @@ interface AppStrings {
     val notAvailable: String
     val nextArrival: String
     val followMyLocation: String
+    // Map marker labels: what a tapped dot is.
+    val markerBusStop: String
+    val markerTripStart: String
+    val markerTripStartHere: String
+    val markerDestination: String
+    val markerVia: String
+    val markerYouAreHere: String
+    val markerNextStop: String
+    val markerYourStop: String
+    val markerStopInfo: String
+    val markerClose: String
     val mapStyle: String
     val mapStyleDark: String
     val mapStyleLight: String
@@ -600,6 +611,16 @@ val EnStrings: AppStrings = object : AppStrings {
     override val notAvailable: String = "N/A"
     override val nextArrival: String = "Next Arrival"
     override val followMyLocation: String = "Follow my location"
+    override val markerBusStop: String = "Bus stop"
+    override val markerTripStart: String = "Start of your trip"
+    override val markerTripStartHere: String = "Start of your trip — and where you are now"
+    override val markerDestination: String = "Your destination"
+    override val markerVia: String = "A stop on the way (via)"
+    override val markerYouAreHere: String = "You are here"
+    override val markerNextStop: String = "The bus's next stop"
+    override val markerYourStop: String = "Your stop — get off here"
+    override val markerStopInfo: String = "Arrivals & info"
+    override val markerClose: String = "Close"
     override val mapStyle: String = "Map style"
     override val mapStyleDark: String = "Dark"
     override val mapStyleLight: String = "Light"
@@ -1024,6 +1045,16 @@ val HeStrings: AppStrings = object : AppStrings {
     override val notAvailable: String = "לא זמין"
     override val nextArrival: String = "הגעה הבאה"
     override val followMyLocation: String = "עקוב אחרי המיקום שלי"
+    override val markerBusStop: String = "תחנת אוטובוס"
+    override val markerTripStart: String = "נקודת ההתחלה של הנסיעה"
+    override val markerTripStartHere: String = "נקודת ההתחלה של הנסיעה — וגם המיקום שלך עכשיו"
+    override val markerDestination: String = "היעד שלך"
+    override val markerVia: String = "עצירה בדרך"
+    override val markerYouAreHere: String = "אתה כאן"
+    override val markerNextStop: String = "התחנה הבאה של האוטובוס"
+    override val markerYourStop: String = "התחנה שלך — כאן יורדים"
+    override val markerStopInfo: String = "הגעות ופרטים"
+    override val markerClose: String = "סגור"
     override val mapStyle: String = "סגנון מפה"
     override val mapStyleDark: String = "כהה"
     override val mapStyleLight: String = "בהיר"

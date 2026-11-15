@@ -106,6 +106,14 @@ data class PtMapViewport(
 enum class PtUserLocationIcon { DOT, PLATFORM_DEFAULT }
 
 /**
+ * The map's own markers that are not stops or buses — the ones a rider sees and has to
+ * guess at. Tapping one reports which it is, so the app can say so: on 2026-11-15 the
+ * trip's start (a pulsing cyan dot) was taken for something unknown, while it sat on top
+ * of the blue "you are here" dot and hid it.
+ */
+enum class PtMapMarker { ORIGIN, DESTINATION, VIA, MY_LOCATION, NEXT_STOP, ALIGHT_STOP }
+
+/**
  * The map.
  *
  * Android renders this with osmdroid — the existing, working implementation, wrapped rather
@@ -123,5 +131,6 @@ expect fun PtMap(
     onUserPan: (() -> Unit)? = null,
     onCameraChanged: ((PtMapViewport) -> Unit)? = null,
     onStopTap: ((StopResult) -> Unit)? = null,
-    onVehicleTap: ((VehicleMarker) -> Unit)? = null
+    onVehicleTap: ((VehicleMarker) -> Unit)? = null,
+    onMarkerTap: ((PtMapMarker) -> Unit)? = null
 )

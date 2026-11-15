@@ -54,6 +54,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Button
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.ui.text.font.FontWeight
@@ -116,6 +117,7 @@ import com.automatelinux.pt.ui.lines.lineDestination
 import com.automatelinux.pt.map.LatLng
 import com.automatelinux.pt.ui.map.MapStyles
 import com.automatelinux.pt.ui.map.PtMap
+import com.automatelinux.pt.ui.map.PtMapMarker
 import com.automatelinux.pt.ui.map.PtMapOverlays
 import com.automatelinux.pt.ui.map.JourneyRideMarks
 import com.automatelinux.pt.journey.RideStopState
@@ -146,6 +148,7 @@ import com.automatelinux.pt.util.metersBetween
 import com.automatelinux.pt.util.SettingsStore
 import com.automatelinux.pt.util.TripLink
 import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
@@ -204,6 +207,9 @@ fun MainScreen(
     var recentSearchesVersion by remember { mutableIntStateOf(0) }
 
     var followingLocation by remember { mutableStateOf(false) }
+    // What the last tapped map dot is. A dot the rider has to guess at is noise; a tap
+    // names it, and a stop's label offers its arrivals instead of jumping straight there.
+    var mapTapInfo by remember { mutableStateOf<MapTapInfo?>(null) }
     // "Show me the buses around me", independent of any planned route or chosen
     // stop — the question people open a transit app with when they have not
     // planned anything yet.
@@ -1469,9 +1475,33 @@ fun MainScreen(
                         currentMapCornerMeters = viewport.visibleCornerMeters
                     },
                     onStopTap = { stop ->
-                        activeTab = ActiveTab.ARRIVALS
-                        arrivalsViewModel.setStationCode(stop.stopCode, stop.stopName)
-                        scope.launch { bottomSheetState.expand() }
+                        mapTapInfo = MapTapInfo(
+                            title = strings.markerBusStop,
+                            detail = "${stop.stopName} · ${strings.stopCodeLabel(stop.stopCode)}",
+                            stop = stop
+                        )
+                    },
+                    onMarkerTap = { kind ->
+                        // The trip's start is often the rider's own position, and then
+                        // its dot covers the blue one: whichever of the two takes the tap,
+                        // the label says both, or "you are here" would seem to be missing.
+                        val startIsHere = routingState.originIsCurrentLocation
+                        mapTapInfo = when (kind) {
+                            PtMapMarker.ORIGIN, PtMapMarker.MY_LOCATION ->
+                                if (startIsHere && routingState.origin != null) {
+                                    MapTapInfo(strings.markerTripStartHere, null)
+                                } else if (kind == PtMapMarker.ORIGIN) {
+                                    MapTapInfo(strings.markerTripStart, routingState.origin?.name)
+                                } else {
+                                    MapTapInfo(strings.markerYouAreHere, null)
+                                }
+                            PtMapMarker.DESTINATION ->
+                                MapTapInfo(strings.markerDestination, routingState.destination?.name)
+                            PtMapMarker.VIA ->
+                                MapTapInfo(strings.markerVia, routingState.via?.name)
+                            PtMapMarker.NEXT_STOP -> MapTapInfo(strings.markerNextStop, null)
+                            PtMapMarker.ALIGHT_STOP -> MapTapInfo(strings.markerYourStop, null)
+                        }
                     },
                     // A bus on the map is the answer to "where is it" only once you
                     // can ask it for more; tapping opens the same tracking screen.
@@ -1519,6 +1549,58 @@ fun MainScreen(
                         }
                     }
                 )
+
+                mapTapInfo?.let { info ->
+                    // A label, not a dialog: it fades on its own, and a new tap replaces it.
+                    LaunchedEffect(info) {
+                        delay(if (info.stop != null) 10_000L else 6_000L)
+                        if (mapTapInfo == info) mapTapInfo = null
+                    }
+                    Surface(
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            // Clear of the button column on the right.
+                            .padding(top = 48.dp, start = 12.dp, end = 72.dp)
+                            .fillMaxWidth(),
+                        color = MaterialTheme.colorScheme.surface,
+                        shape = RoundedCornerShape(16.dp),
+                        shadowElevation = 6.dp
+                    ) {
+                        Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
+                            Text(
+                                text = info.title,
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                            info.detail?.takeIf { it.isNotBlank() }?.let {
+                                Text(
+                                    text = it,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.End
+                            ) {
+                                TextButton(onClick = { mapTapInfo = null }) {
+                                    Text(strings.markerClose)
+                                }
+                                info.stop?.let { stop ->
+                                    Spacer(Modifier.width(4.dp))
+                                    Button(onClick = {
+                                        mapTapInfo = null
+                                        activeTab = ActiveTab.ARRIVALS
+                                        arrivalsViewModel.setStationCode(stop.stopCode, stop.stopName)
+                                        scope.launch { bottomSheetState.expand() }
+                                    }) {
+                                        Text(strings.markerStopInfo)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
 
                 // A line's direction looked at the way a tracked bus is: the sheet steps
                 // aside so the whole route is on screen, and this card is the way back.
@@ -2346,3 +2428,10 @@ private fun boundsInsideVisibleBand(
         )
     )
 }
+
+/** A tapped map dot, named. [stop] is set for a bus stop, whose label offers its arrivals. */
+private data class MapTapInfo(
+    val title: String,
+    val detail: String?,
+    val stop: StopResult? = null
+)

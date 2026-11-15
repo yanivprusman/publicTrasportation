@@ -50,7 +50,8 @@ actual fun PtMap(
     onUserPan: (() -> Unit)?,
     onCameraChanged: ((PtMapViewport) -> Unit)?,
     onStopTap: ((StopResult) -> Unit)?,
-    onVehicleTap: ((VehicleMarker) -> Unit)?
+    onVehicleTap: ((VehicleMarker) -> Unit)?,
+    onMarkerTap: ((PtMapMarker) -> Unit)?
 ) {
     // Acknowledge camera commands even though nothing moves. Without this, every
     // animateTo/fitBounds would sit in pendingCommand forever, and the first real
