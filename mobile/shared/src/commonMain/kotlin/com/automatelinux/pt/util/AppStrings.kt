@@ -466,7 +466,7 @@ interface AppStrings {
 
 val EnStrings: AppStrings = object : AppStrings {
     override val routePlanner: String = "Route Planner"
-    override val stationArrivals: String = "Station Arrivals"
+    override val stationArrivals: String = "Arrivals"
     override val settings: String = "Settings"
     override val opacitySettings: String = "Opacity Settings"
     override val hideOpacitySettings: String = "Hide Opacity Settings"
@@ -892,7 +892,7 @@ val EnStrings: AppStrings = object : AppStrings {
 
 val HeStrings: AppStrings = object : AppStrings {
     override val routePlanner: String = "תכנון מסלול"
-    override val stationArrivals: String = "הגעות לתחנה"
+    override val stationArrivals: String = "הגעות"
     override val settings: String = "הגדרות"
     override val opacitySettings: String = "הגדרות שקיפות"
     override val hideOpacitySettings: String = "הסתר הגדרות שקיפות"
