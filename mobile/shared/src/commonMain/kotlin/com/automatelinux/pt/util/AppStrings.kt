@@ -230,6 +230,8 @@ interface AppStrings {
     val trackingError: String
     val trackingDistanceAway: (String) -> String
     val trackingEtaAtStop: (String) -> String
+    /** The bus after the followed one: (countdown, clock time) → "Next bus in 22min · 09:34". */
+    val trackingNextArrival: (String, String) -> String
     val trackingFrameBus: String
     val lineStopsLoading: String
     val lineStopsError: String
@@ -680,6 +682,7 @@ val EnStrings: AppStrings = object : AppStrings {
     override val trackingError: String = "Live position unavailable"
     override val trackingDistanceAway: (String) -> String = { distance -> "$distance away" }
     override val trackingEtaAtStop: (String) -> String = { stop -> "at $stop" }
+    override val trackingNextArrival: (String, String) -> String = { inText, hm -> "Next bus $inText · $hm" }
     override val trackingFrameBus: String = "Show the bus"
     override val lineStopsLoading: String = "Loading stops…"
     override val lineStopsError: String = "Couldn't load the stop list"
@@ -1114,6 +1117,7 @@ val HeStrings: AppStrings = object : AppStrings {
     override val trackingError: String = "המיקום החי אינו זמין"
     override val trackingDistanceAway: (String) -> String = { distance -> "במרחק $distance" }
     override val trackingEtaAtStop: (String) -> String = { stop -> "בתחנת $stop" }
+    override val trackingNextArrival: (String, String) -> String = { inText, hm -> "האוטובוס הבא $inText · $hm" }
     override val trackingFrameBus: String = "הצג את האוטובוס"
     override val lineStopsLoading: String = "טוען תחנות…"
     override val lineStopsError: String = "רשימת התחנות לא נטענה"

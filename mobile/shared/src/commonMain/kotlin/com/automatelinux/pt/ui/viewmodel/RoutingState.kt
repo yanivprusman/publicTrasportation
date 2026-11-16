@@ -138,12 +138,46 @@ data class TrackedBus(
      * The route this trip actually runs, as [lat, lon] pairs from GTFS shapes.txt.
      * Resolved through the trip id, never the line number — see /api/trip-shape.
      */
-    val shape: List<List<Double>> = emptyList()
+    val shape: List<List<Double>> = emptyList(),
+    /**
+     * Every visit of this line the monitored stop reports, positioned or not. Wider than
+     * [candidates]: a bus that has not left its first stop yet has no position, so it is
+     * never a candidate — but it is exactly "the next one" when the one being followed
+     * is missed.
+     */
+    val lineArrivals: List<LineArrival> = emptyList()
 ) {
     /** The vehicle currently being followed — what the map draws. */
     val marker: VehicleMarker?
         get() = candidates.getOrNull(selectedIndex)
+
+    /**
+     * When the bus after the followed one reaches the same stop, or null when the feed
+     * reports none. Matched on LineRef where both sides carry it, so the other
+     * direction of the same line number at a shared stop is not offered as "next".
+     */
+    val nextArrival: Instant?
+        get() {
+            val followed = marker ?: return null
+            val followedAt = runCatching { Instant.parse(followed.expectedArrival) }.getOrNull()
+                ?: return null
+            return lineArrivals
+                .asSequence()
+                .filter { it.vehicleRef.isEmpty() || it.vehicleRef != followed.vehicleRef }
+                .filter { followed.lineRef == null || it.lineRef == null || it.lineRef == followed.lineRef }
+                .mapNotNull { runCatching { Instant.parse(it.expectedArrival) }.getOrNull() }
+                .filter { it > followedAt }
+                .minOrNull()
+        }
 }
+
+/** One visit of the tracked line at the monitored stop, as the feed reports it. */
+data class LineArrival(
+    val vehicleRef: String,
+    val lineRef: String?,
+    /** ISO-8601 with offset. */
+    val expectedArrival: String
+)
 
 /** TRANSIT shows the itinerary list; BIKE/CAR show that direct street route. */
 enum class TravelMode {

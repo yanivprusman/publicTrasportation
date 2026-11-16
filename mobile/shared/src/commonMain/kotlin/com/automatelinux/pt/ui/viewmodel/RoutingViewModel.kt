@@ -895,8 +895,20 @@ class RoutingViewModel(
                         runCatching { Instant.parse(marker.expectedArrival) }.getOrNull()
                             ?: Instant.DISTANT_FUTURE
                     }
+                val lineArrivals = response.siri?.serviceDelivery?.stopMonitoringDelivery
+                    ?.flatMap { it.monitoredStopVisit ?: emptyList() }
+                    ?.mapNotNull { visit ->
+                        val journey = visit.monitoredVehicleJourney ?: return@mapNotNull null
+                        if (!journey.publishedLineName.equals(lineName, ignoreCase = true)) {
+                            return@mapNotNull null
+                        }
+                        val expected = journey.monitoredCall?.expectedArrivalTime
+                            ?: return@mapNotNull null
+                        LineArrival(journey.vehicleRef ?: "", journey.lineRef, expected)
+                    } ?: emptyList()
                 updateTracking(seq) { tracked ->
                     tracked.copy(
+                        lineArrivals = lineArrivals,
                         status = if (candidates.isEmpty()) {
                             TrackingStatus.NO_VEHICLE
                         } else {

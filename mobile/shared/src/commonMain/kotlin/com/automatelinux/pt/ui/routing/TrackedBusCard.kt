@@ -185,6 +185,22 @@ fun TrackedBusCard(
                 )
             }
 
+            // The bus after this one, at the same stop. Whether to run for this bus or
+            // let it go depends entirely on how long the wait for the next one is, and
+            // the card used to answer only half of that.
+            tracked.nextArrival?.let { next ->
+                val minutes = (next - now).inWholeMinutes.coerceAtLeast(0)
+                val hm = next.toLocalDateTime(TimeZone.currentSystemDefault()).time.toString().take(5)
+                Spacer(Modifier.size(2.dp))
+                Text(
+                    text = strings.trackingNextArrival(strings.arrivalInMin(minutes), hm),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
             tracked.marker?.recordedAt?.let { recordedAt ->
                 val age = ageSeconds(recordedAt, now)
                 if (age != null) {
