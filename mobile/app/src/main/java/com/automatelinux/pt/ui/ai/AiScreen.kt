@@ -62,6 +62,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.style.TextDirection
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.ui.unit.sp
 import com.automatelinux.pt.data.api.AiApiException
 import com.automatelinux.pt.data.api.AiConversation
@@ -234,12 +236,15 @@ fun AiScreen(
                 item { Spacer(Modifier.height(8.dp)) }
                 items(messages) { m ->
                     if (m.role == "user") {
-                        Text(m.text, fontSize = 16.sp, color = muted())
+                        Text(m.text, fontSize = 16.sp, color = muted(), style = LocalTextStyle.current.copy(textDirection = TextDirection.Content))
                     } else if (m.error == true) {
                         Text(strings.aiError, fontSize = 18.sp, color = MaterialTheme.colorScheme.error)
                     } else {
                         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            if (m.text.isNotBlank()) Text(m.text, fontSize = 20.sp, lineHeight = 28.sp)
+                            // Each message takes its direction from its own words, not the app's: in the English
+                            // app a Hebrew reply was laid out left-to-right, so its closing period was stranded
+                            // at the far right of the last line and read as ".בלבד." (owner, 2026-11-16).
+                            if (m.text.isNotBlank()) Text(m.text, fontSize = 20.sp, lineHeight = 28.sp, style = LocalTextStyle.current.copy(textDirection = TextDirection.Content))
                             m.options.forEach { o -> OptionLine(o, chosen = m.start == o.id) { onStartTrip(o.itinerary) } }
                         }
                     }
