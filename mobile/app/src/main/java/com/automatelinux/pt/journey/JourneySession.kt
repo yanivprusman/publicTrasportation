@@ -141,20 +141,21 @@ object JourneySession {
         cursor = resumeFrom?.cursor ?: JourneyCursor()
         startedAtMs = resumeFrom?.startedAtMs ?: Clock.System.now().toEpochMilliseconds()
         // A rejoined trip keeps what it was recorded with; only a new one takes [ends].
-        record(
-            resumeFrom?.copy(itinerary = itinerary, cursor = cursor)
-                ?: StartedTrip(
-                    startedAtMs!!, itinerary, cursor,
-                    originName = ends.originName,
-                    destinationName = ends.destinationName,
-                    originFromGps = ends.originFromGps,
-                    destinationFromGps = ends.destinationFromGps
-                )
-        )
+        val trip = resumeFrom?.copy(itinerary = itinerary, cursor = cursor)
+            ?: StartedTrip(
+                startedAtMs!!, itinerary, cursor,
+                originName = ends.originName,
+                destinationName = ends.destinationName,
+                originFromGps = ends.originFromGps,
+                destinationFromGps = ends.destinationFromGps
+            )
+        record(trip)
         lastFix = null
         linger?.cancel()
         linger = null
-        _itinerary.value = itinerary
+        // The planner's names on the rider's pins, so the panel, the notification
+        // and a shared link say "Walk to <place>" instead of "your destination".
+        _itinerary.value = trip.namedItinerary
         _progress.value = null
         _live.value = null
 

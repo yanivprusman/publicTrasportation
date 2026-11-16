@@ -48,6 +48,27 @@ data class StartedTrip(
     val destinationLabel: String? get() = destinationName?.ifBlank { null } ?: destination?.name?.ifBlank { null }
 
     /**
+     * The itinerary the live journey runs on: the rider's two nameless pins carry
+     * the planner's names. Without this the last step read "Walk to your
+     * destination" while the rider had typed where that was — the app knew the
+     * name and left them to remember it. An end that has its own name (a stop)
+     * keeps it; an end the planner had no name for stays nameless and is worded
+     * as "your destination".
+     */
+    val namedItinerary: Itinerary get() {
+        val o = originName?.ifBlank { null }
+        val d = destinationName?.ifBlank { null }
+        if (o == null && d == null) return itinerary
+        val legs = itinerary.legs
+        return itinerary.copy(legs = legs.mapIndexed { i, leg ->
+            var l = leg
+            if (i == 0 && o != null && l.from.name.isBlank()) l = l.copy(from = l.from.copy(name = o))
+            if (i == legs.lastIndex && d != null && l.to.name.isBlank()) l = l.copy(to = l.to.copy(name = d))
+            l
+        })
+    }
+
+    /**
      * Whether there is still a journey to rejoin: not arrived, and the timetable has
      * not run out more than [RESUME_GRACE_MS] ago. Past that, the buses on it are
      * gone and the only useful thing left is the same two ends, searched again.

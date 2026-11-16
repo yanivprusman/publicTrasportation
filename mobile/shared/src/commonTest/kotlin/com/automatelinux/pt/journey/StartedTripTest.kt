@@ -128,4 +128,39 @@ class StartedTripTest {
         assertFalse(loaded.originFromGps)
         assertFalse(loaded.destinationFromGps)
     }
+
+    /** Walk → bus → walk, with the rider's two pins nameless as the server sends them. */
+    private fun pinned(): Itinerary {
+        val it = itinerary(at = 0, fromLat = 31.0)
+        val bus = it.legs.single()
+        return it.copy(legs = listOf(
+            bus.copy(mode = TransitMode.WALK, from = Place("", 31.0, 34.8), to = bus.from, routeShortName = null),
+            bus,
+            bus.copy(mode = TransitMode.WALK, from = bus.to, to = Place("", 31.2, 34.8), routeShortName = null)
+        ))
+    }
+
+    @Test
+    fun theLastWalkIsNamedForWhereTheRiderSaidTheyWereGoing() {
+        val legs = StartedTrip(t0, pinned(), originName = "בית", destinationName = "מתחם התחנה")
+            .namedItinerary.legs
+        assertEquals("מתחם התחנה", legs.last().to.name)
+        assertEquals("בית", legs.first().from.name)
+        // The stops in between keep their own names.
+        assertEquals("A", legs[1].from.name)
+        assertEquals("B", legs[1].to.name)
+    }
+
+    @Test
+    fun anEndWithNoPlannerNameStaysNameless() {
+        val trip = StartedTrip(t0, pinned())
+        assertEquals(trip.itinerary, trip.namedItinerary)
+        assertEquals("", StartedTrip(t0, pinned(), destinationName = " ").namedItinerary.legs.last().to.name)
+    }
+
+    @Test
+    fun aStopThatEndsTheTripKeepsItsOwnName() {
+        val trip = StartedTrip(t0, itinerary(at = 0, fromLat = 31.0), destinationName = "somewhere else")
+        assertEquals("B", trip.namedItinerary.legs.last().to.name)
+    }
 }
