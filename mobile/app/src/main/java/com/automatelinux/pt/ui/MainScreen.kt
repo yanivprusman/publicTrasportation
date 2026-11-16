@@ -38,6 +38,10 @@ import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.DirectionsBus
 import androidx.compose.material.icons.filled.Layers
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.LocationOff
+import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.SatelliteAlt
@@ -292,6 +296,8 @@ fun MainScreen(
     var aiConversationId by rememberSaveable { mutableStateOf<String?>(null) }
     var shareTripLink by remember { mutableStateOf<String?>(null) }
     var mapStyle by remember { mutableStateOf(settingsStore.mapStyle) }
+    var showStops by remember { mutableStateOf(settingsStore.showStops) }
+    var mapButtonsCollapsed by remember { mutableStateOf(settingsStore.mapButtonsCollapsed) }
     var showMapStyleMenu by remember { mutableStateOf(false) }
 
     val preSuggestions = remember(recentSearchesVersion, strings) {
@@ -1429,7 +1435,8 @@ fun MainScreen(
                             liveBuses -> arrivalsState.nearbyStaleVehicleRefs
                             else -> emptySet()
                         },
-                        stops = nearbyStops,
+                        // The panel's lists keep them; only the dots go.
+                        stops = if (showStops) nearbyStops else emptyList(),
                         activeStopCode = arrivalsState.stationCode.takeIf { it.isNotEmpty() },
                         // Tracking wins over the Lines tab: a bus can be reported far
                         // up the road, well off the stretch of the itinerary you ride,
@@ -1914,6 +1921,29 @@ fun MainScreen(
                     horizontalAlignment = Alignment.End,
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
+                    // Folds the whole column into this one button, which stays put, so
+                    // the map can be read edge to edge and the buttons are one tap back.
+                    SmallFloatingActionButton(
+                        onClick = {
+                            mapButtonsCollapsed = !mapButtonsCollapsed
+                            settingsStore.mapButtonsCollapsed = mapButtonsCollapsed
+                        },
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        contentColor = MaterialTheme.colorScheme.primary,
+                        elevation = FloatingActionButtonDefaults.elevation(4.dp)
+                    ) {
+                        Icon(
+                            if (mapButtonsCollapsed) Icons.Default.ExpandMore else Icons.Default.ExpandLess,
+                            contentDescription = if (mapButtonsCollapsed) {
+                                strings.mapButtonsExpand
+                            } else {
+                                strings.mapButtonsCollapse
+                            },
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+
+                    if (!mapButtonsCollapsed) {
                     // Always here, whatever the sheet is doing and whether or not a
                     // route is planned: the plainest form of "where are the buses".
                     SmallFloatingActionButton(
@@ -2043,6 +2073,32 @@ fun MainScreen(
                         )
                     }
 
+                    // Primary while the dots are drawn, like the live-buses toggle: the
+                    // colour says the layer is on, the icon says what tapping does.
+                    SmallFloatingActionButton(
+                        onClick = {
+                            showStops = !showStops
+                            settingsStore.showStops = showStops
+                        },
+                        containerColor = if (showStops) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.surface
+                        },
+                        contentColor = if (showStops) {
+                            MaterialTheme.colorScheme.onPrimary
+                        } else {
+                            MaterialTheme.colorScheme.primary
+                        },
+                        elevation = FloatingActionButtonDefaults.elevation(4.dp)
+                    ) {
+                        Icon(
+                            if (showStops) Icons.Default.Place else Icons.Default.LocationOff,
+                            contentDescription = if (showStops) strings.mapHideStops else strings.mapShowStops,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+
                     Box {
                         SmallFloatingActionButton(
                             onClick = { showMapStyleMenu = true },
@@ -2086,6 +2142,7 @@ fun MainScreen(
                                 )
                             }
                         }
+                    }
                     }
                 }
 

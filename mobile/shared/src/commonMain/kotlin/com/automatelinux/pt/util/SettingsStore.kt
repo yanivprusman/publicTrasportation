@@ -63,6 +63,16 @@ class SettingsStore(private val prefs: Settings) {
         get() = prefs.getString("location_icon_style", "dot")
         set(value) { prefs.putString("location_icon_style", value) }
 
+    /** The map's nearby-stop dots. Off on request: around a busy junction they bury the map. */
+    var showStops: Boolean
+        get() = prefs.getBoolean("show_stops", true)
+        set(value) { prefs.putBoolean("show_stops", value) }
+
+    /** The top-right map buttons folded down to the one button that unfolds them. */
+    var mapButtonsCollapsed: Boolean
+        get() = prefs.getBoolean("map_buttons_collapsed", false)
+        set(value) { prefs.putBoolean("map_buttons_collapsed", value) }
+
     /** Base map style: "dark" (default, matches the app theme), "light", or "satellite". */
     var mapStyle: String
         get() = prefs.getString("map_style", "dark")

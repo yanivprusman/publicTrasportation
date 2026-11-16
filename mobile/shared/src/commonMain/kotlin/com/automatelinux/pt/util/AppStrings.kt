@@ -251,6 +251,10 @@ interface AppStrings {
     val liveBusesOffscreen: (String) -> String
     /** The live-buses toggle that narrows the map to the displayed route's own lines. */
     val liveBusesRouteOnly: String
+    val mapShowStops: String
+    val mapHideStops: String
+    val mapButtonsCollapse: String
+    val mapButtonsExpand: String
     val liveBusesRouteNone: String
     /** In place of a ride's price when the journey's first fare already paid for it. */
     val fareFreeTransfer: String
@@ -701,6 +705,10 @@ val EnStrings: AppStrings = object : AppStrings {
     override val liveBusesZoomIn: (String) -> String = { radius -> "Only searching $radius around the centre — zoom in to cover what you see" }
     override val liveBusesOffscreen: (String) -> String = { distance -> "Nearest live bus is $distance away — tap to show it" }
     override val liveBusesRouteOnly: String = "My route's lines only"
+    override val mapShowStops: String = "Show stops on the map"
+    override val mapHideStops: String = "Hide stops on the map"
+    override val mapButtonsCollapse: String = "Hide map buttons"
+    override val mapButtonsExpand: String = "Show map buttons"
     override val liveBusesRouteNone: String = "No bus on your route's lines is reporting right now"
     override val fareFreeTransfer: String = "free transfer"
     override val accessAccessible: String = "Wheelchair accessible"
@@ -1134,6 +1142,10 @@ val HeStrings: AppStrings = object : AppStrings {
     override val liveBusesZoomIn: (String) -> String = { radius -> "החיפוש מכסה $radius סביב מרכז המפה בלבד — התקרב כדי לכסות את מה שרואים" }
     override val liveBusesOffscreen: (String) -> String = { distance -> "האוטובוס החי הקרוב ביותר במרחק $distance — הקש כדי לראות אותו" }
     override val liveBusesRouteOnly: String = "רק הקווים של המסלול"
+    override val mapShowStops: String = "הצג תחנות במפה"
+    override val mapHideStops: String = "הסתר תחנות במפה"
+    override val mapButtonsCollapse: String = "הסתר כפתורי מפה"
+    override val mapButtonsExpand: String = "הצג כפתורי מפה"
     override val liveBusesRouteNone: String = "אף אוטובוס בקווים של המסלול לא מדווח כרגע"
     override val fareFreeTransfer: String = "מעבר חינם"
     override val accessAccessible: String = "נגיש לכיסא גלגלים"
