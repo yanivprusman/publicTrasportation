@@ -276,12 +276,13 @@ fun AiScreen(
                             speech.launch(
                                 Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
                                     .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                                    .putExtra(RecognizerIntent.EXTRA_LANGUAGE, if (language == "he") "he-IL" else "en-US")
-                                    // Riders say Israeli places in Hebrew whatever the app's language:
-                                    // listening in English alone turned "הירקון 122" into "I'll call a message time".
-                                    .putExtra("android.speech.extra.EXTRA_ADDITIONAL_LANGUAGES", arrayOf(if (language == "he") "en-US" else "he-IL"))
-                                    .putExtra(RecognizerIntent.EXTRA_ENABLE_LANGUAGE_DETECTION, true)
-                                    .putExtra(RecognizerIntent.EXTRA_LANGUAGE_DETECTION_ALLOWED_LANGUAGES, arrayListOf("he-IL", "en-US"))
+                                    // Always Hebrew, whatever the app's language: riders say Israeli places in
+                                    // Hebrew, as they do to Waze. Listening in English turned "הירקון 122" into
+                                    // "I'll call a message time", and the dialog ignored the additional-language
+                                    // and language-detection hints (tried 2026-11-16). Hebrew recognition still
+                                    // returns English words spoken inside a sentence.
+                                    .putExtra(RecognizerIntent.EXTRA_LANGUAGE, "he-IL")
+                                    .putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, "he-IL")
                             )
                         },
                         enabled = !busy,
