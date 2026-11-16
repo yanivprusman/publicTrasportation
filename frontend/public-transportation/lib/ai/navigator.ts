@@ -208,8 +208,14 @@ async function answer(id: string, text: string, resume: boolean, lat?: number, l
 
 /** The address at the rider's position, or null when there is none; the coordinates are what the planner uses. */
 async function placeName(lat: number, lon: number): Promise<string | null> {
-  const res = await fetch(`http://127.0.0.1:${process.env.PORT}/api/reverse-geocode?lat=${lat}&lon=${lon}`, { signal: AbortSignal.timeout(20_000) }); // cold: a dev compile plus a remote lookup
-  if (!res.ok) throw new Error(`reverse-geocode answered HTTP ${res.status}`);
+  // The name only helps the reply read naturally; the planner works from the coordinates, which
+  // the prompt always carries. A Nominatim timeout used to fail the whole answer (2026-11-16).
+  const res = await fetch(`http://127.0.0.1:${process.env.PORT}/api/reverse-geocode?lat=${lat}&lon=${lon}`, { signal: AbortSignal.timeout(20_000) }) // cold: a dev compile plus a remote lookup
+    .catch((e: Error) => e);
+  if (res instanceof Error || !res.ok) {
+    console.warn(`[ai] no name for ${lat},${lon}: reverse-geocode ${res instanceof Error ? `failed: ${res.message}` : `answered HTTP ${res.status}`}`);
+    return null;
+  }
   const list = (await res.json()) as { name?: string }[];
   return list[0]?.name || null;
 }
