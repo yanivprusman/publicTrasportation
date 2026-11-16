@@ -76,6 +76,23 @@ class JourneyTextTest {
         assertEquals("Walk to stop A", headlineFor("stop A"))
     }
 
+    /** Past the end of the walk with no fix: the schedule alone closes it. */
+    private fun arrivedHeadlineFor(destinationName: String): String =
+        JourneyText.headline(
+            stepJourney(walkTo(destinationName), JourneyCursor(), fix = null, nowMs = t0 + 60 * 60_000L).progress,
+            EnStrings
+        )
+
+    @Test
+    fun `arriving names the place`() {
+        assertEquals("You've arrived at Dizengoff Center", arrivedHeadlineFor("Dizengoff Center"))
+    }
+
+    @Test
+    fun `arriving at a nameless pin says only that you arrived`() {
+        assertEquals("You've arrived!", arrivedHeadlineFor(""))
+    }
+
     private fun walkDetailAt(nowMinutes: Int): String? =
         JourneyText.detail(
             stepJourney(

@@ -300,7 +300,7 @@ fun stepJourney(
     if (legs.isEmpty()) {
         return JourneyUpdate(
             cursor = c.copy(arrived = true),
-            progress = arrivedProgress(legs.size, usable != null),
+            progress = arrivedProgress(legs.size, null, usable != null),
             alerts = if (!cursor.arrived) listOf(JourneyAlert.ARRIVED) else emptyList()
         )
     }
@@ -321,7 +321,7 @@ fun stepJourney(
 
     if (c.arrived || c.legIndex > legs.lastIndex) {
         if (!cursor.arrived) alerts += JourneyAlert.ARRIVED
-        return JourneyUpdate(c.copy(arrived = true), arrivedProgress(legs.size, usable != null), alerts)
+        return JourneyUpdate(c.copy(arrived = true), arrivedProgress(legs.size, legs.last().to.name, usable != null), alerts)
     }
 
     val leg = legs[c.legIndex]
@@ -467,7 +467,12 @@ private fun legComplete(leg: RouteLeg, cursor: JourneyCursor, fix: GeoFix?, nowM
     return nowMs >= endMs + SCHEDULE_GRACE_MS
 }
 
-private fun arrivedProgress(totalLegs: Int, positionKnown: Boolean) = JourneyProgress(
+/**
+ * [destinationName] is the last leg's end — named by the session from what the rider
+ * picked in the planner, since the server sends the rider's own pin nameless. It rides
+ * in [JourneyProgress.targetName] so "You've arrived" can say where.
+ */
+private fun arrivedProgress(totalLegs: Int, destinationName: String?, positionKnown: Boolean) = JourneyProgress(
     phase = JourneyPhase.ARRIVED,
     legIndex = totalLegs,
     totalLegs = totalLegs,
@@ -475,7 +480,7 @@ private fun arrivedProgress(totalLegs: Int, positionKnown: Boolean) = JourneyPro
     nextLeg = null,
     stopsRemaining = null,
     nextStopName = null,
-    targetName = null,
+    targetName = destinationName?.ifBlank { null },
     metersToTarget = null,
     secondsToTarget = null,
     secondsToDeparture = null,

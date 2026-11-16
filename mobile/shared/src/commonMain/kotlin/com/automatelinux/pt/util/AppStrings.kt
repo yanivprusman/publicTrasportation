@@ -337,6 +337,8 @@ interface AppStrings {
     val journeyDone: String
     val journeyArrived: String
     val journeyYouArrived: String
+    /** The arrival headline with the place in it: "You've arrived at Dizengoff Center". */
+    val journeyArrivedAt: (String) -> String
     val journeyArrivedSummary: (String, String) -> String
     val journeyLeave: String
     val journeyDeparts: String
@@ -777,6 +779,7 @@ val EnStrings: AppStrings = object : AppStrings {
     override val journeyDone: String = "Done"
     override val journeyArrived: String = "Arrived"
     override val journeyYouArrived: String = "You've arrived!"
+    override val journeyArrivedAt: (String) -> String = { place -> "You've arrived at $place" }
     override val journeyArrivedSummary: (String, String) -> String = { time, d -> "Arrived $time · $d total" }
     override val journeyLeave: String = "Leave"
     override val journeyDeparts: String = "Departs"
@@ -1209,6 +1212,7 @@ val HeStrings: AppStrings = object : AppStrings {
     override val journeyDone: String = "סיום"
     override val journeyArrived: String = "הגעת"
     override val journeyYouArrived: String = "הגעת ליעד!"
+    override val journeyArrivedAt: (String) -> String = { place -> "הגעת אל $place" }
     override val journeyArrivedSummary: (String, String) -> String = { time, d -> "הגעה ב-$time · $d סה״כ" }
     override val journeyLeave: String = "צא"
     override val journeyDeparts: String = "יציאה"

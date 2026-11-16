@@ -20,7 +20,7 @@ object JourneyText {
     fun headline(progress: JourneyProgress?, strings: AppStrings): String {
         val p = progress ?: return strings.journeyStarting
         return when (p.phase) {
-            JourneyPhase.ARRIVED -> strings.journeyYouArrived
+            JourneyPhase.ARRIVED -> arrivedLine(p, strings)
             JourneyPhase.WAITING -> {
                 val line = p.leg?.let { rideName(it.routeShortName, it.mode, strings) }
                     ?: strings.journeyUpNext
@@ -45,6 +45,10 @@ object JourneyText {
             }
         }
     }
+
+    /** "You've arrived at <place>" — the bare "You've arrived!" only when the end has no name. */
+    private fun arrivedLine(p: JourneyProgress?, strings: AppStrings): String =
+        p?.targetName?.let { strings.journeyArrivedAt(it) } ?: strings.journeyYouArrived
 
     /**
      * The line under it: where this leg ends, and when.
@@ -212,7 +216,7 @@ object JourneyText {
             strings.journeyBoardNow(line ?: "") to
                 (progress?.leg?.from?.name?.let { "${strings.journeyBoardAt} $it" } ?: strings.journeyLabel)
         }
-        JourneyAlert.ARRIVED -> strings.journeyYouArrived to strings.journeyLabel
+        JourneyAlert.ARRIVED -> arrivedLine(progress, strings) to strings.journeyLabel
         JourneyAlert.BUS_EARLY -> busEarlyText(itinerary, live, strings)
     }
 
