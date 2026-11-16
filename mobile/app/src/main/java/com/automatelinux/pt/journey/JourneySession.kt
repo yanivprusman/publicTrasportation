@@ -328,7 +328,14 @@ object JourneySession {
                 ?.arrivalMs,
             nextBus = _live.value
                 ?.takeIf { !with(JourneyLive) { it.isStale(nowMs) } }
-                ?.let { LineSighting(it.legIndex, it.arrivalMs) }
+                ?.let { LineSighting(it.legIndex, it.arrivalMs) },
+            // lastFix is cleared on every start and resume, so null here with
+            // tracking on means the first fix is still on its way.
+            gps = when {
+                !liveTracking -> GpsState.OFF
+                lastFix == null -> GpsState.AWAITING_FIRST_FIX
+                else -> GpsState.ON
+            }
         )
         if (update.cursor != cursor) {
             cursor = update.cursor

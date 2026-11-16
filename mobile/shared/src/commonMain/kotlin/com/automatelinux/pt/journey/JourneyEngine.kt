@@ -160,6 +160,28 @@ const val FIX_STALE_MS = 90_000L
 /** Without GPS, a leg is called done this long after it was timetabled to end. */
 private const val SCHEDULE_GRACE_MS = 30_000L
 
+/**
+ * What the session can expect to learn about where the rider is — which decides how
+ * far the clock alone may move them.
+ */
+enum class GpsState {
+    /** No location at all: the timetable is the only evidence, so it ends legs. */
+    OFF,
+    /**
+     * Location is on but its first fix of this session has not landed. Nothing moves
+     * on the clock: a trip reopened after its timetabled end was called "arrived" the
+     * instant it opened, a few seconds before the GPS put the rider mid-route
+     * (owner, 2026-11-16, six blocks short of the destination).
+     */
+    AWAITING_FIRST_FIX,
+    /**
+     * Location is on and has spoken. A stale fix (underground) still lets the clock
+     * close the legs in between, but never the last one: "You've arrived" is a claim
+     * about where the rider is, and only a position can make it.
+     */
+    ON
+}
+
 /** Board call this long before a ride is due to leave. */
 private const val BOARD_CALL_LEAD_MS = 120_000L
 
@@ -290,7 +312,8 @@ fun stepJourney(
      * Read only for the early-bus warning. Deliberately any trip of the line, not just
      * the planned one: the bus before it running late is a bus the rider can take.
      */
-    nextBus: LineSighting? = null
+    nextBus: LineSighting? = null,
+    gps: GpsState = GpsState.OFF
 ): JourneyUpdate {
     val legs = itinerary.legs
     val usable = fix?.takeIf { nowMs - it.atMs <= FIX_STALE_MS }
@@ -311,7 +334,7 @@ fun stepJourney(
     while (!c.arrived && c.legIndex <= legs.lastIndex) {
         val leg = legs[c.legIndex]
         if (leg.isRide) c = c.copy(stopIndex = advanceStops(leg, c.stopIndex, usable))
-        if (!legComplete(leg, c, usable, nowMs)) break
+        if (!legComplete(leg, c.legIndex == legs.lastIndex, c, usable, nowMs, gps)) break
         c = if (c.legIndex == legs.lastIndex) {
             c.copy(legIndex = legs.size, stopIndex = 0, arrived = true)
         } else {
@@ -454,7 +477,14 @@ private fun advanceStops(leg: RouteLeg, current: Int, fix: GeoFix?): Int {
     return min(best, stops.lastIndex)
 }
 
-private fun legComplete(leg: RouteLeg, cursor: JourneyCursor, fix: GeoFix?, nowMs: Long): Boolean {
+private fun legComplete(
+    leg: RouteLeg,
+    isLastLeg: Boolean,
+    cursor: JourneyCursor,
+    fix: GeoFix?,
+    nowMs: Long,
+    gps: GpsState
+): Boolean {
     if (fix != null) {
         if (haversineMeters(fix.lat, fix.lon, leg.to.lat, leg.to.lon) <= LEG_END_METERS) return true
         if (leg.isRide && cursor.stopIndex >= leg.rideStops().lastIndex) return true
@@ -462,6 +492,11 @@ private fun legComplete(leg: RouteLeg, cursor: JourneyCursor, fix: GeoFix?, nowM
         // still carrying the rider, and skipping ahead there is how a navigator
         // starts lying.
         return false
+    }
+    when (gps) {
+        GpsState.OFF -> Unit
+        GpsState.AWAITING_FIRST_FIX -> return false
+        GpsState.ON -> if (isLastLeg) return false
     }
     val endMs = parseMs(leg.endTime) ?: return false
     return nowMs >= endMs + SCHEDULE_GRACE_MS

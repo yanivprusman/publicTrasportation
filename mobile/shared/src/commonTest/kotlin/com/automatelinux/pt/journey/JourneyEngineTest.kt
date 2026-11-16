@@ -84,6 +84,41 @@ class JourneyEngineTest {
     }
 
     @Test
+    fun `a trip reopened past its timetabled end waits for the first fix instead of arriving`() {
+        // Owner, 2026-11-16: opened a minute after the planned arrival, still mid-walk,
+        // and the clock declared "You've arrived" before the GPS had spoken.
+        val late = t0 + 41 * 60_000L
+        val opened = stepJourney(trip, JourneyCursor(legIndex = 2), null, late, gps = GpsState.AWAITING_FIRST_FIX)
+        assertEquals(JourneyPhase.WALKING, opened.progress.phase)
+        assertFalse(opened.cursor.arrived)
+        assertTrue(JourneyAlert.ARRIVED !in opened.alerts)
+
+        val fixMidWalk = GeoFix(at(5) + 0.0027, lon, 8.0, atMs = late)
+        val located = stepJourney(trip, opened.cursor, fixMidWalk, late, gps = GpsState.ON)
+        assertEquals(JourneyPhase.WALKING, located.progress.phase)
+        assertFalse(located.cursor.arrived)
+    }
+
+    @Test
+    fun `with GPS on the clock never ends the last leg, only a position does`() {
+        val late = t0 + 45 * 60_000L
+        val stale = GeoFix(at(5), lon, 8.0, atMs = late - FIX_STALE_MS - 1)
+        val blind = stepJourney(trip, JourneyCursor(legIndex = 2), stale, late, gps = GpsState.ON)
+        assertFalse(blind.cursor.arrived)
+
+        val there = stepJourney(trip, blind.cursor, fixAt(6, 45), late, gps = GpsState.ON)
+        assertTrue(there.cursor.arrived)
+    }
+
+    @Test
+    fun `with GPS on a stale fix still lets the clock close the legs in between`() {
+        val stale = GeoFix(at(1), lon, 8.0, atMs = t0)
+        val update = stepJourney(trip, JourneyCursor(), stale, t0 + 33 * 60_000L, gps = GpsState.ON)
+        assertEquals(2, update.progress.legIndex)
+        assertFalse(update.cursor.arrived)
+    }
+
+    @Test
     fun `a stale fix is not a position`() {
         val stale = GeoFix(at(3), lon, 8.0, atMs = t0 - FIX_STALE_MS - 1)
         val update = stepJourney(trip, JourneyCursor(), stale, nowMs = t0)
