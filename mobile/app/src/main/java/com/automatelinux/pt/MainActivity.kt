@@ -79,12 +79,12 @@ class MainActivity : ComponentActivity() {
         if (event.action == KeyEvent.ACTION_DOWN) {
             Log.d("MapZoom", "key down: ${event.keyCode}")
             when (event.keyCode) {
-                KeyEvent.KEYCODE_PLUS, KeyEvent.KEYCODE_EQUALS,
-                KeyEvent.KEYCODE_VOLUME_UP -> {
+                // Volume keys are left alone on purpose: they control volume.
+                KeyEvent.KEYCODE_PLUS, KeyEvent.KEYCODE_EQUALS -> {
                     MapZoomHandler.zoomIn()
                     return true
                 }
-                KeyEvent.KEYCODE_MINUS, KeyEvent.KEYCODE_VOLUME_DOWN -> {
+                KeyEvent.KEYCODE_MINUS -> {
                     MapZoomHandler.zoomOut()
                     return true
                 }
