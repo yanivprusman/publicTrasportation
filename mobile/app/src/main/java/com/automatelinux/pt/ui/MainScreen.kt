@@ -387,6 +387,13 @@ fun MainScreen(
         if (!followingLocation || !LocationHelper.hasPermission(context)) {
             return@DisposableEffect onDispose {}
         }
+        // Centre now, on the fix the phone already has. The update stream's first fix
+        // can take ~10s, and until it lands the map stays wherever it was last put
+        // (e.g. framing the whole route), leaving the rider's dot at the edge while
+        // the follow button says it is following.
+        LocationHelper.centerOnLocation(fusedLocationClient) { loc ->
+            if (followingLocation) mapState.animateTo(LatLng(loc.latitude, loc.longitude))
+        }
         val callback = LocationHelper.startFollowing(fusedLocationClient) { loc ->
             mapState.animateTo(LatLng(loc.latitude, loc.longitude))
         }
