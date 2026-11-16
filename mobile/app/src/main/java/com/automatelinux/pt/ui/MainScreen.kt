@@ -660,16 +660,33 @@ fun MainScreen(
         // not a name and is not kept as one.
         val placeholders = setOf(strings.myLocation, strings.selectedLocation, "Selected location")
         fun nameOf(s: GeocodeSuggestion?) = s?.name?.ifBlank { null }?.takeUnless { it in placeholders }
-        JourneySession.start(
-            context, trip, strings, live,
-            ends = pendingEnds ?: TripEnds(
-                originName = nameOf(routingState.origin),
-                destinationName = nameOf(routingState.destination),
-                originFromGps = routingState.originIsCurrentLocation,
-                destinationFromGps = routingState.destinationIsCurrentLocation
-            )
+        val ends = pendingEnds ?: TripEnds(
+            originName = nameOf(routingState.origin),
+            destinationName = nameOf(routingState.destination),
+            originFromGps = routingState.originIsCurrentLocation,
+            destinationFromGps = routingState.destinationIsCurrentLocation
         )
+        JourneySession.start(context, trip, strings, live, ends = ends)
         pendingEnds = null
+        // A place travelled to belongs in the To field's history whichever way it was
+        // chosen. Only a pick from the field's own dropdown used to record it, so a
+        // trip started from the AI tab, a map long-press or a link left no trace
+        // (owner, 2026-11-16: walked to the bank, and the bank was not in history).
+        // Recorded here because every journey passes through here. GPS ends are
+        // "where I happened to be", not a place, and are not kept.
+        trip.legs.firstOrNull()?.from?.let { from ->
+            val name = ends.originName?.takeUnless { it in placeholders }
+            if (name != null && !ends.originFromGps) {
+                settingsStore.addRecentSearch(GeocodeSuggestion(name, from.lat, from.lon))
+            }
+        }
+        trip.legs.lastOrNull()?.to?.let { to ->
+            val name = ends.destinationName?.takeUnless { it in placeholders }
+            if (name != null && !ends.destinationFromGps) {
+                settingsStore.addRecentSearch(GeocodeSuggestion(name, to.lat, to.lon))
+            }
+        }
+        recentSearchesVersion++
         // The sheet gets out of the way, and the map starts following the rider —
         // the panel answers "which stop", the map answers "where am I on the line".
         if (live) followingLocation = true
