@@ -34,6 +34,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -270,7 +271,7 @@ fun AiScreen(
                     modifier = Modifier.weight(1f).testTag("ai-input")
                 )
                 if (text.isBlank()) {
-                    IconButton(
+                    FilledIconButton(
                         onClick = {
                             speech.launch(
                                 Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
