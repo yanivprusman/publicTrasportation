@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
-import { normaliseVehicles } from '../../../lib/siri-vehicles';
+import { collapseDuplicateTrips, normaliseVehicles } from '../../../lib/siri-vehicles';
 import { fileStamp } from '../../../lib/file-stamp';
 import { fetchStopMonitoring } from '../../../lib/siri-fetch';
 
@@ -74,6 +74,9 @@ export async function GET(request: NextRequest) {
       interval: previewInterval,
     }) as Record<string, any>
 
+    // Before anything reads the visits: the board, the vehicles and every client's
+    // "next bus" all assume one visit per trip.
+    collapseDuplicateTrips(data);
     data._stopNames = resolveStopNames(data);
     // The raw SIRI tree stays in the payload — the arrivals board still reads visits from
     // it — but every client reads vehicles from here, so none of them has to decide what

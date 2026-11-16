@@ -101,6 +101,56 @@ function toCall(raw: any): UpcomingCall | null {
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
 /**
+ * Collapse visits that are the same scheduled trip at the same stop, in place.
+ *
+ * The feed sometimes reports one trip under two VehicleRefs — the bus that runs it and a
+ * ghost: a vehicle once assigned to the trip that stopped reporting for it. Measured
+ * 2026-11-16 09:13 at ת.רכבת ההגנה (25637): line 236's 09:05 trip came back as vehicle
+ * 50897804 (position 23s old, approaching, ETA 09:25) AND 52497003 (position 5 min old,
+ * 11 km past the stop, ETA 09:26). Clients showed "1 / 2" buses and a "next bus" one
+ * minute behind the first; the real next bus was 09:44.
+ *
+ * A trip is LineRef + OriginAimedDepartureTime (the same pair a MOTIS trip id carries),
+ * per MonitoringRef. The visit the operator heard from most recently is kept — it is the
+ * vehicle still reporting for the trip. Visits missing either key are never merged.
+ */
+export function collapseDuplicateTrips(data: unknown): void {
+  /* eslint-disable @typescript-eslint/no-explicit-any */
+  const deliveries = (data as any)?.Siri?.ServiceDelivery?.StopMonitoringDelivery
+  if (!Array.isArray(deliveries)) return
+  const recordedMs = (v: any) => {
+    const t = Date.parse(v?.RecordedAtTime ?? '')
+    return Number.isFinite(t) ? t : -Infinity
+  }
+  for (const delivery of deliveries) {
+    const visits = delivery?.MonitoredStopVisit
+    if (!Array.isArray(visits)) continue
+    const keep = new Map<string, any>()
+    const out: any[] = []
+    for (const visit of visits) {
+      const j = visit?.MonitoredVehicleJourney
+      const lineRef = j?.LineRef
+      const origin = j?.OriginAimedDepartureTime
+      if (lineRef == null || origin == null) {
+        out.push(visit)
+        continue
+      }
+      const key = `${visit?.MonitoringRef ?? ''}|${lineRef}|${origin}`
+      const held = keep.get(key)
+      if (held === undefined) {
+        keep.set(key, visit)
+        out.push(visit)
+      } else if (recordedMs(visit) > recordedMs(held)) {
+        out[out.indexOf(held)] = visit
+        keep.set(key, visit)
+      }
+    }
+    delivery.MonitoredStopVisit = out
+  }
+  /* eslint-enable @typescript-eslint/no-explicit-any */
+}
+
+/**
  * Extract every vehicle with a known position from a SIRI StopMonitoring response.
  *
  * Visits without a location or an expected arrival are dropped rather than defaulted:

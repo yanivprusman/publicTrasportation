@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { ensureMotis } from '@/lib/motis-manager'
 import { metersBetween } from '../../../lib/geo'
 import { fetchStopMonitoring } from '../../../lib/siri-fetch'
-import { normaliseVehicles, NormalisedVehicle } from '../../../lib/siri-vehicles'
+import { collapseDuplicateTrips, normaliseVehicles, NormalisedVehicle } from '../../../lib/siri-vehicles'
 
 /**
  * Where the nearest bus that is actually reporting is — at any distance.
@@ -130,6 +130,7 @@ async function vehiclesAt(stopCode: string): Promise<NormalisedVehicle[]> {
     // Positions only. A visit with no VehicleLocation is a scheduled departure, not a bus
     // anyone can be pointed at, and naming a distance to one would name a distance to
     // something that never reported where it is.
+    collapseDuplicateTrips(data)
     return normaliseVehicles(data, {}).filter(v => Number.isFinite(v.lat) && Number.isFinite(v.lon))
   } catch {
     // One unreachable stop must not decide the walk.
