@@ -1492,13 +1492,28 @@ fun MainScreen(
                         // The trip's start is often the rider's own position, and then
                         // its dot covers the blue one: whichever of the two takes the tap,
                         // the label says both, or "you are here" would seem to be missing.
-                        val startIsHere = routingState.originIsCurrentLocation
+                        // "Where you are now" only while it still is: the start is the
+                        // fix taken when the trip was planned, and a rider who has walked
+                        // off it (2026-11-16, ~100 m into the first walk) was told the
+                        // two dots were one place.
+                        val origin = routingState.origin
+                        val here = userLocation
+                        val startIsHere = routingState.originIsCurrentLocation &&
+                            origin != null && here != null &&
+                            metersBetween(origin.lat, origin.lon, here.latitude, here.longitude) <=
+                            START_IS_HERE_METERS
                         mapTapInfo = when (kind) {
                             PtMapMarker.ORIGIN, PtMapMarker.MY_LOCATION ->
-                                if (startIsHere && routingState.origin != null) {
+                                if (startIsHere) {
                                     MapTapInfo(strings.markerTripStartHere, null)
                                 } else if (kind == PtMapMarker.ORIGIN) {
-                                    MapTapInfo(strings.markerTripStart, routingState.origin?.name)
+                                    // "My location" is a placeholder for a fix the rider
+                                    // has since left — under "Start of your trip" it would
+                                    // name the wrong dot.
+                                    MapTapInfo(
+                                        strings.markerTripStart,
+                                        routingState.origin?.name?.takeIf { it != strings.myLocation }
+                                    )
                                 } else {
                                     MapTapInfo(strings.markerYouAreHere, null)
                                 }
@@ -1848,7 +1863,12 @@ fun MainScreen(
                             strings.liveBusesZoomIn(formatDistance(reachedMeters, strings)) to null
                         else -> strings.liveBusesNone(formatDistance(reachedMeters, strings)) to null
                     }
-                    liveBusesHint?.let { (hint, onTap) ->
+                    // The tap label sits in this same slot and is composed earlier, so
+                    // the hint would be drawn over it: on 2026-11-16 a tapped trip-start
+                    // dot showed "Nearest live bus is 927 m away" with "Start of your trip
+                    // and where you are now" bleeding through underneath. The label is
+                    // what the rider just asked for and lasts seconds; the hint returns.
+                    liveBusesHint?.takeIf { mapTapInfo == null }?.let { (hint, onTap) ->
                         Surface(
                             // Start-aligned against the end-aligned button column, so the
                             // two swap sides together under RTL and never collide; the end
@@ -2442,3 +2462,6 @@ private data class MapTapInfo(
     val detail: String?,
     val stop: StopResult? = null
 )
+
+/** Within this of the trip's start, its dot and the blue one are the same place to the rider. */
+private const val START_IS_HERE_METERS = 30.0
