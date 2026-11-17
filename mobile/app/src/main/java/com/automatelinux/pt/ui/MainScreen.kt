@@ -868,8 +868,17 @@ fun MainScreen(
             // and that search must already carry the shared trip's departure time.
             routingViewModel.setDepartureTime(sharedTrip.departureTime)
             routingViewModel.setArriveBy(sharedTrip.arriveBy)
-            routingViewModel.setOrigin(sharedTrip.origin)
-            routingViewModel.setDestination(sharedTrip.destination)
+            if (sharedTrip.origin != null) {
+                routingViewModel.setOrigin(sharedTrip.origin)
+                routingViewModel.setDestination(sharedTrip.destination)
+            } else {
+                // A link with no origin starts from where the rider stands right now.
+                // Drop whatever origin the app already held first, so the destination
+                // does not search from a stale place before the GPS fix lands.
+                routingViewModel.setOrigin(null)
+                routingViewModel.setDestination(sharedTrip.destination)
+                onGpsClick()
+            }
             bottomSheetState.expand()
             onSharedTripConsumed()
         }

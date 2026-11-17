@@ -14,7 +14,8 @@ import java.util.Locale
 object TripLink {
 
     data class SharedTrip(
-        val origin: GeocodeSuggestion,
+        /** null = "from wherever I am when I tap it": the link carried no `from`. */
+        val origin: GeocodeSuggestion?,
         val destination: GeocodeSuggestion,
         val departureTime: Instant?,
         val arriveBy: Boolean
@@ -51,11 +52,18 @@ object TripLink {
 
     fun parse(uri: Uri?): SharedTrip? {
         if (uri == null) return null
-        val from = parseCoords(uri.getQueryParameter("from")) ?: return null
+        // No `from` at all means "start where I'm standing" — a link saved once and
+        // tapped from anywhere. A `from` that is present but malformed is still a
+        // broken link, not a request for GPS.
+        val fromRaw = uri.getQueryParameter("from")
+        val from = if (fromRaw == null) null else parseCoords(fromRaw) ?: return null
         val to = parseCoords(uri.getQueryParameter("to")) ?: return null
 
-        val originName = uri.getQueryParameter("fromName")?.trim().takeUnless { it.isNullOrEmpty() }
-            ?: formatCoords(from.first, from.second)
+        val origin = from?.let {
+            val name = uri.getQueryParameter("fromName")?.trim().takeUnless { n -> n.isNullOrEmpty() }
+                ?: formatCoords(it.first, it.second)
+            GeocodeSuggestion(name = name, lat = it.first, lon = it.second)
+        }
         val destinationName = uri.getQueryParameter("toName")?.trim().takeUnless { it.isNullOrEmpty() }
             ?: formatCoords(to.first, to.second)
 
@@ -65,7 +73,7 @@ object TripLink {
         }
 
         return SharedTrip(
-            origin = GeocodeSuggestion(name = originName, lat = from.first, lon = from.second),
+            origin = origin,
             destination = GeocodeSuggestion(name = destinationName, lat = to.first, lon = to.second),
             departureTime = departureTime,
             arriveBy = uri.getQueryParameter("arriveBy") == "1"
