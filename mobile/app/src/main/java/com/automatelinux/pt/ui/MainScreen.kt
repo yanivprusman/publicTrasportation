@@ -1476,9 +1476,19 @@ fun MainScreen(
                                 alight = stops.last().let { LatLng(it.place.lat, it.place.lon) }
                             )
                         },
-                        origin = routingState.origin?.let { LatLng(it.lat, it.lon) },
-                        destination = routingState.destination?.let { LatLng(it.lat, it.lon) },
-                        via = routingState.via?.let { LatLng(it.lat, it.lon) },
+                        // The pins belong to the same trip as the line. Taken from the
+                        // planner's fields, a journey outlived them: reopening from the
+                        // launcher icon gives a fresh screen with empty fields while the
+                        // journey runs on, so the route was drawn with no destination
+                        // (owner, 2026-11-17, walking to ShinSheva from a trip link).
+                        origin = if (journeyItinerary != null) {
+                            journeyItinerary?.legs?.firstOrNull()?.from?.let { LatLng(it.lat, it.lon) }
+                        } else routingState.origin?.let { LatLng(it.lat, it.lon) },
+                        destination = if (journeyItinerary != null) {
+                            journeyItinerary?.legs?.lastOrNull()?.to?.let { LatLng(it.lat, it.lon) }
+                        } else routingState.destination?.let { LatLng(it.lat, it.lon) },
+                        via = if (journeyItinerary != null) null
+                            else routingState.via?.let { LatLng(it.lat, it.lon) },
                         // Vehicles and line shapes belong to their own tabs; drawing them
                         // everywhere would clutter a map being used for something else.
                         vehicles = when {
