@@ -749,6 +749,42 @@ fun MainScreen(
         }
     }
 
+    // "Recalculate from here" on a live journey: the GPS fix becomes the origin, the
+    // journey's own end stays the destination, and the first fitting result replaces
+    // the running journey. Pending until a result lands; bounded so a failed fix or
+    // search never leaves the button spinning.
+    var recalcPending by remember { mutableStateOf(false) }
+    var recalcWalkOnly by remember { mutableStateOf(false) }
+
+    LaunchedEffect(routingState.results, recalcPending) {
+        if (!recalcPending) return@LaunchedEffect
+        val options = routingState.results?.itineraries ?: return@LaunchedEffect
+        if (routingState.origin == null) return@LaunchedEffect
+        recalcPending = false
+        // A walk stays a walk when walking is still on offer; otherwise the best route.
+        val pick = (if (recalcWalkOnly) options.firstOrNull { t -> t.legs.all { it.mode == TransitMode.WALK } } else null)
+            ?: options.firstOrNull()
+        if (pick != null) startJourney(pick)
+        else Toast.makeText(context, strings.journeyRecalculateFailed, Toast.LENGTH_SHORT).show()
+    }
+
+    LaunchedEffect(routingState.error, recalcPending) {
+        if (recalcPending && routingState.error != null) {
+            recalcPending = false
+            Toast.makeText(context, strings.journeyRecalculateFailed, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    LaunchedEffect(recalcPending) {
+        if (recalcPending) {
+            delay(25_000)
+            if (recalcPending) {
+                recalcPending = false
+                Toast.makeText(context, strings.journeyRecalculateFailed, Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
     val imeVisible = WindowInsets.isImeVisible
     var expandedByIme by remember { mutableStateOf(false) }
 
@@ -2337,6 +2373,19 @@ fun MainScreen(
                         }
                     },
                     sharing = journeyShareToken != null,
+                    onRecalculate = {
+                        val end = trip.legs.last().to
+                        recalcWalkOnly = trip.legs.all { it.mode == TransitMode.WALK }
+                        // Origin cleared first, so the destination below cannot search
+                        // from a stale place; the GPS fix that follows fires the search.
+                        routingViewModel.setOrigin(null)
+                        routingViewModel.setDestinationFromCoords(
+                            end.lat, end.lon, end.name.ifBlank { null }
+                        )
+                        recalcPending = true
+                        onGpsClick()
+                    },
+                    recalculating = recalcPending,
                     onPay = payWithHopOn,
                     onShowLineRoute = { index ->
                         trip.legs.getOrNull(index)?.routeId?.let { routeId ->

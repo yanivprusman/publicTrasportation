@@ -43,12 +43,14 @@ import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.LocationOff
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Route
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -143,6 +145,12 @@ fun JourneyPanel(
     /** Hand out a link that shows this journey live. Green while somebody can watch. */
     onShare: (() -> Unit)? = null,
     sharing: Boolean = false,
+    /**
+     * Off the line: re-plan from where the rider stands now to the same destination
+     * and carry on live. Hidden once arrived; spins while the new route is found.
+     */
+    onRecalculate: (() -> Unit)? = null,
+    recalculating: Boolean = false,
     /** Hands the fare off to the payment app, without leaving the live journey. */
     onPay: (() -> Unit)? = null,
     /**
@@ -363,6 +371,27 @@ fun JourneyPanel(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
+                    if (onRecalculate != null && progress?.phase != JourneyPhase.ARRIVED) {
+                        IconButton(
+                            onClick = onRecalculate,
+                            enabled = !recalculating,
+                            modifier = Modifier.size(32.dp).testTag("journey-recalculate")
+                        ) {
+                            if (recalculating) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Icon(
+                                    Icons.Default.Refresh,
+                                    contentDescription = strings.journeyRecalculate,
+                                    modifier = Modifier.size(20.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                    }
                     if (onShare != null) {
                         IconButton(
                             onClick = onShare,

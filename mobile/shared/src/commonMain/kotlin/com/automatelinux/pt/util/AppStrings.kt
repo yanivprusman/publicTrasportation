@@ -370,6 +370,9 @@ interface AppStrings {
     val journeyThenIn: (String) -> String
     val journeyLiveTag: String
     val journeyShareLive: String
+    /** Live journey: re-plan from where the rider stands now, to the same place. */
+    val journeyRecalculate: String
+    val journeyRecalculateFailed: String
     /** " · stop 13868" — the code printed on the pole, to confirm it is the right one. */
     val journeyStopCode: (String) -> String
     /** "also at 14:05 · 15:09" — the same line's later departures. */
@@ -813,6 +816,8 @@ val EnStrings: AppStrings = object : AppStrings {
     override val journeyThenIn: (String) -> String = { d -> "then $d" }
     override val journeyLiveTag: String = "Live"
     override val journeyShareLive: String = "Share live journey"
+    override val journeyRecalculate: String = "Recalculate from here"
+    override val journeyRecalculateFailed: String = "Couldn't recalculate — no route from here"
     override val journeyStopCode: (String) -> String = { code -> "stop $code" }
     override val alsoAt: (String) -> String = { times -> "also at $times" }
     override val payFare: String = "Pay fare (HopOn)"
@@ -1250,6 +1255,8 @@ val HeStrings: AppStrings = object : AppStrings {
     override val journeyThenIn: (String) -> String = { d -> "אחריו בעוד $d" }
     override val journeyLiveTag: String = "בזמן אמת"
     override val journeyShareLive: String = "שיתוף מסע חי"
+    override val journeyRecalculate: String = "חישוב מחדש מכאן"
+    override val journeyRecalculateFailed: String = "לא נמצא מסלול מכאן"
     override val journeyStopCode: (String) -> String = { code -> "תחנה $code" }
     override val alsoAt: (String) -> String = { times -> "גם ב־$times" }
     override val payFare: String = "תשלום נסיעה (HopOn)"
