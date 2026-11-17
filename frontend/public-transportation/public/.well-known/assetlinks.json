@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.automatelinux.pt.dev",
+      "sha256_cert_fingerprints": [
+        "C6:4A:F7:0C:77:4B:8D:76:AD:D7:7B:6B:8B:6F:83:AC:8D:ED:26:83:7E:BB:F9:44:FA:36:24:96:E8:99:EC:AE"
+      ]
+    }
+  }
+]
