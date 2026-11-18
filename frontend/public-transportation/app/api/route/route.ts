@@ -8,6 +8,7 @@ import { journeyFare, PricedRide } from '@/lib/journey-fare';
 import { NotOnLineError, planFromOnboard, rideAhead } from '@/lib/onboard';
 import { expandScooterHops } from '@/lib/scooter-hops';
 import { expandEarlierDepartures, LineItinerary } from '@/lib/earlier-departures';
+import { MotisStep, streetStretches } from '@/lib/street-names';
 
 const MOTIS_PORT = process.env.MOTIS_PORT || '3504';
 const MOTIS_BASE = `http://localhost:${MOTIS_PORT}`;
@@ -65,6 +66,8 @@ interface MotisLeg {
   agencyName?: string;
   legGeometry?: { points?: string; precision?: number };
   polyline?: string;
+  // Street legs only: one step per OSM way, each with its name and geometry.
+  steps?: MotisStep[];
   intermediateStops?: MotisPlace[];
   // Carries the GTFS trip id, which is the only route to an accessibility flag.
   tripId?: string;
@@ -152,6 +155,12 @@ function transformItinerary(itin: MotisItinerary, scooter: boolean) {
       // Street legs carry their length; Moovit and Maps both print it, and "walk
       // 370 m" answers a question "walk 4 min" does not.
       if (typeof leg.distance === 'number') transformed.distanceMeters = Math.round(leg.distance);
+      // The street names along a street leg, so the map can write them on the route
+      // line — the line otherwise covers the name of the street being walked on.
+      if (isStreetMode(leg.mode)) {
+        const streets = streetStretches(leg.steps);
+        if (streets.length) transformed.streets = streets;
+      }
       // Say where the times came from rather than implying certainty we lack.
       transformed.realTime = leg.realTime === true;
       if (leg.scheduledStartTime) transformed.scheduledStartTime = leg.scheduledStartTime;

@@ -29,6 +29,7 @@ fun RouteOverlay(
     LaunchedEffect(itinerary) {
         map.overlays.removeAll { (it as? Polyline)?.id == TAG_ROUTE }
         map.overlays.removeAll { (it as? Marker)?.id == TAG_MARKER }
+        map.overlays.removeAll { it is StreetNameOverlay }
 
         if (itinerary == null) {
             map.invalidate()
@@ -86,6 +87,15 @@ fun RouteOverlay(
                     map.overlays.add(marker)
                 }
             }
+        }
+
+        // Above every route line, so the names are not hidden under the next leg either.
+        val stretches = itinerary.legs
+            .filter { it.mode.isStreet }
+            .flatMap { it.streets }
+            .map { it.name to PolylineDecoder.decode(it.polyline).toGeoPoints() }
+        if (stretches.isNotEmpty()) {
+            map.overlays.add(StreetNameOverlay(stretches, map.resources.displayMetrics.density))
         }
 
         for (i in 0 until itinerary.legs.size - 1) {

@@ -124,7 +124,22 @@ data class RouteLeg(
      * after naming their line and before choosing a destination. It starts at the
      * line's first stop, not where they are, and nobody gets off at its end by plan.
      */
-    val wholeTrip: Boolean = false
+    val wholeTrip: Boolean = false,
+    /**
+     * The named streets along a street leg, in walking order — one entry per run of
+     * the same street. The map writes them on the route line, because the line
+     * otherwise covers the name of the very street being walked on. Empty on transit
+     * legs and on stretches with no name (footpaths, squares).
+     */
+    val streets: List<StreetStretch> = emptyList()
+)
+
+/** A named stretch of a street leg; [polyline] is MOTIS-encoded at precision 7. */
+@Serializable
+data class StreetStretch(
+    val name: String,
+    val polyline: String,
+    val distanceMeters: Int = 0
 )
 
 /** `/api/line-shape?meta=full`: each GTFS direction's geometry and its route_long_name. */
