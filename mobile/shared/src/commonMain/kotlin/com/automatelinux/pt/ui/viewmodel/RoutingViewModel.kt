@@ -341,6 +341,16 @@ class RoutingViewModel(
     fun searchLater() {
         val s = _state.value
         if (s.ridingLine != null) return
+        // The server's cursor first: a line's later runs it hid on this page start
+        // before the latest trip shown, and paging from that trip would skip them.
+        val cursorAt = s.results?.nextPageCursor
+            ?.takeIf { it.startsWith("LATER|") }
+            ?.substringAfter('|')?.toLongOrNull()
+        if (cursorAt != null) {
+            _state.value = _state.value.copy(departureTime = Instant.fromEpochSeconds(cursorAt), arriveBy = false)
+            search()
+            return
+        }
         val latest = s.results?.itineraries?.maxByOrNull { it.startTime }?.startTime
         if (latest != null) {
             try {

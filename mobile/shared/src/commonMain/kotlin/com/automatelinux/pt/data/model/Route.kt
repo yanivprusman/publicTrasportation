@@ -236,7 +236,13 @@ data class RouteResult(
     val itineraries: List<Itinerary>,
     val alternatives: List<DirectAlternative> = emptyList(),
     /** Which trip the server found the rider on, for a search from on board. */
-    val riding: RidingInfo? = null
+    val riding: RidingInfo? = null,
+    /**
+     * "LATER|<unix s>": where the next page of departures starts. It can be earlier
+     * than the latest trip shown — the server shows each way once and points this
+     * at the first run it hid — so "Later" must page from it, not from the list.
+     */
+    val nextPageCursor: String? = null
 )
 
 /** The trip of the named line the rider is on, as the server identified it. */
