@@ -100,10 +100,10 @@ const en = {
 
   // Day overview
   'day.toggle': 'Whole-day view',
-  'day.toggleTitle': 'See every departure today on one chart',
+  'day.toggleTitle': 'See every departure of the day on one chart',
   'day.loading': 'Scanning the whole day…',
   'day.failed': 'Could not load the day overview',
-  'day.none': 'No transit departures today for this trip',
+  'day.none': 'No transit departures that day for this trip',
   'day.first': 'First',
   'day.last': 'Last',
   'day.fastest': 'Fastest',
@@ -514,10 +514,10 @@ const he: Record<keyof typeof en, string> = {
   'errors.loadMoreFailed': 'טעינת נסיעות נוספות נכשלה',
 
   'day.toggle': 'תצוגת יום שלם',
-  'day.toggleTitle': 'הצג את כל היציאות היום בגרף אחד',
+  'day.toggleTitle': 'הצג את כל היציאות של היום בגרף אחד',
   'day.loading': 'סורק את כל היום…',
   'day.failed': 'טעינת תמונת היום נכשלה',
-  'day.none': 'אין יציאות בתחבורה ציבורית היום למסלול זה',
+  'day.none': 'אין יציאות בתחבורה ציבורית ביום זה למסלול זה',
   'day.first': 'ראשונה',
   'day.last': 'אחרונה',
   'day.fastest': 'המהירה',

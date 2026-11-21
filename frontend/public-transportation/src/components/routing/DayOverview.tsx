@@ -10,6 +10,8 @@ interface DayOverviewProps {
   origin: GeocodeSuggestion
   destination: GeocodeSuggestion
   queryOptions: RouteQueryOptions
+  /** Any moment on the day to chart (the planner's chosen departure time); null = today. */
+  day: Date | null
   /** Load the trip that leaves at this ISO time into the main results view. */
   onPickDeparture: (startTimeIso: string) => void
 }
@@ -28,7 +30,7 @@ function minutesOfDay(iso: string, dayStartMs: number): number {
   return (Date.parse(iso) - dayStartMs) / 60000
 }
 
-export default function DayOverview({ origin, destination, queryOptions, onPickDeparture }: DayOverviewProps) {
+export default function DayOverview({ origin, destination, queryOptions, day, onPickDeparture }: DayOverviewProps) {
   const { t } = useI18n()
   const [data, setData] = useState<DayOverviewResult | null>(null)
   const [loading, setLoading] = useState(true)
@@ -37,6 +39,9 @@ export default function DayOverview({ origin, destination, queryOptions, onPickD
   const [reloadToken, setReloadToken] = useState(0)
 
   const { modes, maxWalk } = queryOptions
+  // The chart's day as a value, so a new time on the same day doesn't re-sweep.
+  const base = day ?? new Date()
+  const dayY = base.getFullYear(), dayM = base.getMonth(), dayD = base.getDate()
 
   useEffect(() => {
     let cancelled = false
@@ -44,11 +49,10 @@ export default function DayOverview({ origin, destination, queryOptions, onPickD
     setError(null)
     setData(null)
     setSelectedKey(null)
-    // The service day: today 04:00 to 02:00 tomorrow, local time. Buses that
-    // leave after midnight belong to today's chart, not tomorrow's.
-    const now = new Date()
-    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 4, 0, 0)
-    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 2, 0, 0)
+    // The chosen day from 00:00, so its first departure really is the first —
+    // night buses included — to 02:00 the next day, so late buses still show.
+    const start = new Date(dayY, dayM, dayD, 0, 0, 0)
+    const end = new Date(dayY, dayM, dayD + 1, 2, 0, 0)
     fetchDayOverview(
       { lat: origin.lat, lon: origin.lon },
       { lat: destination.lat, lon: destination.lon },
@@ -68,7 +72,7 @@ export default function DayOverview({ origin, destination, queryOptions, onPickD
     return () => {
       cancelled = true
     }
-  }, [origin.lat, origin.lon, destination.lat, destination.lon, modes, maxWalk, reloadToken])
+  }, [origin.lat, origin.lon, destination.lat, destination.lon, modes, maxWalk, dayY, dayM, dayD, reloadToken])
 
   const departures = useMemo(() => data?.departures ?? [], [data])
 

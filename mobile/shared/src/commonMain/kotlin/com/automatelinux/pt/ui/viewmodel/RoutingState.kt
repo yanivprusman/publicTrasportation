@@ -258,6 +258,8 @@ data class RoutingState(
     val lineStops: LineStopsUi? = null,
     val showDayOverview: Boolean = false,
     val dayOverview: DayOverviewResult? = null,
+    /** The local date [dayOverview] charts (yyyy-mm-dd), so a different chosen day reloads it. */
+    val dayOverviewDate: String? = null,
     val dayLoading: Boolean = false,
     val dayError: String? = null,
     val selectedDayIndex: Int? = null

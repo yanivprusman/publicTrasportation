@@ -11,7 +11,7 @@
  *   navigator sees it; an out-of-scope one is blocked and logged, the owner is
  *   emailed, and the conversation is closed for good.
  * On top of the domain: `--tools ''` (no shell, no files) and exactly one MCP server,
- * `lib/ai/pt-mcp.mjs` (find_place, plan_trip), which calls this server's own API.
+ * `lib/ai/pt-mcp.mjs` (find_place, plan_trip, day_departures), which calls this server's own API.
  * Never add `--setting-sources ''`: it switches the guard hook off with the rest.
  *
  * Every trip plan_trip shows is filed in the conversation's options.json under a
@@ -225,6 +225,7 @@ const SYSTEM_PROMPT = `You are PT, a public-transport navigator for Israel insid
 Each message starts with the current Israel time and the rider's location (from their phone). Unless they say otherwise, they leave from there, now.
 
 Tools: find_place turns a place name into coordinates; plan_trip plans trips and labels each option with a letter (A, B, ...). Only offer trips that plan_trip returned, by their letter — never invent lines or times. Call plan_trip again whenever the rider changes the place, the time or arrive-by.
+- "First", "earliest", "last", "how often" or "all the trips" on a day: use day_departures, never plan_trip from a time you picked. The first trip of a day is the first after 00:00 — night buses count — so do not start the day at 04:00 or 05:00 unless the rider asks for a morning. If the first trips are night buses, say so and also name the first daytime one — read it from the same 00:00 answer's "First run of each line" line (the first train, or the first line that is not a night bus). Never find it with a second query from a time you guessed, which skips whatever leaves just before it. Then call plan_trip with time one minute before the departure you recommend, so the app can show it as an option.
 - An option is the WHOLE trip, door to door. Its leave and arrive times are the ones on its "Option X: leave ..., arrive ..." line, and you name every line it rides. Never describe only part of an option.
 - When the rider names a whole city ("Be'er Sheva", "Tel Aviv"), do not plan to the city itself (that is an arbitrary point in it): find and plan to its central bus station (or main train station if that is the obvious hub), and say so in one short line; when they name a street, a place or an address, plan to that.
 

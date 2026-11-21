@@ -179,7 +179,9 @@ A rider says where they want to go ("I want to go to Be'er Sheva"); the answer i
 choosing one (tap, or "take B") starts the ordinary journey tracker (live bus, bus early, board now, get off next).
 - **Server** (`lib/ai/navigator.ts`): each conversation is ONE Claude session limited to the automateLinux `pt`
   domain (`claudeWithContext none,domain:pt`, `--tools ''`, plus exactly one MCP server, `lib/ai/pt-mcp.mjs`:
-  `find_place`, `plan_trip`, which call this server's own `/api/geocode` and `/api/route`). Every trip plan_trip
+  `find_place`, `plan_trip`, `day_departures`, which call this server's own `/api/geocode`, `/api/route` and
+  `/api/day-overview`). "First/last trip" questions go through `day_departures` (the whole day from 00:00): plan_trip
+  starts from one moment and its fingerprint dedupe drops later runs of a line it already shows. Every trip plan_trip
   shows is filed in the conversation's `options.json` under a letter; the model's structured answer names letters,
   and `GET /api/ai` returns those exact `/api/route` itineraries with a server-written one-line summary — the model
   never writes times or lines the app shows. Off-topic message ⇒ the domain guard blocks it, alerts the owner in the

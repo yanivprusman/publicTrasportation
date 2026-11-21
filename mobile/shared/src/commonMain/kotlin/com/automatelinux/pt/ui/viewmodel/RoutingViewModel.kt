@@ -376,6 +376,7 @@ class RoutingViewModel(
         _state.value = _state.value.copy(
             showDayOverview = false,
             dayOverview = null,
+            dayOverviewDate = null,
             dayError = null,
             selectedDayIndex = null
         )
@@ -388,8 +389,13 @@ class RoutingViewModel(
             return
         }
         _state.value = s.copy(showDayOverview = true)
-        if (s.dayOverview == null && !s.dayLoading) loadDayOverview()
+        val stale = s.dayOverviewDate != null && s.dayOverviewDate != chartDay(s).toString()
+        if ((s.dayOverview == null || stale) && !s.dayLoading) loadDayOverview()
     }
+
+    /** The day the whole-day view charts: the chosen departure's date, or today. */
+    private fun chartDay(s: RoutingState) =
+        (s.departureTime ?: Clock.System.now()).toLocalDateTime(TimeZone.currentSystemDefault()).date
 
     fun loadDayOverview() {
         val s = _state.value
@@ -400,12 +406,12 @@ class RoutingViewModel(
                 dayLoading = true, dayError = null, dayOverview = null, selectedDayIndex = null
             )
             try {
-                // The service day: today 04:00 to 02:00 tomorrow, local time. Buses
-                // leaving after midnight belong to today's chart, not tomorrow's.
+                // The chosen day from 00:00, so its first departure really is the
+                // first — night buses included — to 02:00 the next day.
                 val tz = TimeZone.currentSystemDefault()
-                val today = Clock.System.now().toLocalDateTime(tz).date
-                val start = today.atTime(4, 0).toInstant(tz)
-                val end = today.plus(1, DateTimeUnit.DAY).atTime(2, 0).toInstant(tz)
+                val day = chartDay(s)
+                val start = day.atTime(0, 0).toInstant(tz)
+                val end = day.plus(1, DateTimeUnit.DAY).atTime(2, 0).toInstant(tz)
                 val result = api.dayOverview(
                     from = "${origin.lat},${origin.lon}",
                     to = "${destination.lat},${destination.lon}",
@@ -413,7 +419,7 @@ class RoutingViewModel(
                     end = end.toString(),
                     scooter = s.scooter, maxRide = s.rideCapForQuery, scooterSpeed = s.scooterSpeedForQuery
                 )
-                _state.value = _state.value.copy(dayOverview = result, dayLoading = false)
+                _state.value = _state.value.copy(dayOverview = result, dayOverviewDate = day.toString(), dayLoading = false)
             } catch (e: Exception) {
                 _state.value = _state.value.copy(
                     dayLoading = false,

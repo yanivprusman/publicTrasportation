@@ -868,7 +868,7 @@ val EnStrings: AppStrings = object : AppStrings {
     override val dayFastest: String = "Fastest"
     override val dayDepartures: String = "Departures"
     override val dayShowTrip: String = "Show trip"
-    override val dayCaption: String = "Every departure today · bar height = trip duration (min) · tap a bar"
+    override val dayCaption: String = "Every departure of the day · bar height = trip duration (min) · tap a bar"
     override val dayTruncated: (Int) -> String = { n -> "Showing the first $n departures of the day" }
     override val departureBoard: String = "Departure Board"
     override val pinWidget: String = "Add Widget to Home Screen"
@@ -1305,7 +1305,7 @@ val HeStrings: AppStrings = object : AppStrings {
     override val dayFastest: String = "מהירה"
     override val dayDepartures: String = "יציאות"
     override val dayShowTrip: String = "הצג מסלול"
-    override val dayCaption: String = "כל היציאות היום · גובה עמודה = משך הנסיעה (דק') · הקש על עמודה"
+    override val dayCaption: String = "כל היציאות של היום · גובה עמודה = משך הנסיעה (דק') · הקש על עמודה"
     override val dayTruncated: (Int) -> String = { n -> "מוצגות $n היציאות הראשונות של היום" }
     override val departureBoard: String = "לוח יציאות"
     override val pinWidget: String = "הוסף ווידג'ט למסך הבית"

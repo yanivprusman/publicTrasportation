@@ -393,6 +393,7 @@ export default function RoutePlanner({
                       origin={routing.origin}
                       destination={routing.destination}
                       queryOptions={toRouteQueryOptions(routing.routeOptions.options)}
+                      day={routing.departureTime}
                       onPickDeparture={handlePickDeparture}
                     />
                   )}
