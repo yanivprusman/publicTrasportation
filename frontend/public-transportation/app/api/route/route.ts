@@ -226,29 +226,47 @@ function transformItinerary(itin: MotisItinerary, scooter: boolean) {
   };
 }
 
-function transformMotisResponse(motisData: MotisPlanResponse, includeDirect: boolean, scooter: boolean) {
-  const seen = new Set<string>();
+/**
+ * A page shows each way of making the trip once (issue #2: MOTIS returns the same
+ * lines at several departure times). The runs it hides would otherwise be lost for
+ * good: MOTIS's next cursor starts after the whole page, so "Later departures"
+ * jumped from the 00:38 night bus straight past its 01:38 and 02:38 runs. So the
+ * cursor in the direction the rider is paging is moved to the nearest hidden run.
+ *
+ * `earlier`: this page answers an "Earlier departures" cursor. Its runs nearest the
+ * page the rider came from are the ones to keep, so the dedupe keeps the LAST run
+ * of a way and the earlier cursor resumes just after the latest hidden one.
+ */
+function transformMotisResponse(motisData: MotisPlanResponse, includeDirect: boolean, scooter: boolean, earlier = false) {
+  const kept = new Map<string, string>(); // fingerprint -> kept run's startTime
+  const hidden: number[] = [];
   // Direct (walk-only) itineraries are not part of the time-paged sequence —
   // MOTIS repeats them on every page, so merge them only into the first page.
   const allItineraries = [
     ...(motisData.itineraries || []),
     ...(includeDirect ? motisData.direct || [] : []),
   ];
-  const itineraries = allItineraries
-    .filter(itin => {
-      const way = itineraryFingerprint(itin);
-      if (!way) return true; // walk-only routes are always unique
-      const fp = itin.earlierDeparture ? `${way}@${itin.startTime}` : way;
-      if (seen.has(fp)) return false;
-      seen.add(fp);
-      return true;
-    })
-    .map(itin => transformItinerary(itin, scooter));
-  return {
-    itineraries,
-    previousPageCursor: motisData.previousPageCursor,
-    nextPageCursor: motisData.nextPageCursor,
-  };
+  const ordered = earlier ? [...allItineraries].reverse() : allItineraries;
+  const survivors = ordered.filter(itin => {
+    const way = itineraryFingerprint(itin);
+    if (!way) return true; // walk-only routes are always unique
+    const fp = itin.earlierDeparture ? `${way}@${itin.startTime}` : way;
+    const keptAt = kept.get(fp);
+    if (keptAt !== undefined) {
+      // A literal repeat of the kept run is noise; another run of it is a real bus.
+      if (keptAt !== itin.startTime && itin.startTime) hidden.push(Date.parse(itin.startTime));
+      return false;
+    }
+    kept.set(fp, itin.startTime || '');
+    return true;
+  });
+  const itineraries = (earlier ? survivors.reverse() : survivors).map(itin => transformItinerary(itin, scooter));
+  let { previousPageCursor, nextPageCursor } = motisData;
+  // MOTIS cursors are "LATER|<unix s>" / "EARLIER|<unix s>": search from / up to
+  // that moment. A minute of margin so the hidden run itself is included.
+  if (hidden.length > 0 && earlier) previousPageCursor = `EARLIER|${Math.floor(Math.max(...hidden) / 1000) + 60}`;
+  if (hidden.length > 0 && !earlier) nextPageCursor = `LATER|${Math.floor(Math.min(...hidden) / 1000) - 60}`;
+  return { itineraries, previousPageCursor, nextPageCursor };
 }
 
 // --- Trips with an intermediate stop ---------------------------------------
@@ -804,7 +822,7 @@ export async function GET(request: NextRequest) {
       motisData.itineraries = [...(motisData.itineraries || []), ...(hops as MotisItinerary[])];
     }
     const result = {
-      ...transformMotisResponse(motisData, !pageCursor, scooter),
+      ...transformMotisResponse(motisData, !pageCursor, scooter, !!pageCursor?.startsWith('EARLIER|')),
       ...(alternatives !== undefined ? { alternatives } : {}),
     };
     setCachedRoute(cacheKey, result);
