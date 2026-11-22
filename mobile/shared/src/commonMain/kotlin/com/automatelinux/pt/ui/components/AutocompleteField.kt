@@ -17,6 +17,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Work
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -33,10 +34,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.automatelinux.pt.data.model.GeocodeSuggestion
+import com.automatelinux.pt.ui.util.rememberSpeechInput
 import com.automatelinux.pt.util.LocalAppStrings
 import kotlinx.coroutines.delay
 
@@ -76,7 +81,9 @@ fun <T> AutocompleteField(
     // answer that isn't a result list). Distinct from [emptyText] on purpose: an
     // unreachable backend rendered as "nothing found" tells the user their
     // spelling is wrong when the truth is that nothing was ever searched.
-    errorText: String? = null
+    errorText: String? = null,
+    /** A mic in the empty field: speak the query instead of typing it. */
+    voiceInput: Boolean = true
 ) {
     val strings = LocalAppStrings.current
     var suggestions by remember { mutableStateOf<List<T>>(emptyList()) }
@@ -86,6 +93,15 @@ fun <T> AutocompleteField(
     var justSelected by remember { mutableStateOf(false) }
     var searchedEmpty by remember { mutableStateOf(false) }
     var searchFailed by remember { mutableStateOf(false) }
+    val focusRequester = remember { FocusRequester() }
+    // The transcript goes in as if typed, so the normal debounced search runs on it.
+    // Focus is taken too: the dropdown only opens on a focused field, and tapping the
+    // mic does not focus it.
+    val speak = if (!voiceInput) null else rememberSpeechInput { spoken ->
+        onValueChange(spoken)
+        showPreSuggestions = false
+        focusRequester.requestFocus()
+    }
 
     LaunchedEffect(value) {
         if (justSelected || suppressSearch) {
@@ -148,6 +164,7 @@ fun <T> AutocompleteField(
             label = { Text(label) },
             modifier = Modifier
                 .fillMaxWidth()
+                .focusRequester(focusRequester)
                 .onFocusChanged { state ->
                     hasFocus = state.isFocused
                     if (state.isFocused && value.isEmpty() && preSuggestions.isNotEmpty()) {
@@ -161,10 +178,19 @@ fun <T> AutocompleteField(
             singleLine = true,
             leadingIcon = leadingIcon,
             supportingText = supportingText,
-            trailingIcon = if (trailingAccessory == null && value.isEmpty()) null else {
+            trailingIcon = if (trailingAccessory == null && value.isEmpty() && speak == null) null else {
                 {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         trailingAccessory?.invoke()
+                        if (value.isEmpty() && speak != null) {
+                            IconButton(onClick = speak, modifier = Modifier.testTag("voice-search")) {
+                                Icon(
+                                    Icons.Default.Mic,
+                                    contentDescription = strings.aiSpeak,
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
                         if (value.isNotEmpty()) {
                             IconButton(onClick = {
                                 onValueChange("")
