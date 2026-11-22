@@ -9,6 +9,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.automatelinux.pt.MainActivity
 import com.automatelinux.pt.R
+import com.automatelinux.pt.notify.PtSound
 
 class ReminderReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
@@ -33,7 +34,8 @@ class ReminderReceiver : BroadcastReceiver() {
             .setContentText(text)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
-            .setDefaults(Notification.DEFAULT_ALL)
+            .setDefaults(Notification.DEFAULT_VIBRATE or Notification.DEFAULT_LIGHTS)
+            .setSound(PtSound.uri(context))
             .setAutoCancel(true)
             .setContentIntent(contentIntent)
             .build()

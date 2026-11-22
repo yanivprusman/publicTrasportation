@@ -6,12 +6,13 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import com.automatelinux.pt.notify.PtSound
 
 // Departure reminders via AlarmManager so they survive the app being killed.
 // One reminder can be armed at a time (fixed request code), matching the UI,
 // which exposes a single armed reminder.
 object ReminderScheduler {
-    const val CHANNEL_ID = "departure_reminders"
+    const val CHANNEL_ID = "departure_reminders_chime"
     const val EXTRA_TITLE = "reminder_title"
     const val EXTRA_TEXT = "reminder_text"
     const val EXTRA_CHANNEL_NAME = "reminder_channel_name"
@@ -20,8 +21,12 @@ object ReminderScheduler {
     fun ensureChannel(context: Context, channelName: String) {
         val manager = context.getSystemService(NotificationManager::class.java)
         manager.createNotificationChannel(
-            NotificationChannel(CHANNEL_ID, channelName, NotificationManager.IMPORTANCE_HIGH)
+            PtSound.apply(
+                context,
+                NotificationChannel(CHANNEL_ID, channelName, NotificationManager.IMPORTANCE_HIGH)
+            )
         )
+        PtSound.retireOldChannels(manager)
     }
 
     fun schedule(

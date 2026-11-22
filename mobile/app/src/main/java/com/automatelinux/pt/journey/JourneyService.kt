@@ -19,6 +19,7 @@ import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import com.automatelinux.pt.MainActivity
 import com.automatelinux.pt.R
+import com.automatelinux.pt.notify.PtSound
 import com.automatelinux.pt.util.EnStrings
 import com.automatelinux.pt.util.HeStrings
 import com.automatelinux.pt.util.SettingsStore
@@ -206,8 +207,10 @@ class JourneyService : Service() {
             ).apply {
                 enableVibration(true)
                 vibrationPattern = ALIGHT_VIBRATION
+                PtSound.apply(this@JourneyService, this)
             }
         )
+        PtSound.retireOldChannels(manager)
     }
 
     private fun contentIntent(): PendingIntent = PendingIntent.getActivity(
@@ -278,7 +281,7 @@ class JourneyService : Service() {
                         .setAutoCancel(true)
                         .setCategory(NotificationCompat.CATEGORY_NAVIGATION)
                         .setPriority(NotificationCompat.PRIORITY_HIGH)
-                        .setDefaults(NotificationCompat.DEFAULT_SOUND)
+                        .setSound(PtSound.uri(this))
                         .build()
                 )
                 vibrate()
@@ -305,7 +308,7 @@ class JourneyService : Service() {
         const val ACTION_STOP = "com.automatelinux.pt.journey.STOP"
 
         private const val CHANNEL_ONGOING = "journey_ongoing"
-        private const val CHANNEL_ALERT = "journey_alerts"
+        private const val CHANNEL_ALERT = "journey_alerts_chime"
         private const val NOTIFICATION_ID = 4201
         private const val ALERT_ID = 4202
 
