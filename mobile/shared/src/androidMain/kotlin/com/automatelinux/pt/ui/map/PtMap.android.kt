@@ -16,6 +16,7 @@ import android.graphics.Point
 import android.view.MotionEvent
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
+import com.google.android.gms.location.LocationServices
 
 /**
  * The Android map: osmdroid, driven from the shared declarative description.
@@ -96,7 +97,14 @@ actual fun PtMap(
 
             // The blue dot answers "what is this?" like every other marker. osmdroid gives
             // the overlay no click listener, so the tap is hit-tested against the fix here.
-            val overlay = object : MyLocationNewOverlay(currentMap) {
+            // Fed by the fused provider, the same source the journey tracks with. The
+            // overlay's default reader listens to raw GPS AND the network provider, so
+            // inside a bus the dot jumped to cell/Wi-Fi fixes hundreds of metres off
+            // while the journey, on fused, stayed put (owner, 2026-11-23).
+            val provider = FusedLocationOverlayProvider(
+                LocationServices.getFusedLocationProviderClient(currentMap.context)
+            )
+            val overlay = object : MyLocationNewOverlay(provider, currentMap) {
                 override fun onSingleTapConfirmed(e: MotionEvent, mapView: MapView): Boolean {
                     val handler = onMyLocationTap ?: return false
                     val fix = myLocation ?: return false

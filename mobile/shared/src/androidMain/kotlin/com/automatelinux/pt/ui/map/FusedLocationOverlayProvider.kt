@@ -9,6 +9,11 @@ import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.Priority
 import org.osmdroid.views.overlay.mylocation.IMyLocationConsumer
 import org.osmdroid.views.overlay.mylocation.IMyLocationProvider
+import android.os.SystemClock
+import com.automatelinux.pt.journey.MAX_FIX_ACCURACY_METERS
+
+/** How long a good fix keeps rough ones off the dot. */
+private const val ROUGH_HOLD_MS = 60_000L
 
 @SuppressLint("MissingPermission")
 class FusedLocationOverlayProvider(
@@ -18,9 +23,24 @@ class FusedLocationOverlayProvider(
     private var consumer: IMyLocationConsumer? = null
     private var lastLoc: Location? = null
 
+    /** When the last fix within [MAX_FIX_ACCURACY_METERS] arrived, elapsed-realtime ms. */
+    private var lastAccurateAtMs: Long? = null
+
     private val callback = object : LocationCallback() {
         override fun onLocationResult(result: LocationResult) {
             val loc = result.lastLocation ?: return
+            val rough = loc.hasAccuracy() && loc.accuracy > MAX_FIX_ACCURACY_METERS
+            val now = SystemClock.elapsedRealtime()
+            // A rough fix (cell/Wi-Fi, hundreds of metres off) must not drag the dot
+            // away from a good one: inside a bus GPS drops in and out, and the dot
+            // jumped between the two (owner, 2026-11-23). With no good fix for a while
+            // the rough one is all there is, and showing it beats showing nothing.
+            if (rough) {
+                val good = lastAccurateAtMs
+                if (good != null && now - good <= ROUGH_HOLD_MS) return
+            } else {
+                lastAccurateAtMs = now
+            }
             lastLoc = loc
             consumer?.onLocationChanged(loc, this@FusedLocationOverlayProvider)
         }

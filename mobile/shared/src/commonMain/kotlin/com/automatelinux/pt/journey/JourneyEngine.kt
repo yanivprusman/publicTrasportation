@@ -176,6 +176,14 @@ data class JourneyUpdate(
     val alerts: List<JourneyAlert>
 )
 
+/**
+ * A fix claiming worse than this is not a position. Inside a bus GPS keeps dropping out
+ * and the fused provider fills the gaps from cell towers and Wi-Fi, hundreds of metres
+ * off: on the map the rider's dot jumped (owner, 2026-11-23), and one such fix landing
+ * near a stop ahead would call that stop. The map's dot uses the same bar.
+ */
+const val MAX_FIX_ACCURACY_METERS = 50.0
+
 /** Close enough to a stop to count as having called there. */
 const val STOP_HIT_METERS = 120.0
 
@@ -357,7 +365,10 @@ fun stepJourney(
     gps: GpsState = GpsState.OFF
 ): JourneyUpdate {
     val legs = itinerary.legs
-    val usable = fix?.takeIf { nowMs - it.atMs <= FIX_STALE_MS }
+    val usable = fix?.takeIf {
+        nowMs - it.atMs <= FIX_STALE_MS &&
+            (it.accuracyMeters == null || it.accuracyMeters <= MAX_FIX_ACCURACY_METERS)
+    }
     val alerts = mutableListOf<JourneyAlert>()
     var c = cursor
 

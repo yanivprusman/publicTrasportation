@@ -240,6 +240,15 @@ class JourneyEngineTest {
     }
 
     @Test
+    fun `a rough cell or wifi fix near a stop ahead does not call that stop`() {
+        val aboard = JourneyCursor(legIndex = 1, stopIndex = 1, boardedLegs = setOf(1))
+        val rough = GeoFix(lat = at(3), lon = lon, accuracyMeters = 400.0, atMs = t0 + 16 * 60_000L)
+        val update = stepJourney(trip, aboard, rough, t0 + 16 * 60_000L, gps = GpsState.ON)
+        assertEquals(1, update.cursor.stopIndex)
+        assertFalse(update.progress.positionKnown)
+    }
+
+    @Test
     fun `with GPS on, the clock alone never puts the rider on board`() {
         val now = t0 + 14 * 60_000L
         val stale = GeoFix(lat = at(1), lon = lon, accuracyMeters = 8.0, atMs = now - 5 * 60_000L)
