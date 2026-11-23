@@ -52,17 +52,21 @@ data class PtMapOverlays(
     val showUserLocation: Boolean = false,
     /** Which marker to draw for the device's position; a user-facing setting. */
     val userLocationIcon: PtUserLocationIcon = PtUserLocationIcon.DOT,
-    /** On a ride: the next stop and the rider's own, drawn over the route's stop dots. */
+    /** On a ride: the rider's own stop, drawn over the route's stop dots. */
     val journeyRide: JourneyRideMarks? = null
 )
 
 /**
- * The two stops of a live ride worth marking on the map: the one the vehicle calls at
- * next, and the one the rider gets off at. The route overlay draws every stop the
- * same, which answers "where does this bus go" but not "which of these is mine".
+ * The stop of a live ride worth marking on the map: the one the rider gets off at. The
+ * route overlay draws every stop the same, which answers "where does this bus go" but
+ * not "which of these is mine".
+ *
+ * The next stop is deliberately NOT marked. It was an amber ring, and amber already
+ * means the rider's own stop and the live bus, so the ring read as "my bus" or "my
+ * stop" (owner, 2026-11-23: "the orange dot is confusing"). The card names the next
+ * stop in words; the map keeps one amber meaning.
  */
 data class JourneyRideMarks(
-    val next: LatLng?,
     val alight: LatLng
 )
 
@@ -111,7 +115,7 @@ enum class PtUserLocationIcon { DOT, PLATFORM_DEFAULT }
  * trip's start (a pulsing cyan dot) was taken for something unknown, while it sat on top
  * of the blue "you are here" dot and hid it.
  */
-enum class PtMapMarker { ORIGIN, DESTINATION, VIA, MY_LOCATION, NEXT_STOP, ALIGHT_STOP }
+enum class PtMapMarker { ORIGIN, DESTINATION, VIA, MY_LOCATION, ALIGHT_STOP }
 
 /**
  * The map.

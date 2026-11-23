@@ -164,7 +164,6 @@ interface AppStrings {
     val markerDestination: String
     val markerVia: String
     val markerYouAreHere: String
-    val markerNextStop: String
     val markerYourStop: String
     val markerStopInfo: String
     val markerClose: String
@@ -628,7 +627,6 @@ val EnStrings: AppStrings = object : AppStrings {
     override val markerDestination: String = "Your destination"
     override val markerVia: String = "A stop on the way (via)"
     override val markerYouAreHere: String = "You are here"
-    override val markerNextStop: String = "The bus's next stop"
     override val markerYourStop: String = "Your stop — get off here"
     override val markerStopInfo: String = "Arrivals & info"
     override val markerClose: String = "Close"
@@ -1070,7 +1068,6 @@ val HeStrings: AppStrings = object : AppStrings {
     override val markerDestination: String = "היעד שלך"
     override val markerVia: String = "עצירה בדרך"
     override val markerYouAreHere: String = "אתה כאן"
-    override val markerNextStop: String = "התחנה הבאה של האוטובוס"
     override val markerYourStop: String = "התחנה שלך — כאן יורדים"
     override val markerStopInfo: String = "הגעות ופרטים"
     override val markerClose: String = "סגור"

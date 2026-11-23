@@ -124,7 +124,6 @@ import com.automatelinux.pt.ui.map.PtMap
 import com.automatelinux.pt.ui.map.PtMapMarker
 import com.automatelinux.pt.ui.map.PtMapOverlays
 import com.automatelinux.pt.ui.map.JourneyRideMarks
-import com.automatelinux.pt.journey.RideStopState
 import com.automatelinux.pt.journey.rideStopList
 import com.automatelinux.pt.ui.map.PtMapState
 import com.automatelinux.pt.ui.map.PtMapStyle
@@ -1471,8 +1470,6 @@ fun MainScreen(
                         itinerary = mapItinerary,
                         journeyRide = journeyProgress?.rideStopList()?.let { stops ->
                             JourneyRideMarks(
-                                next = stops.firstOrNull { it.state == RideStopState.NEXT }
-                                    ?.let { LatLng(it.place.lat, it.place.lon) },
                                 alight = stops.last().let { LatLng(it.place.lat, it.place.lon) }
                             )
                         },
@@ -1600,7 +1597,6 @@ fun MainScreen(
                                 MapTapInfo(strings.markerDestination, routingState.destination?.name)
                             PtMapMarker.VIA ->
                                 MapTapInfo(strings.markerVia, routingState.via?.name)
-                            PtMapMarker.NEXT_STOP -> MapTapInfo(strings.markerNextStop, null)
                             PtMapMarker.ALIGHT_STOP -> MapTapInfo(strings.markerYourStop, null)
                         }
                     },

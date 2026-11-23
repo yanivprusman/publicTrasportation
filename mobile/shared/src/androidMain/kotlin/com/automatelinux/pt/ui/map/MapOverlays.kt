@@ -201,9 +201,9 @@ private fun Marker.tapReports(kind: PtMapMarker, handler: () -> ((PtMapMarker) -
 private const val JOURNEY_ALIGHT_COLOR = 0xFFFFB74D.toInt()
 
 /**
- * On a ride, the stop the vehicle calls at next (a white dot ringed in amber) and the
- * rider's own stop (a solid amber dot ringed in white), on top of the route's plain
- * stop dots — so a glance at the map says which of the dots ahead is theirs.
+ * On a ride, the rider's own stop (a solid amber dot ringed in white), on top of the
+ * route's plain stop dots — so a glance at the map says which of the dots ahead is
+ * theirs. Only that one: see [JourneyRideMarks] for why the next stop is not marked.
  */
 @Composable
 fun JourneyStopsOverlay(
@@ -215,16 +215,6 @@ fun JourneyStopsOverlay(
     LaunchedEffect(marks) {
         map.overlays.removeAll { (it as? Marker)?.id == TAG_JOURNEY_STOP }
         if (marks != null) {
-            marks.next?.let { next ->
-                map.overlays.add(Marker(map).apply {
-                    id = TAG_JOURNEY_STOP
-                    position = next.toGeoPoint()
-                    setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
-                    icon = createCircleDrawable(Color.WHITE, 8, JOURNEY_ALIGHT_COLOR, 3f)
-                    setInfoWindow(null)
-                    tapReports(PtMapMarker.NEXT_STOP) { onTap }
-                })
-            }
             map.overlays.add(Marker(map).apply {
                 id = TAG_JOURNEY_STOP
                 position = marks.alight.toGeoPoint()
