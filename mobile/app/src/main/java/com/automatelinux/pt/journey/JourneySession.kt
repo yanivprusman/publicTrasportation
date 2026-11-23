@@ -195,6 +195,17 @@ object JourneySession {
         return true
     }
 
+    /**
+     * The rider saying where they are: at the start of leg [legIndex] — on board, when
+     * it is a ride. Reached from a previewed step's "I'm here".
+     */
+    fun placeAt(legIndex: Int) {
+        val leg = _itinerary.value?.legs?.getOrNull(legIndex) ?: return
+        cursor = cursor.placedAt(legIndex, isRide = leg.isRide)
+        startedAtMs?.let { saveCursor(it, cursor) }
+        scope.launch { advance() }
+    }
+
     /** The rider ending the trip. It stays in the recent trips, closed. */
     fun stop(context: Context) {
         if (liveTracking) {

@@ -2392,6 +2392,7 @@ fun MainScreen(
                         onGpsClick()
                     },
                     recalculating = recalcPending,
+                    onPlaceAt = { legIndex -> JourneySession.placeAt(legIndex) },
                     onPay = payWithHopOn,
                     onShowLineRoute = { index ->
                         trip.legs.getOrNull(index)?.routeId?.let { routeId ->

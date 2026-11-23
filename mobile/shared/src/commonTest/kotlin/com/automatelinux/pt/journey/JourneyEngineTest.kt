@@ -209,6 +209,37 @@ class JourneyEngineTest {
     }
 
     @Test
+    fun `the rider saying they boarded beats a position still at the pole`() {
+        val now = t0 + 14 * 60_000L
+        val update = stepJourney(trip, JourneyCursor(legIndex = 1).boarded(), fixAt(1, 14), now,
+            liveBoardingArrivalMs = now + 3 * 60_000L, gps = GpsState.ON)
+        assertEquals(JourneyPhase.RIDING, update.progress.phase)
+    }
+
+    @Test
+    fun `placing the rider on an earlier ride re-arms what is ahead and puts them on board`() {
+        val later = JourneyCursor(legIndex = 2, alightAlerted = setOf(1), boardAlerted = setOf(1), earlyAlerted = setOf(1))
+        val back = later.placedAt(1, isRide = true)
+        assertEquals(1, back.legIndex)
+        assertEquals(0, back.stopIndex)
+        assertTrue(1 in back.boardedLegs)
+        assertTrue(back.alightAlerted.isEmpty())
+        val now = t0 + 14 * 60_000L
+        val update = stepJourney(trip, back, fixAt(1, 14), now, gps = GpsState.ON)
+        assertEquals(JourneyPhase.RIDING, update.progress.phase)
+        // Tracking carries on from there: the next stop called at moves it forward.
+        val on = stepJourney(trip, update.cursor, fixAt(2, 15), t0 + 15 * 60_000L, gps = GpsState.ON)
+        assertEquals(1, on.cursor.stopIndex)
+    }
+
+    @Test
+    fun `placing the rider on a walk does not mark anything boarded`() {
+        val placed = JourneyCursor(legIndex = 1, boardedLegs = setOf(1)).placedAt(0, isRide = false)
+        assertEquals(0, placed.legIndex)
+        assertTrue(placed.boardedLegs.isEmpty())
+    }
+
+    @Test
     fun `with GPS on, the clock alone never puts the rider on board`() {
         val now = t0 + 14 * 60_000L
         val stale = GeoFix(lat = at(1), lon = lon, accuracyMeters = 8.0, atMs = now - 5 * 60_000L)

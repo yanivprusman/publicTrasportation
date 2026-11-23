@@ -1,6 +1,12 @@
 package com.automatelinux.pt.ui.journey
 
 import androidx.compose.ui.platform.testTag
+import kotlin.math.abs
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material3.TextButton
 import androidx.compose.animation.animateColorAsState
@@ -51,6 +57,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -109,6 +116,12 @@ private val LIVE_GREEN = Color(0xFF66BB6A)
 /** How long the end-journey button stays armed before it goes back to being an ✕. */
 private const val CONFIRM_END_TIMEOUT_MS = 4_000L
 
+/** How long a previewed step stays up before the card falls back to the live one. */
+private const val PREVIEW_TIMEOUT_MS = 8_000L
+
+/** How far the headline must be dragged sideways to count as a swipe. */
+private val SWIPE_THRESHOLD = 48.dp
+
 /** A fling faster than this (px/s) decides open or shut whatever the distance dragged. */
 private const val FLING_VELOCITY_PX = 800f
 
@@ -151,6 +164,12 @@ fun JourneyPanel(
      */
     onRecalculate: (() -> Unit)? = null,
     recalculating: Boolean = false,
+    /**
+     * The rider saying where they are: at the start of the given leg (on board, for a
+     * ride). Offered on a step previewed by swiping the headline. Position and the live
+     * feed can lag the rider's own eyes by minutes; this is how they overrule them.
+     */
+    onPlaceAt: ((Int) -> Unit)? = null,
     /** Hands the fare off to the payment app, without leaving the live journey. */
     onPay: (() -> Unit)? = null,
     /**
@@ -223,6 +242,22 @@ fun JourneyPanel(
         }
     }
     val urgent = progress?.alightImminent == true
+    // Swiping the headline previews the step before or after the live one — look only;
+    // nothing about the journey moves. "I'm here" on a previewed step is the one way it
+    // does. It falls back to live by itself, so the card is never left showing a step
+    // the rider is not on. [previewTouch] restarts that clock on every swipe.
+    val liveLeg = (progress?.legIndex ?: 0).coerceIn(0, (itinerary.legs.size - 1).coerceAtLeast(0))
+    var previewLeg by remember { mutableStateOf<Int?>(null) }
+    var previewTouch by remember { mutableIntStateOf(0) }
+    LaunchedEffect(previewLeg, previewTouch) {
+        if (previewLeg != null) {
+            delay(PREVIEW_TIMEOUT_MS)
+            previewLeg = null
+        }
+    }
+    val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    val swipeThresholdPx = with(LocalDensity.current) { SWIPE_THRESHOLD.toPx() }
+    val previewing = previewLeg?.takeIf { it != liveLeg && it in itinerary.legs.indices }
     val accent by animateColorAsState(
         targetValue = if (urgent) URGENT else MaterialTheme.colorScheme.primary,
         label = "journeyAccent"
@@ -486,7 +521,72 @@ fun JourneyPanel(
                                 m.clip(RoundedCornerShape(8.dp)).clickable { onFocusLeg(idx) }
                             } else m
                         }
+                        // Forward is the reading direction: a swipe toward the start of
+                        // the line, like turning a page — left in English, right in Hebrew.
+                        .pointerInput(itinerary, liveLeg, rtl) {
+                            var dx = 0f
+                            detectHorizontalDragGestures(
+                                onDragStart = { dx = 0f },
+                                onHorizontalDrag = { change, amount ->
+                                    change.consume()
+                                    dx += amount
+                                },
+                                onDragEnd = {
+                                    if (abs(dx) >= swipeThresholdPx && itinerary.legs.isNotEmpty()) {
+                                        val forward = (dx < 0f) != rtl
+                                        val from = previewLeg ?: liveLeg
+                                        val to = (from + if (forward) 1 else -1)
+                                            .coerceIn(0, itinerary.legs.lastIndex)
+                                        previewLeg = to.takeIf { it != liveLeg }
+                                        previewTouch++
+                                    }
+                                }
+                            )
+                        }
                 ) {
+                    if (previewing != null) {
+                        val leg = itinerary.legs[previewing]
+                        Text(
+                            text = strings.journeyPreviewStep(previewing + 1, itinerary.legs.size, previewing < liveLeg),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = legLine(leg.routeShortName, leg.mode, leg.to.name, strings),
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        listOfNotNull(
+                            leg.startTime?.takeIf { it.isNotBlank() }?.let { formatTime(it) },
+                            leg.endTime?.takeIf { it.isNotBlank() }?.let { formatTime(it) }
+                        ).takeIf { it.isNotEmpty() }?.let { times ->
+                            Text(
+                                text = times.joinToString(" – "),
+                                modifier = Modifier.padding(top = 2.dp),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Row(
+                            modifier = Modifier.padding(top = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            if (onPlaceAt != null) {
+                                FilledTonalButton(
+                                    onClick = {
+                                        onPlaceAt(previewing)
+                                        previewLeg = null
+                                    },
+                                    modifier = Modifier.testTag("journey-im-here")
+                                ) { Text(strings.journeyImHere) }
+                            }
+                            TextButton(
+                                onClick = { previewLeg = null },
+                                modifier = Modifier.testTag("journey-back-to-live")
+                            ) { Text(strings.journeyBackToLive) }
+                        }
+                    } else {
                     Text(
                         text = JourneyText.headline(progress, strings),
                         style = MaterialTheme.typography.headlineSmall,
@@ -500,6 +600,7 @@ fun JourneyPanel(
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                    }
                     }
                 }
                 if (hasSteps) {

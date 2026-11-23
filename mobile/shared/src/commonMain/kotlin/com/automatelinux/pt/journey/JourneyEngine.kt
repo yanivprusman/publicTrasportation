@@ -76,8 +76,39 @@ data class JourneyCursor(
     val boardAlerted: Set<Int> = emptySet(),
     /** Legs whose "your bus is early" warning has already been given. */
     val earlyAlerted: Set<Int> = emptySet(),
+    /**
+     * Ride legs the rider put themselves on ("I'm here" on a previewed ride). Their word
+     * beats every inference: a position still near the pole (a bus crawling out of
+     * traffic, a fix lagging behind) and a live feed already counting down to the NEXT
+     * bus of the line otherwise kept them "waiting" on board (owner, 2026-11-23).
+     */
+    val boardedLegs: Set<Int> = emptySet(),
     val arrived: Boolean = false
 )
+
+/** The rider says they are on the ride of the current leg. */
+fun JourneyCursor.boarded(): JourneyCursor = copy(boardedLegs = boardedLegs + legIndex)
+
+/**
+ * The rider says they are at the start of [legIndex] — forward or back. On a ride leg
+ * that means on board (they swiped to the bus and said "I'm here"), so its board call is
+ * spent too. Everything recorded about that leg and the ones after it is forgotten, so
+ * going back re-arms the alerts still ahead; the legs before it keep their history.
+ * Tracking carries on from here: a fix at a later stop still moves the cursor forward.
+ */
+fun JourneyCursor.placedAt(legIndex: Int, isRide: Boolean): JourneyCursor {
+    val before = { s: Set<Int> -> s.filterTo(mutableSetOf()) { it < legIndex } }
+    val here = if (isRide) setOf(legIndex) else emptySet()
+    return copy(
+        legIndex = legIndex,
+        stopIndex = 0,
+        arrived = false,
+        alightAlerted = before(alightAlerted),
+        boardAlerted = before(boardAlerted) + here,
+        earlyAlerted = before(earlyAlerted),
+        boardedLegs = before(boardedLegs) + here
+    )
+}
 
 data class JourneyProgress(
     val phase: JourneyPhase,
@@ -385,7 +416,7 @@ fun stepJourney(
     // a fix just past STOP_HIT_METERS said "18 stops to go". Only with location off
     // does the clock alone decide, because then nothing else ever can.
     val waitingUntilMs = legStartMs?.takeIf {
-        leg.isRide && c.stopIndex == 0 && (
+        leg.isRide && c.stopIndex == 0 && c.legIndex !in c.boardedLegs && (
             nowMs < max(it, liveBoardingArrivalMs ?: it) ||
                 when {
                     usable != null ->

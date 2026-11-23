@@ -354,6 +354,12 @@ interface AppStrings {
     val journeyStayOn: (String) -> String
     val journeyLeavesIn: (String, String) -> String
     val journeyBoardNow: (String) -> String
+    /** On a previewed step: the rider says this is where they are. */
+    val journeyImHere: String
+    /** Leaves the preview for the live step. */
+    val journeyBackToLive: String
+    /** "Step 3 of 4 · earlier" / "· later" — over a previewed step. */
+    val journeyPreviewStep: (Int, Int, Boolean) -> String
     val journeyScheduleOnly: String
     /** The live banner: what the feed says about the bus being waited for. */
     val journeyBusArrivesIn: (String, String) -> String
@@ -802,6 +808,10 @@ val EnStrings: AppStrings = object : AppStrings {
     override val journeyStayOn: (String) -> String = { line -> "Stay on $line" }
     override val journeyLeavesIn: (String, String) -> String = { line, d -> "$line leaves in $d" }
     override val journeyBoardNow: (String) -> String = { line -> "Board $line now" }
+    override val journeyImHere: String = "I'm here"
+    override val journeyBackToLive: String = "Back to live"
+    override val journeyPreviewStep: (Int, Int, Boolean) -> String =
+        { n, total, past -> "Step $n of $total · ${if (past) "earlier" else "later"}" }
     override val journeyScheduleOnly: String = "Following the timetable — no location"
     override val journeyBusArrivesIn: (String, String) -> String = { line, d -> "$line arrives in $d" }
     override val journeyBusDueNow: (String) -> String = { line -> "$line is arriving" }
@@ -1240,6 +1250,10 @@ val HeStrings: AppStrings = object : AppStrings {
     override val journeyStayOn: (String) -> String = { line -> "להישאר על $line" }
     override val journeyLeavesIn: (String, String) -> String = { line, d -> "$line יוצא בעוד $d" }
     override val journeyBoardNow: (String) -> String = { line -> "לעלות על $line עכשיו" }
+    override val journeyImHere: String = "אני כאן"
+    override val journeyBackToLive: String = "חזרה למצב חי"
+    override val journeyPreviewStep: (Int, Int, Boolean) -> String =
+        { n, total, past -> "שלב $n מתוך $total · ${if (past) "קודם" else "בהמשך"}" }
     override val journeyScheduleOnly: String = "לפי לוח הזמנים — בלי מיקום"
     override val journeyBusArrivesIn: (String, String) -> String = { line, d -> "$line מגיע בעוד $d" }
     override val journeyBusDueNow: (String) -> String = { line -> "$line מגיע עכשיו" }
