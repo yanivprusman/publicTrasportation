@@ -1172,6 +1172,7 @@ fun MainScreen(
                                     onScooterSpeedChange = { routingViewModel.setScooterSpeed(it) },
                                     onEarlier = { routingViewModel.searchEarlier() },
                                     onLater = { routingViewModel.searchLater() },
+                                    onRefresh = { routingViewModel.refreshFromNow() },
                                     homePlace = settingsStore.homePlace,
                                     workPlace = settingsStore.workPlace,
                                     // Both quick paths ride the endpoint auto-search;

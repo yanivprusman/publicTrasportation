@@ -320,6 +320,17 @@ class RoutingViewModel(
         _state.value = _state.value.copy(travelMode = mode)
     }
 
+    /**
+     * The same trip again, departing now. Results searched "now" go stale as the
+     * buses in them leave, and Earlier/Later have moved the clock off now, so a
+     * refresh resets the time rather than repeating the old one.
+     */
+    fun refreshFromNow() {
+        if (_state.value.ridingLine != null) return
+        _state.value = _state.value.copy(departureTime = null, arriveBy = false)
+        search()
+    }
+
     fun searchEarlier() {
         val s = _state.value
         // From on board there is only now.

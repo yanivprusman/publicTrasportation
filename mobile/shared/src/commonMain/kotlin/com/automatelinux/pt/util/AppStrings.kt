@@ -28,6 +28,7 @@ interface AppStrings {
     val removeStop: String
     val searchRoutes: String
     val editSearch: String
+    val refreshFromNow: String
     val nothingFound: String
     /** The search never ran — the server could not be reached or did not answer with results. */
     val searchUnavailable: String
@@ -507,6 +508,7 @@ val EnStrings: AppStrings = object : AppStrings {
     override val removeStop: String = "Remove stop"
     override val searchRoutes: String = "Search Routes"
     override val editSearch: String = "Edit search"
+    override val refreshFromNow: String = "Refresh from now"
     override val nothingFound: String = "Nothing found — try a different spelling or Hebrew"
     override val searchUnavailable: String = "Can't reach the PT server — search unavailable"
     override val showAllDepartures: (Int) -> String = { n -> "Show all $n departures" }
@@ -954,6 +956,7 @@ val HeStrings: AppStrings = object : AppStrings {
     override val removeStop: String = "הסר עצירה"
     override val searchRoutes: String = "חפש מסלולים"
     override val editSearch: String = "עריכת החיפוש"
+    override val refreshFromNow: String = "רענון מעכשיו"
     override val nothingFound: String = "לא נמצאו תוצאות — נסו איות אחר"
     override val searchUnavailable: String = "אין קשר לשרת — החיפוש אינו זמין"
     override val showAllDepartures: (Int) -> String = { n -> "הצגת כל $n היציאות" }

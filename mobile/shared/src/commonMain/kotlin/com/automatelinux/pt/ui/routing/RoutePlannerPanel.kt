@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.RemoveCircleOutline
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.Circle
 import androidx.compose.material.icons.filled.Star
@@ -112,6 +113,8 @@ fun RoutePlannerPanel(
     onScooterSpeedChange: ((Int) -> Unit)? = null,
     onEarlier: (() -> Unit)? = null,
     onLater: (() -> Unit)? = null,
+    /** Searches the same trip again from now: the folded results go stale as buses leave. */
+    onRefresh: (() -> Unit)? = null,
     homePlace: GeocodeSuggestion? = null,
     workPlace: GeocodeSuggestion? = null,
     onQuickRoute: ((GeocodeSuggestion, GeocodeSuggestion) -> Unit)? = null,
@@ -169,6 +172,7 @@ fun RoutePlannerPanel(
                 state = state,
                 onExpand = { formCollapsed = false },
                 onSwap = onSwap,
+                onRefresh = onRefresh?.takeIf { state.ridingLine == null },
                 isFavorite = isCurrentRouteFavorite,
                 onToggleFavorite = onToggleFavoriteRoute?.takeIf { state.canStarRoute }
             )
@@ -512,6 +516,7 @@ private fun CollapsedSearchSummary(
     state: RoutingState,
     onExpand: () -> Unit,
     onSwap: () -> Unit,
+    onRefresh: (() -> Unit)?,
     isFavorite: Boolean,
     onToggleFavorite: (() -> Unit)?,
 ) {
@@ -584,6 +589,15 @@ private fun CollapsedSearchSummary(
                     Icon(
                         if (isFavorite) Icons.Default.Star else Icons.Default.StarBorder,
                         contentDescription = if (isFavorite) strings.unsaveRoute else strings.saveRoute,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+            if (onRefresh != null) {
+                IconButton(onClick = onRefresh, enabled = !state.loading) {
+                    Icon(
+                        Icons.Default.Refresh,
+                        contentDescription = strings.refreshFromNow,
                         tint = MaterialTheme.colorScheme.primary
                     )
                 }
