@@ -12,6 +12,7 @@ import com.automatelinux.pt.data.model.RouteSortMode
 import com.automatelinux.pt.data.model.VehicleMarker
 import com.automatelinux.pt.data.model.WheelchairAccess
 import com.automatelinux.pt.data.model.extractVehicleMarkers
+import com.automatelinux.pt.util.RiderHeading
 import com.automatelinux.pt.util.SettingsStore
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -77,15 +78,27 @@ class RoutingViewModel(
 
     private var riderFix: RiderFix? = null
     private var suggestionsWanted = false
+    private val riderHeading = RiderHeading()
+    /** The plan on screen was made from a bus whose direction was not yet known. */
+    private var ridingSearchedWithoutHeading = false
 
     /**
      * The latest fix while the rider is choosing a line or riding one. A bus moves a
      * kilometre a minute, so a search from on board must never use the fix the origin
      * field was filled with — the server would read the difference as the bus being late.
      */
-    fun updateRiderPosition(lat: Double, lon: Double, heading: Int?) {
+    fun updateRiderPosition(lat: Double, lon: Double, gpsHeading: Int?) {
+        // Stopped at a stop or a light the GPS gives no bearing; the road behind does.
+        val heading = riderHeading.update(lat, lon, gpsHeading, Clock.System.now().toEpochMilliseconds())
         riderFix = RiderFix(lat, lon, heading)
         if (suggestionsWanted) loadLineSuggestions()
+        // Without a direction the server may have planned from the line's other
+        // direction — the plan that said "get off the 73 now". Plan again once known.
+        val s = _state.value
+        if (heading != null && ridingSearchedWithoutHeading && s.ridingLine != null && !s.loading) {
+            ridingSearchedWithoutHeading = false
+            search()
+        }
     }
 
     /** Asks which lines pass here now; waits for the first fix if there is none yet. */
@@ -748,6 +761,7 @@ class RoutingViewModel(
                 val raw = if (riding != null) {
                     // startRiding refuses to start without a fix, and one is never taken back.
                     val fix = checkNotNull(riderFix) { "Riding without a GPS fix" }
+                    ridingSearchedWithoutHeading = fix.heading == null
                     api.searchRoute(
                         from = "${fix.lat},${fix.lon}", to = to,
                         modes = modes, maxWalk = s.walkCapForQuery, scooter = s.scooter, maxRide = s.rideCapForQuery, scooterSpeed = s.scooterSpeedForQuery,
