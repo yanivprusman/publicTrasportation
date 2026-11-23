@@ -1,6 +1,7 @@
 package com.automatelinux.pt.ui.journey
 
 import androidx.compose.ui.platform.testTag
+import com.automatelinux.pt.journey.previewStopList
 import kotlin.math.abs
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.LayoutDirection
@@ -258,6 +259,21 @@ fun JourneyPanel(
     val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     val swipeThresholdPx = with(LocalDensity.current) { SWIPE_THRESHOLD.toPx() }
     val previewing = previewLeg?.takeIf { it != liveLeg && it in itinerary.legs.indices }
+    // A preview shows the whole step, not just its name: its stops in place of the live
+    // ride's, the map framed on it, the pips marking it. Swiping back to live reframes
+    // the live leg, since the preview moved the map away from it.
+    val shownStops = if (previewing != null) itinerary.legs[previewing].previewStopList() else rideStops
+    val showLadder = if (previewing != null) shownStops != null else riding && rideStops != null
+    var framedPreview by remember { mutableStateOf(false) }
+    LaunchedEffect(previewing) {
+        if (previewing != null) {
+            onFocusLeg?.invoke(previewing)
+            framedPreview = true
+        } else if (framedPreview) {
+            onFocusLeg?.invoke(liveLeg)
+            framedPreview = false
+        }
+    }
     val accent by animateColorAsState(
         targetValue = if (urgent) URGENT else MaterialTheme.colorScheme.primary,
         label = "journeyAccent"
@@ -329,6 +345,30 @@ fun JourneyPanel(
             modifier = Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
+                // The whole card answers the swipe, not just the headline: a preview
+                // replaces everything the card shows about a step.
+                // Forward is the reading direction: a swipe toward the start of
+                // the line, like turning a page — left in English, right in Hebrew.
+                .pointerInput(itinerary, liveLeg, rtl) {
+                    var dx = 0f
+                    detectHorizontalDragGestures(
+                        onDragStart = { dx = 0f },
+                        onHorizontalDrag = { change, amount ->
+                            change.consume()
+                            dx += amount
+                        },
+                        onDragEnd = {
+                            if (abs(dx) >= swipeThresholdPx && itinerary.legs.isNotEmpty()) {
+                                val forward = (dx < 0f) != rtl
+                                val from = previewLeg ?: liveLeg
+                                val to = (from + if (forward) 1 else -1)
+                                    .coerceIn(0, itinerary.legs.lastIndex)
+                                previewLeg = to.takeIf { it != liveLeg }
+                                previewTouch++
+                            }
+                        }
+                    )
+                }
                 .padding(start = 16.dp, end = 16.dp, bottom = 12.dp)
         ) {
             // The same handle the planner's sheet wears, so the panel reads as the
@@ -465,8 +505,9 @@ fun JourneyPanel(
             // The line every other app leads with: where the actual bus is. Shown
             // only while a boarding stop is ahead and the report is fresh — silence,
             // never a guess. Tapping it flies the map to the bus itself.
+            // During a preview the banner stays only if it is about the step shown.
             JourneyText.liveBanner(
-                live, itinerary,
+                live?.takeIf { previewing == null || it.legIndex == previewing }, itinerary,
                 Clock.System.now().toEpochMilliseconds(), strings
             )?.let { banner ->
                 val vehicle = live?.vehicle
@@ -521,28 +562,6 @@ fun JourneyPanel(
                                 m.clip(RoundedCornerShape(8.dp)).clickable { onFocusLeg(idx) }
                             } else m
                         }
-                        // Forward is the reading direction: a swipe toward the start of
-                        // the line, like turning a page — left in English, right in Hebrew.
-                        .pointerInput(itinerary, liveLeg, rtl) {
-                            var dx = 0f
-                            detectHorizontalDragGestures(
-                                onDragStart = { dx = 0f },
-                                onHorizontalDrag = { change, amount ->
-                                    change.consume()
-                                    dx += amount
-                                },
-                                onDragEnd = {
-                                    if (abs(dx) >= swipeThresholdPx && itinerary.legs.isNotEmpty()) {
-                                        val forward = (dx < 0f) != rtl
-                                        val from = previewLeg ?: liveLeg
-                                        val to = (from + if (forward) 1 else -1)
-                                            .coerceIn(0, itinerary.legs.lastIndex)
-                                        previewLeg = to.takeIf { it != liveLeg }
-                                        previewTouch++
-                                    }
-                                }
-                            )
-                        }
                 ) {
                     if (previewing != null) {
                         val leg = itinerary.legs[previewing]
@@ -558,11 +577,14 @@ fun JourneyPanel(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         listOfNotNull(
-                            leg.startTime?.takeIf { it.isNotBlank() }?.let { formatTime(it) },
-                            leg.endTime?.takeIf { it.isNotBlank() }?.let { formatTime(it) }
-                        ).takeIf { it.isNotEmpty() }?.let { times ->
+                            listOfNotNull(
+                                leg.startTime?.takeIf { it.isNotBlank() }?.let { formatTime(it) },
+                                leg.endTime?.takeIf { it.isNotBlank() }?.let { formatTime(it) }
+                            ).takeIf { it.isNotEmpty() }?.joinToString(" – "),
+                            leg.duration.takeIf { it > 0 }?.let { strings.formatDuration(it) }
+                        ).takeIf { it.isNotEmpty() }?.let { parts ->
                             Text(
-                                text = times.joinToString(" – "),
+                                text = parts.joinToString(" · "),
                                 modifier = Modifier.padding(top = 2.dp),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -617,12 +639,12 @@ fun JourneyPanel(
             // Folded: the next stop, how many follow it, and the rider's own — the
             // three facts a passenger glances for between stops. Opened, the full list
             // below replaces it.
-            if (reveal < 0.5f && riding && rideStops != null) {
-                StopLadder(stops = rideStops, accent = accent, onFocusStop = onFocusStop)
+            if (reveal < 0.5f && showLadder && shownStops != null) {
+                StopLadder(stops = shownStops, accent = accent, onFocusStop = onFocusStop)
             }
 
             Spacer(Modifier.height(10.dp))
-            LegPips(itinerary = itinerary, progress = progress, accent = accent)
+            LegPips(itinerary = itinerary, progress = progress, accent = accent, previewLeg = previewing)
 
             if (hasSteps) Box(
                 modifier = Modifier
@@ -649,8 +671,8 @@ fun JourneyPanel(
                         .verticalScroll(rememberScrollState())
                         .padding(top = 12.dp)
                 ) {
-                    if (rideStops != null) {
-                        RideStopList(stops = rideStops, accent = accent, onFocusStop = onFocusStop)
+                    if (shownStops != null) {
+                        RideStopList(stops = shownStops, accent = accent, onFocusStop = onFocusStop)
                         if (itinerary.legs.size > 1) {
                             HorizontalDivider(
                                 modifier = Modifier.padding(vertical = 8.dp),
@@ -1046,7 +1068,13 @@ private fun TrackingChip(positionKnown: Boolean) {
  * bar moves while the rider walks.
  */
 @Composable
-private fun LegPips(itinerary: Itinerary, progress: JourneyProgress?, accent: Color) {
+private fun LegPips(
+    itinerary: Itinerary,
+    progress: JourneyProgress?,
+    accent: Color,
+    /** The step a swipe is previewing; its pip stands taller so the bar says which one. */
+    previewLeg: Int? = null
+) {
     val reachedIndex = progress?.legIndex ?: 0
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -1067,8 +1095,11 @@ private fun LegPips(itinerary: Itinerary, progress: JourneyProgress?, accent: Co
             Box(
                 modifier = Modifier
                     .weight(leg.duration.coerceAtLeast(1).toFloat())
-                    .height(6.dp)
-                    .background(base.copy(alpha = 0.25f), RoundedCornerShape(3.dp))
+                    .height(if (index == previewLeg) 10.dp else 6.dp)
+                    .background(
+                        base.copy(alpha = if (index == previewLeg) 0.6f else 0.25f),
+                        RoundedCornerShape(3.dp)
+                    )
             ) {
                 if (fill > 0f) {
                     Box(

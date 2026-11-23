@@ -333,6 +333,31 @@ fun JourneyProgress.rideStopList(): List<RideStop>? {
     }
 }
 
+/**
+ * The stops of [this] ride as a preview shows them — a step swiped to, not the one being
+ * travelled: boarding stop marked next, the rest ahead, so the card reads it exactly as
+ * it reads a ride about to start. Null off a ride, or when the feed sent no stops.
+ */
+fun RouteLeg.previewStopList(): List<RideStop>? {
+    if (!isRide) return null
+    val stops = rideStops()
+    if (stops.size < 2) return null
+    return stops.mapIndexed { i, place ->
+        val timed = when {
+            place.arrival != null -> place
+            i == 0 -> place.copy(arrival = startTime.takeIf { it.isNotBlank() })
+            i == stops.lastIndex -> place.copy(arrival = endTime.takeIf { it.isNotBlank() })
+            else -> place
+        }
+        RideStop(
+            place = timed,
+            index = i,
+            state = if (i == 0) RideStopState.NEXT else RideStopState.AHEAD,
+            isAlight = i == stops.lastIndex
+        )
+    }
+}
+
 internal fun parseMs(iso: String?): Long? =
     iso?.let { runCatching { Instant.parse(it).toEpochMilliseconds() }.getOrNull() }
 
