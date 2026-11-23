@@ -551,6 +551,13 @@ fun MainScreen(
         mapItinerary?.legs?.takeIf { routeVehicleQueries(it).isNotEmpty() }
     }
     val routeOnlyActive = liveBuses && liveBusesRouteOnly && routeQueryLegs != null
+    // "73 · 18": what the filter narrows to, said on the chip and on the map, so the
+    // map is never quietly missing buses without saying which ones it kept.
+    val routeLineNames = remember(routeQueryLegs) {
+        routeQueryLegs.orEmpty().filter { !it.mode.isStreet }
+            .mapNotNull { it.routeShortName?.takeIf { n -> n.isNotBlank() } }
+            .distinct().joinToString(" · ")
+    }
 
     LaunchedEffect(routeOnlyActive, routeQueryLegs) {
         if (routeOnlyActive && routeQueryLegs != null) {
@@ -1896,6 +1903,11 @@ fun MainScreen(
                             strings.liveBusesOffscreen(
                                 formatDistance(routeNearestMeters.toInt(), strings)
                             ) to showNearestLiveBus
+                        // Buses in view: still say the map is filtered. A map showing
+                        // two buses reads as "only two buses run here" unless it says
+                        // it was asked to hide the rest.
+                        routeLineNames.isNotEmpty() ->
+                            strings.liveBusesRouteLinesHint(routeLineNames) to { liveBusesRouteOnly = false }
                         else -> null
                     } else when {
                         !arrivalsState.nearbyVehiclesLoaded -> strings.liveBusesSearching to null
@@ -2042,16 +2054,31 @@ fun MainScreen(
                         FilterChip(
                             selected = liveBusesRouteOnly,
                             onClick = { liveBusesRouteOnly = !liveBusesRouteOnly },
-                            label = { Text(strings.liveBusesRouteOnly) },
+                            // On and off must not look alike: on the dark theme the
+                            // default selected tint was another dark grey, so the chip
+                            // never said which state it was in. On = solid primary, a
+                            // tick, and the lines it kept; off = outlined offer.
+                            label = {
+                                Text(
+                                    if (liveBusesRouteOnly && routeLineNames.isNotEmpty()) {
+                                        strings.liveBusesRouteLines(routeLineNames)
+                                    } else {
+                                        strings.liveBusesRouteOnly
+                                    }
+                                )
+                            },
                             leadingIcon = {
                                 Icon(
-                                    Icons.Default.DirectionsBus,
+                                    if (liveBusesRouteOnly) Icons.Default.Check else Icons.Default.DirectionsBus,
                                     contentDescription = null,
                                     modifier = Modifier.size(18.dp)
                                 )
                             },
                             colors = FilterChipDefaults.filterChipColors(
-                                containerColor = MaterialTheme.colorScheme.surface
+                                containerColor = MaterialTheme.colorScheme.surface,
+                                selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                                selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary
                             ),
                             elevation = FilterChipDefaults.filterChipElevation(elevation = 4.dp)
                         )

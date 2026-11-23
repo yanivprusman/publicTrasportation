@@ -251,6 +251,10 @@ interface AppStrings {
     val liveBusesOffscreen: (String) -> String
     /** The live-buses toggle that narrows the map to the displayed route's own lines. */
     val liveBusesRouteOnly: String
+    /** The same toggle while ON, naming the lines it narrows to: "Showing lines 73 · 18". */
+    val liveBusesRouteLines: (String) -> String
+    /** On the map while the filter is on and its buses are in view; tapping it shows all. */
+    val liveBusesRouteLinesHint: (String) -> String
     val mapShowStops: String
     val mapHideStops: String
     val mapButtonsCollapse: String
@@ -714,6 +718,8 @@ val EnStrings: AppStrings = object : AppStrings {
     override val liveBusesZoomIn: (String) -> String = { radius -> "Only searching $radius around the centre — zoom in to cover what you see" }
     override val liveBusesOffscreen: (String) -> String = { distance -> "Nearest live bus is $distance away — tap to show it" }
     override val liveBusesRouteOnly: String = "My route's lines only"
+    override val liveBusesRouteLines: (String) -> String = { lines -> "Showing lines $lines" }
+    override val liveBusesRouteLinesHint: (String) -> String = { lines -> "Only lines $lines shown · tap to show all buses" }
     override val mapShowStops: String = "Show stops on the map"
     override val mapHideStops: String = "Hide stops on the map"
     override val mapButtonsCollapse: String = "Hide map buttons"
@@ -1157,6 +1163,8 @@ val HeStrings: AppStrings = object : AppStrings {
     override val liveBusesZoomIn: (String) -> String = { radius -> "החיפוש מכסה $radius סביב מרכז המפה בלבד — התקרב כדי לכסות את מה שרואים" }
     override val liveBusesOffscreen: (String) -> String = { distance -> "האוטובוס החי הקרוב ביותר במרחק $distance — הקש כדי לראות אותו" }
     override val liveBusesRouteOnly: String = "רק הקווים של המסלול"
+    override val liveBusesRouteLines: (String) -> String = { lines -> "מוצגים קווים $lines" }
+    override val liveBusesRouteLinesHint: (String) -> String = { lines -> "מוצגים רק קווים $lines · הקש להצגת כל האוטובוסים" }
     override val mapShowStops: String = "הצג תחנות במפה"
     override val mapHideStops: String = "הסתר תחנות במפה"
     override val mapButtonsCollapse: String = "הסתר כפתורי מפה"
