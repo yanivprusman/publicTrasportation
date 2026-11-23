@@ -148,11 +148,13 @@ class JourneyService : Service() {
     }
 
     /**
-     * Swipe-away stops the trip rather than orphaning it in the shade — but only
-     * interrupts it: the stored trip stays open and the next launch rejoins it.
+     * Swiping the app out of recents does NOT end the trip. Riders clear recents out of
+     * habit mid-ride; until 2026-11-23 that stopped the location subscription here, the
+     * panel froze for 12 minutes on a bus and came back saying "11 stops to go" with 6
+     * left (owner). Ending a trip is the rider's explicit act — the panel's ✕ or the
+     * notification's stop action — so this only keeps the foreground service running.
      */
     override fun onTaskRemoved(rootIntent: Intent?) {
-        stopJourney(finished = false)
         super.onTaskRemoved(rootIntent)
     }
 

@@ -187,6 +187,13 @@ const val MAX_FIX_ACCURACY_METERS = 50.0
 /** Close enough to a stop to count as having called there. */
 const val STOP_HIT_METERS = 120.0
 
+/**
+ * Between two stops, how far off the straight line joining them a fix may be and still
+ * place the rider on that stretch. Wider than GPS error, narrower than a parallel street
+ * block away, which is where a different line runs.
+ */
+const val ON_ROUTE_METERS = 80.0
+
 /** Close enough to the end of a leg to call the leg done. */
 const val LEG_END_METERS = 70.0
 
@@ -413,7 +420,17 @@ fun stepJourney(
     // minutes underground should land on the leg they are actually on.
     while (!c.arrived && c.legIndex <= legs.lastIndex) {
         val leg = legs[c.legIndex]
-        if (leg.isRide) c = c.copy(stopIndex = advanceStops(leg, c.stopIndex, usable))
+        if (leg.isRide) {
+            // On board: a stop already called at, the rider's own word, or — past the
+            // departure — a fix well clear of the boarding pole (the same test that
+            // ends the waiting screen below).
+            val onBoard = c.stopIndex > 0 || c.legIndex in c.boardedLegs || (
+                usable != null &&
+                    (parseMs(leg.startTime)?.let { nowMs >= it } == true) &&
+                    haversineMeters(usable.lat, usable.lon, leg.from.lat, leg.from.lon) > BOARDED_METERS
+                )
+            c = c.copy(stopIndex = advanceStops(leg, c.stopIndex, usable, onBoard))
+        }
         if (!legComplete(leg, c.legIndex == legs.lastIndex, c, usable, roughFresh, nowMs, gps)) break
         c = if (c.legIndex == legs.lastIndex) {
             c.copy(legIndex = legs.size, stopIndex = 0, arrived = true)
@@ -561,7 +578,23 @@ private fun busEarly(
  * The furthest stop on this leg the rider can be shown to have reached. Never goes
  * back: a fix that lands between two poles must not un-pass the one already behind.
  */
-private fun advanceStops(leg: RouteLeg, current: Int, fix: GeoFix?): Int {
+/**
+ * The stop index [fix] puts the rider at on [leg], never behind [current].
+ *
+ * Two kinds of evidence. A fix within [STOP_HIT_METERS] of a stop ahead calls that stop.
+ * And once the rider is [onBoard], a fix lying between two consecutive stops ahead, within
+ * [ON_ROUTE_METERS] of the line joining them, says the first of the two is behind them.
+ * Before 2026-11-23 only the first existed, so a cursor that had fallen behind — tracking
+ * off for 12 minutes after the app was swiped away, then reopened mid-ride — stayed there
+ * until the bus happened to pass within 120 m of a pole: "11 stops to go" with 6 left, and
+ * "next" a stop already passed (owner, on the 18:05 to Yehudit/Begin).
+ *
+ * The between-stops reading needs the rider on board: someone walking to the pole along
+ * the bus's own street is also "on the route", and must not be put on a bus they have
+ * not caught. A road that bends away from the line between two stops just gives no
+ * reading there; the next stop or straighter stretch does.
+ */
+private fun advanceStops(leg: RouteLeg, current: Int, fix: GeoFix?, onBoard: Boolean): Int {
     if (fix == null) return current
     val stops = leg.rideStops()
     var best = current
@@ -569,7 +602,40 @@ private fun advanceStops(leg: RouteLeg, current: Int, fix: GeoFix?): Int {
         val stop = stops[i]
         if (haversineMeters(fix.lat, fix.lon, stop.lat, stop.lon) <= STOP_HIT_METERS) best = i
     }
+    if (onBoard) {
+        var nearest = ON_ROUTE_METERS
+        var passed = -1
+        for (i in current until stops.lastIndex) {
+            val d = metersBetweenStops(fix, stops[i], stops[i + 1]) ?: continue
+            if (d <= nearest) {
+                nearest = d
+                passed = i
+            }
+        }
+        best = max(best, passed)
+    }
     return min(best, stops.lastIndex)
+}
+
+/**
+ * Metres from [fix] to the straight line from [a] to [b], or null when the fix is not
+ * between them (its foot falls before [a] or past [b]). Flat-earth over a few hundred
+ * metres, which is all the distance between two stops is.
+ */
+private fun metersBetweenStops(fix: GeoFix, a: Place, b: Place): Double? {
+    val mPerDegLat = 111_320.0
+    val mPerDegLon = mPerDegLat * cos(a.lat.toRadians())
+    val bx = (b.lon - a.lon) * mPerDegLon
+    val by = (b.lat - a.lat) * mPerDegLat
+    val px = (fix.lon - a.lon) * mPerDegLon
+    val py = (fix.lat - a.lat) * mPerDegLat
+    val len2 = bx * bx + by * by
+    if (len2 == 0.0) return null
+    val t = (px * bx + py * by) / len2
+    if (t < 0.0 || t > 1.0) return null
+    val dx = px - t * bx
+    val dy = py - t * by
+    return sqrt(dx * dx + dy * dy)
 }
 
 private fun legComplete(

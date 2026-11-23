@@ -317,6 +317,42 @@ class JourneyEngineTest {
         assertEquals(listOf(4, 3, 2, 1), seen)
     }
 
+    /** Halfway between stop [index] and the next, [eastMeters] off the line joining them. */
+    private fun fixBetween(index: Int, atMinutes: Int, eastMeters: Double = 0.0) = GeoFix(
+        lat = at(index) + 0.0027,
+        lon = lon + eastMeters / (111_320.0 * kotlin.math.cos(originLat * 0.017453292519943295)),
+        accuracyMeters = 8.0,
+        atMs = t0 + atMinutes * 60_000L
+    )
+
+    @Test
+    fun `a rider reopening the app between stops is placed on the right stretch at once`() {
+        // Tracking stopped just after stop B (owner, 2026-11-23: swiped away, 12 minutes
+        // dark). The bus is now between C and D, far from any pole.
+        val behind = JourneyCursor(legIndex = 1, stopIndex = 1)
+        val update = stepJourney(trip, behind, fixBetween(3, 22), t0 + 22 * 60_000L)
+        // Ride stops: A=0, B=1, C=2, D=3, E=4. Between C and D: C is behind them.
+        assertEquals(2, update.cursor.stopIndex)
+        assertEquals(2, update.progress.stopsRemaining)
+        assertEquals("stop D", update.progress.nextStopName)
+    }
+
+    @Test
+    fun `a fix a street away from the stretch between stops places nothing`() {
+        val behind = JourneyCursor(legIndex = 1, stopIndex = 1)
+        val update = stepJourney(trip, behind, fixBetween(3, 22, eastMeters = 200.0), t0 + 22 * 60_000L)
+        assertEquals(1, update.cursor.stopIndex)
+    }
+
+    @Test
+    fun `walking along the route to the pole does not put the rider on the bus`() {
+        // On the walk leg's last stretch, before departure: the bus's own street, but not aboard.
+        val waiting = JourneyCursor(legIndex = 1)
+        val update = stepJourney(trip, waiting, fixBetween(2, 9), t0 + 9 * 60_000L)
+        assertEquals(0, update.cursor.stopIndex)
+        assertEquals(JourneyPhase.WAITING, update.progress.phase)
+    }
+
     @Test
     fun `a fix that wobbles backwards does not rewind the trip`() {
         val forward = stepJourney(trip, JourneyCursor(legIndex = 1), fixAt(3, 18), t0 + 18 * 60_000)
