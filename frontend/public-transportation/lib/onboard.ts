@@ -230,7 +230,7 @@ interface TripFit {
 }
 
 /** Every trip that plausibly carries the rider right now, best fit first. */
-async function tripsCarryingRider(
+export async function tripsCarryingRider(
   lat: number,
   lon: number,
   heading: number | null,
@@ -381,6 +381,47 @@ async function limited<T>(tasks: (() => Promise<T>)[], limit: number): Promise<T
 
 export class NotOnLineError extends Error {}
 
+/** Where the rider was a few minutes ago, from the phone's own trail. */
+export interface EarlierFix {
+  lat: number
+  lon: number
+  atMs: number
+}
+
+/**
+ * The candidate trip that also carried the rider through [prev] — before it reached
+ * here, and running about as late there as here.
+ *
+ * A line's two directions often share streets, and through a loop they even run the
+ * same way down them, so position and heading alone cannot tell them apart: on
+ * 2026-11-23 a rider riding the 73 from Jaffa to Holon was fitted to the 73 back to
+ * Tel Aviv twice, once with no heading and once in Holon with a correct one. The
+ * trip that is really carrying the rider is the one that passed where they were a few
+ * minutes ago, first. Null when no candidate did — then the earlier fix is from before
+ * the rider boarded and says nothing about which bus this is.
+ */
+async function provenByEarlierFix(
+  candidates: TripFit[],
+  prev: EarlierFix,
+  nowMs: number
+): Promise<TripFit | null> {
+  const earlier = new Map(
+    (await tripsCarryingRider(prev.lat, prev.lon, null, prev.atMs)).map(f => [f.tripId, f])
+  )
+  let best: { fit: TripFit; score: number } | null = null
+  for (const c of candidates) {
+    const then = earlier.get(c.tripId)
+    // Passing the earlier point AFTER this one is the other direction of a loop.
+    if (!then || then.fit.scheduledMs >= c.fit.scheduledMs) continue
+    const lateNow = nowMs - c.fit.scheduledMs
+    const lateThen = prev.atMs - then.fit.scheduledMs
+    const score = c.fit.score + then.fit.score +
+      METERS_PER_DEVIATION_MIN * Math.abs(lateNow - lateThen) / 60_000
+    if (!best || score < best.score) best = { fit: c, score }
+  }
+  return best?.fit ?? null
+}
+
 /** The trip the rider is on, where on it they are, and how to ride it to any stop ahead. */
 interface LocatedRide {
   leg: OnboardLeg
@@ -404,13 +445,15 @@ async function locateRide(opts: {
   lon: number
   heading: number | null
   nowMs: number
+  prev?: EarlierFix | null
 }): Promise<LocatedRide> {
   const { line, lat, lon, heading, nowMs } = opts
   const fits = await tripsCarryingRider(lat, lon, heading, nowMs)
-  const ours = fits.find(f => f.line === line)
-  if (!ours) {
+  const candidates = fits.filter(f => f.line === line)
+  if (candidates.length === 0) {
     throw new NotOnLineError(`No line ${line} is passing here now, going your way`)
   }
+  const ours = (opts.prev && await provenByEarlierFix(candidates, opts.prev, nowMs)) || candidates[0]
 
   const leg = await fetchTripLeg(ours.tripId)
   const stops = tripStops(leg)
@@ -478,6 +521,7 @@ export async function rideAhead(opts: {
   lon: number
   heading: number | null
   nowMs: number
+  prev?: EarlierFix | null
 }): Promise<{ itinerary: OnboardItinerary; riding: RiddenTrip }> {
   const { leg, delayMs, riding } = await locateRide(opts)
   const shift = (stop?: MotisStop): MotisStop | undefined => stop && {
@@ -506,6 +550,7 @@ export async function planFromOnboard(opts: {
   lon: number
   heading: number | null
   nowMs: number
+  prev?: EarlierFix | null
   planFrom: PlanFrom
 }): Promise<{ itineraries: OnboardItinerary[]; riding: RiddenTrip }> {
   const { planFrom } = opts

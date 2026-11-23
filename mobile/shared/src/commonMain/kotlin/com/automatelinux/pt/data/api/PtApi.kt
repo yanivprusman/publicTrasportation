@@ -63,14 +63,16 @@ class PtApi(private val client: HttpClient) {
         /** The line the rider is on now; [from] is then where the bus is. */
         onLine: String? = null,
         /** Degrees the rider is moving, when the phone knows — tells a line's two directions apart. */
-        heading: Int? = null
+        heading: Int? = null,
+        /** "lat,lon,ageSeconds": where the rider on [onLine] was a few minutes ago. */
+        prev: String? = null
     ): RouteResult = fetch(
         "/api/route",
         params = mapOf(
             "from" to from, "to" to to, "via" to via, "time" to time,
             "arriveBy" to arriveBy, "modes" to modes, "maxWalk" to maxWalk,
             "scooter" to scooter?.takeIf { it }, "maxRide" to maxRide, "scooterSpeed" to scooterSpeed,
-            "onLine" to onLine, "heading" to heading
+            "onLine" to onLine, "heading" to heading, "prev" to prev
         )
     )
 

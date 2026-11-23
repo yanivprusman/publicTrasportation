@@ -79,8 +79,11 @@ class RoutingViewModel(
     private var riderFix: RiderFix? = null
     private var suggestionsWanted = false
     private val riderHeading = RiderHeading()
-    /** The plan on screen was made from a bus whose direction was not yet known. */
-    private var ridingSearchedWithoutHeading = false
+    /**
+     * The plan on screen was made before the phone knew which way the bus is going or
+     * where it came from — the two things that tell the line's directions apart.
+     */
+    private var ridingSearchedBlind = false
 
     /**
      * The latest fix while the rider is choosing a line or riding one. A bus moves a
@@ -95,8 +98,11 @@ class RoutingViewModel(
         // Without a direction the server may have planned from the line's other
         // direction — the plan that said "get off the 73 now". Plan again once known.
         val s = _state.value
-        if (heading != null && ridingSearchedWithoutHeading && s.ridingLine != null && !s.loading) {
-            ridingSearchedWithoutHeading = false
+        val nowMs = Clock.System.now().toEpochMilliseconds()
+        if (ridingSearchedBlind && heading != null && riderHeading.earlierFix(nowMs) != null &&
+            s.ridingLine != null && !s.loading
+        ) {
+            ridingSearchedBlind = false
             search()
         }
     }
@@ -761,11 +767,13 @@ class RoutingViewModel(
                 val raw = if (riding != null) {
                     // startRiding refuses to start without a fix, and one is never taken back.
                     val fix = checkNotNull(riderFix) { "Riding without a GPS fix" }
-                    ridingSearchedWithoutHeading = fix.heading == null
+                    val earlier = riderHeading.earlierFix(Clock.System.now().toEpochMilliseconds())
+                    ridingSearchedBlind = fix.heading == null || earlier == null
                     api.searchRoute(
                         from = "${fix.lat},${fix.lon}", to = to,
                         modes = modes, maxWalk = s.walkCapForQuery, scooter = s.scooter, maxRide = s.rideCapForQuery, scooterSpeed = s.scooterSpeedForQuery,
-                        onLine = riding, heading = fix.heading
+                        onLine = riding, heading = fix.heading,
+                        prev = earlier?.let { "${it.lat},${it.lon},${it.ageSeconds}" }
                     )
                 } else {
                     api.searchRoute(

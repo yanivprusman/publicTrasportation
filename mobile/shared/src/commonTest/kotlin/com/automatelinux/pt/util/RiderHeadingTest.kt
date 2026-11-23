@@ -46,4 +46,24 @@ class RiderHeadingTest {
         h.update(32.0600, 34.7640, 10, 0)
         assertNull(h.update(32.0530, 34.7653, null, 10 * 60_000))
     }
+
+    @Test
+    fun earlierFixIsTheLatestOneFarEnoughBack() {
+        val h = RiderHeading()
+        h.update(32.0621, 34.7612, null, 0)          // Kaufmann
+        h.update(32.0560, 34.7640, null, 240_000)    // ~720 m on
+        h.update(32.0545, 34.7648, null, 420_000)    // ~180 m on
+        h.update(32.0531, 34.7654, null, 540_000)
+        val e = h.earlierFix(540_000)!!
+        assertEquals(32.0560, e.lat)
+        assertEquals(300, e.ageSeconds)
+    }
+
+    @Test
+    fun noEarlierFixWhileStillAtTheStop() {
+        val h = RiderHeading()
+        h.update(32.05300, 34.76530, null, 0)
+        h.update(32.05310, 34.76540, null, 60_000)
+        assertNull(h.earlierFix(60_000))
+    }
 }

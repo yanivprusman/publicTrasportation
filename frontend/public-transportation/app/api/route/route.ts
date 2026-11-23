@@ -5,7 +5,7 @@ import { tripWheelchairAccess } from '@/lib/gtfs-trips';
 import { stopIdentity } from '@/lib/gtfs-stops';
 import { rideFare } from '@/lib/gtfs-fares';
 import { journeyFare, PricedRide } from '@/lib/journey-fare';
-import { NotOnLineError, planFromOnboard, rideAhead } from '@/lib/onboard';
+import { NotOnLineError, planFromOnboard, rideAhead, type EarlierFix } from '@/lib/onboard';
 import { expandScooterHops } from '@/lib/scooter-hops';
 import { expandEarlierDepartures, LineItinerary } from '@/lib/earlier-departures';
 import { MotisStep, streetStretches } from '@/lib/street-names';
@@ -461,6 +461,9 @@ export async function GET(request: NextRequest) {
   // The rider is on this line now; `from` is where the bus is. See lib/onboard.ts.
   const onLine = searchParams.get('onLine')?.trim() || null;
   const headingParam = searchParams.get('heading');
+  // "lat,lon,ageSeconds": where the rider on board was a few minutes ago. Tells a
+  // line's two directions apart where they share streets (see provenByEarlierFix).
+  const prevParam = searchParams.get('prev');
   // The rider has an e-scooter that travels with them — see scooterPlanParams.
   const scooter = parseScooterParam(searchParams.get('scooter'));
   if (scooter === null) {
@@ -577,12 +580,23 @@ export async function GET(request: NextRequest) {
         );
       }
     }
+    let prev: EarlierFix | null = null;
+    if (prevParam !== null) {
+      const [pLat, pLon, ageS] = prevParam.split(',').map(Number);
+      if (![pLat, pLon, ageS].every(Number.isFinite) || ageS < 0 || ageS > 15 * 60) {
+        return NextResponse.json(
+          { error: 'Invalid prev parameter. Expected lat,lon,ageSeconds with age up to 900.' },
+          { status: 400 }
+        );
+      }
+      prev = { lat: pLat, lon: pLon, atMs: Date.now() - ageS * 1000 };
+    }
     await ensureMotis();
     try {
       if (!to) {
         // Nowhere chosen yet: the whole trip the rider is on, first stop to last.
         const { itinerary, riding } = await rideAhead({
-          line: onLine, lat: fromLat, lon: fromLon, heading, nowMs: Date.now(),
+          line: onLine, lat: fromLat, lon: fromLon, heading, prev, nowMs: Date.now(),
         });
         return NextResponse.json({ itineraries: [transformItinerary(itinerary as MotisItinerary, scooter)], riding });
       }
@@ -591,6 +605,7 @@ export async function GET(request: NextRequest) {
         lat: fromLat,
         lon: fromLon,
         heading,
+        prev,
         nowMs: Date.now(),
         planFrom: async (lat, lon, timeIso) => {
           const params = new URLSearchParams({
