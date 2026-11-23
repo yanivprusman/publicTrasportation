@@ -249,6 +249,16 @@ class JourneyEngineTest {
     }
 
     @Test
+    fun `rough fixes on a late bus do not let the timetable end the ride`() {
+        val aboard = JourneyCursor(legIndex = 1, stopIndex = 1, boardedLegs = setOf(1))
+        val wellPast = t0 + 60 * 60_000L
+        val rough = GeoFix(lat = at(2), lon = lon, accuracyMeters = 400.0, atMs = wellPast)
+        val update = stepJourney(trip, aboard, rough, wellPast, gps = GpsState.ON)
+        assertEquals(1, update.cursor.legIndex)
+        assertEquals(JourneyPhase.RIDING, update.progress.phase)
+    }
+
+    @Test
     fun `with GPS on, the clock alone never puts the rider on board`() {
         val now = t0 + 14 * 60_000L
         val stale = GeoFix(lat = at(1), lon = lon, accuracyMeters = 8.0, atMs = now - 5 * 60_000L)

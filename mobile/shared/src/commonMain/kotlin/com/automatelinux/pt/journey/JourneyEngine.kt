@@ -390,10 +390,13 @@ fun stepJourney(
     gps: GpsState = GpsState.OFF
 ): JourneyUpdate {
     val legs = itinerary.legs
-    val usable = fix?.takeIf {
-        nowMs - it.atMs <= FIX_STALE_MS &&
-            (it.accuracyMeters == null || it.accuracyMeters <= MAX_FIX_ACCURACY_METERS)
-    }
+    val fresh = fix?.takeIf { nowMs - it.atMs <= FIX_STALE_MS }
+    val usable = fresh?.takeIf { it.accuracyMeters == null || it.accuracyMeters <= MAX_FIX_ACCURACY_METERS }
+    // A fresh but rough fix is not precise enough to call a stop, yet it proves the phone
+    // is still being located — so it must not hand the leg to the clock either. Treating
+    // it as no fix at all let the timetable end a late bus ride with the rider 8 stops
+    // short (owner, 2026-11-23, 09:41 → "Walk to …" at 09:47).
+    val roughFresh = fresh != null && usable == null
     val alerts = mutableListOf<JourneyAlert>()
     var c = cursor
 
@@ -411,7 +414,7 @@ fun stepJourney(
     while (!c.arrived && c.legIndex <= legs.lastIndex) {
         val leg = legs[c.legIndex]
         if (leg.isRide) c = c.copy(stopIndex = advanceStops(leg, c.stopIndex, usable))
-        if (!legComplete(leg, c.legIndex == legs.lastIndex, c, usable, nowMs, gps)) break
+        if (!legComplete(leg, c.legIndex == legs.lastIndex, c, usable, roughFresh, nowMs, gps)) break
         c = if (c.legIndex == legs.lastIndex) {
             c.copy(legIndex = legs.size, stopIndex = 0, arrived = true)
         } else {
@@ -574,6 +577,7 @@ private fun legComplete(
     isLastLeg: Boolean,
     cursor: JourneyCursor,
     fix: GeoFix?,
+    roughFresh: Boolean,
     nowMs: Long,
     gps: GpsState
 ): Boolean {
@@ -585,6 +589,7 @@ private fun legComplete(
         // starts lying.
         return false
     }
+    if (roughFresh) return false
     when (gps) {
         GpsState.OFF -> Unit
         GpsState.AWAITING_FIRST_FIX -> return false
