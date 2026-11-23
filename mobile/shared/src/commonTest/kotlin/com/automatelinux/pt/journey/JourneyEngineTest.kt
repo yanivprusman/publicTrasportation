@@ -199,6 +199,16 @@ class JourneyEngineTest {
     }
 
     @Test
+    fun `a late bus the feed sees coming counts down to its live arrival, not the timetable`() {
+        val now = t0 + 14 * 60_000L
+        val live = now + 4 * 60_000L
+        val update = stepJourney(trip, JourneyCursor(legIndex = 1), fixAt(1, 14), now,
+            liveBoardingArrivalMs = live, gps = GpsState.ON)
+        assertEquals(JourneyPhase.WAITING, update.progress.phase)
+        assertEquals(240L, update.progress.secondsToDeparture)
+    }
+
+    @Test
     fun `with GPS on, the clock alone never puts the rider on board`() {
         val now = t0 + 14 * 60_000L
         val stale = GeoFix(lat = at(1), lon = lon, accuracyMeters = 8.0, atMs = now - 5 * 60_000L)

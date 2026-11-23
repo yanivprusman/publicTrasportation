@@ -445,7 +445,11 @@ fun stepJourney(
             targetName = leg.to.name.ifBlank { null },
             metersToTarget = metersToTarget,
             secondsToTarget = legEndMs?.let { (it - nowMs) / 1000 },
-            secondsToDeparture = waitingUntilMs?.let { (it - nowMs) / 1000 },
+            // The countdown is to the bus the feed actually sees coming, when it sees one:
+            // past a late bus's timetabled minute the timetable has nothing left to count,
+            // and "Board 14 now" with the bus still minutes away sends the rider into the
+            // road for nothing (owner, 2026-11-23, 09:15 for a 09:09 bus).
+            secondsToDeparture = waitingUntilMs?.let { ((liveBoardingArrivalMs ?: it) - nowMs) / 1000 },
             alightImminent = alightImminent,
             positionKnown = usable != null
         ),
