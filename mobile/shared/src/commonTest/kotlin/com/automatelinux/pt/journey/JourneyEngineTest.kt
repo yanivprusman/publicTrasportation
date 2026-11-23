@@ -190,6 +190,44 @@ class JourneyEngineTest {
     }
 
     @Test
+    fun `waiting near the pole but outside the stop radius after departure is still waiting`() {
+        // Owner, 2026-11-23: a few dozen metres off the pole, live feed gone, 14 late —
+        // and the app said "18 stops to go". ~180 m north of the pole, not yet at the next.
+        val nearby = GeoFix(lat = at(1) + 0.0016, lon = lon, accuracyMeters = 20.0, atMs = t0 + 14 * 60_000L)
+        val update = stepJourney(trip, JourneyCursor(legIndex = 1), nearby, t0 + 14 * 60_000L, gps = GpsState.ON)
+        assertEquals(JourneyPhase.WAITING, update.progress.phase)
+    }
+
+    @Test
+    fun `with GPS on, the clock alone never puts the rider on board`() {
+        val now = t0 + 14 * 60_000L
+        val stale = GeoFix(lat = at(1), lon = lon, accuracyMeters = 8.0, atMs = now - 5 * 60_000L)
+        val blind = stepJourney(trip, JourneyCursor(legIndex = 1), stale, now, gps = GpsState.ON)
+        assertEquals(JourneyPhase.WAITING, blind.progress.phase)
+        val first = stepJourney(trip, JourneyCursor(legIndex = 1), null, now, gps = GpsState.AWAITING_FIRST_FIX)
+        assertEquals(JourneyPhase.WAITING, first.progress.phase)
+        // With location off nothing else can ever decide, so the clock still does.
+        val off = stepJourney(trip, JourneyCursor(legIndex = 1), null, now, gps = GpsState.OFF)
+        assertEquals(JourneyPhase.RIDING, off.progress.phase)
+    }
+
+    @Test
+    fun `a rider wrongly shown riding gets the waiting screen back on the next fix at the pole`() {
+        val now = t0 + 14 * 60_000L
+        val wrong = stepJourney(trip, JourneyCursor(legIndex = 1), null, now, gps = GpsState.OFF)
+        assertEquals(JourneyPhase.RIDING, wrong.progress.phase)
+        val back = stepJourney(trip, wrong.cursor, fixAt(1, 14), now, gps = GpsState.ON)
+        assertEquals(JourneyPhase.WAITING, back.progress.phase)
+    }
+
+    @Test
+    fun `leaving the pole after departure with GPS on is boarding`() {
+        val between = GeoFix(lat = (at(1) + at(2)) / 2, lon = lon, accuracyMeters = 8.0, atMs = t0 + 12 * 60_000L)
+        val update = stepJourney(trip, JourneyCursor(legIndex = 1), between, t0 + 12 * 60_000L, gps = GpsState.ON)
+        assertEquals(JourneyPhase.RIDING, update.progress.phase)
+    }
+
+    @Test
     fun `without a fix a bus the feed still has on its way keeps the rider waiting`() {
         val late = t0 + 15 * 60_000L
         val waiting = stepJourney(trip, JourneyCursor(legIndex = 1), null, t0 + 12 * 60_000L, liveBoardingArrivalMs = late)

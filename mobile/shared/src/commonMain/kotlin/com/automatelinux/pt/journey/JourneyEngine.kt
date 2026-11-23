@@ -151,6 +151,16 @@ const val STOP_HIT_METERS = 120.0
 /** Close enough to the end of a leg to call the leg done. */
 const val LEG_END_METERS = 70.0
 
+/**
+ * How far from the boarding pole a fix must be, after the departure, before the rider
+ * counts as on board. Wider than [STOP_HIT_METERS] on purpose: that radius says "at this
+ * stop" for a passing bus, but a rider waiting in a shelter, a shop doorway or across the
+ * road, with an indoor fix wandering by tens of metres, must not be put on a bus they are
+ * still waiting for. A bus that has really left is past this within a minute, and the
+ * next pole it reaches advances the cursor on its own.
+ */
+const val BOARDED_METERS = 250.0
+
 /** Warn this far out even when the stop count is unknown (no intermediate stops). */
 const val ALIGHT_WARN_METERS = 500.0
 
@@ -366,11 +376,22 @@ fun stepJourney(
     // is evidence: the bus has left the pole — on the timetable AND on the live feed —
     // and no fix still puts the rider at that pole. A later stop already called at
     // (stopIndex > 0) settles it outright.
+    //
+    // Past the departure, with location on, only a position puts the rider on board:
+    // a fresh fix beyond BOARDED_METERS of the pole (or a later stop called at). No
+    // fresh fix — first one not in yet, or the phone stopped reporting while the rider
+    // stood still — is no evidence of boarding. The owner, 2026-11-23, waiting for a
+    // late 14 a few dozen metres from the pole with the live feed gone: the clock and
+    // a fix just past STOP_HIT_METERS said "18 stops to go". Only with location off
+    // does the clock alone decide, because then nothing else ever can.
     val waitingUntilMs = legStartMs?.takeIf {
         leg.isRide && c.stopIndex == 0 && (
             nowMs < max(it, liveBoardingArrivalMs ?: it) ||
-                (usable != null &&
-                    haversineMeters(usable.lat, usable.lon, leg.from.lat, leg.from.lon) <= STOP_HIT_METERS)
+                when {
+                    usable != null ->
+                        haversineMeters(usable.lat, usable.lon, leg.from.lat, leg.from.lon) <= BOARDED_METERS
+                    else -> gps != GpsState.OFF
+                }
             )
     }
     val waiting = waitingUntilMs != null
