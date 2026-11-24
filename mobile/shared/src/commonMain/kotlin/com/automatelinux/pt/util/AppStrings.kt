@@ -300,6 +300,11 @@ interface AppStrings {
     val timetable: String
     val commonLines: String
     val saveAs: String
+    /** Chip + dialog title: give a destination a name kept on this phone only. */
+    val nameThisPlace: String
+    val placeNameHint: String
+    val placeNameOnlyOnPhone: String
+    val forgetPlaceName: String
     val savedRoutes: String
     val saveRoute: String
     val unsaveRoute: String
@@ -764,6 +769,10 @@ val EnStrings: AppStrings = object : AppStrings {
     override val timetable: String = "Timetable"
     override val commonLines: String = "Common Lines"
     override val saveAs: String = "Save as"
+    override val nameThisPlace: String = "Name this place"
+    override val placeNameHint: String = "e.g. Grandma's"
+    override val placeNameOnlyOnPhone: String = "Saved only on this phone"
+    override val forgetPlaceName: String = "Forget name"
     override val savedRoutes: String = "Saved routes"
     override val saveRoute: String = "Save route"
     override val unsaveRoute: String = "Remove from saved routes"
@@ -1210,6 +1219,10 @@ val HeStrings: AppStrings = object : AppStrings {
     override val timetable: String = "לוח זמנים"
     override val commonLines: String = "קווים נפוצים"
     override val saveAs: String = "שמור בתור"
+    override val nameThisPlace: String = "תן שם למקום"
+    override val placeNameHint: String = "למשל: אצל סבתא"
+    override val placeNameOnlyOnPhone: String = "נשמר רק בטלפון הזה"
+    override val forgetPlaceName: String = "מחק את השם"
     override val savedRoutes: String = "מסלולים שמורים"
     override val saveRoute: String = "שמור מסלול"
     override val unsaveRoute: String = "הסר מהמסלולים השמורים"

@@ -4,6 +4,7 @@ import android.content.Context
 import com.russhwolf.settings.Settings
 import com.russhwolf.settings.SharedPreferencesSettings
 import org.koin.android.ext.koin.androidContext
+import org.koin.core.qualifier.named
 import org.koin.dsl.module
 
 /**
@@ -17,4 +18,15 @@ val androidPlatformModule = module {
             androidContext().getSharedPreferences("pt_settings", Context.MODE_PRIVATE)
         )
     }
+    // Excluded from cloud backup and device transfer (res/xml/backup_rules.xml,
+    // data_extraction_rules.xml): what is in here stays on this phone.
+    single<Settings>(named(LOCAL_ONLY_SETTINGS)) {
+        SharedPreferencesSettings(
+            androidContext().getSharedPreferences(LOCAL_ONLY_PREFS_FILE, Context.MODE_PRIVATE)
+        )
+    }
 }
+
+/** Must match the file name excluded in res/xml/backup_rules.xml and data_extraction_rules.xml. */
+const val LOCAL_ONLY_PREFS_FILE = "pt_local_only"
+

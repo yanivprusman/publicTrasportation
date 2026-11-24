@@ -17,6 +17,8 @@ object TripLink {
         /** null = "from wherever I am when I tap it": the link carried no `from`. */
         val origin: GeocodeSuggestion?,
         val destination: GeocodeSuggestion,
+        /** false = the link only had coordinates; [destination]'s name is those numbers. */
+        val destinationNamed: Boolean,
         val departureTime: Instant?,
         val arriveBy: Boolean
     )
@@ -63,6 +65,7 @@ object TripLink {
                     lat = pin.lat,
                     lon = pin.lon
                 ),
+                destinationNamed = pin.label != null,
                 departureTime = null,
                 arriveBy = false
             )
@@ -79,8 +82,8 @@ object TripLink {
                 ?: formatCoords(it.first, it.second)
             GeocodeSuggestion(name = name, lat = it.first, lon = it.second)
         }
-        val destinationName = uri.getQueryParameter("toName")?.trim().takeUnless { it.isNullOrEmpty() }
-            ?: formatCoords(to.first, to.second)
+        val toName = uri.getQueryParameter("toName")?.trim().takeUnless { it.isNullOrEmpty() }
+        val destinationName = toName ?: formatCoords(to.first, to.second)
 
         // An unparseable time can only be read as "leave now" — same rule as the web app.
         val departureTime = uri.getQueryParameter("time")?.let {
@@ -90,6 +93,7 @@ object TripLink {
         return SharedTrip(
             origin = origin,
             destination = GeocodeSuggestion(name = destinationName, lat = to.first, lon = to.second),
+            destinationNamed = toName != null,
             departureTime = departureTime,
             arriveBy = uri.getQueryParameter("arriveBy") == "1"
         )

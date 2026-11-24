@@ -35,6 +35,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.DirectionsBus
@@ -206,6 +207,7 @@ fun MainScreen(
     var sheetOpacity by remember { mutableFloatStateOf(settingsStore.sheetOpacity) }
     var cardOpacity by remember { mutableFloatStateOf(settingsStore.cardOpacity) }
 
+    var namePlaceOpen by remember { mutableStateOf(false) }
     var savePlaceTarget by remember { mutableStateOf<com.automatelinux.pt.data.model.GeocodeSuggestion?>(null) }
     var showSetHomeDialog by remember { mutableStateOf(false) }
     var recentSearchesVersion by remember { mutableIntStateOf(0) }
@@ -307,6 +309,10 @@ fun MainScreen(
             }
             settingsStore.workPlace?.let {
                 add(PreSuggestion(it, Icons.Default.Work, strings.work))
+            }
+            // Places the rider named on this phone, before the history.
+            routingViewModel.localPlaces().forEach {
+                add(PreSuggestion(it, Icons.Default.Bookmark))
             }
             settingsStore.getRecentSearches().forEach {
                 add(PreSuggestion(it, Icons.Default.History))
@@ -911,15 +917,23 @@ fun MainScreen(
             // and that search must already carry the shared trip's departure time.
             routingViewModel.setDepartureTime(sharedTrip.departureTime)
             routingViewModel.setArriveBy(sharedTrip.arriveBy)
+            // Through *FromCoords so a name the rider gave this spot on this phone
+            // wins, and a bare-coordinates pin is looked up as a street instead.
+            val d = sharedTrip.destination
+            val setSharedDestination = {
+                routingViewModel.setDestinationFromCoords(
+                    d.lat, d.lon, name = if (sharedTrip.destinationNamed) d.name else null
+                )
+            }
             if (sharedTrip.origin != null) {
                 routingViewModel.setOrigin(sharedTrip.origin)
-                routingViewModel.setDestination(sharedTrip.destination)
+                setSharedDestination()
             } else {
                 // A link with no origin starts from where the rider stands right now.
                 // Drop whatever origin the app already held first, so the destination
                 // does not search from a stale place before the GPS fix lands.
                 routingViewModel.setOrigin(null)
-                routingViewModel.setDestination(sharedTrip.destination)
+                setSharedDestination()
                 onGpsClick()
             }
             bottomSheetState.expand()
@@ -1197,6 +1211,7 @@ fun MainScreen(
                                         }
                                     },
                                     onSavePlace = { savePlaceTarget = it },
+                                    onNameDestination = { namePlaceOpen = true },
                                     onSetHome = { showSetHomeDialog = true },
                                     favoriteRoutes = favoriteRoutes,
                                     onPickFavoriteRoute = { route ->
@@ -2506,6 +2521,23 @@ fun MainScreen(
                     routingViewModel.startRiding(line, strings.onBusLabel(line))
                 },
                 onDismiss = { ridingDialogOpen = false }
+            )
+        }
+
+        if (namePlaceOpen) {
+            NamePlaceDialog(
+                currentName = routingViewModel.destinationLocalName(),
+                onSave = {
+                    routingViewModel.nameDestination(it)
+                    recentSearchesVersion++
+                    namePlaceOpen = false
+                },
+                onForget = {
+                    routingViewModel.nameDestination("")
+                    recentSearchesVersion++
+                    namePlaceOpen = false
+                },
+                onDismiss = { namePlaceOpen = false }
             )
         }
 

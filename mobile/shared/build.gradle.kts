@@ -66,6 +66,7 @@ kotlin {
         // cannot be checked by hand on a bus, so it is checked here.
         commonTest.dependencies {
             implementation(kotlin("test"))
+            implementation(libs.multiplatform.settings.test)
         }
     }
 }

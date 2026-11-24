@@ -78,6 +78,7 @@ koin-compose-viewmodel = { group = "io.insert-koin", name = "koin-compose-viewmo
 jb-lifecycle-viewmodel = { group = "org.jetbrains.androidx.lifecycle", name = "lifecycle-viewmodel", version.ref = "jb-lifecycle" }
 jb-lifecycle-viewmodel-compose = { group = "org.jetbrains.androidx.lifecycle", name = "lifecycle-viewmodel-compose", version.ref = "jb-lifecycle" }
 multiplatform-settings = { group = "com.russhwolf", name = "multiplatform-settings", version.ref = "multiplatform-settings" }
+multiplatform-settings-test = { group = "com.russhwolf", name = "multiplatform-settings-test", version.ref = "multiplatform-settings" }
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
 okhttp-logging = { group = "com.squareup.okhttp3", name = "logging-interceptor", version.ref = "okhttp" }
 

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 11 and below. Names the rider gave places stay on this phone. -->
+<full-backup-content>
+    <exclude domain="sharedpref" path="pt_local_only.xml" />
+</full-backup-content>

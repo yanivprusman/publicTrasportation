@@ -13,6 +13,7 @@ import com.automatelinux.pt.data.model.VehicleMarker
 import com.automatelinux.pt.data.model.WheelchairAccess
 import com.automatelinux.pt.data.model.extractVehicleMarkers
 import com.automatelinux.pt.util.RiderHeading
+import com.automatelinux.pt.util.LocalPlaces
 import com.automatelinux.pt.util.SettingsStore
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -37,7 +38,8 @@ import kotlin.time.Duration.Companion.minutes
 
 class RoutingViewModel(
     private val api: PtApi,
-    private val settingsStore: SettingsStore
+    private val settingsStore: SettingsStore,
+    private val localPlaces: LocalPlaces
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(RoutingState(
@@ -498,9 +500,11 @@ class RoutingViewModel(
         placeholder: String = MAP_LOCATION_LABEL,
         isCurrentLocation: Boolean = false
     ) {
-        val displayName = name ?: placeholder
+        // The rider's own name for this spot beats both the caller's and the street's.
+        val local = if (isCurrentLocation) null else localPlaces.nameAt(lat, lon)
+        val displayName = local ?: name ?: placeholder
         applyOrigin(GeocodeSuggestion(name = displayName, lat = lat, lon = lon), isCurrentLocation)
-        if (name == null) resolveAddress(lat, lon) { applyOrigin(it, isCurrentLocation) }
+        if (local == null && name == null) resolveAddress(lat, lon) { applyOrigin(it, isCurrentLocation) }
     }
 
     fun setDestinationFromCoords(
@@ -510,9 +514,38 @@ class RoutingViewModel(
         placeholder: String = MAP_LOCATION_LABEL,
         isCurrentLocation: Boolean = false
     ) {
-        val displayName = name ?: placeholder
+        val local = if (isCurrentLocation) null else localPlaces.nameAt(lat, lon)
+        val displayName = local ?: name ?: placeholder
         applyDestination(GeocodeSuggestion(name = displayName, lat = lat, lon = lon), isCurrentLocation)
-        if (name == null) resolveAddress(lat, lon) { applyDestination(it, isCurrentLocation) }
+        if (local == null && name == null) resolveAddress(lat, lon) { applyDestination(it, isCurrentLocation) }
+    }
+
+    /**
+     * Gives the current destination a name kept on this phone only ([LocalPlaces]);
+     * the same spot arriving again — a WhatsApp pin, a map tap — shows that name.
+     * A blank name forgets the one it had.
+     */
+    fun nameDestination(name: String) {
+        val d = _state.value.destination ?: return
+        if (name.isBlank()) {
+            localPlaces.remove(d.lat, d.lon)
+            _state.value = _state.value.copy(destination = d.copy(name = formatCoordsLabel(d.lat, d.lon)))
+            resolveAddress(d.lat, d.lon) { applyDestination(it, false) }
+        } else {
+            localPlaces.save(name, d.lat, d.lon)
+            _state.value = _state.value.copy(destination = d.copy(name = name.trim()))
+        }
+    }
+
+    /** The rider's own name for the current destination, if it has one. */
+    fun destinationLocalName(): String? =
+        _state.value.destination?.let { localPlaces.nameAt(it.lat, it.lon) }
+
+    fun localPlaces(): List<GeocodeSuggestion> = localPlaces.all()
+
+    private fun formatCoordsLabel(lat: Double, lon: Double): String {
+        fun f(v: Double) = ((v * 100000).toLong() / 100000.0).toString()
+        return "${f(lat)},${f(lon)}"
     }
 
     private fun resolveAddress(lat: Double, lon: Double, apply: (GeocodeSuggestion) -> Unit) {

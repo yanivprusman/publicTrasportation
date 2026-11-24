@@ -120,6 +120,8 @@ fun RoutePlannerPanel(
     onQuickRoute: ((GeocodeSuggestion, GeocodeSuggestion) -> Unit)? = null,
     onQuickDestination: ((GeocodeSuggestion) -> Unit)? = null,
     onSavePlace: ((GeocodeSuggestion) -> Unit)? = null,
+    /** "Name this place": a name for the destination kept on this phone only. */
+    onNameDestination: (() -> Unit)? = null,
     onSetHome: (() -> Unit)? = null,
     /** Starred From→To pairs; tapping one fills both ends and searches. */
     favoriteRoutes: List<FavoriteRoute> = emptyList(),
@@ -332,18 +334,28 @@ fun RoutePlannerPanel(
                     )
                 }
             }
-        } else if (destination != null && onSavePlace != null &&
-            homePlace == null && workPlace == null &&
-            state.results == null && !state.loading
-        ) {
+        } else if (destination != null && state.results == null && !state.loading) {
             // Bootstrap: without a saved place the quick chips can never appear,
             // and the only other way to save one is a long-press on a suggestion.
-            Row {
-                QuickDestinationChip(
-                    label = strings.saveAs,
-                    icon = Icons.Default.BookmarkAdd,
-                    onClick = { onSavePlace(destination) }
-                )
+            val showSaveAs = onSavePlace != null && homePlace == null && workPlace == null
+            val showName = onNameDestination != null && !state.destinationIsCurrentLocation
+            if (showSaveAs || showName) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (showSaveAs) {
+                        QuickDestinationChip(
+                            label = strings.saveAs,
+                            icon = Icons.Default.BookmarkAdd,
+                            onClick = { onSavePlace?.invoke(destination) }
+                        )
+                    }
+                    if (showName) {
+                        QuickDestinationChip(
+                            label = strings.nameThisPlace,
+                            icon = Icons.Default.Edit,
+                            onClick = { onNameDestination?.invoke() }
+                        )
+                    }
+                }
             }
         }
 
