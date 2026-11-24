@@ -204,7 +204,7 @@ class JourneyLiveTest {
             JourneyAlert.BUS_EARLY, null, EnStrings, itinerary = trip2, live = info
         )!!
         assertEquals("64 is ${EnStrings.formatDuration(4 * 60)} early", title)
-        assertTrue(body.startsWith("Reaches stop A at "), body)
+        assertTrue(body.startsWith("Reaches ${isolated("stop A")} at "), body)
     }
 
     @Test

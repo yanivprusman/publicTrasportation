@@ -39,16 +39,16 @@ object JourneyText {
             // sentence. Putting "your destination" through the {place} slot is how
             // you get "Walk to Walk to your destination".
             JourneyPhase.WALKING -> if (p.leg?.mode == TransitMode.SCOOTER) {
-                p.targetName?.let { strings.journeyRideTo(it) } ?: strings.journeyRideToDest
+                p.targetName?.let { strings.journeyRideTo(isolated(it)) } ?: strings.journeyRideToDest
             } else {
-                p.targetName?.let { strings.journeyWalkTo(it) } ?: strings.journeyWalkToDest
+                p.targetName?.let { strings.journeyWalkTo(isolated(it)) } ?: strings.journeyWalkToDest
             }
         }
     }
 
     /** "You've arrived at <place>" — the bare "You've arrived!" only when the end has no name. */
     private fun arrivedLine(p: JourneyProgress?, strings: AppStrings): String =
-        p?.targetName?.let { strings.journeyArrivedAt(it) } ?: strings.journeyYouArrived
+        p?.targetName?.let { strings.journeyArrivedAt(isolated(it)) } ?: strings.journeyYouArrived
 
     /**
      * The line under it: where this leg ends, and when.
@@ -66,15 +66,15 @@ object JourneyText {
                 // The alight time rides with the stop name rather than trailing the
                 // line, so the one number here cannot be read as belonging to the
                 // next stop mentioned after it.
-                p.targetName?.let { add("${strings.journeyGetOffAt} $it${legEndAt(p, strings)}") }
+                p.targetName?.let { add("${strings.journeyGetOffAt} ${isolated(it)}${legEndAt(p, strings)}") }
                 p.nextStopName?.takeIf { !p.alightImminent }
-                    ?.let { add("${strings.journeyNextStop} $it") }
+                    ?.let { add("${strings.journeyNextStop} ${isolated(it)}") }
             }.joinToString(" · ").ifBlank { null }
             // The pole's printed code rides along — it is how a rider standing
             // between two stops confirms which one the app means, and what every
             // other app shows for the same reason.
             JourneyPhase.WAITING -> p.leg?.from?.name?.takeIf { it.isNotBlank() }
-                ?.let { "${strings.journeyBoardAt} $it${legStartAt(p, strings)}${rideLength(p, strings)}${stopCodeAt(p, strings)}" }
+                ?.let { "${strings.journeyBoardAt} ${isolated(it)}${legStartAt(p, strings)}${rideLength(p, strings)}${stopCodeAt(p, strings)}" }
             JourneyPhase.WALKING -> buildList {
                 walkDistance(p, strings)?.let { add(it) }
                 walkTiming(p, strings)?.let { add(it) }
@@ -221,11 +221,11 @@ object JourneyText {
         live: JourneyLiveInfo? = null
     ): Pair<String, String>? = when (alert) {
         JourneyAlert.PREPARE_TO_ALIGHT -> strings.journeyGetOffNext to
-            (progress?.targetName?.let { "${strings.journeyGetOffAt} $it" } ?: strings.journeyLabel)
+            (progress?.targetName?.let { "${strings.journeyGetOffAt} ${isolated(it)}" } ?: strings.journeyLabel)
         JourneyAlert.BOARD_NOW -> {
             val line = progress?.leg?.let { rideName(it.routeShortName, it.mode, strings) }
             strings.journeyBoardNow(line ?: "") to
-                (progress?.leg?.from?.name?.let { "${strings.journeyBoardAt} $it" } ?: strings.journeyLabel)
+                (progress?.leg?.from?.name?.let { "${strings.journeyBoardAt} ${isolated(it)}" } ?: strings.journeyLabel)
         }
         JourneyAlert.ARRIVED -> arrivedLine(progress, strings) to strings.journeyLabel
         JourneyAlert.BUS_EARLY -> busEarlyText(itinerary, live, strings)
@@ -258,7 +258,7 @@ object JourneyText {
             strings.journeyEarlierBus(line, by)
         }
         val liveAt = formatTime(Instant.fromEpochMilliseconds(info.arrivalMs).toString())
-        return title to strings.journeyBusEarlyAt(ride.from.name, liveAt, formatTime(ride.startTime))
+        return title to strings.journeyBusEarlyAt(isolated(ride.from.name), liveAt, formatTime(ride.startTime))
     }
 
     /** "64", or the mode's name when the service has no short name worth printing. */
@@ -273,3 +273,15 @@ object JourneyText {
                 else -> strings.journeyUpNext
             }
 }
+
+/**
+ * A place name wrapped in Unicode isolates (FSI … PDI), so its direction stays its own.
+ *
+ * Without them a Hebrew stop name inside an English line swallows the numbers after
+ * it (UAX#9: a number takes the direction of the nearest strong letter before it), and
+ * the line rendered as "Board at 12 · 18:21 · לונדון מיניסטור … stops to yours" — the
+ * count torn off its words and the time jumped in front of the name. An isolate is
+ * neutral in either paragraph direction, so the same string is right in Hebrew too.
+ */
+internal fun isolated(name: String): String = "\u2068$name\u2069"
+

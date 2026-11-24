@@ -73,7 +73,7 @@ class JourneyTextTest {
 
     @Test
     fun `a walk that ends somewhere real still names it`() {
-        assertEquals("Walk to stop A", headlineFor("stop A"))
+        assertEquals("Walk to ${isolated("stop A")}", headlineFor("stop A"))
     }
 
     /** Past the end of the walk with no fix: the schedule alone closes it. */
@@ -85,7 +85,7 @@ class JourneyTextTest {
 
     @Test
     fun `arriving names the place`() {
-        assertEquals("You've arrived at Dizengoff Center", arrivedHeadlineFor("Dizengoff Center"))
+        assertEquals("You've arrived at ${isolated("Dizengoff Center")}", arrivedHeadlineFor("Dizengoff Center"))
     }
 
     @Test
@@ -283,7 +283,7 @@ class JourneyTextTest {
             stepJourney(rideOnly(), JourneyCursor(), fix = null, nowMs = t0).progress,
             EnStrings
         )
-        assertEquals("Board at stop A · ${formatTime(iso(5))}", detail)
+        assertEquals("Board at ${isolated("stop A")} · ${formatTime(iso(5))}", detail)
     }
 
     @Test
@@ -301,7 +301,22 @@ class JourneyTextTest {
             stepJourney(withStops, JourneyCursor(), fix = null, nowMs = t0).progress,
             EnStrings
         )
-        assertEquals("Board at stop A · ${formatTime(iso(5))} · 3 stops to yours · stop 13868", detail)
+        assertEquals("Board at ${isolated("stop A")} · ${formatTime(iso(5))} · 3 stops to yours · stop 13868", detail)
+    }
+
+    @Test
+    fun `a Hebrew stop name cannot drag the numbers after it out of place`() {
+        // On 2026-11-24 "Board at לונדון מיניסטור · 18:21 · 12 stops to yours" rendered
+        // as "Board at 12 · 18:21 · לונדון מיניסטור stops to yours": the name's direction
+        // captured the numbers after it. Isolates close the name off on both sides.
+        val hebrew = rideOnly().let { trip ->
+            trip.copy(legs = trip.legs.map { it.copy(from = it.from.copy(name = "לונדון מיניסטור")) })
+        }
+        val detail = JourneyText.detail(
+            stepJourney(hebrew, JourneyCursor(), fix = null, nowMs = t0).progress,
+            EnStrings
+        )!!
+        assertTrue(detail.startsWith("Board at \u2068לונדון מיניסטור\u2069 · "), detail)
     }
 
     @Test
@@ -312,7 +327,7 @@ class JourneyTextTest {
             stepJourney(rideOnly(), JourneyCursor(), fix = null, nowMs = t0 + 10 * 60_000L).progress,
             EnStrings
         )
-        assertEquals("Get off at stop B · ${formatTime(iso(30))}", detail)
+        assertEquals("Get off at ${isolated("stop B")} · ${formatTime(iso(30))}", detail)
     }
 
     @Test
