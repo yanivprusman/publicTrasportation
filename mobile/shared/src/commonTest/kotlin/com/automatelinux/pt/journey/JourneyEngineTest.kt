@@ -119,6 +119,42 @@ class JourneyEngineTest {
     }
 
     @Test
+    fun `a late bus the clock ended is taken back by the first fix on its route`() {
+        // Owner, 2026-11-24: phone not locating while the 149 ran late; at 19:00 the
+        // panel said "Walk to ויצמן" with the bus still mid-route.
+        val stale = GeoFix(at(1), lon, 8.0, atMs = t0)
+        val skipped = stepJourney(trip, JourneyCursor(), stale, t0 + 33 * 60_000L, gps = GpsState.ON)
+        assertEquals(2, skipped.progress.legIndex)
+
+        val onBus = stepJourney(trip, skipped.cursor, fixAt(3, 34), t0 + 34 * 60_000L, gps = GpsState.ON)
+        assertEquals(1, onBus.progress.legIndex)
+        assertEquals(JourneyPhase.RIDING, onBus.progress.phase)
+        assertEquals(2, onBus.progress.stopsRemaining)
+
+        // And it carries on from there by position as usual.
+        val off = stepJourney(trip, onBus.cursor, fixAt(5, 38), t0 + 38 * 60_000L, gps = GpsState.ON)
+        assertEquals(2, off.progress.legIndex)
+    }
+
+    @Test
+    fun `a rider who did get off is not put back on the bus`() {
+        val stale = GeoFix(at(1), lon, 8.0, atMs = t0)
+        val skipped = stepJourney(trip, JourneyCursor(), stale, t0 + 33 * 60_000L, gps = GpsState.ON)
+        // Standing at the alighting stop: the walk is theirs.
+        val atStop = stepJourney(trip, skipped.cursor, fixAt(5, 34), t0 + 34 * 60_000L, gps = GpsState.ON)
+        assertEquals(2, atStop.progress.legIndex)
+    }
+
+    @Test
+    fun `a ride ended by a position is never reopened`() {
+        val off = stepJourney(trip, JourneyCursor(legIndex = 1, stopIndex = 3, boardedLegs = setOf(1)),
+            fixAt(5, 30), t0 + 30 * 60_000L, gps = GpsState.ON)
+        assertEquals(2, off.progress.legIndex)
+        val back = stepJourney(trip, off.cursor, fixAt(3, 31), t0 + 31 * 60_000L, gps = GpsState.ON)
+        assertEquals(2, back.progress.legIndex)
+    }
+
+    @Test
     fun `a stale fix is not a position`() {
         val stale = GeoFix(at(3), lon, 8.0, atMs = t0 - FIX_STALE_MS - 1)
         val update = stepJourney(trip, JourneyCursor(), stale, nowMs = t0)

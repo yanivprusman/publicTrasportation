@@ -62,8 +62,9 @@ enum class JourneyAlert {
 }
 
 /**
- * How far along the journey is. Monotonic by construction — a journey never walks
- * itself backwards because a GPS fix wobbled, so the cursor only ever moves forward.
+ * How far along the journey is. A GPS fix wobbling never walks it backwards: the only
+ * step back is out of a leg the timetable closed with no position behind it, onto the
+ * ride a real fix shows the rider is still on (see [reclaimClockClosedRide]).
  */
 @Serializable
 data class JourneyCursor(
@@ -83,6 +84,13 @@ data class JourneyCursor(
      * bus of the line otherwise kept them "waiting" on board (owner, 2026-11-23).
      */
     val boardedLegs: Set<Int> = emptySet(),
+    /**
+     * Legs ended by the timetable alone, with no position to say so. Such a close is a
+     * guess, and the first real fix may take it back: a late bus that outran its
+     * timetable while the phone was not locating put the rider on the final walk with
+     * the bus still eight stops from their stop (owner, 2026-11-24, the 149 at 19:00).
+     */
+    val clockClosed: Set<Int> = emptySet(),
     val arrived: Boolean = false
 )
 
@@ -415,6 +423,9 @@ fun stepJourney(
         )
     }
 
+    // A ride the clock ended is the one thing a fix may move the cursor back to.
+    c = reclaimClockClosedRide(legs, c, usable)
+
     // Walk the cursor forward as far as the evidence carries it. A single fix can
     // close more than one leg — a rider who looked at the phone again after twenty
     // minutes underground should land on the leg they are actually on.
@@ -432,6 +443,9 @@ fun stepJourney(
             c = c.copy(stopIndex = advanceStops(leg, c.stopIndex, usable, onBoard))
         }
         if (!legComplete(leg, c.legIndex == legs.lastIndex, c, usable, roughFresh, nowMs, gps)) break
+        // With a usable fix only a position can end a leg (legComplete), so no fix
+        // means the clock did it.
+        c = c.copy(clockClosed = if (usable == null) c.clockClosed + c.legIndex else c.clockClosed - c.legIndex)
         c = if (c.legIndex == legs.lastIndex) {
             c.copy(legIndex = legs.size, stopIndex = 0, arrived = true)
         } else {
@@ -636,6 +650,49 @@ private fun metersBetweenStops(fix: GeoFix, a: Place, b: Place): Double? {
     val dx = px - t * bx
     val dy = py - t * by
     return sqrt(dx * dx + dy * dy)
+}
+
+/**
+ * Undo a timetable guess the rider's position contradicts.
+ *
+ * Walks back from the current leg over legs the clock closed (and only those — a leg a
+ * position ended is settled), looking for a ride whose route the [fix] lies on. Found:
+ * the rider is still on it, so the cursor returns there, on board. A fix within
+ * [BOARDED_METERS] of the ride's own end is not counted: that is where a rider who
+ * did get off stands, and the walk from there is theirs.
+ *
+ * This is what keeps the clock's shortcut safe. Underground, or with the screen off,
+ * the timetable still moves the rider along; it just stops being the last word.
+ */
+private fun reclaimClockClosedRide(legs: List<RouteLeg>, cursor: JourneyCursor, fix: GeoFix?): JourneyCursor {
+    if (fix == null || cursor.clockClosed.isEmpty()) return cursor
+    var i = min(cursor.legIndex, legs.size) - 1
+    while (i >= 0 && i in cursor.clockClosed) {
+        val leg = legs[i]
+        if (leg.isRide && onRideRoute(leg, fix)) {
+            val back = cursor.copy(
+                legIndex = i,
+                stopIndex = 0,
+                boardedLegs = cursor.boardedLegs + i,
+                clockClosed = cursor.clockClosed.filter { it < i }.toSet(),
+                arrived = false
+            )
+            return back.copy(stopIndex = advanceStops(leg, 0, fix, onBoard = true))
+        }
+        i--
+    }
+    return cursor
+}
+
+/** [fix] is on [ride]'s path (at a stop or between two) and not at its end. */
+private fun onRideRoute(ride: RouteLeg, fix: GeoFix): Boolean {
+    if (haversineMeters(fix.lat, fix.lon, ride.to.lat, ride.to.lon) <= BOARDED_METERS) return false
+    val stops = ride.rideStops()
+    if (stops.size < 2) return false
+    if (stops.any { haversineMeters(fix.lat, fix.lon, it.lat, it.lon) <= STOP_HIT_METERS }) return true
+    return (0 until stops.lastIndex).any { k ->
+        metersBetweenStops(fix, stops[k], stops[k + 1])?.let { it <= ON_ROUTE_METERS } == true
+    }
 }
 
 private fun legComplete(
