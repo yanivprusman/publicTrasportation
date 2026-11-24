@@ -69,9 +69,22 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun readTripLink(intent: Intent?) {
+        val data = intent?.data ?: return
+        val trip = TripLink.parse(data)
+        if (trip != null) {
+            pendingSharedTrip.value = trip
+        } else if (data.scheme.equals("geo", ignoreCase = true)) {
+            // An address-only pin: say so, rather than open on an empty search.
+            android.widget.Toast.makeText(
+                this, "This location has no coordinates — search for it instead", android.widget.Toast.LENGTH_LONG
+            ).show()
+        }
+    }
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        TripLink.parse(intent.data)?.let { pendingSharedTrip.value = it }
+        readTripLink(intent)
         parseWidgetStation(intent)
     }
 
@@ -97,7 +110,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         MapZoomHandler.clear()
-        TripLink.parse(intent?.data)?.let { pendingSharedTrip.value = it }
+        readTripLink(intent)
         parseWidgetStation(intent)
         // Identity first, ping second: trackLaunch reads the install id, and
         // minting a fresh one before the vault has been consulted would report a

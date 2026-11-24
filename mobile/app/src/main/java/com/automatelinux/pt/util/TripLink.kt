@@ -52,6 +52,21 @@ object TripLink {
 
     fun parse(uri: Uri?): SharedTrip? {
         if (uri == null) return null
+        // A map pin from another app (WhatsApp location, Google Maps share):
+        // the pin is the destination, the start is wherever the rider stands.
+        if (uri.scheme.equals("geo", ignoreCase = true)) {
+            val pin = GeoUri.parse(uri.toString()) ?: return null
+            return SharedTrip(
+                origin = null,
+                destination = GeocodeSuggestion(
+                    name = pin.label ?: formatCoords(pin.lat, pin.lon),
+                    lat = pin.lat,
+                    lon = pin.lon
+                ),
+                departureTime = null,
+                arriveBy = false
+            )
+        }
         // No `from` at all means "start where I'm standing" — a link saved once and
         // tapped from anywhere. A `from` that is present but malformed is still a
         // broken link, not a request for GPS.

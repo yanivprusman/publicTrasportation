@@ -46,6 +46,14 @@
                 <data android:scheme="https" android:host="pt.dev.ya-niv.com" />
                 <data android:scheme="https" android:host="pt.prod.ya-niv.com" />
             </intent-filter>
+            <!-- Map pins from other apps (a WhatsApp location, a Google Maps share):
+                 offers this app in "Open with", the pin becomes the destination. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="geo" />
+            </intent-filter>
         </activity>
 
         <!-- Started only after ACCESS_FINE_LOCATION was granted: on API 34+ a
