@@ -287,6 +287,24 @@ class JourneyTextTest {
     }
 
     @Test
+    fun `waiting at the pole says how many stops the ride is`() {
+        // Two stops in between plus the rider's own: three. The boarding stop is not one.
+        val withStops = rideOnly().let { trip ->
+            trip.copy(legs = trip.legs.map {
+                it.copy(
+                    fromStopCode = "13868",
+                    intermediateStops = listOf(Place("mid 1", 31.0, 34.78), Place("mid 2", 31.1, 34.79))
+                )
+            })
+        }
+        val detail = JourneyText.detail(
+            stepJourney(withStops, JourneyCursor(), fix = null, nowMs = t0).progress,
+            EnStrings
+        )
+        assertEquals("Board at stop A · ${formatTime(iso(5))} · 3 stops to yours · stop 13868", detail)
+    }
+
+    @Test
     fun `riding says when you get off, next to where`() {
         // "Get off at stop B" and no clock was the panel's largest silence: the rider
         // had to open the step list to learn when their own stop comes.

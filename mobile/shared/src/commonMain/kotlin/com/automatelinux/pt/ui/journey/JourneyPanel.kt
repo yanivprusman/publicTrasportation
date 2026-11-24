@@ -884,32 +884,13 @@ private fun RideStopList(
 ) {
     val strings = LocalAppStrings.current
     val passed = stops.count { it.state == RideStopState.PASSED }
-    // Stops the vehicle still has to call at, the rider's own included. The boarding
-    // stop (index 0) never counts: before boarding it is NEXT, but it is not a ride.
-    val toGo = stops.count {
-        it.index > 0 && (it.state == RideStopState.NEXT || it.state == RideStopState.AHEAD)
-    }
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = strings.journeyStopsOnRide.uppercase(),
-            modifier = Modifier.weight(1f),
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.Bold,
-            letterSpacing = 1.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        if (toGo > 0) {
-            Text(
-                text = strings.journeyStopsToYours(toGo),
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Bold,
-                color = accent
-            )
-        }
-    }
+    Text(
+        text = strings.journeyStopsOnRide.uppercase(),
+        style = MaterialTheme.typography.labelSmall,
+        fontWeight = FontWeight.Bold,
+        letterSpacing = 1.sp,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
     Spacer(Modifier.height(4.dp))
     if (passed > 0) {
         Text(

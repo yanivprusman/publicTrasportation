@@ -422,7 +422,7 @@ interface AppStrings {
     val journeyMoreStops: (Int) -> String
     /** The dim first line of the opened list: stops already called at. */
     val journeyStopsPassed: (Int) -> String
-    /** Beside the opened list's label: rides still to make, the rider's own stop included. */
+    /** On the waiting line: stops the ride calls at, the rider's own included. */
     val journeyStopsToYours: (Int) -> String
     /** Long-press menu on a journey step: re-plan the trip around that leg. */
     val journeyStartFrom: (String) -> String

@@ -74,7 +74,7 @@ object JourneyText {
             // between two stops confirms which one the app means, and what every
             // other app shows for the same reason.
             JourneyPhase.WAITING -> p.leg?.from?.name?.takeIf { it.isNotBlank() }
-                ?.let { "${strings.journeyBoardAt} $it${legStartAt(p, strings)}${stopCodeAt(p, strings)}" }
+                ?.let { "${strings.journeyBoardAt} $it${legStartAt(p, strings)}${rideLength(p, strings)}${stopCodeAt(p, strings)}" }
             JourneyPhase.WALKING -> buildList {
                 walkDistance(p, strings)?.let { add(it) }
                 walkTiming(p, strings)?.let { add(it) }
@@ -90,6 +90,17 @@ object JourneyText {
     /** " · 11:35" — the leg's scheduled start, or nothing when it has no readable one. */
     private fun legStartAt(p: JourneyProgress, strings: AppStrings): String =
         p.leg?.startTime?.takeIf { it.isNotBlank() }?.let { " · ${formatTime(it)}" } ?: ""
+
+    /**
+     * " · 11 stops to yours" — how many stops the ride about to start calls at, the
+     * rider's own included. Lives on this line, not in the stop list, because this line
+     * shows folded and opened alike and never scrolls away. While riding the headline
+     * already counts down ("7 stops to go"), so only the waiting line carries it. A feed
+     * that sent no intermediate stops gets no number rather than a wrong "1".
+     */
+    private fun rideLength(p: JourneyProgress, strings: AppStrings): String =
+        p.leg?.takeIf { it.isRide }?.intermediateStops
+            ?.let { " · ${strings.journeyStopsToYours(it.size + 1)}" } ?: ""
 
     /** " · stop 13868" — the boarding pole's printed code, when the feed carries one. */
     private fun stopCodeAt(p: JourneyProgress, strings: AppStrings): String =
