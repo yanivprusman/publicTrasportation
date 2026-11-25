@@ -38,7 +38,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DarkMode
-import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.DirectionsBus
@@ -314,10 +313,6 @@ fun MainScreen(
             }
             settingsStore.workPlace?.let {
                 add(PreSuggestion(it, Icons.Default.Work, strings.work))
-            }
-            // Places the rider named on this phone, before the history.
-            routingViewModel.localPlaces().forEach {
-                add(PreSuggestion(it, Icons.Default.Bookmark))
             }
             settingsStore.getRecentSearches().forEach {
                 add(PreSuggestion(it, Icons.Default.History))

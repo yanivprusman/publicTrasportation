@@ -541,8 +541,6 @@ class RoutingViewModel(
     fun destinationLocalName(): String? =
         _state.value.destination?.let { localPlaces.nameAt(it.lat, it.lon) }
 
-    fun localPlaces(): List<GeocodeSuggestion> = localPlaces.all()
-
     private fun formatCoordsLabel(lat: Double, lon: Double): String {
         fun f(v: Double) = ((v * 100000).toLong() / 100000.0).toString()
         return "${f(lat)},${f(lon)}"
