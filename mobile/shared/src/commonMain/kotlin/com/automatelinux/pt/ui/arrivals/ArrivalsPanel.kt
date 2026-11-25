@@ -1,5 +1,7 @@
 package com.automatelinux.pt.ui.arrivals
 
+import androidx.compose.ui.draw.clip
+import com.automatelinux.pt.ui.theme.PtWarn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -23,7 +25,7 @@ import androidx.compose.material.icons.filled.Widgets
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.FilterChip
+import com.automatelinux.pt.ui.components.PtChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -103,7 +105,7 @@ fun ArrivalsPanel(
                     modifier = Modifier.size(16.dp)
                 )
                 gpsNearbyStops.forEach { stop ->
-                    FilterChip(
+                    PtChip(
                         selected = stop.stopCode == state.stationCode,
                         onClick = { onStationSelect(stop.stopCode, stop.stopName) },
                         label = {
@@ -119,43 +121,34 @@ fun ArrivalsPanel(
             }
         }
 
-        if (onOpenBoard != null && state.stationCode.isNotEmpty()) {
-            Button(
-                onClick = onOpenBoard,
+        // The stop's two side doors — its full-screen board and a home-screen widget —
+        // as one pair of equal keys rather than two full-width bars stacked above the
+        // arrivals the screen is for.
+        if (state.stationCode.isNotEmpty() && (onOpenBoard != null || onPinWidget != null)) {
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 4.dp),
-                shape = RoundedCornerShape(10.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF14110A),
-                    contentColor = Color(0xFFFFB300)
-                )
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Icon(
-                    Icons.Default.DepartureBoard,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(Modifier.width(8.dp))
-                Text(strings.departureBoard, fontWeight = FontWeight.Bold)
-            }
-        }
-
-        if (onPinWidget != null && state.stationCode.isNotEmpty()) {
-            OutlinedButton(
-                onClick = onPinWidget,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 4.dp),
-                shape = RoundedCornerShape(10.dp)
-            ) {
-                Icon(
-                    Icons.Default.Widgets,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(Modifier.width(8.dp))
-                Text(strings.pinWidget)
+                if (onOpenBoard != null) {
+                    StopSideDoor(
+                        label = strings.departureBoard,
+                        icon = Icons.Default.DepartureBoard,
+                        tint = PtWarn,
+                        onClick = onOpenBoard,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                if (onPinWidget != null) {
+                    StopSideDoor(
+                        label = strings.pinWidget,
+                        icon = Icons.Default.Widgets,
+                        tint = MaterialTheme.colorScheme.primary,
+                        onClick = onPinWidget,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
             }
         }
 
@@ -331,5 +324,35 @@ fun NearbyStopsSection(
             }
         }
         HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+    }
+}
+
+@Composable
+private fun StopSideDoor(
+    label: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    tint: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .height(48.dp)
+            .clip(MaterialTheme.shapes.medium)
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center
+    ) {
+        Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(19.dp))
+        Spacer(Modifier.width(8.dp))
+        Text(
+            label,
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+        )
     }
 }

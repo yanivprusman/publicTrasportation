@@ -8,7 +8,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
+import com.automatelinux.pt.ui.components.PtSegment
+import com.automatelinux.pt.ui.components.PtSegmented
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker as M3TimePicker
@@ -67,35 +68,31 @@ fun TimePickerSection(
     var selectedTime by remember { mutableStateOf(Clock.System.now().toLocalDateTime(sysTz).time) }
 
     Column(modifier = modifier) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            FilterChip(
-                selected = mode == TimeMode.NOW,
-                onClick = {
-                    onTimeChange(null)
-                    onArriveByChange(false)
-                },
-                label = { Text(strings.now) }
-            )
-            FilterChip(
-                selected = mode == TimeMode.DEPART,
-                onClick = {
-                    onArriveByChange(false)
-                    showDatePicker = true
-                },
-                label = { Text(strings.departAt) }
-            )
-            FilterChip(
-                selected = mode == TimeMode.ARRIVE,
-                onClick = {
-                    onArriveByChange(true)
-                    showDatePicker = true
-                },
-                label = { Text(strings.arriveBy) }
-            )
-        }
+        PtSegmented(
+            segments = listOf(
+                PtSegment(strings.now),
+                PtSegment(strings.departAt),
+                PtSegment(strings.arriveBy)
+            ),
+            selectedIndex = mode.ordinal,
+            onSelect = { index ->
+                when (TimeMode.entries[index]) {
+                    TimeMode.NOW -> {
+                        onTimeChange(null)
+                        onArriveByChange(false)
+                    }
+                    TimeMode.DEPART -> {
+                        onArriveByChange(false)
+                        showDatePicker = true
+                    }
+                    TimeMode.ARRIVE -> {
+                        onArriveByChange(true)
+                        showDatePicker = true
+                    }
+                }
+            },
+            modifier = Modifier.fillMaxWidth()
+        )
 
         if (departureTime != null) {
             // Same words as the folded summary — "מחר 06:46", "אתמול 06:46", or just the

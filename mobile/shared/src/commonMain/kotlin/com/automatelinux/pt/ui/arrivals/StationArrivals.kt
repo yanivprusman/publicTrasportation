@@ -1,5 +1,6 @@
 package com.automatelinux.pt.ui.arrivals
 
+import com.automatelinux.pt.ui.theme.PtLive
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -23,7 +24,7 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FilterChip
+import com.automatelinux.pt.ui.components.PtChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -74,7 +75,7 @@ private val lineColors = listOf(
     Color(0xFF3F51B5),
 )
 
-internal val LiveGreen = Color(0xFF4CAF50)
+internal val LiveGreen = PtLive
 
 fun lineColor(lineName: String?): Color {
     if (lineName.isNullOrBlank()) return Color(0xFF607D8B)
@@ -342,13 +343,13 @@ fun StationArrivals(
                     .padding(horizontal = 12.dp),
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                FilterChip(
+                PtChip(
                     selected = lineFilter.isBlank(),
                     onClick = { onLineFilterChange("") },
                     label = { Text(strings.allLinesChip) }
                 )
                 availableLines.forEach { line ->
-                    FilterChip(
+                    PtChip(
                         selected = lineFilter.equals(line, ignoreCase = true),
                         onClick = {
                             onLineFilterChange(

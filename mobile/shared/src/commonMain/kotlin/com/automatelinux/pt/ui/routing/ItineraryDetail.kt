@@ -1,5 +1,8 @@
 package com.automatelinux.pt.ui.routing
 
+import com.automatelinux.pt.ui.theme.PtLive
+import com.automatelinux.pt.ui.components.PtChip
+import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -82,7 +85,7 @@ private val SpineWidth = 22.dp
 private val WalkSpineColor = Color(0xFF9E9E9E)
 private val DestinationDotColor = Color(0xFFE53935)
 private val WaitChipColor = Color(0xFFFFB300)
-private val AccessibleGreen = Color(0xFF4CAF50)
+private val AccessibleGreen = PtLive
 
 private fun legSpineColor(leg: RouteLeg): Color =
     if (leg.mode == TransitMode.WALK) WalkSpineColor
@@ -116,8 +119,8 @@ fun ItineraryDetail(
     onTrackBus: ((Int, RouteLeg) -> Unit)? = null,
     trackedLegIndex: Int? = null,
     onSetReminder: ((RouteLeg) -> Unit)? = null,
-    activeReminderLegIndex: Int? = null,
-    onCancelReminder: (() -> Unit)? = null,
+    activeReminderKeys: Set<String> = emptySet(),
+    onCancelReminder: ((RouteLeg) -> Unit)? = null,
     onStartJourney: (() -> Unit)? = null,
     onShareTrip: (() -> Unit)? = null,
     /** Per ride-leg: the same line's later departures, formatted — "and if I miss it?". */
@@ -181,8 +184,8 @@ fun ItineraryDetail(
                 if (onStartJourney != null) {
                     Button(
                         onClick = onStartJourney,
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp)
+                        modifier = Modifier.weight(1f).height(50.dp),
+                        shape = MaterialTheme.shapes.medium
                     ) {
                         Icon(
                             Icons.Default.Navigation,
@@ -197,7 +200,12 @@ fun ItineraryDetail(
                     if (onStartJourney != null) Spacer(Modifier.width(8.dp))
                     FilledTonalButton(
                         onClick = onShareTrip,
-                        shape = RoundedCornerShape(12.dp)
+                        modifier = Modifier.height(50.dp),
+                        shape = MaterialTheme.shapes.medium,
+                        colors = ButtonDefaults.filledTonalButtonColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            contentColor = MaterialTheme.colorScheme.onSurface
+                        )
                     ) {
                         Icon(
                             Icons.Default.Share,
@@ -210,7 +218,12 @@ fun ItineraryDetail(
                     Spacer(Modifier.width(8.dp))
                     FilledTonalButton(
                         onClick = onPay,
-                        shape = RoundedCornerShape(12.dp)
+                        modifier = Modifier.height(50.dp),
+                        shape = MaterialTheme.shapes.medium,
+                        colors = ButtonDefaults.filledTonalButtonColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            contentColor = MaterialTheme.colorScheme.onSurface
+                        )
                     ) {
                         Icon(
                             Icons.Default.CreditCard,
@@ -243,7 +256,7 @@ fun ItineraryDetail(
                     onTrackBus = onTrackBus,
                     isTracking = trackedLegIndex == index,
                     onSetReminder = onSetReminder,
-                    hasReminder = activeReminderLegIndex == index,
+                    hasReminder = leg.reminderKey() in activeReminderKeys,
                     onCancelReminder = onCancelReminder,
                     alsoAt = nextDepartures[index] ?: emptyList(),
                     onLegAsStart = onLegAsStart,
@@ -400,7 +413,7 @@ private fun LegSegment(
     isTracking: Boolean = false,
     onSetReminder: ((RouteLeg) -> Unit)? = null,
     hasReminder: Boolean = false,
-    onCancelReminder: (() -> Unit)? = null,
+    onCancelReminder: ((RouteLeg) -> Unit)? = null,
     alsoAt: List<String> = emptyList(),
     onLegAsStart: ((RouteLeg) -> Unit)? = null,
     onLegAsEnd: ((RouteLeg) -> Unit)? = null
@@ -511,7 +524,7 @@ private fun LegSegment(
                                     else -> "₪${fare.toFixed(2)}"
                                 },
                                 style = MaterialTheme.typography.bodySmall,
-                                color = Color(0xFF81C784)
+                                color = PtLive
                             )
                         }
                         // Whether you can board at all outranks the agency's name, so it
@@ -551,52 +564,44 @@ private fun LegSegment(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         if (onTrackBus != null) {
-                            FilledTonalButton(
+                            PtChip(
+                                selected = isTracking,
                                 onClick = { onTrackBus(legIndex, leg) },
-                                modifier = Modifier.height(30.dp),
-                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
-                                colors = if (isTracking) ButtonDefaults.filledTonalButtonColors(
-                                    containerColor = MaterialTheme.colorScheme.tertiary,
-                                    contentColor = MaterialTheme.colorScheme.onTertiary
-                                ) else ButtonDefaults.filledTonalButtonColors()
-                            ) {
-                                Icon(
-                                    Icons.Default.GpsFixed,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(14.dp)
-                                )
-                                Spacer(Modifier.width(4.dp))
-                                Text(
-                                    text = if (isTracking) strings.trackingBus else strings.trackBus,
-                                    fontSize = 11.sp
-                                )
-                            }
+                                leadingIcon = {
+                                    Icon(Icons.Default.GpsFixed, contentDescription = null, modifier = Modifier.size(16.dp))
+                                },
+                                label = {
+                                    Text(
+                                        text = if (isTracking) strings.trackingBus else strings.trackBus,
+                                        style = MaterialTheme.typography.labelMedium
+                                    )
+                                }
+                            )
                         }
 
+                        // Armed is the picked state, like every other "on" in the app —
+                        // it was an error-red button, which read as something gone wrong.
                         if (onSetReminder != null) {
-                            FilledTonalButton(
+                            PtChip(
+                                selected = hasReminder,
                                 onClick = {
-                                    if (hasReminder) onCancelReminder?.invoke()
+                                    if (hasReminder) onCancelReminder?.invoke(leg)
                                     else onSetReminder(leg)
                                 },
-                                modifier = Modifier.height(30.dp),
-                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
-                                colors = if (hasReminder) ButtonDefaults.filledTonalButtonColors(
-                                    containerColor = MaterialTheme.colorScheme.error,
-                                    contentColor = MaterialTheme.colorScheme.onError
-                                ) else ButtonDefaults.filledTonalButtonColors()
-                            ) {
-                                Icon(
-                                    if (hasReminder) Icons.Default.NotificationsOff else Icons.Default.Notifications,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(14.dp)
-                                )
-                                Spacer(Modifier.width(4.dp))
-                                Text(
-                                    text = if (hasReminder) strings.cancelReminder else strings.departureReminder,
-                                    fontSize = 11.sp
-                                )
-                            }
+                                leadingIcon = {
+                                    Icon(
+                                        if (hasReminder) Icons.Default.NotificationsActive else Icons.Default.Notifications,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                },
+                                label = {
+                                    Text(
+                                        text = if (hasReminder) strings.cancelReminder else strings.departureReminder,
+                                        style = MaterialTheme.typography.labelMedium
+                                    )
+                                }
+                            )
                         }
                     }
 
@@ -696,3 +701,12 @@ private fun LegSegment(
         }
     }
 }
+
+/**
+ * What makes a departure reminder THIS ride's: the line, the pole it leaves from and
+ * the minute it leaves. Not the leg's position in an itinerary — reminders are armed
+ * across several suggested routes at once (a 64 on one, a 65 on another, to take
+ * whichever comes first), and "leg 1" is a different bus on each of them.
+ */
+fun RouteLeg.reminderKey(): String =
+    "${routeShortName.orEmpty()}|${fromStopCode ?: from.name}|$startTime"

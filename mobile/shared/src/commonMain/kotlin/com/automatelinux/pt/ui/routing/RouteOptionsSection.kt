@@ -16,8 +16,10 @@ import androidx.compose.material.icons.filled.ElectricScooter
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Train
 import androidx.compose.material.icons.filled.Tram
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
+import com.automatelinux.pt.ui.components.PtSegment
+import com.automatelinux.pt.ui.components.PtSegmented
+import com.automatelinux.pt.ui.components.PtSwitchRow
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -69,91 +71,80 @@ fun RouteOptionsSection(
     Column(modifier = modifier.fillMaxWidth()) {
         TransitModeRow(enabledModes = enabledModes, onSelectMode = onSelectMode)
 
-        Spacer(Modifier.height(4.dp))
-
-        // Not a mode to include or exclude but a fact about the rider, so it has a
-        // row of its own rather than a fourth chip in the modes row.
-        FilterChip(
-            selected = scooter,
-            onClick = { onScooterChange(!scooter) },
-            label = { Text(strings.scooterOption, maxLines = 1) },
-            leadingIcon = {
-                Icon(
-                    Icons.Default.ElectricScooter,
-                    contentDescription = null,
-                    modifier = Modifier.size(FilterChipDefaults.IconSize)
-                )
-            }
-        )
-        if (scooter) {
-            Text(
-                text = strings.scooterHint,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-
-        Spacer(Modifier.height(4.dp))
+        Spacer(Modifier.height(8.dp))
 
         // With a scooter the first/last mile is ridden, not walked: the cap row keeps
         // its place but asks about the ride, with choices sized for one.
         val capChoices = if (scooter) RIDE_CHOICES else WALK_CHOICES
         val cap = if (scooter) maxRideMinutes else maxWalkMinutes
         val onCapChange = if (scooter) onMaxRideChange else onMaxWalkChange
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            Icon(
-                if (scooter) Icons.Default.ElectricScooter else Icons.AutoMirrored.Filled.DirectionsWalk,
-                contentDescription = if (scooter) strings.maxRideLabel else strings.maxWalkLabel,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(18.dp)
-            )
-            WalkChip(
-                selected = cap == null,
-                label = strings.noWalkLimit,
-                onClick = { onCapChange(null) }
-            )
-            capChoices.forEach { minutes ->
-                WalkChip(
-                    selected = cap == minutes,
-                    label = strings.walkMinutesChip(minutes),
-                    onClick = { onCapChange(minutes) }
-                )
-            }
-        }
+        LabelledTrack(
+            icon = if (scooter) Icons.Default.ElectricScooter else Icons.AutoMirrored.Filled.DirectionsWalk,
+            description = if (scooter) strings.maxRideLabel else strings.maxWalkLabel,
+            segments = listOf(PtSegment(strings.noWalkLimit)) +
+                capChoices.map { PtSegment(strings.walkMinutesChip(it)) },
+            selectedIndex = if (cap == null) 0 else capChoices.indexOf(cap) + 1,
+            onSelect = { index -> onCapChange(if (index == 0) null else capChoices[index - 1]) }
+        )
 
         // The router prices every ride at this speed, so it decides which rides beat
         // which buses — a 40 km/h scooter priced at a cyclist's 15 loses to buses it
         // would beat. The default is the legal limit; a faster scooter says so.
         if (scooter) {
-            Spacer(Modifier.height(4.dp))
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState()),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                Icon(
-                    Icons.Default.Speed,
-                    contentDescription = strings.scooterSpeedLabel,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(18.dp)
-                )
-                SCOOTER_SPEED_CHOICES.forEach { kmh ->
-                    WalkChip(
-                        selected = scooterSpeedKmh == kmh,
-                        label = strings.speedKmhChip(kmh),
-                        onClick = { onScooterSpeedChange(kmh) }
-                    )
-                }
-            }
+            Spacer(Modifier.height(8.dp))
+            LabelledTrack(
+                icon = Icons.Default.Speed,
+                description = strings.scooterSpeedLabel,
+                segments = SCOOTER_SPEED_CHOICES.map { PtSegment(strings.speedKmhChip(it)) },
+                selectedIndex = SCOOTER_SPEED_CHOICES.indexOf(scooterSpeedKmh),
+                onSelect = { onScooterSpeedChange(SCOOTER_SPEED_CHOICES[it]) }
+            )
         }
+
+        Spacer(Modifier.height(4.dp))
+
+        // Not a mode to include or exclude but a fact about the rider — on or off —
+        // so it is a switch on a line of its own, not a fourth choice in the modes.
+        PtSwitchRow(
+            checked = scooter,
+            onCheckedChange = onScooterChange,
+            label = strings.scooterOption,
+            icon = Icons.Default.ElectricScooter,
+            modifier = Modifier.fillMaxWidth()
+        )
+        if (scooter) {
+            Text(
+                text = strings.scooterHint,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 34.dp)
+            )
+        }
+    }
+}
+
+/** A track with the glyph of what it sets in front of it. */
+@Composable
+private fun LabelledTrack(
+    icon: ImageVector,
+    description: String,
+    segments: List<PtSegment>,
+    selectedIndex: Int,
+    onSelect: (Int) -> Unit
+) {
+    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Icon(
+            icon,
+            contentDescription = description,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(start = 4.dp, end = 10.dp).size(20.dp)
+        )
+        PtSegmented(
+            segments = segments,
+            selectedIndex = selectedIndex,
+            onSelect = onSelect,
+            modifier = Modifier.weight(1f)
+        )
     }
 }
 
@@ -172,51 +163,19 @@ fun TransitModeRow(
 ) {
     val strings = LocalAppStrings.current
     val all = enabledModes.size == TransitFilter.entries.size
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(6.dp)
-    ) {
-        FilterChip(
-            selected = all,
-            onClick = { if (!all) onSelectMode(enabledModes.first()) },
-            label = { Text(strings.allModes, maxLines = 1) }
-        )
-        ModeChip(TransitFilter.BUS, Icons.Default.DirectionsBus, enabledModes, onSelectMode)
-        ModeChip(TransitFilter.TRAIN, Icons.Default.Train, enabledModes, onSelectMode)
-        ModeChip(TransitFilter.TRAM, Icons.Default.Tram, enabledModes, onSelectMode)
-    }
-}
-
-@Composable
-private fun ModeChip(
-    filter: TransitFilter,
-    icon: ImageVector,
-    enabledModes: Set<TransitFilter>,
-    onSelectMode: (TransitFilter) -> Unit
-) {
-    // Lit only when this mode is the one selected — with "all" on, no mode chip is.
-    val selected = enabledModes == setOf(filter)
-    FilterChip(
-        selected = selected,
-        onClick = { onSelectMode(filter) },
-        label = { Text(filter.label(LocalAppStrings.current), maxLines = 1) },
-        leadingIcon = {
-            Icon(icon, contentDescription = null, modifier = Modifier.size(FilterChipDefaults.IconSize))
-        }
-    )
-}
-
-@Composable
-private fun WalkChip(
-    selected: Boolean,
-    label: String,
-    onClick: () -> Unit
-) {
-    FilterChip(
-        selected = selected,
-        onClick = onClick,
-        label = { Text(label, maxLines = 1) }
+    val filters = listOf(TransitFilter.BUS, TransitFilter.TRAIN, TransitFilter.TRAM)
+    val icons = listOf(Icons.Default.DirectionsBus, Icons.Default.Train, Icons.Default.Tram)
+    PtSegmented(
+        segments = listOf(PtSegment(strings.allModes)) +
+            filters.mapIndexed { i, filter -> PtSegment(filter.label(strings), icons[i]) },
+        selectedIndex = if (all) 0 else filters.indexOf(enabledModes.singleOrNull()) + 1,
+        onSelect = { index ->
+            if (index == 0) {
+                if (!all) onSelectMode(enabledModes.first())
+            } else {
+                onSelectMode(filters[index - 1])
+            }
+        },
+        modifier = modifier.fillMaxWidth()
     )
 }

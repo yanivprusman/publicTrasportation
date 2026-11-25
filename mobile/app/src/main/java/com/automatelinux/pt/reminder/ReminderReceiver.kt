@@ -40,7 +40,11 @@ class ReminderReceiver : BroadcastReceiver() {
             .setContentIntent(contentIntent)
             .build()
 
-        NotificationManagerCompat.from(context).notify(NOTIFICATION_ID, notification)
+        // Its own id per ride: two armed buses are two notifications, and the second
+        // must not overwrite the first while the rider is still deciding between them.
+        val id = intent.getStringExtra(ReminderScheduler.EXTRA_KEY)
+            ?.let(ReminderScheduler::idOf) ?: NOTIFICATION_ID
+        NotificationManagerCompat.from(context).notify(id, notification)
     }
 
     companion object {

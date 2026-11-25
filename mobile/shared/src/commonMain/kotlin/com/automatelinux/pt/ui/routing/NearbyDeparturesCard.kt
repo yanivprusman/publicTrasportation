@@ -1,5 +1,6 @@
 package com.automatelinux.pt.ui.routing
 
+import com.automatelinux.pt.ui.theme.PtLive
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -219,5 +220,5 @@ private fun DepartureEntry.destination(stopNames: Map<String, String>): String =
         ?: stopTime?.headsign?.replace('_', ' ')?.takeIf { it.isNotBlank() }
         ?: ""
 
-private val LIVE_GREEN = Color(0xFF66BB6A)
+private val LIVE_GREEN = PtLive
 private const val MAX_ROWS = 6

@@ -23,7 +23,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -147,7 +146,7 @@ fun <T> AutocompleteField(
     }
 
     Column(modifier = modifier) {
-        OutlinedTextField(
+        PtTextField(
             value = value,
             onValueChange = { text ->
                 onValueChange(text)
@@ -209,9 +208,9 @@ fun <T> AutocompleteField(
         if (showPreSuggestions && preSuggestions.isNotEmpty() && !showDropdown) {
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                shadowElevation = 4.dp,
-                color = MaterialTheme.colorScheme.surface,
-                shape = MaterialTheme.shapes.small
+                shadowElevation = 8.dp,
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                shape = MaterialTheme.shapes.medium
             ) {
                 LazyColumn(
                     modifier = Modifier.heightIn(max = 280.dp)
@@ -261,7 +260,7 @@ fun <T> AutocompleteField(
                             }
                         }
                         if (index < preSuggestions.lastIndex) {
-                            HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                         }
                     }
                 }
@@ -273,9 +272,9 @@ fun <T> AutocompleteField(
         ) {
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                shadowElevation = 4.dp,
-                color = MaterialTheme.colorScheme.surface,
-                shape = MaterialTheme.shapes.small
+                shadowElevation = 8.dp,
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                shape = MaterialTheme.shapes.medium
             ) {
                 Text(
                     text = errorText,
@@ -291,9 +290,9 @@ fun <T> AutocompleteField(
         ) {
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                shadowElevation = 4.dp,
-                color = MaterialTheme.colorScheme.surface,
-                shape = MaterialTheme.shapes.small
+                shadowElevation = 8.dp,
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                shape = MaterialTheme.shapes.medium
             ) {
                 Text(
                     text = emptyText,
@@ -307,9 +306,9 @@ fun <T> AutocompleteField(
         if (showDropdown && suggestions.isNotEmpty()) {
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                shadowElevation = 4.dp,
-                color = MaterialTheme.colorScheme.surface,
-                shape = MaterialTheme.shapes.small
+                shadowElevation = 8.dp,
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                shape = MaterialTheme.shapes.medium
             ) {
                 LazyColumn(
                     modifier = Modifier.heightIn(max = 200.dp)
@@ -338,7 +337,7 @@ fun <T> AutocompleteField(
                             itemContent(item)
                         }
                         if (index < suggestions.lastIndex) {
-                            HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                         }
                     }
                 }

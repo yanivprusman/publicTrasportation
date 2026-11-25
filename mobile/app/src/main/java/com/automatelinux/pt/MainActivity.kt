@@ -35,7 +35,9 @@ import com.automatelinux.pt.analytics.AnalyticsRepository
 import com.automatelinux.pt.ui.MainScreen
 import com.automatelinux.pt.ui.PricingNoticeDialog
 import com.automatelinux.pt.ui.RegistrationScreen
+import androidx.activity.SystemBarStyle
 import com.automatelinux.pt.ui.theme.PTTheme
+import com.automatelinux.pt.ui.theme.PtFontFamily
 import kotlinx.coroutines.launch
 import com.automatelinux.pt.util.EnStrings
 import com.automatelinux.pt.util.HeStrings
@@ -108,7 +110,12 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        // The app is dark whatever the system theme is, so the bars are told so: left
+        // to auto-detect, a phone in light mode drew a dark clock on the dark map.
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
+        )
         MapZoomHandler.clear()
         readTripLink(intent)
         parseWidgetStation(intent)
@@ -133,7 +140,7 @@ class MainActivity : ComponentActivity() {
                 LocalAppStrings provides strings,
                 LocalLayoutDirection provides layoutDirection,
             ) {
-                PTTheme {
+                PTTheme(fontFamily = PtFontFamily) {
                     Surface(
                         modifier = Modifier.fillMaxSize(),
                         color = MaterialTheme.colorScheme.background

@@ -1,7 +1,13 @@
 package com.automatelinux.pt.ui
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import com.automatelinux.pt.ui.components.PtSegment
+import com.automatelinux.pt.ui.components.PtSegmented
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -13,13 +19,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -54,8 +60,9 @@ fun SheetDragHandleRow(
             .padding(horizontal = 12.dp)
     ) {
         BottomSheetDefaults.DragHandle(
-            width = 56.dp,
-            height = 5.dp,
+            width = 44.dp,
+            height = 4.dp,
+            color = MaterialTheme.colorScheme.outline,
             modifier = Modifier.align(Alignment.Center)
         )
         if (showDebugFill) {
@@ -100,50 +107,58 @@ fun SheetTabRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 4.dp),
+            .padding(start = 12.dp, end = 4.dp, top = 4.dp, bottom = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // The chips scroll sideways as a group and never wrap their labels: on a
-        // narrow phone four chips + the gear don't fit, and Compose used to squeeze
-        // the last chip until "AI" broke onto two lines and the gear left the screen.
-        // The gear sits outside the scroller so it is always reachable.
-        Row(
-            modifier = Modifier
-                .weight(1f)
-                .horizontalScroll(rememberScrollState()),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-        FilterChip(
-            selected = activeTab == ActiveTab.ROUTE,
-            onClick = { onTabChange(ActiveTab.ROUTE) },
-            label = { Text(strings.routePlanner, maxLines = 1, softWrap = false) },
-            modifier = Modifier.padding(end = 8.dp)
+        // One of three views: a segmented track, which says so. It takes the width
+        // the gear and the AI button leave, and scrolls sideways inside itself rather
+        // than squeezing a label onto two lines on a narrow phone.
+        val tabs = listOf(ActiveTab.ROUTE, ActiveTab.ARRIVALS, ActiveTab.LINES)
+        PtSegmented(
+            segments = listOf(
+                PtSegment(strings.routePlanner),
+                PtSegment(strings.stationArrivals),
+                PtSegment(strings.linesBrowser)
+            ),
+            selectedIndex = tabs.indexOf(activeTab),
+            onSelect = { onTabChange(tabs[it]) },
+            modifier = Modifier.weight(1f)
         )
-        FilterChip(
-            selected = activeTab == ActiveTab.ARRIVALS,
-            onClick = { onTabChange(ActiveTab.ARRIVALS) },
-            label = { Text(strings.stationArrivals, maxLines = 1, softWrap = false) }
-        )
-        FilterChip(
-            selected = activeTab == ActiveTab.LINES,
-            onClick = { onTabChange(ActiveTab.LINES) },
-            label = { Text(strings.linesBrowser, maxLines = 1, softWrap = false) },
-            modifier = Modifier.padding(start = 8.dp)
-        )
+        // Not a fourth view but a different way in, so it is a button beside the
+        // track and never wears the picked state.
         if (onOpenAi != null) {
-            FilterChip(
-                selected = false,
-                onClick = onOpenAi,
-                label = { Text(strings.aiChip, maxLines = 1, softWrap = false) },
-                modifier = Modifier.padding(start = 8.dp)
-            )
-        }
+            Spacer(Modifier.width(8.dp))
+            Row(
+                modifier = Modifier
+                    .height(42.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(MaterialTheme.colorScheme.surfaceContainer)
+                    .clickable(onClick = onOpenAi)
+                    .padding(horizontal = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    Icons.Default.AutoAwesome,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(Modifier.width(5.dp))
+                Text(
+                    strings.aiChip,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    softWrap = false
+                )
+            }
         }
         Box {
             IconButton(onClick = { menuExpanded = true }) {
                 Icon(
                     Icons.Default.Settings,
                     contentDescription = strings.settings,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(22.dp)
                 )
             }

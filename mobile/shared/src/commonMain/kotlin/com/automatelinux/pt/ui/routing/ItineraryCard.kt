@@ -1,5 +1,14 @@
 package com.automatelinux.pt.ui.routing
 
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.filled.NotificationsActive
+import androidx.compose.material.icons.filled.NotificationsNone
+import androidx.compose.ui.draw.clip
+import com.automatelinux.pt.ui.components.PtTag
+import com.automatelinux.pt.ui.components.ptCardGround
+import com.automatelinux.pt.ui.theme.PtLive
+import com.automatelinux.pt.ui.theme.PtOtherDay
+import com.automatelinux.pt.ui.theme.PtWarn
 import kotlinx.datetime.toLocalDateTime
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -77,6 +86,14 @@ fun ItineraryCard(
     /** What the operator feed says about this ride, when it says anything. */
     live: LiveBoarding? = null,
     cardOpacity: Float = 0.6f,
+    /** A departure reminder is armed for this card's first ride. */
+    reminderArmed: Boolean = false,
+    /**
+     * Arms / disarms that reminder from the card. On the card and not only in the
+     * opened timeline, because the case it serves is two cards at once: a 64 on one
+     * route and a 65 on another, both armed, to take whichever comes first.
+     */
+    onToggleReminder: ((RouteLeg) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val strings = LocalAppStrings.current
@@ -84,7 +101,7 @@ fun ItineraryCard(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 4.dp)
+            .padding(horizontal = 8.dp, vertical = 5.dp)
             .then(
                 // Open card: a full-strength accent ring. Merely selected (the route
                 // the map is drawing behind the sheet): the same colour, halved, so the
@@ -93,34 +110,33 @@ fun ItineraryCard(
                     expanded -> Modifier.border(
                         2.dp,
                         MaterialTheme.colorScheme.primary,
-                        RoundedCornerShape(12.dp)
+                        MaterialTheme.shapes.medium
                     )
                     selected -> Modifier.border(
                         1.dp,
                         MaterialTheme.colorScheme.primary.copy(alpha = 0.45f),
-                        RoundedCornerShape(12.dp)
+                        MaterialTheme.shapes.medium
                     )
                     else -> Modifier
                 }
             )
+            .clip(MaterialTheme.shapes.medium)
             .clickable(onClick = onClick),
+        shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(
             // The user's opacity setting thins the card's GROUND, not its ink:
             // a whole-card alpha() faded times and line pills into the map and
             // made every unselected route unreadable. The map still shows
             // through the surface; the content stays at full contrast.
-            containerColor = if (selected || expanded) Color(0xFF1A1A1A)
-            else MaterialTheme.colorScheme.surface.copy(alpha = cardOpacity)
+            containerColor = if (selected || expanded) MaterialTheme.colorScheme.surfaceContainerHigh
+            else ptCardGround(cardOpacity)
         )
     ) {
-        val textColor = if (selected) Color.White else Color.Unspecified
-        val secondaryTextColor = if (selected) Color(0xFFBBBBBB)
-            else MaterialTheme.colorScheme.onSurfaceVariant
-        Row(
-            modifier = Modifier.padding(start = 12.dp, top = 12.dp, end = 6.dp, bottom = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
+        val textColor = MaterialTheme.colorScheme.onSurface
+        val secondaryTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+        Column(
+            modifier = Modifier.padding(start = 14.dp, top = 14.dp, end = 8.dp, bottom = 14.dp)
         ) {
-        Column(modifier = Modifier.weight(1f)) {
             // A day of its own line, above everything else, whenever this trip does not
             // leave today. It gets a line rather than a corner of the header row because
             // the Fastest sort interleaves days: tomorrow's 06:35 can sit between two
@@ -128,49 +144,39 @@ fun ItineraryCard(
             // that gets ellipsized on exactly the card that needed it.
             val dayLabel = departureDayLabel(itinerary.startTime, now, strings)
             if (dayLabel != null) {
-                Text(
+                PtTag(
                     text = dayLabel,
-                    modifier = Modifier
-                        .padding(bottom = 6.dp)
-                        .background(Color(0xFF4527A0).copy(alpha = 0.35f), RoundedCornerShape(4.dp))
-                        .padding(horizontal = 8.dp, vertical = 2.dp),
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFFB39DDB)
+                    modifier = Modifier.padding(bottom = 8.dp),
+                    color = PtOtherDay,
+                    ground = PtOtherDay.copy(alpha = 0.16f),
+                    bold = true
                 )
             }
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().padding(end = 6.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     text = strings.formatDuration(itinerary.duration),
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = textColor
                 )
                 val fare = itinerary.fareTotal
                 if (fare != null && fare > 0) {
-                    Text(
+                    PtTag(
                         // 12.5 is a real price in this tariff, not a rounding artefact —
                         // print the agorot when they exist and not when they don't.
                         text = strings.fareEstimate(
                             if (fare % 1.0 == 0.0) "₪${fare.toFixed(0)}" else "₪${fare.toFixed(2)}"
                         ),
-                        modifier = Modifier
-                            .background(Color(0xFF1B5E20).copy(alpha = 0.3f), RoundedCornerShape(4.dp))
-                            .padding(horizontal = 6.dp, vertical = 2.dp),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF81C784)
+                        color = PtLive,
+                        ground = PtLive.copy(alpha = 0.13f)
                     )
                 }
-                Text(
+                PtTag(
                     text = if (itinerary.transfers == 0) strings.direct else strings.transferCount(itinerary.transfers),
-                    modifier = Modifier
-                        .background(Color(0xFF2A2A2A), RoundedCornerShape(4.dp))
-                        .padding(horizontal = 6.dp, vertical = 2.dp),
-                    style = MaterialTheme.typography.bodySmall,
                     color = secondaryTextColor
                 )
                 // The range and its "+1" are ONE item of this SpaceBetween row: added as
@@ -179,8 +185,11 @@ fun ItineraryCard(
                 Row(verticalAlignment = Alignment.Top) {
                     Text(
                         text = "${formatTime(itinerary.startTime)} - ${formatTime(itinerary.endTime)}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = secondaryTextColor
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium,
+                        color = textColor,
+                        maxLines = 1,
+                        softWrap = false
                     )
                     // "+1" for an arrival after midnight — its own Text, not a suffix
                     // inside the range: a Latin-digit suffix glued into that string sits
@@ -193,25 +202,29 @@ fun ItineraryCard(
                             modifier = Modifier.padding(start = 1.dp),
                             fontSize = 9.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFFB39DDB)
+                            color = PtOtherDay
                         )
                     }
                 }
             }
 
+            // The header above has the card's full width; the bell and chevron flank
+            // only what is below it, so a long time range never wraps to make room.
+            Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(modifier = Modifier.weight(1f)) {
             // Leg widths are proportional to each leg's share of travel time, so the
             // walk/ride balance of a route is readable at a glance
             val totalLegSeconds = itinerary.legs.sumOf { it.duration }
             Row(
                 modifier = Modifier
-                    .padding(top = 8.dp)
+                    .padding(top = 10.dp)
                     .fillMaxWidth()
-                    .height(22.dp),
-                horizontalArrangement = Arrangement.spacedBy(2.dp)
+                    .height(26.dp),
+                horizontalArrangement = Arrangement.spacedBy(3.dp)
             ) {
                 for (leg in itinerary.legs) {
                     val isWalk = leg.mode == TransitMode.WALK
-                    val color = if (isWalk) Color(0xFF616161)
+                    val color = if (isWalk) MaterialTheme.colorScheme.surfaceContainerHighest
                         else getModeColorWithRoute(leg.mode, leg.routeColor)
                     val share = if (totalLegSeconds > 0) leg.duration.toFloat() / totalLegSeconds
                         else 1f / itinerary.legs.size
@@ -220,7 +233,7 @@ fun ItineraryCard(
                             // Floor tiny legs so every segment stays visible
                             .weight(maxOf(share, 0.08f))
                             .fillMaxHeight()
-                            .background(color, RoundedCornerShape(5.dp)),
+                            .background(color, RoundedCornerShape(8.dp)),
                         contentAlignment = Alignment.Center
                     ) {
                         if (isWalk || leg.mode == TransitMode.SCOOTER) {
@@ -228,14 +241,15 @@ fun ItineraryCard(
                                 if (isWalk) Icons.AutoMirrored.Filled.DirectionsWalk
                                 else Icons.Default.ElectricScooter,
                                 contentDescription = if (isWalk) strings.walkMode else strings.scooterMode,
-                                tint = Color.White.copy(alpha = 0.9f),
-                                modifier = Modifier.size(14.dp)
+                                tint = if (isWalk) MaterialTheme.colorScheme.onSurfaceVariant
+                                    else Color.White.copy(alpha = 0.9f),
+                                modifier = Modifier.size(15.dp)
                             )
                         } else {
                             Text(
                                 text = legPillLabel(leg, strings),
                                 color = onColorFor(color),
-                                fontSize = 11.sp,
+                                fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
                                 maxLines = 1,
                                 softWrap = false
@@ -260,12 +274,43 @@ fun ItineraryCard(
             // The one mark that says a result is a door and not a poster. It lives
             // outside the content Column so a walk-only itinerary — which prints no
             // boarding line — still carries it.
-            Icon(
-                imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                contentDescription = if (expanded) strings.hideDetails else strings.showDetails,
-                tint = if (expanded) MaterialTheme.colorScheme.primary else secondaryTextColor,
-                modifier = Modifier.size(22.dp)
-            )
+            Column(
+                modifier = Modifier.padding(start = 4.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                val ride = itinerary.firstRide?.takeUnless { it.onboard }
+                if (onToggleReminder != null && ride != null) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(
+                                if (reminderArmed) MaterialTheme.colorScheme.primaryContainer
+                                else Color.Transparent
+                            )
+                            .clickable { onToggleReminder(ride) },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = if (reminderArmed) Icons.Default.NotificationsActive
+                                else Icons.Default.NotificationsNone,
+                            contentDescription = if (reminderArmed) strings.cancelReminder
+                                else strings.departureReminder,
+                            tint = if (reminderArmed) MaterialTheme.colorScheme.primary
+                                else secondaryTextColor,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    Spacer(Modifier.height(6.dp))
+                }
+                Icon(
+                    imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    contentDescription = if (expanded) strings.hideDetails else strings.showDetails,
+                    tint = if (expanded) MaterialTheme.colorScheme.primary else secondaryTextColor,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+            }
         }
     }
 }
@@ -300,7 +345,7 @@ private fun BoardingLine(
     }
     val isLive = live != null || leg.realTime
 
-    Column(modifier = Modifier.padding(top = 6.dp)) {
+    Column(modifier = Modifier.padding(top = 10.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
@@ -308,13 +353,13 @@ private fun BoardingLine(
             val badgeColor = getModeColorWithRoute(leg.mode, leg.routeColor)
             Box(
                 modifier = Modifier
-                    .background(badgeColor, RoundedCornerShape(4.dp))
-                    .padding(horizontal = 6.dp, vertical = 1.dp)
+                    .background(badgeColor, RoundedCornerShape(7.dp))
+                    .padding(horizontal = 7.dp, vertical = 2.dp)
             ) {
                 Text(
                     text = legPillLabel(leg, strings),
                     color = onColorFor(badgeColor),
-                    fontSize = 12.sp,
+                    fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
                     softWrap = false
@@ -329,7 +374,7 @@ private fun BoardingLine(
                 imageVector = if (isLive) Icons.Default.Sensors else Icons.Default.Schedule,
                 contentDescription = if (isLive) strings.departureLive
                     else strings.departureTimetable,
-                tint = if (isLive) Color(0xFF66BB6A) else secondaryTextColor,
+                tint = if (isLive) PtLive else secondaryTextColor,
                 modifier = Modifier.size(14.dp)
             )
             Spacer(Modifier.width(4.dp))
@@ -337,7 +382,7 @@ private fun BoardingLine(
                 text = strings.departsAt(formatTime(timeIso)),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
-                color = if (isLive) Color(0xFF66BB6A) else textColor
+                color = if (isLive) PtLive else textColor
             )
 
             val remaining = (departure - now).inWholeSeconds
@@ -362,8 +407,8 @@ private fun BoardingLine(
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = if (remaining <= URGENT_SECONDS) FontWeight.Bold else FontWeight.Normal,
                     color = when {
-                        remaining < -60 -> Color(0xFFEF9A9A)
-                        remaining <= URGENT_SECONDS -> Color(0xFFFFB74D)
+                        remaining < -60 -> MaterialTheme.colorScheme.error
+                        remaining <= URGENT_SECONDS -> PtWarn
                         else -> secondaryTextColor
                     }
                 )
@@ -398,7 +443,7 @@ private fun BoardingLine(
                 color = secondaryTextColor,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(top = 2.dp)
+                modifier = Modifier.padding(top = 4.dp)
             )
         }
     }
@@ -428,13 +473,13 @@ private fun OnboardLine(leg: RouteLeg, textColor: Color) {
         val badgeColor = getModeColorWithRoute(leg.mode, leg.routeColor)
         Box(
             modifier = Modifier
-                .background(badgeColor, RoundedCornerShape(4.dp))
-                .padding(horizontal = 6.dp, vertical = 1.dp)
+                .background(badgeColor, RoundedCornerShape(7.dp))
+                .padding(horizontal = 7.dp, vertical = 2.dp)
         ) {
             Text(
                 text = legPillLabel(leg, strings),
                 color = onColorFor(badgeColor),
-                fontSize = 12.sp,
+                fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
                 softWrap = false

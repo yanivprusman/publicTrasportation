@@ -14,7 +14,7 @@ import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
+import com.automatelinux.pt.ui.components.PtTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -56,7 +56,7 @@ fun NamePlaceDialog(
         title = { Text(strings.nameThisPlace) },
         text = {
             Column {
-                OutlinedTextField(
+                PtTextField(
                     value = name,
                     onValueChange = { name = it.take(60) },
                     placeholder = { Text(strings.placeNameHint) },

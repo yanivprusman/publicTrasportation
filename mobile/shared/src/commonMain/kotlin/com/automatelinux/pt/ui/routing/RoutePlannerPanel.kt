@@ -35,7 +35,14 @@ import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material.icons.filled.Work
 import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.AssistChip
-import androidx.compose.material3.FilterChip
+import com.automatelinux.pt.ui.components.PtChip
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.ui.draw.clip
+import com.automatelinux.pt.ui.components.PtActionChip
+import com.automatelinux.pt.ui.components.PtPrimaryButton
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedButton
@@ -134,8 +141,9 @@ fun RoutePlannerPanel(
     onTrackBus: ((Int, RouteLeg) -> Unit)? = null,
     trackedLegIndex: Int? = null,
     onSetReminder: ((RouteLeg) -> Unit)? = null,
-    activeReminderLegIndex: Int? = null,
-    onCancelReminder: (() -> Unit)? = null,
+    /** Rides with a departure reminder armed, by [reminderKey] — any number at once. */
+    activeReminderKeys: Set<String> = emptySet(),
+    onCancelReminder: ((RouteLeg) -> Unit)? = null,
     onStartJourney: (() -> Unit)? = null,
     onShareTrip: (() -> Unit)? = null,
     nextDepartures: Map<Int, List<String>> = emptyMap(),
@@ -227,41 +235,42 @@ fun RoutePlannerPanel(
         // From on board the trip is the bus's: there is no stop to add on the way to
         // it and nothing to swap it with.
         val riding = state.ridingLine != null
-        Box(modifier = Modifier.fillMaxWidth()) {
+        Box(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
             if (!state.viaFieldVisible && !riding) {
-                TextButton(
+                BetweenFieldsAction(
+                    label = strings.addStop,
+                    icon = Icons.Default.AddLocationAlt,
                     onClick = onShowViaField,
                     modifier = Modifier.align(Alignment.CenterStart)
-                ) {
-                    Icon(
-                        Icons.Default.AddLocationAlt,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Text(strings.addStop, modifier = Modifier.padding(start = 4.dp))
-                }
+                )
             }
             if (!riding) {
-                IconButton(onClick = onSwap, modifier = Modifier.align(Alignment.Center)) {
+                // The swap key sits on the seam between the two fields it exchanges,
+                // a round key on the same raised ground they stand on.
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                        .clickable(onClick = onSwap),
+                    contentAlignment = Alignment.Center
+                ) {
                     Icon(
                         Icons.Default.SwapVert,
                         contentDescription = strings.swapOriginDestination,
-                        tint = MaterialTheme.colorScheme.primary
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(22.dp)
                     )
                 }
             }
             if (onRidingClick != null && !riding) {
-                TextButton(
+                BetweenFieldsAction(
+                    label = strings.onABus,
+                    icon = Icons.Default.DirectionsBus,
                     onClick = onRidingClick,
                     modifier = Modifier.align(Alignment.CenterEnd)
-                ) {
-                    Icon(
-                        Icons.Default.DirectionsBus,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Text(strings.onABus, modifier = Modifier.padding(start = 4.dp))
-                }
+                )
             }
         }
 
@@ -360,7 +369,7 @@ fun RoutePlannerPanel(
         }
 
         if (onToggleFavoriteRoute != null && state.canStarRoute) {
-            FilterChip(
+            PtChip(
                 selected = isCurrentRouteFavorite,
                 onClick = onToggleFavoriteRoute,
                 label = { Text(if (isCurrentRouteFavorite) strings.unsaveRoute else strings.saveRoute) },
@@ -407,25 +416,34 @@ fun RoutePlannerPanel(
 
         Spacer(Modifier.height(8.dp))
 
-        Button(
+        PtPrimaryButton(
             onClick = onSearch,
+            text = strings.searchRoutes,
+            icon = Icons.Default.Search,
             modifier = Modifier.fillMaxWidth(),
             enabled = state.origin != null && state.destination != null && !state.loading
-        ) {
-            Icon(Icons.Default.Search, contentDescription = null)
-            Text("  ${strings.searchRoutes}", modifier = Modifier.padding(start = 4.dp))
-        }
+        )
 
         // Day overview and street alternatives are point-to-point only — the
         // backend doesn't produce them for trips stitched through a via stop.
         if (onToggleDayOverview != null && state.origin != null && state.destination != null && state.via == null && !riding) {
-            Spacer(Modifier.height(4.dp))
-            OutlinedButton(
+            Spacer(Modifier.height(8.dp))
+            FilledTonalButton(
                 onClick = onToggleDayOverview,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth().height(46.dp),
+                shape = MaterialTheme.shapes.medium,
+                colors = ButtonDefaults.filledTonalButtonColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    contentColor = MaterialTheme.colorScheme.onSurface
+                )
             ) {
-                Icon(Icons.Default.BarChart, contentDescription = null, modifier = Modifier.size(18.dp))
-                Text("  ${strings.dayOverview}", modifier = Modifier.padding(start = 4.dp))
+                Icon(
+                    Icons.Default.BarChart,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(18.dp)
+                )
+                Text(strings.dayOverview, modifier = Modifier.padding(start = 8.dp))
             }
             if (state.showDayOverview) {
                 Spacer(Modifier.height(8.dp))
@@ -492,6 +510,13 @@ fun RoutePlannerPanel(
                 onLater = if (state.results?.itineraries?.isNotEmpty() == true && state.ridingLine == null) onLater else null,
                 liveBoardings = state.liveBoardings,
                 cardOpacity = cardOpacity,
+                reminderKeys = activeReminderKeys,
+                onToggleReminder = onSetReminder?.let { arm ->
+                    { leg ->
+                        if (leg.reminderKey() in activeReminderKeys) onCancelReminder?.invoke(leg)
+                        else arm(leg)
+                    }
+                },
                 // Opened in place, under its own card — the itinerary comes from the
                 // list rather than from state.selectedItinerary so the timeline can
                 // never be one frame behind the card it is hanging from.
@@ -503,7 +528,7 @@ fun RoutePlannerPanel(
                         onTrackBus = onTrackBus,
                         trackedLegIndex = trackedLegIndex,
                         onSetReminder = onSetReminder,
-                        activeReminderLegIndex = activeReminderLegIndex,
+                        activeReminderKeys = activeReminderKeys,
                         onCancelReminder = onCancelReminder,
                         onStartJourney = onStartJourney,
                         onShareTrip = onShareTrip,
@@ -552,21 +577,21 @@ private fun CollapsedSearchSummary(
     val subtitle = if (modeText != null) "$timeText · $modeText" else timeText
     Card(
         onClick = onExpand,
-        shape = RoundedCornerShape(12.dp),
+        shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f)
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
         ),
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(start = 12.dp, end = 4.dp, top = 8.dp, bottom = 8.dp)
+            modifier = Modifier.padding(start = 16.dp, end = 4.dp, top = 10.dp, bottom = 10.dp)
         ) {
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         state.origin?.name.orEmpty(),
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -580,7 +605,7 @@ private fun CollapsedSearchSummary(
                     )
                     Text(
                         state.destination?.name.orEmpty(),
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -610,7 +635,7 @@ private fun CollapsedSearchSummary(
                     Icon(
                         Icons.Default.Refresh,
                         contentDescription = strings.refreshFromNow,
-                        tint = MaterialTheme.colorScheme.primary
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -618,18 +643,49 @@ private fun CollapsedSearchSummary(
                 Icon(
                     Icons.Default.SwapVert,
                     contentDescription = strings.swapOriginDestination,
-                    tint = MaterialTheme.colorScheme.primary
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             IconButton(onClick = onExpand) {
                 Icon(
                     Icons.Default.Edit,
                     contentDescription = strings.editSearch,
-                    tint = MaterialTheme.colorScheme.primary,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(18.dp)
                 )
             }
         }
+    }
+}
+
+/** "Add a stop" / "On a bus?": a link beside the swap key, in ink with an accent glyph. */
+@Composable
+private fun BetweenFieldsAction(
+    label: String,
+    icon: ImageVector,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .height(40.dp)
+            .clip(MaterialTheme.shapes.small)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(18.dp)
+        )
+        Text(
+            label,
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.padding(start = 6.dp)
+        )
     }
 }
 
@@ -639,18 +695,7 @@ private fun QuickDestinationChip(
     icon: ImageVector,
     onClick: () -> Unit
 ) {
-    AssistChip(
-        onClick = onClick,
-        label = { Text(label) },
-        leadingIcon = {
-            Icon(
-                icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(18.dp)
-            )
-        }
-    )
+    PtActionChip(onClick = onClick, label = label, icon = icon)
 }
 
 @Composable
@@ -753,13 +798,13 @@ private fun SavedRoutesStrip(
             routes.forEach { route ->
                 Card(
                     onClick = { onPick(route) },
-                    shape = RoundedCornerShape(12.dp),
+                    shape = MaterialTheme.shapes.medium,
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
                     ),
                     modifier = Modifier.width(200.dp)
                 ) {
-                    Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+                    Column(Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
                         SavedRouteEnd(route.origin.name, LocationMarker.ORIGIN)
                         SavedRouteEnd(route.destination.name, LocationMarker.DESTINATION)
                         Text(
@@ -769,7 +814,7 @@ private fun SavedRoutesStrip(
                                 "${if (route.arriveBy) strings.arriveBy else strings.departAt} $slot"
                             } ?: strings.now,
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(top = 2.dp)
                         )
                     }
@@ -816,9 +861,9 @@ private fun RecentTripsStrip(
             trips.forEach { trip ->
                 val running = trip.resumable(nowMs)
                 val container = if (running) MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.surfaceVariant
+                    else MaterialTheme.colorScheme.surfaceContainerHigh
                 val content = if (running) MaterialTheme.colorScheme.onPrimary
-                    else MaterialTheme.colorScheme.onSurfaceVariant
+                    else MaterialTheme.colorScheme.onSurface
                 val started = Instant.fromEpochMilliseconds(trip.startedAtMs).toLocalDateTime(zone)
                 val subtitle = if (running) {
                     val arrive = runCatching {
@@ -832,11 +877,11 @@ private fun RecentTripsStrip(
                 }
                 Card(
                     onClick = { onPick(trip) },
-                    shape = RoundedCornerShape(12.dp),
+                    shape = MaterialTheme.shapes.medium,
                     colors = CardDefaults.cardColors(containerColor = container),
                     modifier = Modifier.width(200.dp)
                 ) {
-                    Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+                    Column(Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
                         SavedRouteEnd(
                             trip.originLabel ?: strings.placeYourLocation,
                             LocationMarker.ORIGIN,
@@ -867,7 +912,7 @@ private fun RecentTripsStrip(
 private fun SavedRouteEnd(
     name: String,
     marker: LocationMarker,
-    color: Color = MaterialTheme.colorScheme.onPrimaryContainer,
+    color: Color = MaterialTheme.colorScheme.onSurface,
     /** The end was the phone's GPS fix: the crosshair says so, the name says where it was. */
     fromGps: Boolean = false
 ) {

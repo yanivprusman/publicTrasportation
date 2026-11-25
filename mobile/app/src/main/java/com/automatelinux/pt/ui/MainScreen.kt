@@ -49,16 +49,16 @@ import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.SatelliteAlt
 import androidx.compose.material.icons.filled.Sensors
 import androidx.compose.material.icons.filled.Work
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SheetValue
-import androidx.compose.material3.SmallFloatingActionButton
+import com.automatelinux.pt.ui.components.PtChip
+import com.automatelinux.pt.ui.routing.reminderKey
+import com.automatelinux.pt.ui.components.PtMapRail
+import com.automatelinux.pt.ui.components.PtMapRailButton
 import androidx.compose.material3.Button
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.OutlinedButton
@@ -237,8 +237,10 @@ fun MainScreen(
     var favoriteLines by remember { mutableStateOf(settingsStore.getFavoriteLines()) }
     var favoriteStations by remember { mutableStateOf(settingsStore.getFavoriteStations()) }
     var favoriteRoutes by remember { mutableStateOf(settingsStore.getFavoriteRoutes()) }
-    var reminderLegIndex by remember { mutableStateOf<Int?>(null) }
-    var reminderJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+    // Every armed departure reminder, by ride (RouteLeg.reminderKey) → when it fires.
+    // Seeded from the scheduler, which is where they live: the alarms outlast the
+    // process, so a relaunched app must still show — and be able to cancel — them.
+    var reminders by remember { mutableStateOf(ReminderScheduler.armed(context)) }
     var selectedLine by remember { mutableStateOf<String?>(null) }
     var lineShapeData by remember { mutableStateOf(LineShapeData()) }
     // The one direction of [selectedLine] being looked at full screen, or null while
@@ -480,35 +482,34 @@ fun MainScreen(
         }
     }
 
-    // Departure reminder: exact AlarmManager alarm + system notification, so it fires
-    // even if the app is killed. reminderLegIndex/reminderJob only drive the button UI.
+    // Departure reminders: an exact AlarmManager alarm + system notification each, so
+    // they fire even if the app is killed. Several rides can be armed at once — one on
+    // each of two suggested routes, to take whichever bus comes first.
     val armReminder: (RouteLeg) -> Unit = { leg ->
-        val legIdx = routingState.selectedItinerary?.legs?.indexOf(leg) ?: -1
-        if (legIdx >= 0) {
-            try {
-                val departTime = Instant.parse(leg.startTime)
-                val triggerAt = departTime.minus(5, DateTimeUnit.MINUTE).toEpochMilliseconds()
-                val lineName = leg.routeShortName ?: strings.busMode
-                val timeStr = departTime.toLocalDateTime(TimeZone.currentSystemDefault())
-                    .time.toString().take(5)
-                ReminderScheduler.schedule(
-                    context,
-                    triggerAtMillis = triggerAt,
-                    title = strings.departureReminder,
-                    text = strings.reminderNotification(lineName, timeStr),
-                    channelName = strings.departureReminder
-                )
-                reminderLegIndex = legIdx
-                reminderJob?.cancel()
-                reminderJob = scope.launch {
-                    val delayMs = triggerAt - Clock.System.now().toEpochMilliseconds()
-                    if (delayMs > 0) kotlinx.coroutines.delay(delayMs)
-                    reminderLegIndex = null
-                }
-            } catch (_: Exception) {
-                // Unparseable departure time — leave the button unarmed.
-            }
+        try {
+            val departTime = Instant.parse(leg.startTime)
+            val triggerAt = departTime.minus(5, DateTimeUnit.MINUTE).toEpochMilliseconds()
+            val lineName = leg.routeShortName ?: strings.busMode
+            val timeStr = departTime.toLocalDateTime(TimeZone.currentSystemDefault())
+                .time.toString().take(5)
+            ReminderScheduler.schedule(
+                context,
+                key = leg.reminderKey(),
+                triggerAtMillis = triggerAt,
+                title = strings.departureReminder,
+                text = strings.reminderNotification(lineName, timeStr),
+                channelName = strings.departureReminder
+            )
+            reminders = ReminderScheduler.armed(context)
+        } catch (_: Exception) {
+            // Unparseable departure time — leave the button unarmed.
         }
+    }
+    // A reminder that has fired is no longer armed; its button goes back to "remind me".
+    LaunchedEffect(reminders) {
+        val next = reminders.values.minOrNull() ?: return@LaunchedEffect
+        kotlinx.coroutines.delay((next - System.currentTimeMillis()).coerceAtLeast(0) + 500)
+        reminders = ReminderScheduler.armed(context)
     }
 
     var pendingReminderLeg by remember { mutableStateOf<RouteLeg?>(null) }
@@ -1276,12 +1277,10 @@ fun MainScreen(
                                     },
                                     trackedLegIndex = routingState.trackedBus?.legIndex,
                                     onSetReminder = setDepartureReminder,
-                                    activeReminderLegIndex = reminderLegIndex,
-                                    onCancelReminder = {
-                                        ReminderScheduler.cancel(context)
-                                        reminderJob?.cancel()
-                                        reminderJob = null
-                                        reminderLegIndex = null
+                                    activeReminderKeys = reminders.keys,
+                                    onCancelReminder = { leg ->
+                                        ReminderScheduler.cancel(context, leg.reminderKey())
+                                        reminders = ReminderScheduler.armed(context)
                                     },
                                     onStartJourney = {
                                         keyboardController?.hide()
@@ -2016,58 +2015,148 @@ fun MainScreen(
                         .align(Alignment.TopEnd)
                         .padding(top = 48.dp, end = 12.dp),
                     horizontalAlignment = Alignment.End,
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    // Folds the whole column into this one button, which stays put, so
-                    // the map can be read edge to edge and the buttons are one tap back.
-                    SmallFloatingActionButton(
-                        onClick = {
-                            mapButtonsCollapsed = !mapButtonsCollapsed
-                            settingsStore.mapButtonsCollapsed = mapButtonsCollapsed
-                        },
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        contentColor = MaterialTheme.colorScheme.primary,
-                        elevation = FloatingActionButtonDefaults.elevation(4.dp)
-                    ) {
-                        Icon(
-                            if (mapButtonsCollapsed) Icons.Default.ExpandMore else Icons.Default.ExpandLess,
+                    val trackableLeg = remember(routingState.displayedItinerary) {
+                        routingState.displayedItinerary?.legs
+                            ?.withIndex()
+                            ?.firstOrNull { (_, leg) ->
+                                leg.mode != TransitMode.WALK && leg.routeShortName != null
+                            }
+                    }
+                    // One capsule, a cell per button. Its first cell folds the rest
+                    // away and stays put, so the map can be read edge to edge and the
+                    // buttons are one tap back.
+                    PtMapRail {
+                        PtMapRailButton(
+                            onClick = {
+                                mapButtonsCollapsed = !mapButtonsCollapsed
+                                settingsStore.mapButtonsCollapsed = mapButtonsCollapsed
+                            },
+                            icon = if (mapButtonsCollapsed) Icons.Default.ExpandMore else Icons.Default.ExpandLess,
                             contentDescription = if (mapButtonsCollapsed) {
                                 strings.mapButtonsExpand
                             } else {
                                 strings.mapButtonsCollapse
-                            },
-                            modifier = Modifier.size(22.dp)
+                            }
                         )
+
+                        if (!mapButtonsCollapsed) {
+                            // Always here, whatever the sheet is doing and whether or
+                            // not a route is planned: the plainest form of "where are
+                            // the buses". Filled while the layer is on.
+                            PtMapRailButton(
+                                onClick = { liveBuses = !liveBuses },
+                                icon = Icons.Default.Sensors,
+                                contentDescription = strings.liveBusesNearby,
+                                active = liveBuses
+                            )
+
+                            // Picking a route already says which bus you care about.
+                            // With the sheet closed — the state you actually read the
+                            // map in — this is the way to ask where your bus is.
+                            if (routingState.trackedBus == null && trackableLeg != null) {
+                                val (legIndex, leg) = trackableLeg
+                                PtMapRailButton(
+                                    onClick = {
+                                        routingViewModel.trackBusOnLeg(
+                                            legIndex = legIndex,
+                                            lat = leg.from.lat,
+                                            lon = leg.from.lon,
+                                            lineName = leg.routeShortName ?: return@PtMapRailButton,
+                                            access = leg.access,
+                                            destination = leg.to.name,
+                                            tripId = leg.tripId
+                                        )
+                                    },
+                                    icon = Icons.Default.DirectionsBus,
+                                    contentDescription = strings.trackBus
+                                )
+                            }
+
+                            // Panning away from the bus is normal — you look ahead down
+                            // the road — so getting back to it is one tap, not a re-track.
+                            if (routingState.trackedBus?.marker != null) {
+                                PtMapRailButton(
+                                    onClick = frameTrackedBus,
+                                    icon = Icons.Default.DirectionsBus,
+                                    contentDescription = strings.trackingFrameBus,
+                                    active = true
+                                )
+                            }
+
+                            PtMapRailButton(
+                        onClick = {
+                                            if (LocationHelper.hasPermission(context)) {
+                                                followingLocation = !followingLocation
+                                                if (followingLocation) {
+                                                    centerMapOnCurrentLocation()
+                                                }
+                                            } else {
+                                                pendingGpsTarget = GpsTarget.MAP_FOLLOW
+                                                permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+                                            }
+                                        },
+                                icon = Icons.Default.MyLocation,
+                                contentDescription = strings.followMyLocation,
+                                active = followingLocation
+                            )
+
+                            // Filled while the dots are drawn, like the live-buses
+                            // cell: the fill says the layer is on, the icon says what
+                            // tapping does.
+                            PtMapRailButton(
+                                onClick = {
+                                    showStops = !showStops
+                                    settingsStore.showStops = showStops
+                                },
+                                icon = if (showStops) Icons.Default.Place else Icons.Default.LocationOff,
+                                contentDescription = if (showStops) strings.mapHideStops else strings.mapShowStops,
+                                active = showStops
+                            )
+
+                            Box {
+                                PtMapRailButton(
+                                    onClick = { showMapStyleMenu = true },
+                                    icon = Icons.Default.Layers,
+                                    contentDescription = strings.mapStyle
+                                )
+                                DropdownMenu(
+                                    expanded = showMapStyleMenu,
+                                    onDismissRequest = { showMapStyleMenu = false }
+                                ) {
+                                    val styleOptions = listOf(
+                                        Triple(MapStyles.DARK, Icons.Default.DarkMode, strings.mapStyleDark),
+                                        Triple(MapStyles.LIGHT, Icons.Default.LightMode, strings.mapStyleLight),
+                                        Triple(MapStyles.SATELLITE, Icons.Default.SatelliteAlt, strings.mapStyleSatellite)
+                                    )
+                                    for ((style, icon, label) in styleOptions) {
+                                        DropdownMenuItem(
+                                            text = { Text(label) },
+                                            leadingIcon = { Icon(icon, contentDescription = null) },
+                                            trailingIcon = if (mapStyle == style) {
+                                                {
+                                                    Icon(
+                                                        Icons.Default.Check,
+                                                        contentDescription = null,
+                                                        tint = MaterialTheme.colorScheme.primary
+                                                    )
+                                                }
+                                            } else null,
+                                            onClick = {
+                                                settingsStore.mapStyle = style
+                                                mapStyle = style
+                                                showMapStyleMenu = false
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
 
-                    if (!mapButtonsCollapsed) {
-                    // Always here, whatever the sheet is doing and whether or not a
-                    // route is planned: the plainest form of "where are the buses".
-                    SmallFloatingActionButton(
-                        onClick = { liveBuses = !liveBuses },
-                        containerColor = if (liveBuses) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.surface
-                        },
-                        contentColor = if (liveBuses) {
-                            MaterialTheme.colorScheme.onPrimary
-                        } else {
-                            MaterialTheme.colorScheme.primary
-                        },
-                        elevation = FloatingActionButtonDefaults.elevation(4.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.Sensors,
-                            contentDescription = strings.liveBusesNearby,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-
-                    // Only where it can mean something: live buses on and a route on
-                    // the map with a stop the feed can be asked about.
                     if (liveBuses && routeQueryLegs != null) {
-                        FilterChip(
+                        PtChip(
                             selected = liveBusesRouteOnly,
                             onClick = { liveBusesRouteOnly = !liveBusesRouteOnly },
                             // On and off must not look alike: on the dark theme the
@@ -2090,171 +2179,7 @@ fun MainScreen(
                                     modifier = Modifier.size(18.dp)
                                 )
                             },
-                            colors = FilterChipDefaults.filterChipColors(
-                                containerColor = MaterialTheme.colorScheme.surface,
-                                selectedContainerColor = MaterialTheme.colorScheme.primary,
-                                selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-                                selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary
-                            ),
-                            elevation = FilterChipDefaults.filterChipElevation(elevation = 4.dp)
                         )
-                    }
-
-                    // Picking a route already says which bus you care about. Until
-                    // now that intent went nowhere: the only Track control lived
-                    // inside the itinerary's leg detail, so with the sheet closed —
-                    // the state you actually read the map in — there was no way to
-                    // ask where your bus was. This button is on the map, so it is
-                    // there whatever the sheet is doing.
-                    val trackableLeg = remember(routingState.displayedItinerary) {
-                        routingState.displayedItinerary?.legs
-                            ?.withIndex()
-                            ?.firstOrNull { (_, leg) ->
-                                leg.mode != TransitMode.WALK && leg.routeShortName != null
-                            }
-                    }
-                    if (routingState.trackedBus == null && trackableLeg != null) {
-                        val (legIndex, leg) = trackableLeg
-                        SmallFloatingActionButton(
-                            onClick = {
-                                routingViewModel.trackBusOnLeg(
-                                    legIndex = legIndex,
-                                    lat = leg.from.lat,
-                                    lon = leg.from.lon,
-                                    lineName = leg.routeShortName ?: return@SmallFloatingActionButton,
-                                    access = leg.access,
-                                    destination = leg.to.name,
-                                    tripId = leg.tripId
-                                )
-                            },
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary,
-                            elevation = FloatingActionButtonDefaults.elevation(4.dp)
-                        ) {
-                            Icon(
-                                Icons.Default.DirectionsBus,
-                                contentDescription = strings.trackBus,
-                                modifier = Modifier.size(22.dp)
-                            )
-                        }
-                    }
-
-                    // Panning away from the bus is normal — you look ahead down the
-                    // road — so getting back to it has to be one tap, not a re-track.
-                    if (routingState.trackedBus?.marker != null) {
-                        SmallFloatingActionButton(
-                            onClick = frameTrackedBus,
-                            containerColor = MaterialTheme.colorScheme.surface,
-                            contentColor = MaterialTheme.colorScheme.primary,
-                            elevation = FloatingActionButtonDefaults.elevation(4.dp)
-                        ) {
-                            Icon(
-                                Icons.Default.DirectionsBus,
-                                contentDescription = strings.trackingFrameBus,
-                                modifier = Modifier.size(22.dp)
-                            )
-                        }
-                    }
-
-                    SmallFloatingActionButton(
-                        onClick = {
-                            if (LocationHelper.hasPermission(context)) {
-                                followingLocation = !followingLocation
-                                if (followingLocation) {
-                                    centerMapOnCurrentLocation()
-                                }
-                            } else {
-                                pendingGpsTarget = GpsTarget.MAP_FOLLOW
-                                permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
-                            }
-                        },
-                        containerColor = if (followingLocation)
-                            MaterialTheme.colorScheme.primary
-                        else
-                            MaterialTheme.colorScheme.surface,
-                        contentColor = if (followingLocation)
-                            MaterialTheme.colorScheme.onPrimary
-                        else
-                            MaterialTheme.colorScheme.primary,
-                        elevation = FloatingActionButtonDefaults.elevation(4.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.MyLocation,
-                            contentDescription = strings.followMyLocation,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-
-                    // Primary while the dots are drawn, like the live-buses toggle: the
-                    // colour says the layer is on, the icon says what tapping does.
-                    SmallFloatingActionButton(
-                        onClick = {
-                            showStops = !showStops
-                            settingsStore.showStops = showStops
-                        },
-                        containerColor = if (showStops) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.surface
-                        },
-                        contentColor = if (showStops) {
-                            MaterialTheme.colorScheme.onPrimary
-                        } else {
-                            MaterialTheme.colorScheme.primary
-                        },
-                        elevation = FloatingActionButtonDefaults.elevation(4.dp)
-                    ) {
-                        Icon(
-                            if (showStops) Icons.Default.Place else Icons.Default.LocationOff,
-                            contentDescription = if (showStops) strings.mapHideStops else strings.mapShowStops,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-
-                    Box {
-                        SmallFloatingActionButton(
-                            onClick = { showMapStyleMenu = true },
-                            containerColor = MaterialTheme.colorScheme.surface,
-                            contentColor = MaterialTheme.colorScheme.primary,
-                            elevation = FloatingActionButtonDefaults.elevation(4.dp)
-                        ) {
-                            Icon(
-                                Icons.Default.Layers,
-                                contentDescription = strings.mapStyle,
-                                modifier = Modifier.size(22.dp)
-                            )
-                        }
-                        DropdownMenu(
-                            expanded = showMapStyleMenu,
-                            onDismissRequest = { showMapStyleMenu = false }
-                        ) {
-                            val styleOptions = listOf(
-                                Triple(MapStyles.DARK, Icons.Default.DarkMode, strings.mapStyleDark),
-                                Triple(MapStyles.LIGHT, Icons.Default.LightMode, strings.mapStyleLight),
-                                Triple(MapStyles.SATELLITE, Icons.Default.SatelliteAlt, strings.mapStyleSatellite)
-                            )
-                            for ((style, icon, label) in styleOptions) {
-                                DropdownMenuItem(
-                                    text = { Text(label) },
-                                    leadingIcon = { Icon(icon, contentDescription = null) },
-                                    trailingIcon = if (mapStyle == style) {
-                                        {
-                                            Icon(
-                                                Icons.Default.Check,
-                                                contentDescription = null,
-                                                tint = MaterialTheme.colorScheme.primary
-                                            )
-                                        }
-                                    } else null,
-                                    onClick = {
-                                        settingsStore.mapStyle = style
-                                        mapStyle = style
-                                        showMapStyleMenu = false
-                                    }
-                                )
-                            }
-                        }
-                    }
                     }
                 }
 

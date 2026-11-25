@@ -1,5 +1,6 @@
 package com.automatelinux.pt.ui.routing
 
+import com.automatelinux.pt.ui.theme.PtLive
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -191,7 +192,7 @@ private fun DayChart(
     val gridColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.18f)
     val axisTextColor = MaterialTheme.colorScheme.onSurfaceVariant
     val barColor = MaterialTheme.colorScheme.primary
-    val fastestColor = Color(0xFF4CAF50)
+    val fastestColor = PtLive
     val selectedColor = MaterialTheme.colorScheme.onSurface
     val axisStyle = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp, color = axisTextColor)
 
@@ -367,7 +368,7 @@ private fun DayStat(label: String, value: String, highlight: Boolean = false) {
             text = value,
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.Bold,
-            color = if (highlight) Color(0xFF4CAF50) else MaterialTheme.colorScheme.onSurface
+            color = if (highlight) PtLive else MaterialTheme.colorScheme.onSurface
         )
     }
 }

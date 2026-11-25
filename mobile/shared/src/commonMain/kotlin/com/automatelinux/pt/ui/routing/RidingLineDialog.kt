@@ -18,7 +18,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
+import com.automatelinux.pt.ui.components.PtTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -85,7 +85,7 @@ fun RidingLineDialog(
         title = { Text(strings.whichBusTitle) },
         text = {
             Column {
-                OutlinedTextField(
+                PtTextField(
                     value = line,
                     onValueChange = { line = it.take(8) },
                     label = { Text(strings.lineNumberLabel) },

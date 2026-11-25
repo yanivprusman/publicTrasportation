@@ -11,6 +11,7 @@ import com.automatelinux.feedbacklib.data.model.Issue
 import com.automatelinux.feedbacklib.ui.chat.FeedbackChatScreen
 import com.automatelinux.feedbacklib.ui.chat.FeedbackChatViewModel
 import com.automatelinux.pt.ui.theme.PTTheme
+import com.automatelinux.pt.ui.theme.PtFontFamily
 import com.automatelinux.pt.util.ServerConfig
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -32,7 +33,7 @@ class FeedbackChatActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            PTTheme {
+            PTTheme(fontFamily = PtFontFamily) {
                 val viewModel: FeedbackChatViewModel = hiltViewModel()
 
                 val clarifierSessionId = intent.getStringExtra(EXTRA_CLARIFIER_SESSION_ID)

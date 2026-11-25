@@ -1,5 +1,7 @@
 package com.automatelinux.pt.ui.journey
 
+import com.automatelinux.pt.ui.theme.PtLive
+import com.automatelinux.pt.ui.theme.PtWarn
 import androidx.compose.ui.platform.testTag
 import com.automatelinux.pt.journey.previewStopList
 import kotlin.math.abs
@@ -109,10 +111,10 @@ import com.automatelinux.pt.ui.util.PlatformBackHandler
 import kotlinx.datetime.Clock
 
 /** The colour of "get ready, this is you" — the same amber the cards use for urgency. */
-private val URGENT = Color(0xFFFFB74D)
+private val URGENT = PtWarn
 
 /** The colour of a live sighting — the same green the tracking chip already speaks. */
-private val LIVE_GREEN = Color(0xFF66BB6A)
+private val LIVE_GREEN = PtLive
 
 /** How long the end-journey button stays armed before it goes back to being an ✕. */
 private const val CONFIRM_END_TIMEOUT_MS = 4_000L
@@ -1034,7 +1036,7 @@ private fun legLine(
 @Composable
 private fun TrackingChip(positionKnown: Boolean) {
     val strings = LocalAppStrings.current
-    val color = if (positionKnown) Color(0xFF66BB6A) else MaterialTheme.colorScheme.onSurfaceVariant
+    val color = if (positionKnown) PtLive else MaterialTheme.colorScheme.onSurfaceVariant
     Row(
         modifier = Modifier
             .background(color.copy(alpha = 0.15f), RoundedCornerShape(4.dp))

@@ -1,5 +1,8 @@
 package com.automatelinux.pt.ui.arrivals
 
+import com.automatelinux.pt.ui.components.PtSwitchRow
+import androidx.compose.material.icons.filled.DirectionsBus
+import com.automatelinux.pt.ui.theme.PtWarn
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -120,7 +123,7 @@ fun TransportControls(
                             } else {
                                 strings.addFavorite
                             },
-                            tint = if (isStationFavorite) Color(0xFFFFD700) else MaterialTheme.colorScheme.onSurfaceVariant,
+                            tint = if (isStationFavorite) PtWarn else MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -130,15 +133,12 @@ fun TransportControls(
 
         Spacer(Modifier.height(8.dp))
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Checkbox(
-                checked = showVehicleMarkers,
-                onCheckedChange = onShowVehicleMarkersChange
-            )
-            Text(strings.vehicles, style = MaterialTheme.typography.bodySmall)
-        }
+        // A layer on the map, on or off: a switch, not a form checkbox.
+        PtSwitchRow(
+            checked = showVehicleMarkers,
+            onCheckedChange = onShowVehicleMarkersChange,
+            label = strings.vehicles,
+            icon = Icons.Default.DirectionsBus
+        )
     }
 }

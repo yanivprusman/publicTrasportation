@@ -4,8 +4,15 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material3.Icon
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -15,8 +22,8 @@ import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
+import com.automatelinux.pt.ui.components.PtSegment
+import com.automatelinux.pt.ui.components.PtSegmented
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -40,7 +47,7 @@ import kotlinx.coroutines.delay
 import com.automatelinux.pt.ui.util.PlatformBackHandler
 import kotlinx.datetime.Clock
 
-@OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun RouteResults(
     sortedItineraries: List<Itinerary>,
@@ -65,6 +72,10 @@ fun RouteResults(
     /** What the operator feed says about the rides on screen, keyed by [liveBoardingKey]. */
     liveBoardings: Map<String, LiveBoarding> = emptyMap(),
     cardOpacity: Float = 0.6f,
+    /** Rides with a departure reminder armed, by [reminderKey]. */
+    reminderKeys: Set<String> = emptySet(),
+    /** Arms or disarms the reminder for a card's first ride, from the card itself. */
+    onToggleReminder: ((com.automatelinux.pt.data.model.RouteLeg) -> Unit)? = null,
     /**
      * The full timeline of one result, rendered by the caller and placed by this list
      * DIRECTLY UNDER the card that was tapped. It used to hang below the whole list,
@@ -146,59 +157,27 @@ fun RouteResults(
             sortedItineraries.isNotEmpty() -> {
                 Column {
                     if (onSortChange != null) {
-                        FlowRow(
-                            modifier = Modifier.padding(horizontal = 8.dp),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            FilterChip(
-                                selected = sortMode == RouteSortMode.ARRIVES_FIRST,
-                                onClick = { onSortChange(RouteSortMode.ARRIVES_FIRST) },
-                                label = { Text(strings.arrivesFirst, style = MaterialTheme.typography.labelSmall) },
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = MaterialTheme.colorScheme.primary,
-                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary
-                                )
-                            )
-                            FilterChip(
-                                selected = sortMode == RouteSortMode.FASTEST,
-                                onClick = { onSortChange(RouteSortMode.FASTEST) },
-                                label = { Text(strings.fastest, style = MaterialTheme.typography.labelSmall) },
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = MaterialTheme.colorScheme.primary,
-                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary
-                                )
-                            )
-                            FilterChip(
-                                selected = sortMode == RouteSortMode.FEWER_TRANSFERS,
-                                onClick = { onSortChange(RouteSortMode.FEWER_TRANSFERS) },
-                                label = { Text(strings.fewerTransfers, style = MaterialTheme.typography.labelSmall) },
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = MaterialTheme.colorScheme.primary,
-                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary
-                                )
-                            )
-                            FilterChip(
-                                selected = sortMode == RouteSortMode.LESS_WALKING,
-                                onClick = { onSortChange(RouteSortMode.LESS_WALKING) },
-                                label = { Text(strings.lessWalking, style = MaterialTheme.typography.labelSmall) },
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = MaterialTheme.colorScheme.primary,
-                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary
-                                )
-                            )
-                        }
-                        Spacer(Modifier.height(4.dp))
+                        // One order at a time, so a track rather than four chips
+                        // that wrapped onto a second line with one orphan on it.
+                        val sorts = listOf(
+                            RouteSortMode.ARRIVES_FIRST to strings.arrivesFirst,
+                            RouteSortMode.FASTEST to strings.fastest,
+                            RouteSortMode.FEWER_TRANSFERS to strings.fewerTransfers,
+                            RouteSortMode.LESS_WALKING to strings.lessWalking
+                        )
+                        PtSegmented(
+                            segments = sorts.map { PtSegment(it.second) },
+                            selectedIndex = sorts.indexOfFirst { it.first == sortMode },
+                            onSelect = { onSortChange(sorts[it].first) },
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+                            height = 38.dp,
+                            dense = true
+                        )
+                        Spacer(Modifier.height(8.dp))
                     }
 
                     if (onEarlier != null) {
-                        OutlinedButton(
-                            onClick = onEarlier,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 8.dp)
-                        ) {
-                            Text(strings.earlier)
-                        }
+                        TimeShiftRow(strings.earlier, Icons.Default.KeyboardArrowUp, onEarlier)
                         Spacer(Modifier.height(4.dp))
                     }
 
@@ -224,7 +203,9 @@ fun RouteResults(
                                 now = now,
                                 laterDepartures = laterDeparturesOf(itinerary, sortedItineraries),
                                 live = liveBoardingFor(itinerary, liveBoardings),
-                                cardOpacity = cardOpacity
+                                cardOpacity = cardOpacity,
+                                reminderArmed = itinerary.firstRide?.reminderKey() in reminderKeys,
+                                onToggleReminder = onToggleReminder
                             )
                             if (open && detailContent != null) {
                                 detailContent(itinerary)
@@ -234,14 +215,7 @@ fun RouteResults(
 
                     if (onLater != null) {
                         Spacer(Modifier.height(4.dp))
-                        OutlinedButton(
-                            onClick = onLater,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 8.dp)
-                        ) {
-                            Text(strings.later)
-                        }
+                        TimeShiftRow(strings.later, Icons.Default.KeyboardArrowDown, onLater)
                     }
                 }
             }
@@ -281,5 +255,36 @@ fun RouteResults(
                 }
             }
         }
+    }
+}
+
+/**
+ * "Earlier" / "Later": the list goes on in that direction. A quiet full-width row
+ * with the arrow of the way it extends, not a hollow button competing with the cards.
+ */
+@Composable
+private fun TimeShiftRow(label: String, icon: ImageVector, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp)
+            .height(40.dp)
+            .clip(MaterialTheme.shapes.small)
+            .clickable(onClick = onClick),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center
+    ) {
+        Icon(
+            icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(20.dp)
+        )
+        Spacer(Modifier.width(4.dp))
+        Text(
+            label,
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.primary
+        )
     }
 }

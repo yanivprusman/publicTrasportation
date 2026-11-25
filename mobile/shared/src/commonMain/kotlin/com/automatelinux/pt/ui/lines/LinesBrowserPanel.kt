@@ -29,7 +29,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
+import com.automatelinux.pt.ui.components.PtTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -97,7 +97,7 @@ fun LinesBrowserPanel(
     var searchText by remember { mutableStateOf("") }
 
     Column(modifier = modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
-        OutlinedTextField(
+        PtTextField(
             value = searchText,
             onValueChange = { searchText = it },
             label = { Text(strings.searchLine) },
