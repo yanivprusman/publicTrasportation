@@ -364,6 +364,8 @@ interface AppStrings {
     val journeyStayOn: (String) -> String
     val journeyLeavesIn: (String, String) -> String
     val journeyBoardNow: (String) -> String
+    /** The bus waited for left without the rider; the next one is being looked up. */
+    val journeyMissedBus: (String) -> String
     /** On a previewed step: the rider says this is where they are. */
     val journeyImHere: String
     /** Leaves the preview for the live step. */
@@ -827,6 +829,7 @@ val EnStrings: AppStrings = object : AppStrings {
     override val journeyStayOn: (String) -> String = { line -> "Stay on $line" }
     override val journeyLeavesIn: (String, String) -> String = { line, d -> "$line leaves in $d" }
     override val journeyBoardNow: (String) -> String = { line -> "Board $line now" }
+    override val journeyMissedBus: (String) -> String = { line -> "$line has left · finding the next one" }
     override val journeyImHere: String = "I'm here"
     override val journeyBackToLive: String = "Back to live"
     override val journeyPreviewStep: (Int, Int, Boolean) -> String =
@@ -1277,6 +1280,7 @@ val HeStrings: AppStrings = object : AppStrings {
     override val journeyStayOn: (String) -> String = { line -> "להישאר על $line" }
     override val journeyLeavesIn: (String, String) -> String = { line, d -> "$line יוצא בעוד $d" }
     override val journeyBoardNow: (String) -> String = { line -> "לעלות על $line עכשיו" }
+    override val journeyMissedBus: (String) -> String = { line -> "$line כבר יצא · מחפש את הבא" }
     override val journeyImHere: String = "אני כאן"
     override val journeyBackToLive: String = "חזרה למצב חי"
     override val journeyPreviewStep: (Int, Int, Boolean) -> String =

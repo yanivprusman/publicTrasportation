@@ -234,6 +234,9 @@ object JourneySession {
         livePoll = null
         shareJob?.cancel()
         shareJob = null
+        nextTripJob?.cancel()
+        nextTripJob = null
+        nextTripTriedAtMs = 0L
         // Tell watchers the trip is over rather than letting the page go dark.
         // Captured before the state is wiped; fired from the session scope, which
         // outlives this call.
@@ -355,6 +358,8 @@ object JourneySession {
         _progress.value = update.progress
         update.alerts.forEach { _alerts.emit(it) }
 
+        if (update.progress.boardingMissed) takeNextTrip(update.progress.legIndex, nowMs)
+
         // Arrival ends the journey by itself: linger long enough for "You've
         // arrived!" to be read, then put everything away. Before this lived here, a
         // journey run off the timetable alone (no service) ticked forever, and its
@@ -364,6 +369,52 @@ object JourneySession {
                 delay(ARRIVED_LINGER_MS)
                 clear()
             }
+        }
+    }
+
+    private var nextTripJob: Job? = null
+    private var nextTripTriedAtMs = 0L
+
+    /**
+     * The rider's bus left without them: ask the planner for the next trip of the same
+     * line, same pole to same stop, and ride that one instead. Leg [legIndex] is
+     * replaced in place, so the cursor and the legs already travelled stand.
+     *
+     * Tried at most once a minute: a search with no later trip of the line (last bus
+     * gone, server down) leaves the headline saying the bus left, which is true, and
+     * the rider's own re-plan button is right beside it.
+     */
+    private fun takeNextTrip(legIndex: Int, nowMs: Long) {
+        if (nextTripJob?.isActive == true || nowMs - nextTripTriedAtMs < NEXT_TRIP_RETRY_MS) return
+        nextTripTriedAtMs = nowMs
+        val trip = _itinerary.value ?: return
+        val missed = trip.legs.getOrNull(legIndex)?.takeIf { it.isRide } ?: return
+        val started = startedAtMs ?: return
+        nextTripJob = scope.launch {
+            val options = try {
+                GlobalContext.get().get<PtApi>().searchRoute(
+                    from = "${missed.from.lat},${missed.from.lon}",
+                    to = "${missed.to.lat},${missed.to.lon}",
+                    time = kotlinx.datetime.Instant.fromEpochMilliseconds(nowMs).toString()
+                ).itineraries
+            } catch (_: Exception) {
+                return@launch
+            }
+            val ride = laterRideFor(missed, options) ?: return@launch
+            // The journey may have moved on, or ended, while the search ran.
+            if (startedAtMs != started || _itinerary.value !== trip || cursor.legIndex != legIndex) return@launch
+            _itinerary.value = trip.withRideReplaced(legIndex, ride)
+            cursor = cursor.rearmedFor(legIndex)
+            _live.value = null
+            synchronized(storeLock) {
+                val s = store()
+                s.setStartedTrips(s.getStartedTrips().map {
+                    if (it.startedAtMs == started) {
+                        it.copy(itinerary = it.itinerary.withRideReplaced(legIndex, ride), cursor = cursor)
+                    } else it
+                })
+            }
+            advance()
         }
     }
 
@@ -408,6 +459,7 @@ object JourneySession {
     }
 
     private const val TICK_MS = 1_000L
+    private const val NEXT_TRIP_RETRY_MS = 60_000L
     private const val ARRIVED_LINGER_MS = 20_000L
     private const val LIVE_POLL_MS = 20_000L
     private const val SHARE_POST_MS = 10_000L

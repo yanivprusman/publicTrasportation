@@ -141,7 +141,13 @@ data class JourneyProgress(
     /** True from the moment the rider should be getting ready to step off. */
     val alightImminent: Boolean,
     /** False when no usable fix has arrived: the UI must say so rather than guess. */
-    val positionKnown: Boolean
+    val positionKnown: Boolean,
+    /**
+     * The ride being waited for has gone without the rider: they are still at its pole
+     * [MISSED_AFTER_MS] after it was due, and the live feed sees no bus of the line
+     * still coming. The session then looks for the next trip of the line.
+     */
+    val boardingMissed: Boolean = false
 )
 
 /**
@@ -497,6 +503,12 @@ fun stepJourney(
     }
     val waiting = waitingUntilMs != null
 
+    // Missed needs the rider's position at the pole: with no fix they may well be on
+    // the bus, and with location off the clock has already put them aboard.
+    val boardingMissed = waitingUntilMs != null && usable != null &&
+        nowMs - max(waitingUntilMs, liveBoardingArrivalMs ?: waitingUntilMs) >= MISSED_AFTER_MS &&
+        haversineMeters(usable.lat, usable.lon, leg.from.lat, leg.from.lon) <= BOARDED_METERS
+
     val phase = when {
         waiting -> JourneyPhase.WAITING
         leg.isRide -> JourneyPhase.RIDING
@@ -552,7 +564,8 @@ fun stepJourney(
             // road for nothing (owner, 2026-11-23, 09:15 for a 09:09 bus).
             secondsToDeparture = waitingUntilMs?.let { ((liveBoardingArrivalMs ?: it) - nowMs) / 1000 },
             alightImminent = alightImminent,
-            positionKnown = usable != null
+            positionKnown = usable != null,
+            boardingMissed = boardingMissed
         ),
         alerts = alerts
     )

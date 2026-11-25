@@ -24,6 +24,10 @@ object JourneyText {
             JourneyPhase.WAITING -> {
                 val line = p.leg?.let { rideName(it.routeShortName, it.mode, strings) }
                     ?: strings.journeyUpNext
+                // Never "Board now" for a bus that left long ago; the session is
+                // already looking for the next one, and the headline turns into its
+                // countdown the moment it is found.
+                if (p.boardingMissed) return strings.journeyMissedBus(line)
                 p.secondsToDeparture?.takeIf { it > 0 }
                     ?.let { strings.journeyLeavesIn(line, strings.formatDuration(it)) }
                     ?: strings.journeyBoardNow(line)
