@@ -1,5 +1,8 @@
 package com.automatelinux.pt.ui
 
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.ui.graphics.Color
 import android.Manifest
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -2009,6 +2012,23 @@ fun MainScreen(
                         }
                     }
                 }
+
+                // The clock and battery are drawn light (the app is dark), and the map
+                // under them may be the light style: a short fade keeps them readable
+                // on any tiles without putting a bar across the map.
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .fillMaxWidth()
+                        .height(
+                            WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 14.dp
+                        )
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(Color.Black.copy(alpha = 0.5f), Color.Transparent)
+                            )
+                        )
+                )
 
                 Column(
                     modifier = Modifier
